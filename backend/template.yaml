@@ -1,0 +1,375 @@
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: SatoshiFi wrapper backend (satoshifi-api, satoshifi-watch)
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [test, prod]
+  SiteOrigin:
+    Type: String
+    Description: Only origin allowed by CORS, e.g. https://btcyield.online
+  OperatorEmail:
+    Type: String
+    Description: Receives SES mail and SNS alarms; must be verified in SES
+  SesSender:
+    Type: String
+    Description: From-address on the SES-verified domain
+  OperatorChatKey:
+    Type: String
+    AllowedValues: [ops, test]
+    Description: Key in /satoshifi/telegram/chats for the operator chat
+  ApiDomain:
+    Type: String
+    Default: ""
+    Description: Custom API domain (prod only); empty means execute-api URL
+  ApiCertificateArn:
+    Type: String
+    Default: ""
+  HostedZoneId:
+    Type: String
+    Default: ""
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref ApiDomain, ""]]
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Architectures: [x86_64]
+    CodeUri: src/
+    MemorySize: 256
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        SITE_ORIGIN: !Ref SiteOrigin
+        OPERATOR_EMAIL: !Ref OperatorEmail
+        SES_SENDER: !Ref SesSender
+        OPERATOR_CHAT_KEY: !Ref OperatorChatKey
+        SSM_CONFIG: !Sub /satoshifi/${Stage}/config
+        SSM_SESSION_SECRET: !Sub /satoshifi/${Stage}/session_secret
+        SSM_TELEGRAM_PREFIX: /satoshifi/telegram
+        T_REQUESTS: !Ref RequestsTable
+        T_DEPLOYMENTS: !Ref DeploymentsTable
+        T_ALLOWLIST: !Ref AllowlistTable
+        T_CODES: !Ref CodesTable
+        T_BINDINGS: !Ref BindingsTable
+        T_REPORTS: !Ref ReportsTable
+        T_EVENTS: !Ref EventsTable
+        T_NONCES: !Ref NoncesTable
+
+Resources:
+  # --- Tables (spec section 6) ---------------------------------------------
+  RequestsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      AttributeDefinitions:
+        - {AttributeName: request_id, AttributeType: S}
+        - {AttributeName: initiator_address, AttributeType: S}
+      KeySchema:
+        - {AttributeName: request_id, KeyType: HASH}
+      GlobalSecondaryIndexes:
+        - IndexName: by_initiator
+          KeySchema:
+            - {AttributeName: initiator_address, KeyType: HASH}
+          Projection: {ProjectionType: ALL}
+
+  DeploymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: deployment_id, AttributeType: S}
+      KeySchema:
+        - {AttributeName: deployment_id, KeyType: HASH}
+
+  AllowlistTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      AttributeDefinitions:
+        - {AttributeName: deployment_id, AttributeType: S}
+        - {AttributeName: personal_address, AttributeType: S}
+      KeySchema:
+        - {AttributeName: deployment_id, KeyType: HASH}
+        - {AttributeName: personal_address, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: by_personal
+          KeySchema:
+            - {AttributeName: personal_address, KeyType: HASH}
+          Projection: {ProjectionType: ALL}
+
+  CodesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: code, AttributeType: S}
+      KeySchema:
+        - {AttributeName: code, KeyType: HASH}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+
+  BindingsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      AttributeDefinitions:
+        - {AttributeName: deployment_id, AttributeType: S}
+        - {AttributeName: personal_address, AttributeType: S}
+        - {AttributeName: work_address, AttributeType: S}
+      KeySchema:
+        - {AttributeName: deployment_id, KeyType: HASH}
+        - {AttributeName: personal_address, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: by_work
+          KeySchema:
+            - {AttributeName: work_address, KeyType: HASH}
+          Projection: {ProjectionType: ALL}
+
+  ReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: deployment_id, AttributeType: S}
+        - {AttributeName: work_address, AttributeType: S}
+      KeySchema:
+        - {AttributeName: deployment_id, KeyType: HASH}
+        - {AttributeName: work_address, KeyType: RANGE}
+
+  EventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: deployment_id, AttributeType: S}
+        - {AttributeName: dedup_key, AttributeType: S}
+      KeySchema:
+        - {AttributeName: deployment_id, KeyType: HASH}
+        - {AttributeName: dedup_key, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+
+  NoncesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: scope, AttributeType: S}
+        - {AttributeName: nonce, AttributeType: S}
+      KeySchema:
+        - {AttributeName: scope, KeyType: HASH}
+        - {AttributeName: nonce, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+
+  # --- HTTP API ---------------------------------------------------------------
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: [!Ref SiteOrigin]
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [Content-Type, Authorization]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 50
+        ThrottlingRateLimit: 20
+
+  ApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: HasDomain
+    Metadata:
+      cfn-lint: {config: {ignore_checks: [W1030]}}
+    Properties:
+      DomainName: !Ref ApiDomain
+      DomainNameConfigurations:
+        - CertificateArn: !Ref ApiCertificateArn
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+
+  ApiDomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: HasDomain
+    DependsOn: HttpApiApiGatewayDefaultStage
+    Properties:
+      ApiId: !Ref HttpApi
+      DomainName: !Ref ApiDomainName
+      Stage: $default
+
+  ApiDomainRecordA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref ApiDomain
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiDomainName.RegionalDomainName
+        HostedZoneId: !GetAtt ApiDomainName.RegionalHostedZoneId
+
+  ApiDomainRecordAAAA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref ApiDomain
+      Type: AAAA
+      AliasTarget:
+        DNSName: !GetAtt ApiDomainName.RegionalDomainName
+        HostedZoneId: !GetAtt ApiDomainName.RegionalHostedZoneId
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: ApiLogGroup
+    Properties:
+      FunctionName: !Sub satoshifi-api-${Stage}
+      Handler: satoshifi.api.handler.handler
+      Timeout: 15
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RequestsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref DeploymentsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AllowlistTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref CodesTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BindingsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref ReportsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref EventsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref NoncesTable}
+        - SSMParameterReadPolicy: {ParameterName: !Sub "satoshifi/${Stage}/*"}
+        - SSMParameterReadPolicy: {ParameterName: "satoshifi/telegram/*"}
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource:
+                - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/btcyield.online
+                - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${OperatorEmail}
+      Events:
+        SessionNonce: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/session/nonce}}
+        Session: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/session}}
+        Me: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: /v1/me}}
+        Dashboard: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: /v1/dashboard}}
+        Requests: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/requests}}
+        Bindings: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/bindings}}
+        BindingStatus: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: "/v1/bindings/{code}"}}
+        Reports: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/reports}}
+        Events: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/events}}
+        Telegram: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/tg}}
+        OpRequests: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: /v1/operator/requests}}
+        OpRequestPatch: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: PATCH, Path: "/v1/operator/requests/{id}"}}
+        OpDeployment: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: PUT, Path: "/v1/operator/deployments/{id}"}}
+        OpAllowlist: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: PUT, Path: /v1/operator/allowlist}}
+        OpBindings: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: /v1/operator/bindings}}
+        OpStatus: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: GET, Path: /v1/operator/status}}
+        OpState: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: PUT, Path: /v1/operator/state}}
+        OpEvents: {Type: HttpApi, Properties: {ApiId: !Ref HttpApi, Method: POST, Path: /v1/operator/events}}
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/satoshifi-api-${Stage}
+      RetentionInDays: 30
+
+  # --- Watch ------------------------------------------------------------------
+  WatchFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: WatchLogGroup
+    Properties:
+      FunctionName: !Sub satoshifi-watch-${Stage}
+      Handler: satoshifi.watch.handler.handler
+      Timeout: 50
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DeploymentsTable}
+        - DynamoDBReadPolicy: {TableName: !Ref AllowlistTable}
+        - DynamoDBReadPolicy: {TableName: !Ref BindingsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref ReportsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref EventsTable}
+        - SSMParameterReadPolicy: {ParameterName: !Sub "satoshifi/${Stage}/*"}
+        - SSMParameterReadPolicy: {ParameterName: "satoshifi/telegram/*"}
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource:
+                - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/btcyield.online
+                - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${OperatorEmail}
+      Events:
+        EveryMinute:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(1 minute)
+
+  WatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/satoshifi-watch-${Stage}
+      RetentionInDays: 30
+
+  # --- Alarms (DEP-08) --------------------------------------------------------
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub satoshifi-alarms-${Stage}
+      Subscription:
+        - {Protocol: email, Endpoint: !Ref OperatorEmail}
+
+  ApiErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub satoshifi-api-${Stage}-errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: !Ref ApiFunction}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopic]
+
+  WatchErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub satoshifi-watch-${Stage}-errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: !Ref WatchFunction}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopic]
+
+  WatchSilentAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub satoshifi-watch-${Stage}-silent
+      Namespace: AWS/Lambda
+      MetricName: Invocations
+      Dimensions: [{Name: FunctionName, Value: !Ref WatchFunction}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopic]
+
+Outputs:
+  ApiUrl:
+    Value: !If
+      - HasDomain
+      - !Sub https://${ApiDomain}
+      - !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
