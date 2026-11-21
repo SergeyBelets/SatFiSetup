@@ -1,0 +1,138 @@
+{
+  "note": "TEST-ONLY keys derived from public strings; never fund these addresses.",
+  "params": {
+    "domain": "btcyield.online",
+    "uri": "https://btcyield.online/create-confederation.html",
+    "chain_id": 1,
+    "t0": 1795000000
+  },
+  "accounts": {
+    "operator": "0xbE9729c4cd4107C5573739B7a97409a1f38DC27A",
+    "initiator": "0x4993337303fFcD555956eD77E1b24460e38c8F98",
+    "personal": "0xC405d2EF0cFe25865d1Daf36f107F64e8f48d9Ad",
+    "work": "0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C",
+    "other": "0x2e9B00AdbC51467C32C19b2d491C91Ef51f9Fa88"
+  },
+  "canon": [
+    {
+      "name": "nested-order",
+      "value": {
+        "b": [
+          3,
+          {
+            "z": 1,
+            "a": null
+          }
+        ],
+        "a": true,
+        "c": false
+      },
+      "jcs": "{\"a\":true,\"b\":[3,{\"a\":null,\"z\":1}],\"c\":false}",
+      "keccak": "0xd42ad4d2540fad7bbaab9ffee06da8cbc0f679ed8cead4d5271045792ce0a9e8"
+    },
+    {
+      "name": "unicode-and-escapes",
+      "value": {
+        "text": "Проверка \"q\" \\ /\n\t\u0001 ✓"
+      },
+      "jcs": "{\"text\":\"Проверка \\\"q\\\" \\\\ /\\n\\t\\u0001 ✓\"}",
+      "keccak": "0xc9d763228b6003c4e95b086f902d7cfb5be555bafb8072c8256305e3837f8644"
+    },
+    {
+      "name": "utf16-key-order",
+      "value": {
+        "": 1,
+        "😀": 2,
+        "a": 3
+      },
+      "jcs": "{\"a\":3,\"😀\":2,\"\":1}",
+      "keccak": "0xa5c84fb78ce5eaa7dc68880499002dd439dc594262e7c6d0389722ba4b6ed61e"
+    },
+    {
+      "name": "integers",
+      "value": {
+        "max": 9007199254740991,
+        "min": -9007199254740991,
+        "zero": 0
+      },
+      "jcs": "{\"max\":9007199254740991,\"min\":-9007199254740991,\"zero\":0}",
+      "keccak": "0x353606244eb51bdbe7da3afdeaa8aba0cf8aa5379fd02b99f2f3dd5a76c74990"
+    },
+    {
+      "name": "empty",
+      "value": {
+        "o": {},
+        "l": []
+      },
+      "jcs": "{\"l\":[],\"o\":{}}",
+      "keccak": "0x09aef2cf6c961a4ae714afeb84372c179c5468604e91fb4efb9009e217c22d2d"
+    }
+  ],
+  "request": {
+    "body": {
+      "initiator_address": "0x4993337303fFcD555956eD77E1b24460e38c8F98",
+      "initiator_name": "Test Initiator",
+      "email": "initiator@example.org",
+      "organization": "Example Org",
+      "participants": [
+        {
+          "address": "0x4993337303fFcD555956eD77E1b24460e38c8F98",
+          "label": "Initiator"
+        },
+        {
+          "address": "0xC405d2EF0cFe25865d1Daf36f107F64e8f48d9Ad",
+          "label": "Участник",
+          "contact": "@participant"
+        }
+      ]
+    },
+    "issued_at": 1795000000,
+    "hash": "0xb6260fa530b0a44bac934464049d0ce726a55be4eceef164e7099370824d4550",
+    "message": "SatoshiFi confederation request v1\nDomain: btcyield.online\nChain ID: 1\nIssued at: 1795000000\nRequest hash: 0xb6260fa530b0a44bac934464049d0ce726a55be4eceef164e7099370824d4550",
+    "signer": "0x4993337303fFcD555956eD77E1b24460e38c8F98",
+    "signature": "0x3752bd18e047117dcad6926bb134d4eb0fd86612a87a080b5289ef66bd81eb45509cd8b004be72f29f0292574c472f97e827bddbe6dfad57d80fbb5ed53d25bf1c"
+  },
+  "wsig": {
+    "deployment": "s13",
+    "work": "0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C",
+    "code": "4d9c5fc29cd3cf71a29fbf54f7a02b4f3d30a50d2e2e7a4e7bdb0611450d0955",
+    "exp": 1795086400,
+    "message": "SatoshiFi work binding v1\nDeployment: s13\nChain ID: 1\nWork address: 0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C\nCode: 4d9c5fc29cd3cf71a29fbf54f7a02b4f3d30a50d2e2e7a4e7bdb0611450d0955\nExpires: 1795086400",
+    "signer": "0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C",
+    "signature": "0xd6fc4cd183a660df19435fbaa021e2217adb48b1d188368d8ae74d50a25c10de4fd08d81d7bfb8c9127ae3fb1f8c7e098fb305a4ab027f27474f2689a02a17a21c"
+  },
+  "binding_siwe": {
+    "message": "btcyield.online wants you to sign in with your Ethereum account:\n0xC405d2EF0cFe25865d1Daf36f107F64e8f48d9Ad\n\nMy work address for s13 is 0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C.\n\nURI: https://btcyield.online/create-confederation.html\nVersion: 1\nChain ID: 1\nNonce: 4d9c5fc29cd3cf71a29fbf54f7a02b4f3d30a50d2e2e7a4e7bdb0611450d0955\nIssued At: 2026-11-18T11:06:40Z\nExpiration Time: 2026-11-19T11:06:40Z\nResources:\n- urn:satoshifi:wsig:0x16097e6b9523f67e23c1ddefcae8c0baa51000629880b31d87f02d943bfa1b29",
+    "signer": "0xC405d2EF0cFe25865d1Daf36f107F64e8f48d9Ad",
+    "signature": "0x363f02b5ec362793aedec37b3cbf80b262a2a2a5845a3c0be8ff6af2bfbc3a12793115627bc768fac030c20d6110a44967490bc2a894a42f8989c71f7bf7e7d81c",
+    "resource": "urn:satoshifi:wsig:0x16097e6b9523f67e23c1ddefcae8c0baa51000629880b31d87f02d943bfa1b29"
+  },
+  "login_siwe": {
+    "nonce": "79dde0e89cb7bb9917e994088cc23ad9",
+    "message": "btcyield.online wants you to sign in with your Ethereum account:\n0x4993337303fFcD555956eD77E1b24460e38c8F98\n\nSign in to SatoshiFi.\n\nURI: https://btcyield.online/create-confederation.html\nVersion: 1\nChain ID: 1\nNonce: 79dde0e89cb7bb9917e994088cc23ad9\nIssued At: 2026-11-18T11:06:40Z\nExpiration Time: 2026-11-18T11:11:40Z",
+    "signer": "0x4993337303fFcD555956eD77E1b24460e38c8F98",
+    "signature": "0x593a7f37bca9a80a172fe0f527a1129524fb7fe8ecf5a6ade10db3271ce30fb079df8b99f7019072e15a80c6a465a07d184ad2241aa4ce6ba25c3777bcc309111b"
+  },
+  "api": [
+    {
+      "method": "POST",
+      "path": "/v1/reports",
+      "timestamp": 1795000000,
+      "nonce": "0x77b5980c9e36c2e327ecd47b9316bc3e",
+      "body": "{\"deployment\":\"s13\",\"version\":\"1.0.0\",\"state\":\"RUNNING\",\"stage\":\"zk\",\"verdict\":\"OK\",\"last_error\":null,\"proof_height\":925000,\"eth_balance_wei\":\"120000000000000000\",\"ts\":1795000000}",
+      "message": "SatoshiFi api v1\nPOST /v1/reports\n1795000000\n0x77b5980c9e36c2e327ecd47b9316bc3e\n0x3dd30b310ea522f0f8665c6b8320a8c16358078c9add32ab7c7d255db9ba37f8",
+      "signer": "0x84a1c27Fb10DC5B3aBe8E154851F17e198B9CE4C",
+      "signature": "0x35feb0d22f40a44c17d194220b632994797a1f090400cf6eddde597139cade75006ee283f8d27712714175b2e50e1c5b97e340f03d9703016d9d8094713cc79e1b"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/operator/status?deployment=s13",
+      "timestamp": 1795000000,
+      "nonce": "0x77b5980c9e36c2e327ecd47b9316bc3e",
+      "body": "",
+      "message": "SatoshiFi api v1\nGET /v1/operator/status?deployment=s13\n1795000000\n0x77b5980c9e36c2e327ecd47b9316bc3e\n0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+      "signer": "0xbE9729c4cd4107C5573739B7a97409a1f38DC27A",
+      "signature": "0x74df2f9942433eca27798df6e5515b77ebf5930eaa3d679caf473c8d78f0b104213034849df5072c86d57e8d67036911db448cb1073fc370e6b1e0f6ae3d5ad11c"
+    }
+  ]
+}

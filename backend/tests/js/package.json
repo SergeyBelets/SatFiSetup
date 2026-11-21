@@ -1,0 +1,7 @@
+{
+  "name": "satoshifi-vector-check",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": { "check": "node check_vectors.js" },
+  "dependencies": { "ethers": "5.7.2" }
+}
