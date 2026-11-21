@@ -304,6 +304,7 @@ Resources:
         EveryMinute:
           Type: ScheduleV2
           Properties:
+            Name: !Sub satoshifi-watch-${Stage}
             ScheduleExpression: rate(1 minute)
 
   WatchLogGroup:
