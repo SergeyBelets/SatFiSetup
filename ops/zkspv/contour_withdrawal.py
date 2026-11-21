@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from .contour import digest,private_write,sha
-from .contour_calls import Calls,Required,Hold,Progress
+from .contour_calls import Calls,Required,Hold,Progress,ObservationPending
 from signer_agent.onboarding import read_private,password_file
 from signer_agent.btc_fee_reserve import Inspector,load_config as fee_config,read
 from signer_agent.withdrawal_user import Withdrawal
@@ -341,6 +341,7 @@ class Pipeline:
                 result=self.r.btc('btc-settle')
                 return self.result('ABSENT',result['status'])
             except Required:return self.result('ABSENT','ORIGINAL_WITHDRAWAL_OPERATION_REQUIRED')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_WITHDRAWAL_RECOVERY_REQUIRED')
             except Progress:return self.result('ABSENT','ORIGINAL_WITHDRAWAL_OPERATION_PROGRESS')
             finally:

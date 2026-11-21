@@ -186,7 +186,7 @@ def review_consumer(w3, invite, target, kind, intent, block):
     consumers = []
     if kind in ("BitcoinDepositRegistry", "BitcoinWithdrawalEscrow", "BitcoinWithdrawalEscrowV2"):
         consumers.append(target)
-    elif kind == "MiningPoolV1":
+    elif kind in ("MiningPoolV1", "ConfederationBitcoinReserve"):
         consumers.extend([contract(read(target, "deposits"), "BitcoinDepositRegistry"),
                           contract(read(target, "escrow"), escrow_kind)])
     elif kind == "BitcoinAddressRegistry":

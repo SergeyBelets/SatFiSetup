@@ -1,6 +1,6 @@
 # Токены: где используются и откуда берутся
 
-[Схемы: SVG/PNG и hashes текущих Mermaid-исходников](DIAGRAMS.md).
+[Индекс схем](DIAGRAMS.md).
 
 [Параметры федерации/конфедерации и новые группы](FEDERATION_CONFEDERATION_SETUP.md) ·
 [NFT скидок: параметры, роли и требования](NFT_CONFIGURATION.md).
@@ -14,10 +14,21 @@
 читайте из согласованной политики и контрактов.
 
 [Индекс документации](README.md). Экономический профиль обновлён 5 ноября 2026 года.
-Ниже описана текущая реализация и значения стандартного bootstrap; это не
-перечень уже развёрнутых адресов.
+Для новых конфедераций с ULR policy V3 действуют следующие правила.
 
-## Карта активов
+| Актив | Роль в V3 |
+|---|---|
+| MP федерации | Выпускается исходным `MiningPoolV1`. При переносе обеспечения исходный escrow сжигает MP после подтверждённой Bitcoin-выплаты под ключ конфедерации. |
+| S конфедерации | Переводимый ERC-20 `ConfederationShareV2`. Выпускается по принятому Bitcoin-выходу в соотношении `10^10` базовых единиц на сатоши. Держатель погашает S из BTC-резерва конфедерации. |
+| ULR и награды | `create` выпускает общие ULR, `reuse` подключает их к отдельному стейкингу новой конфедерации. DAO получает комиссии в S и может принимать одобренные стейблкоины. |
+
+Адрес S определяет `ConfederationFactory.getConfederation(id).shareToken`
+или `ConfederationPoolV2.shareToken()`. Своя запись резерва доступна через
+`ConfederationPoolV2.bitcoinReserve()`, её общий BTC-баланс обеспечения
+через `deposits().totalBackingSats()` в сатоши. Погашение S не требует
+локального MP. [Маршрут и расчёт MP → S → BTC](CONFEDERATION_DAO_IN_KIND.md).
+
+## Карта активов прежних профилей
 
 Общий [ULR staking](ULR_STAKING.md) использует один выбранный 10-миллионный
 ULR-токен и один payout-стейблкоин для всех подключённых конфедераций. Их
@@ -71,7 +82,7 @@ legacy-профиля передайте `setup invite --token-metadata FILE` в
 | `governance` | `CustodianDAOToken`, общий staking и кандидаты | `ULR` / `ULR` в общем профиле; `Custodian Governance` / `CGOV` в legacy |
 | `mining` | `PoolMpToken` внутри `MiningPoolV1` | `Integration MP` / `IMP` |
 | `federation_share` | `MultiPoolShareToken` федерации | `Federation Shares` / `FS` |
-| `confederation_share` | `ConfederationToken` конфедерации | `Confederation Shares` / `CS` |
+| `confederation_share` | `ConfederationShareV2` в V3 или `ConfederationToken` прежнего профиля | `Confederation Shares` / `CS` |
 
 Примеры полного системного профиля содержат редактируемые `Project …` /
 `PGOV`, `PMIN`, `PFS`, `PCS`. Если `system-profile` вызван без файла имён,
@@ -95,8 +106,9 @@ flowchart LR
 
 Изменение имён после enrollment требует нового приглашения и согласования
 участников. При `reuse` общий governance-токен уже существует: экспортированный
-`ulr.reuse_policy.token` сохраняет его имя и символ. Новая конфедерация может
-выбрать имена своих MP и долей, но конфликт имён общего токена отклоняется.
+`ulr.reuse_policy.token` сохраняет его имя и символ. В V3 имя S берётся из
+`confederation_share`, а метаданные `mining` используются прежними профилями
+при выпуске MP. Конфликт имён общего токена отклоняется.
 Метаданные также проверяются по фактическим контрактам; проверка адресов,
 происхождения, runtime hash и полномочий выполняется прежним механизмом.
 Текущие контракты не имеют функции переименования после развёртывания.
@@ -143,7 +155,7 @@ MP base units = принятые сатоши × 10^10
 [mint admission](BITCOIN_MINT_ADMISSION.md),
 [Bitcoin lifecycle](BITCOIN_WITHDRAWALS.md).
 
-## FS и CS: два отдельных пула долей
+## FS и CS: два отдельных пула долей в прежнем профиле
 
 При создании федерации фабрика через deployer создаёт `SimpleMultiPool` и
 [`MultiPoolShareToken`](../web3/contracts/src/tokens/MultiPoolShareToken.sol).
@@ -164,7 +176,7 @@ MP через `userPoolBalances` / `getUserPoolBalance`; вывод провер
 долю именно по выбранному MP. Это не свободный обмен любого исходного MP
 на любой другой актив из общего списка пулов.
 
-Текущая схема:
+Схема прежнего профиля с локальным MP в конфедерации.
 
 ```mermaid
 flowchart TD
@@ -314,7 +326,7 @@ withdrawal fee credits и fee reserve — учёт средств и обяза�
 - Для каждого ERC-20 сверить `name()`, `symbol()`, `decimals()` и `totalSupply()`
   в выбранной EVM-сети. Тикер из таблицы не заменяет проверку адреса.
 
-## Governance и USD-награды в новом bootstrap
+## Governance и USD-награды в прежнем ULR-профиле
 
 В ULR-профиле общий governance-токен имеет один выпуск 10 млн и 18 decimals;
 `ULR` — историческое имя роли. Названия задаются до подписания. `create`

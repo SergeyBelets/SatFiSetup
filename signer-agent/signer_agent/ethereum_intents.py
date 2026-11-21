@@ -184,7 +184,7 @@ def review_bootstrap_intent(w3, intent, bundle, block_identifier):
         "CustodianDAOIncomeVault": "authorization", "CustodianDAODailySettlement": "authorization",
         "BitcoinBatchRegistry": "authorization", "BitcoinDepositRegistry": "authorization",
         "CustodianDAOFeeRouter": "authorization", "PoolFeePipeline": "authorization",
-        "MiningPoolV1": "authorization", "BitcoinMintAdmission": "authorization",
+        "MiningPoolV1": "authorization", "ConfederationBitcoinReserve": "authorization", "BitcoinMintAdmission": "authorization",
         "SPVServicePaymentRegistry": "authorization", "BitcoinAddressRegistry": "authorization", "BitcoinKeyFamilyRegistry":"governance", "BitcoinFeeReserve": "authorization",
         "CustodianDAODecisionBoard": "authorization"}
     if kind not in {*auth_getters, "BitcoinWithdrawalEscrow", "BitcoinWithdrawalEscrowV2", "GovernanceRegistry", "FederationFactory", "ConfederationFactory"}:

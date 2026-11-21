@@ -1,0 +1,13 @@
+{
+  "network": "testnet4",
+  "source": "https://mempool.space/testnet4/api",
+  "genesis": "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043",
+  "first": 2006,
+  "checkpoint": 2016,
+  "last": 4050,
+  "checkpoint_chainwork": "000000000000000000000000000000000000000000000000000007e407e407e4",
+  "header_prefix_sha256": "f5d72c2d6bebd87892d3fc5ca8a05b41efaa1db21b7c9e0fb4575c1fca50b7ab",
+  "headers_sha256": "0b4686d8801e5c7ee2d56ed36ad7b6c0fb921ff29a6db367e54990745750330b",
+  "expected_sha256": "d0995fcf2c136663532f810864370fac314b1bdb8af6293b6dd3aee1c0cffd69",
+  "scope": "Historical public testnet4 headers. Independently replayed against Bitcoin Core; not a live trust checkpoint."
+}

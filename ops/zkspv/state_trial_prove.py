@@ -102,7 +102,7 @@ def main():
         if free<8*1024**3:raise ValueError('At least 8 GiB free required for STARK launch')
         profile='(version 1) (allow default) (deny network*)'
         # Strict no-network probe already qualified by the original runner.
-        probe=probe_code(cuda is not None)
+        probe=probe_code(False)
         command=[r0vm,'--elf',program,'--initial-input',base/'state.input','--receipt',out/'receipt.bin','--receipt-kind','composite','-v']
         if cuda is not None:
             command += ["--po2", cuda["segment_limit_po2"]]
@@ -146,7 +146,7 @@ def main():
             checks['prove']['broker'] = job.diagnostics()
         if checks['prove']['exit_code']==0:
             if a.stage=='succinct':shutil.copy2(out/'result/receipt.bin',out/'receipt.bin')
-            checks['verify']=run([bridge,'inspect',program,base/'state.journal',out/'receipt.bin',out/'verified'],out/'verify.log',profile,env,3600,**kwargs)
+            checks['verify']=run([bridge,'inspect',program,base/'state.journal',out/'receipt.bin',out/'verified'],out/'verify.log',profile,env,180,**kwargs)
     unchanged=all(sha(ROOT/p)==digest for p,digest in prep['source_sha256'].items())
     verified=read(out/'verified/receipt.json') if (out/'verified/receipt.json').exists() else {}
     ok=(checks.get('verify',{}).get('exit_code')==0 and unchanged and input_matches()

@@ -1,3 +1,0 @@
-   Compiling satoshifi-regtest-deposit-kernel v0.1.0 (/private/tmp/satoshifi-deposit-build/deposit-integration/kernel)
-    Finished `dev` profile [unoptimized] target(s) in 1.05s
-     Running `/private/tmp/satoshifi-deposit-native-target/debug/prepare '/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/deposit-integration/evidence/run-04/state.input' '/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/deposit-integration/evidence/run-04/native-debug'`

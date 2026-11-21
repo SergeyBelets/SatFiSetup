@@ -6,7 +6,6 @@ from .safe_errors import exception_code
 # alphanumeric, all uppercase, or look like one of our error-code prefixes.
 # New codes not yet listed safely fall back to the exception class.
 PARTICIPANT_ERROR_CODES = frozenset("""
-CONFEDERATION_DAO_CANDIDATE CONFEDERATION_DAO_CUSTODIAN CONFEDERATION_DAO_BINDING BITCOIN_RPC_TLS_FAILED BITCOIN_RPC_AUTH_REJECTED
 AMOUNT_PRECISION_EXCEEDED CLAIM_REQUIRES_1_TO_32_UNIQUE_DAYS CONFEDERATION_INACTIVE CONFEDERATION_MISMATCH
 CONFEDERATION_REQUIRED CONTRACT_CODE_MISSING DAO_ANCHOR_CHANGED DAO_AUTHORIZATION_DKG_MISMATCH DAO_BINDING_MISMATCH
 DAO_BOARD_TREASURY_MISMATCH DAO_CONFIG_BINDING_CHANGED DAO_CONFIG_PROVENANCE_MISMATCH DAO_CONFIG_PROVENANCE_REQUIRED_RUN_INIT
@@ -36,7 +35,8 @@ BITCOIN_CUSTODY_SESSION BITCOIN_CUSTODY_REORG BITCOIN_CUSTODY_POLICY_REQUIRED
 BITCOIN_CUSTODY_PUBLISHER_EPOCH BITCOIN_CUSTODY_BINDING_REQUIRED BITCOIN_CUSTODY_REQUEST_RECEIPT
 BITCOIN_CUSTODY_OUTPUT_EXISTS BITCOIN_CUSTODY_FINGERPRINT BITCOIN_CUSTODY_AMOUNT
 BITCOIN_CUSTODY_BATCH BITCOIN_CUSTODY_IMMATURE
-BTC_UNACCEPTED_CUSTODY_TRANSFER
+BTC_UNACCEPTED_CUSTODY_TRANSFER BTC_CUSTODY_OUTPUT_GROUP
+DAO_EXPENSES_ALREADY_STAGED DAO_EXPENSE_BATCH_ORDER DAO_EXPENSE_ALREADY_RECORDED
 BTC_MINT_ADMISSION_SESSION_REQUIRED
 ULR_DISTRIBUTION_OPTIONS ULR_DISTRIBUTION_OPERATOR_REQUIRED ULR_DISTRIBUTION_FINGERPRINT_REQUIRED
 ULR_DISTRIBUTION_NOT_PAUSED ULR_DISTRIBUTION_BINDING ULR_DISTRIBUTION_CHANGED
@@ -44,6 +44,15 @@ BOOTSTRAP_FUNDING_OPTIONS BOOTSTRAP_FUNDING_MINIMUM_REQUIRED BOOTSTRAP_FUNDING_R
 BOOTSTRAP_FUNDING_OPERATOR_REQUIRED BOOTSTRAP_FUNDING_POLICY_MISMATCH
 BOOTSTRAP_FUNDING_TOO_LATE BOOTSTRAP_FUNDING_PAUSE_REQUIRED
 FROST_CANONICAL_VERIFIER_REQUIRED
+FROST_FINALIZATION_RESULT_MISMATCH FROST_FINALIZATION_REVERT_AWAITING_FINALITY
+EVM_PENDING_FEE_CAP_BELOW_BASE EVM_REPLACEMENT_PENDING EVM_REPLACEMENT_SEND_UNCERTAIN
+EVM_REPLACEMENT_INPUTS_REQUIRED EVM_REPLACEMENT_TRANSACTION EVM_REPLACEMENT_NOT_JOURNALED
+EVM_LEGACY_NONCE_INPUTS_REQUIRED EVM_LEGACY_NONCE_SOURCE_REQUIRED EVM_LEGACY_NONCE_UNSUPPORTED
+EVM_REPLACEMENT_UNSUPPORTED EVM_REPLACEMENT_NOT_PENDING EVM_REPLACEMENT_BUDGET_REQUIRED
+EVM_REPLACEMENT_FEE_INCREASE EVM_REPLACEMENT_FINGERPRINT EVM_REPLACEMENT_LIMIT
+EVM_REPLACEMENT_APPROVAL_EXPIRED EVM_REPLACEMENT_BUDGET_EXCEEDED EVM_REPLACEMENT_BASE_FEE
+EVM_REPLACEMENT_FUNDING EVM_REPLACEMENT_ACCOUNT_CODE EVM_REPLACEMENT_GAS_LIMIT
+EVM_REPLACEMENT_NONCE_CONFLICT EVM_REPLACEMENT_RECONCILE_FIRST
 ZK_PARTICIPANT_LOCAL_PROVER_REQUIRED
 ZK_LOCAL_RUNNER_PLATFORM_NOT_SUPPORTED ZK_PROVER_TOOL_PIN_REQUIRED ZK_PROVER_PROFILE
 ZK_LINUX_BWRAP_REQUIRED ZK_LINUX_SECCOMP_REQUIRED ZK_LINUX_NETWORK_NAMESPACE_REQUIRED
@@ -72,7 +81,11 @@ ULR_ENROLLMENT_POLICY ULR_ENROLLMENT_RECEIPT ULR_FEE_ROUTER_BINDING ULR_FINALITY
 ULR_HISTORICAL_CONFEDERATION_BINDING ULR_HOLDER_INVENTORY ULR_INTEGER_RANGE ULR_INTENT_POLICY
 ULR_HOLDER_INVENTORY_SUPPLY ULR_HOLDER_INVENTORY_INCOMPLETE ULR_SNAPSHOT_TRANSACTION_GAS
 ULR_SNAPSHOT_INTENT_FILE_REQUIRED ULR_SNAPSHOT_INTENT_HASH_MISMATCH
-API_OPERATION_DEPLOYMENT_REQUIRED API_LEGACY_OPERATION_PROFILE_MISMATCH
+ULR_TREASURY_PIN_BEHIND ULR_TREASURY_HISTORY_MISMATCH
+ULR_TREASURY_NOT_ACTIVE ULR_TREASURY_ACTIVATION_UNSUPPORTED
+ZK_PROOF_ATTEMPT_BINDING ZK_PROOF_ATTEMPT_BUSY ZK_PROOF_ROOT_PENDING ZK_PROOF_ROOT_UNCHANGED
+API_OPERATION_DEPLOYMENT_REQUIRED API_OPERATION_DEPLOYMENT_QUERY API_LEGACY_OPERATION_PROFILE_MISMATCH
+API_OPERATION_ARTIFACT_MISMATCH API_OPERATION_EXECUTION_IN_PROGRESS API_OPERATION_EXECUTION_JOURNAL_MISSING
 ULR_LAST_BLOCK_OF_DAY_REQUIRED ULR_NONZERO_HASH_REQUIRED ULR_NOT_ELIGIBLE_CANDIDATE
 ULR_OPERATION_COMPLETE ULR_OPERATION_HASH ULR_OPERATION_TARGET ULR_PIN_REQUIRED ULR_PUBLIC_INTENT_REQUIRED
 ULR_ROUTER_RECEIPT ULR_SESSION_HASH ULR_SIGNING_AUTHORITY ULR_SNAPSHOT_BINDING ULR_SNAPSHOT_DAY
@@ -94,6 +107,7 @@ CUSTODIAN_TARGET_UNSUPPORTED CUSTODIAN_BINDING_MISMATCH CUSTODIAN_TRANSACTION_UN
 ZK_OBSERVATION_BACKUP_CONFLICT ZK_OBSERVATION_BRANCH_LIMIT ZK_OBSERVATION_CONCURRENT ZK_OBSERVATION_BUSY
 ZK_OBSERVATION_HEADER ZK_OBSERVATION_INTEGRITY ZK_OBSERVATION_KNOWN_DEEP_REORG ZK_OBSERVATION_LIMIT
 ZK_OBSERVATION_OUTBOX_CONFLICT ZK_OBSERVATION_POLICY ZK_OBSERVATION_POLICY_CHANGED ZK_OBSERVATION_WITNESS_REQUIRED
+ZK_OBSERVATION_CORE_BEHIND
 ZK_OBSERVATION_OUTBOX_SCOPE ZK_OBSERVATION_BACKUP_PATH
 CONTOUR_SCENARIO_ASSERTION CONTOUR_SCENARIO_CATALOG CONTOUR_SCENARIO_CHECK CONTOUR_SCENARIO_CONFIG
 CONTOUR_SCENARIO_EXPECTED_DENIAL CONTOUR_SCENARIO_EXPECTED_REVERT CONTOUR_SCENARIO_REVERT CONTOUR_SCENARIO_SCOPE
@@ -227,7 +241,8 @@ BTC_SIGNATURE_PACKETS_MISSING BTC_TRANSACTION_UNCONFIRMED BTC_UNEXPECTED_OUTPUT
 BTC_WALLET_CONTEXT_MISMATCH BTC_WALLET_RESULT_MISMATCH BTC_WITHDRAWAL_BELOW_MINIMUM
 BTC_WITHDRAWAL_TO_WALLET_UNSUPPORTED CEREMONY_TERMINAL_FAILURE CEREMONY_TIMEOUT
 CEREMONY_TIMING_MISMATCH CHAIN_MISMATCH COMMITMENT_MISMATCH CONFIRMATION_DEPTH
-CONFLICTING_RETRY CRYPTO_VALIDATION_FAILED DKG_ANCHOR_REORG DKG_ANCHOR_UNAVAILABLE
+CONFLICTING_RETRY CRYPTO_VALIDATION_FAILED DKG_ANCHOR_REORG DKG_ANCHOR_UNAVAILABLE DKG_ABORT_CONFIRMATION_MISMATCH
+EVM_RPC_BEHIND
 DKG_BOARD_REQUIRED ENROLLED_MANIFEST_MISMATCH ENROLLED_MANIFEST_REQUIRED
 ENROLLED_PROFILE_MISMATCH ENROLLMENT_CONTEXT ENROLLMENT_IDENTITY_MISMATCH ENROLLMENT_INCOMPLETE
 ENROLLMENT_SCHEMA ENROLLMENT_SIGNATURE ENROLLMENT_TRANSPORT_KEYS ENVELOPE_CONFLICT
@@ -291,7 +306,7 @@ ETHEREUM_DURABLE_IDENTITY_REQUIRED ETHEREUM_FINALITY_UNAVAILABLE ETHEREUM_MAINNE
 FLOW_INVALID_RESULT FLOW_COMMAND_FAILED FLOW_ENROLLED_STATE_REQUIRED
 EVM_REORG_RECOVERY_REQUIRED
 PAYMENT_NOT_CONFIRMED
-BITCOIN_OBSERVATION_UNAVAILABLE BTC_RECOVERY_BATCH_MISMATCH BTC_RECOVERY_CHANGED
+BITCOIN_OBSERVATION_UNAVAILABLE BITCOIN_PAYMENT_DEPTH_PENDING BTC_RECOVERY_BATCH_MISMATCH BTC_RECOVERY_CHANGED
 BTC_RECOVERY_PAYMENT_MISMATCH BTC_REGISTRY_PROVENANCE_REQUIRED
 BTC_MINT_ALLOCATION_MISMATCH BTC_MINT_AMOUNT ARTIFACT_HASH_MISMATCH BTC_MINT_DEPOSIT_COMMITMENT BTC_MINT_SINGLE_RECIPIENT BTC_MINT_DISTRIBUTION
 BTC_MINT_GENERATION_PROFILE_REQUIRED BTC_ADDRESS_SIGNING_PROFILE_REQUIRED
@@ -321,12 +336,90 @@ GAS_GOVERNANCE_RECEIPT GAS_GOVERNANCE_POSTCONDITION
 
 def participant_exception_code(exc):
     from .bitcoin_rpc import BitcoinRPCError
-    from .evm_network import GasLimitExceeded
 
-    if type(exc) is GasLimitExceeded:
-        return "ETHEREUM_TRANSACTION_GAS_LIMIT"
     if type(exc) in (ValueError, RuntimeError, BitcoinRPCError) and len(exc.args) == 1:
         value = exc.args[0]
         if isinstance(value, str) and value in PARTICIPANT_ERROR_CODES:
             return value
     return exception_code(exc)
+
+
+_MESSAGES = {
+    "ZK_PROOF_ROOT_PENDING": "Wait for the Bitcoin header to be materialized against the current ZK root.",
+    "ZK_PROOF_ROOT_UNCHANGED": "The proof call reverted under the same observed root. Check the recorded transaction before retrying.",
+    "BTC_CUSTODY_OUTPUT_GROUP": "Keep each V3 custody gateway's complete payment in one exclusive Bitcoin output. Put unrelated payments to that script in a separate batch.",
+    "DAO_EXPENSES_ALREADY_STAGED": "Finalize this report without inline expenses. Stage any remaining expenses in chronological batches first.",
+    "DAO_EXPENSE_BATCH_ORDER": "This batch must begin after the last staged receipt for the same UTC day.",
+    "DAO_EXPENSE_ALREADY_RECORDED": "A receipt in this batch has already been recorded for reimbursement.",
+    "ULR_TREASURY_PIN_BEHIND": "Refresh the local treasury pin from the approved registry before signing the historical snapshot.",
+    "ULR_TREASURY_HISTORY_MISMATCH": "The treasury enrollment history does not match the historical registry state.",
+    "API_OPERATION_DEPLOYMENT_REQUIRED": "The operation key matches multiple deployments. Repeat the command with --deployment DEPLOYMENT_ID.",
+    "API_LEGACY_OPERATION_PROFILE_MISMATCH": "The saved legacy execution differs from the verified deployment profile. Recover with the original journal and profile.",
+    "API_OPERATION_ARTIFACT_MISMATCH": "The verified deployment contract uses a different artifact from the prepared API action. Check the deployment and API policy.",
+    "API_OPERATION_EXECUTION_IN_PROGRESS": "Another worker is executing this operation. Check its status after that worker finishes.",
+    "API_OPERATION_EXECUTION_JOURNAL_MISSING": "Restore the matching transaction journal before retrying this operation.",
+    "OPERATION_PARAMETERS_MISMATCH": "The operation hash differs from the current contract state. Check the intent and its nonce before retrying.",
+    "POLICY_MISMATCH": "The selected session does not match the intended operation, target or signing policy.",
+    "SESSION_DKG_MISMATCH": "The signing session belongs to a different DKG result. Check the board and the participant role.",
+    "TRANSACTION_REVERTED": "The EVM transaction reverted. Inspect its canonical receipt before acknowledging the revert or retrying.",
+    "PRIOR_TRANSACTION_RECOVERY_REQUIRED": "An earlier transaction in this account needs recovery. Resolve its receipt and nonce before sending another transaction.",
+    "NONCE_JOURNAL_MISSING_RECOVERY_REQUIRED": "An on-chain nonce is ahead of the available journal. Locate the original identity and journal before sending.",
+    "EVM_REORG_RECOVERY_REQUIRED": "The previously recorded EVM receipt no longer matches the canonical chain. Recheck the receipt before continuing.",
+    "EVM_RPC_BEHIND": "The EVM RPC has not caught up with the saved block, receipt or nonce. Wait or use a synchronized endpoint with the original journal.",
+    "DKG_ABORT_CONFIRMATION_MISMATCH": "Use the fingerprint from the current DKG_REVIEW_REQUIRED result for the same ceremony and phase.",
+    "RECOVERY_REVERT_NOT_FINALIZED": "The journaled transaction needs a canonical, finalized revert receipt before acknowledgement.",
+    "TRANSACTION_PENDING": "The journaled EVM transaction is still awaiting confirmation. Check its receipt and gas price before retrying.",
+    "RPC_UNAVAILABLE": "The RPC endpoint could not confirm the journaled transaction. Retry with the same account and journal.",
+    "FROST_FINALIZATION_RESULT_MISMATCH": "The finalized session result differs from the expected aggregate signature or message. Check the session before proceeding.",
+    "FROST_FINALIZATION_REVERT_AWAITING_FINALITY": "A competing FROST finalization reverted. Waiting for finality before reconciling the account nonce.",
+    "EVM_PENDING_FEE_CAP_BELOW_BASE": "The signed transaction's fee cap is below the current base fee. Wait for it to fall or review a same-nonce replacement with bootstrap replace-pending.",
+    "EVM_REPLACEMENT_PENDING": "Waiting for confirmation of the original transaction or one of its same-nonce replacements.",
+    "EVM_REPLACEMENT_SEND_UNCERTAIN": "The signed replacement is saved, but the RPC did not confirm submission. Repeat with the same fingerprint or resume once it is mined.",
+    "EVM_REPLACEMENT_INPUTS_REQUIRED": "Use replace-pending with the original identity, RPC, transaction hash, two fee caps and a maximum total cost.",
+    "EVM_REPLACEMENT_NOT_JOURNALED": "The transaction is missing from this identity's journal. Use the identity and journal that sent it.",
+    "EVM_LEGACY_NONCE_INPUTS_REQUIRED": "Pass the original identity, source journal, RPC and transaction hash to bootstrap bind-legacy-nonce.",
+    "EVM_LEGACY_NONCE_SOURCE_REQUIRED": "Use bootstrap bind-legacy-nonce with the original durable FROST transaction journal.",
+    "EVM_LEGACY_NONCE_UNSUPPORTED": "Only existing legacy nonce reservations for a supported FROST coordinator call can be bound.",
+    "EVM_REPLACEMENT_UNSUPPORTED": "This journaled transaction is outside the supported replacement paths. Check the recovery instructions for its operation type.",
+    "EVM_REPLACEMENT_NOT_PENDING": "The journal does not show a replaceable pending transaction. Resume the original operation to reconcile it first.",
+    "EVM_REPLACEMENT_BUDGET_REQUIRED": "Specify the fee caps, maximum cost and any gas limit as positive integers.",
+    "EVM_REPLACEMENT_BUDGET_EXCEEDED": "The replacement exceeds the approved gas limit, fee caps or maximum total cost.",
+    "EVM_REPLACEMENT_BASE_FEE": "The replacement fee cap is below the current base fee plus tip. Review the fee caps again.",
+    "EVM_REPLACEMENT_FEE_INCREASE": "Raise both fee caps over the previous attempt and preserve at least its gas limit.",
+    "EVM_REPLACEMENT_FUNDING": "The sending account balance cannot cover the reviewed replacement cost.",
+    "EVM_REPLACEMENT_GAS_LIMIT": "The replacement gas limit is below the current estimate for the same call.",
+    "EVM_REPLACEMENT_FINGERPRINT": "The replacement parameters differ from the reviewed fingerprint. Prepare a new review before sending.",
+    "EVM_REPLACEMENT_NONCE_CONFLICT": "The account nonce no longer matches the journaled attempts. Reconcile the original transaction before sending.",
+    "EVM_REPLACEMENT_RECONCILE_FIRST": "Resume the original operation so it records which transaction mined, then acknowledge the finalized revert.",
+    "EVM_REPLACEMENT_APPROVAL_EXPIRED": "The call's approval deadline has passed. Check the session before recovering this nonce.",
+    "ETHEREUM_TRANSACTION_GAS_LIMIT": "The gas estimate exceeds the operation's configured limit. Review the gas budget before sending.",
+    "BITCOIN_RPC_FAILED": "The Bitcoin RPC request failed. Check connectivity and retry with the same journal and batch.",
+    "BITCOIN_RPC_REJECTED": "The Bitcoin node rejected the RPC request. Check node readiness and the public RPC error code in debug output.",
+    "BITCOIN_OBSERVATION_UNAVAILABLE": "Bitcoin payment evidence is temporarily unavailable. Retry observation of the same batch.",
+    "BITCOIN_PAYMENT_DEPTH_PENDING": "The current Bitcoin observation has insufficient depth. Retry with the same batch and journal after the node catches up.",
+    "ZK_OBSERVATION_CORE_BEHIND": "The current Bitcoin RPC view is behind the saved chainwork. Wait for a current view and reuse the same journal.",
+    "PAYMENTS_PAUSED_FOR_RECOVERY": "Bitcoin payment verification is paused. Use btc-recover with the affected batch and its original journal.",
+    "CREATE_SIMULATION_REJECTED": "The withdrawal deployment simulation failed. Review its current chain state and gas constraints.",
+    "ConnectionError": "The RPC connection failed. Check the endpoint and try again.",
+    "Timeout": "The request timed out. Retry with the same operation ID or journal.",
+    "HTTPError": "The RPC server rejected the HTTP request. Check the endpoint and authorization.",
+    "ValueError": "The SDK could not validate an input or on-chain state. Use --debug to locate the failing check.",
+    "RuntimeError": "The SDK could not complete the operation. Use --debug to locate the failing step.",
+}
+
+
+def participant_message(code):
+    """Return maintained public text without formatting provider exceptions."""
+    return _MESSAGES.get(code, "The operation could not continue. Review the error code and run with --debug for the failing check.")
+
+
+def participant_failure(exc):
+    from .transaction_wait import TransactionPending, TransactionRecoveryRequired
+
+    if isinstance(exc, (TransactionPending, TransactionRecoveryRequired)):
+        code = participant_exception_code(ValueError(exc.result.get("reason")))
+        if code == "ValueError":
+            code = exc.result["status"]
+        return dict(status="ERROR", code=code, message=exc.result["message"])
+    code = participant_exception_code(exc)
+    return dict(status="ERROR", code=code, message=participant_message(code))

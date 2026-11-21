@@ -1,8 +1,0 @@
-{
-  "observed_unix": 1793306556.040948,
-  "fields": "pid ppid elapsed cpu_time cpu_percent rss_kib executable",
-  "processes": [
-    "23138 23129       13:06  75:06.57 661.2 1145296 /private/tmp/satoshifi-risc0-3.0.3/r0vm"
-  ],
-  "scope": "Point-in-time observation, not a full performance benchmark"
-}

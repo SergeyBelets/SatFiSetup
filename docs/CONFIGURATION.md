@@ -15,9 +15,16 @@ Each participant needs its own Core/RPC, reviewed worker config, identity, priva
 guest image agree across participants; private paths, local proof keys, caches
 and transaction journals stay with their owner. Ready receipts and working
 inputs/journals are not deployment inputs supplied by the distributor.
-`prepare` / `prove` and default worker `run` compute locally without transactions.
-The designated publisher explicitly uses `publish` or `run --boundary all` for
-the service loop. The local prover has macOS arm64 and Linux/WSL2 x86-64
+`frost-signer zk-worker run --boundary prepare` follows queued requests and
+heartbeat needs and prepares transition data. Use `--once` for a single pass.
+Default `run` computes proofs locally. `run --boundary export --bundle-file FILE`
+computes one transition and writes a public ZIP. For `verify-bundle`, peers can
+use a separate JSON with `version: "1"`, `chain_id`, `evm_rpc`, `evm_confirmations`,
+`bitcoin_policy`, and `zk_state` from their reviewed deployment and own EVM RPC.
+Only the designated publisher
+uses `publish` or `run --boundary all` for transactions. See the [worker
+runbook](ZK_SPV_WORKER.md) for roles, configuration and archive verification.
+The local prover has macOS arm64 and Linux/WSL2 x86-64
 backends. Follow the [Linux prover setup](ZK_PROVER_LINUX.md) for pinned tools,
 Docker and isolation probes. Linux ARM64 is unsupported for full proving.
 Fresh-proof acceptance and physical WSL testing remain pending; qualification

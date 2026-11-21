@@ -10,6 +10,12 @@
 выбирает сети, create/reuse, confirmations, имена токенов, пороги, комиссии и
 дополнительный стартовый APY из собственного USD-бюджета.
 
+Для `income_model=in-kind` конфигуратор выдаёт ULR policy V3. Она создаёт
+переводимый S, BTC-резерв, свой стейкинг и DAO каждой конфедерации. Она
+использует `setup invite --ulr-policy FILE` и отдельную custody policy.
+Маршрут с общим стейкингом, конвертером и family/fee reserve ниже описывает
+прежний профиль. [Bootstrap и эксплуатация V3](CONFEDERATION_DAO_IN_KIND.md).
+
 The signed [ULR bootstrap profile](ULR_BOOTSTRAP.md) replaces the legacy per-confederation
 CGOV economic graph with one fixed 10m governance-token issue, common staking/snapshots,
 confederation treasuries, candidacy and delegated voting. Pass `setup invite --ulr-policy FILE`;
@@ -39,10 +45,11 @@ field retain their original roster. Editing a local profile does not upgrade
 an enrolled invitation or deployed contract.
 
 The policy may pin existing source federation graphs before enrollment.
-`BitcoinCustodyTransfer` locks source MP in the original escrow and issues
-locally backed CS only after source burn/payment settlement and destination
-SPV acceptance. Directly adding foreign-custody MP to the destination pool
-is rejected. See [custody transfer and operator commands](BITCOIN_CUSTODY_TRANSFER.md).
+Both gateway versions lock source MP in the original escrow. Source
+settlement burns MP, and destination SPV verifies receipt of the backing.
+`BitcoinCustodyTransferV2` then issues S against the accepted Bitcoin output.
+The earlier `BitcoinCustodyTransfer` issues CS through local MP. See
+[custody transfer and operator commands](BITCOIN_CUSTODY_TRANSFER.md).
 
 First use with only participant addresses: [on-chain onboarding](FIRST_DKG_ONCHAIN.md).
 All new invitations are V6. Choose `--ethereum-network mainnet|sepolia|local`
@@ -245,10 +252,83 @@ private journals for exact replay.
 
 For a standalone mined revert, acknowledge the consumed nonce with
 `bootstrap acknowledge-revert --identity-file "$IDENTITY" --rpc "$RPC" --tx-hash "$TX_HASH"`.
-The failed operation remains failed in its source journal. For a successful
-receipt stopped by a postcondition read, use
+Use the identity that sent the transaction. The command verifies the finalized
+revert and confirms that the account consumed its nonce. The failed operation
+remains failed in its source journal.
+
+FROST callers check the session immediately before sending `finalizeSession`.
+Two transactions can still enter a block together. If another signer finalized
+the exact result, the losing signer can continue after its revert is final.
+The SDK verifies the journal, the nonce and the identical on-chain message
+and aggregate. A regular revert still requires the receipt and the acknowledgement
+above. A retry of an executed operation returns `ALREADY_EXECUTED` after matching
+the operation hash, target and signing epoch against the confirmed state.
+
+For a historical FROST coordinator send with a missing source binding, use
+the original private signer journal, typically `<identity file>.transactions.sqlite`.
+The command verifies the exact signed transaction in that journal and the
+coordinator's runtime at a canonical finalized block on public EVM chains.
+It records the binding locally without sending a transaction. Then resume with
+the original command, journal and DKG. Resume checks the session outcome.
+For a still-pending coordinator call, the binding also allows a fee review.
+
+```sh
+frost-signer bootstrap bind-legacy-nonce --identity-file "$IDENTITY" \
+  --rpc "$RPC" --tx-hash "$TX_HASH" --source-journal "$STATE"
+```
+
+For a successful receipt stopped by a postcondition read, use
 `bootstrap recheck --deployment "$DEPLOYMENT_ID" --state "$LOCAL/bootstrap.sqlite" --step "$STEP_ID"`.
 Then run `resume` to check the postconditions again.
+
+### Replacing a pending EVM call
+
+[Recovery diagrams for signers and operators](RECOVERY.md).
+
+`EVM_PENDING_FEE_CAP_BELOW_BASE` on mainnet or Sepolia means the signed
+transaction is waiting at its existing nonce. Use the original identity and
+a synchronized RPC on the same chain to review the fee cap. Set the two EIP-1559 caps and the maximum
+total cost in wei. The first command calculates `worst_case_wei` as the new gas
+limit times the fee cap plus the value sent. It returns `EVM_REPLACEMENT_REVIEW`
+and a fingerprint for those exact terms.
+
+```sh
+frost-signer bootstrap replace-pending --identity-file "$IDENTITY" --rpc "$RPC" \
+  --tx-hash "$TX_HASH" --max-fee-per-gas-wei "$FEE_CAP_WEI" \
+  --max-priority-fee-per-gas-wei "$TIP_CAP_WEI" --max-cost-wei "$MAX_COST_WEI"
+```
+
+Check the chain, sender, nonce, target, `data_hash` and `worst_case_wei`.
+Repeat the command with the same arguments and
+`--confirm-replacement "$REPLACEMENT_FINGERPRINT"` to sign and send.
+Optional `--gas-limit` belongs in both commands. The SDK checks it against the
+current estimate. On mainnet the original transaction uses the configured fee
+and priority caps. For an increase, the operator normally needs to update both
+`SATOSHIFI_MAX_FEE_PER_GAS_WEI` and `SATOSHIFI_MAX_PRIORITY_FEE_PER_GAS_WEI` in
+the replacement shell. Keep `SATOSHIFI_MAX_TX_GAS` and the maximum total cost
+within the approved budget. Each increase requires operator confirmation. The
+replacement keeps the sender, chain, nonce, destination, call data, value and
+access list. It reuses the existing DKG. The original and replacement hashes remain
+in the journal. Resume the original command to follow the canonical receipt.
+On mainnet and Sepolia the winning receipt needs both the configured
+confirmation depth and consensus finality. Local chain ID `31337` uses the
+configured depth. On `EVM_REPLACEMENT_SEND_UNCERTAIN` repeat `replace-pending`
+with the same parameters and fingerprint to resend the saved candidate. A
+different fee requires a new review and confirmation.
+
+The command supports pending EIP-1559 FROST signer calls and eligible serial
+calls journaled by the updated SDK. For other old calls without the original
+fee opt-in, use manual acknowledgement if they ultimately revert. Grouped CREATE,
+parallel calls and workers with their own budget ledger have separate recovery
+paths. If the RPC pending nonce falls below an earlier replacement's reserved
+nonce floor, a grouped bootstrap waits and reports the replacement hash.
+On Sepolia, an older journal that recorded a winner before consensus finality
+waits in `CONFIRMING` while the recorded block is still canonical.
+If the winning transaction reverts, first resume the
+original command to reconcile the receipt, then run `acknowledge-revert`.
+This closes the nonce and leaves the operation failed. If gas estimation
+stopped the call before signing, review the configured gas limit and retry
+the original call.
 
 `flow bootstrap` polls this same journal; `flow dkg` runs the applicable local
 role states and skips custody roles for the representative. They preserve explicit `dkg sign-evm` intent review and separate custodian
@@ -263,17 +343,28 @@ DKG and approval waits return partial public manifests and
 completed deployment. Use the manifest's registry/coordinator, ceremony inputs,
 and stored operation hash/session to run the separate participant CLI processes.
 All participants must see the exact public intent and independently reproduce its
-on-chain helper hash. Resume after finalization or custodian approval. The
+on-chain helper hash. If the FROST threshold of verified shares was reached
+before the deadline, the bootstrap can still wait for finalization after it.
+Resume after finalization or custodian approval. The
 builder deliberately does not own participant credentials or auto-approve.
 
 Public read outputs and session IDs from receipt events are frozen in the journal.
 A transaction's exact signed bytes and hash are durably committed before sending.
 A separate per-identity nonce journal serializes signing across deployments.
+Before a new signature, its latest confirmed success, completed recoveries
+and unresolved reservations establish the minimum usable nonce.
 Explicit independent groups of at most 8 deploy/call steps may broadcast before a
 shared confirmation barrier. Dependent constructors and calls cannot consume
 outputs until all receipts and postconditions in the group are verified.
-A crash resumes the same transaction; status zero never advances a step. Missing
-or changed canonical receipts trigger recovery. Verified manifests include ABI
+A crash resumes the same transaction. A receipt with status zero stops the step.
+If the RPC's pending nonce is below the saved lower bound or it cannot yet
+confirm a saved block or receipt, the command returns `AWAITING_EVM_RPC`.
+Use `--rpc` on `bootstrap resume` or `flow bootstrap` to select another
+synchronized endpoint on the same chain. The SDK checks saved anchors with
+the new endpoint and preserves the deployment and journals. A conflicting
+canonical hash requires recovery. [RPC recovery](RECOVERY.md#5-отставание-rpc-участников).
+
+Verified manifests include ABI
 artifact hashes, runtime hashes, receipt block/hash, constructor outputs and
 pending steps. Keep the journal and nonce journal together; do not run multiple
 copies of an EVM identity with independent nonce journals.

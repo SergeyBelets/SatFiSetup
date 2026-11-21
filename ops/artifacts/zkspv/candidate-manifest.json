@@ -1,0 +1,487 @@
+{
+  "schema_version": 1,
+  "specification_version": "2.16",
+  "recorded_on": "2026-10-27",
+  "status": "FAIL",
+  "production_ready": false,
+  "status_scope": "Unmodified candidate is not a complete compatible SatoshiFi production backend.",
+  "reference_implementation": {
+    "repository": "https://github.com/chainwayxyz/citrea",
+    "crate": "bitcoin-da",
+    "version": "2.8.0",
+    "type": "BitcoinVerifier",
+    "method": "verify_header_chain",
+    "statement": "Bitcoin mainnet linear header transition to LatestDaState inside existing RISC Zero light-client-proof path"
+  },
+  "audit_revisions": {
+    "sigma_scope": "ee7505a57ab2daefaded90f6148c3aa29d68fef2",
+    "sigma_fixes": "650ed94df1672bcbf4dbce760ea536463526befc",
+    "cantina_scope": "738e68ee8321eb2e5d78e2f94dfe0b99b4957dd2",
+    "cantina_post_fix": null
+  },
+  "integration_revision": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "satoshifi_base_commit": "733831ec48e3df96a2356623edf17771f64ba16d",
+  "satoshifi_final_commit": null,
+  "satoshifi_final_commit_reason": "Working-tree implementation is not committed; base identity is not a resulting commit.",
+  "upstream_baseline": {
+    "source_modified": false,
+    "build": "build-manifest.json",
+    "tests": "evidence/upstream-header-tests-native.log",
+    "proof_status": "UNKNOWN",
+    "subsequent_native_test_evidence": "rust/zkspv/header-qualification/original-native-report.json"
+  },
+  "reuse_map": [
+    {
+      "rule": "header_parsing_hash",
+      "source_symbol": "crates/bitcoin-da/src/spec/header.rs:BitcoinHeaderWrapper::deserialize_reader,HeaderWrapper::verify_hash",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "REUSED_UNCHANGED",
+      "used_in_production": false,
+      "local_change": null,
+      "review_status": "UNKNOWN",
+      "reason": "Unchanged pinned parsing/hash code exercised by original and subsequent native suites; production qualification remains open.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": "rust/zkspv/header-qualification/original-native-report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "pow_bits",
+      "source_symbol": "crates/bitcoin-da/src/verifier.rs:verify_target_hash,bits_to_target,target_to_bits",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "ADAPTED_UPSTREAM",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/patches/0002-compact-encoder-boundaries.patch",
+        "rust/zkspv/header-qualification/0005-checked-compact-target.patch"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Compact encoder and guarded target corrections have local Core/native differential evidence; independent review remains open.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": "rust/zkspv/header-qualification/corrected-native-report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "retarget",
+      "source_symbol": "crates/bitcoin-da/src/verifier.rs:calculate_new_difficulty",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "ADAPTED_UPSTREAM",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/patches/0003-signed-retarget-timespan.patch"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Signed-timespan correction has historical/native differential evidence; independent review remains open.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": "rust/zkspv/header-qualification/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "mtp",
+      "source_symbol": "crates/bitcoin-da/src/verifier.rs:verify_timestamp",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "REUSED_UNCHANGED",
+      "used_in_production": false,
+      "local_change": null,
+      "review_status": "UNKNOWN",
+      "reason": "Unchanged pinned MTP is exercised by native tests; upper time policy is a separate locally tested application component.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": "rust/zkspv/time-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "work",
+      "source_symbol": "crates/bitcoin-da/src/verifier.rs:target_to_work,BitcoinVerifier::verify_header_chain_mainnet",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "ADAPTED_UPSTREAM",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/patches/0001-target-one-work.patch",
+        "rust/zkspv/header-qualification/0004-checked-chainwork.patch"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Target-one and checked-chainwork corrections have local Core/native evidence; independent review remains open.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": "rust/zkspv/header-qualification/corrected-native-report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "checkpoint",
+      "source_symbol": "crates/bitcoin-da/src/verifier.rs:BitcoinVerifier::verify_header_chain",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "NEW_INTEGRATION",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/checkpoint-policy/src/checkpoint.rs",
+        "web3/contracts/src/core/BitcoinCheckpoint.sol"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Explicit mainnet checkpoint factory and native initial context are locally qualified; production checkpoint selection/authentication and review remain open.",
+      "audit_scope": null,
+      "test": "rust/zkspv/checkpoint-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "fork_choice_lca",
+      "source_symbol": null,
+      "commit": null,
+      "classification": "NEW_INTEGRATION",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/fork-policy/src/lib.rs"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Local fork/LCA/context policy ports the existing relay algorithm; new integration is not covered by upstream audits.",
+      "audit_scope": null,
+      "test": "rust/zkspv/fork-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS",
+      "subsequent_v2_evidence": "rust/zkspv/resume-policy/report.json",
+      "v2_scope": "Separate new authenticated-index/exact-LCA resume code; V1 evidence unchanged, independent review required"
+    },
+    {
+      "rule": "reorg_halt",
+      "source_symbol": null,
+      "commit": null,
+      "classification": "NEW_INTEGRATION",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/fork-policy/src/lib.rs"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Local 100/101 reorg, permanent halt and safe-prefix policy is tested; complete proof/state integration and independent review remain open.",
+      "audit_scope": null,
+      "test": "rust/zkspv/fork-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS",
+      "subsequent_v2_evidence": "rust/zkspv/resume-policy/report.json",
+      "v2_scope": "Separate new authenticated-index/exact-LCA resume code; V1 evidence unchanged, independent review required"
+    },
+    {
+      "rule": "canonical_history_membership",
+      "source_symbol": null,
+      "commit": null,
+      "classification": "NEW_INTEGRATION",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/fork-policy/src/history.rs",
+        "web3/contracts/src/core/BitcoinCanonicalHistory.sol"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "Persistent branch history, membership and full replay have local evidence; bounded proving witnesses, availability and independent review remain open.",
+      "audit_scope": null,
+      "test": "rust/zkspv/fork-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS",
+      "subsequent_v2_evidence": "rust/zkspv/resume-policy/report.json",
+      "v2_scope": "Separate new authenticated-index/exact-LCA resume code; V1 evidence unchanged, independent review required"
+    },
+    {
+      "rule": "public_outputs",
+      "source_symbol": null,
+      "commit": null,
+      "classification": "NEW_INTEGRATION",
+      "used_in_production": false,
+      "local_change": [
+        "rust/zkspv/transition-policy/src/transition.rs",
+        "rust/zkspv/transition-policy/journal-schema.json",
+        "web3/contracts/src/core/BitcoinTransition.sol"
+      ],
+      "review_status": "UNKNOWN",
+      "reason": "V1 complete transition journal and matching EVM checks are locally qualified; exact-byte real proof/image-ID authentication and production state integration are absent.",
+      "audit_scope": null,
+      "test": "rust/zkspv/transition-policy/report.json",
+      "local_test_status": "LOCAL_COMPONENT_PASS"
+    },
+    {
+      "rule": "recursion",
+      "source_symbol": "crates/light-client-prover/src/circuit/mod.rs:LightClientProofCircuit::run_circuit",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "classification": "UNCONFIRMED",
+      "used_in_production": false,
+      "local_change": null,
+      "review_status": "UNKNOWN",
+      "reason": "Reference recursion binds Citrea L2 context and has no demonstrated SatoshiFi proof here.",
+      "audit_scope": "Sigma/Cantina older revisions only; see distinct audit_revisions",
+      "test": null
+    },
+    {
+      "rule": "evm_verifier",
+      "source_symbol": "contracts/src/groth16/RiscZeroGroth16Verifier.sol:verify,_verifyIntegrity",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "classification": "UNCONFIRMED",
+      "used_in_production": false,
+      "local_change": null,
+      "review_status": "UNKNOWN",
+      "reason": "Official 3.0.1 sources pinned; actual program/circuit-control binding and EVM proof not exercised.",
+      "audit_scope": null,
+      "test": null
+    }
+  ],
+  "proof_system": {
+    "name": "RISC Zero",
+    "resolved_version": "3.0.3",
+    "local_execution_mode": null,
+    "proof_format": null,
+    "intended_evm_format": "RISC Zero Groth16 receipt seal",
+    "program_id": null,
+    "guest_artifact_sha256": null,
+    "public_statement_schema": "rust/zkspv/resume-transition/journal-schema.json",
+    "public_statement_status": "Experimental receipts independently verified for append/conditional retarget and separate TEST_ONLY policy models; no production image selected",
+    "historical_public_statement_schema_v1": "rust/zkspv/transition-policy/journal-schema.json"
+  },
+  "authority_model": {
+    "selected_production_model": null,
+    "reason": "No enabled SatoshiFi ZK path; official fixed verifier candidate does not provide program/policy authorization by itself."
+  },
+  "initial_trust": {
+    "checkpoint": null,
+    "network": "bitcoin-mainnet",
+    "checkpoint_authentication": null,
+    "reason": "Must provide explicit authenticated checkpoint and timestamp context; upstream INITIAL_MAINNET_STATE cannot be inherited."
+  },
+  "data_availability": {
+    "header_fixture_sources": "Pinned upstream archive",
+    "production_witness_store": null,
+    "recovery_test": "rust/zkspv/checkpoint-policy/report.json",
+    "recovery_scope": "V1 complete replay and V2 local archive reconstruction/witnesses tested; durable production archive service and availability operations absent",
+    "bounded_resume_evidence": "rust/zkspv/resume-policy/report.json"
+  },
+  "deployments": [],
+  "operational_history": {
+    "status": "UNKNOWN",
+    "evidence": null,
+    "reason": "Upstream product history is not established evidence of the selected commit and new SatoshiFi application."
+  },
+  "gates": {
+    "source_identity": {
+      "status": "PASS",
+      "reason": "Exact archive downloaded; 45 retained files individually hashed.",
+      "evidence": "upstream-lock.json"
+    },
+    "audit_identity_scope": {
+      "status": "PASS",
+      "reason": "Both audit PDF hashes match specification; Sigma scope/fix and Cantina scope are separate; post-scope consensus changes reviewed as changes.",
+      "evidence": "selection-report.md"
+    },
+    "upstream_build": {
+      "status": "PASS",
+      "reason": "Unchanged bitcoin-da library compiled with exact Rust 1.88.0 and --locked.",
+      "evidence": "evidence/upstream-build-pinned.log"
+    },
+    "upstream_native_tests": {
+      "status": "UNKNOWN",
+      "reason": "Native-feature test dependency build exited 101 with ENOSPC; original header tests did not execute. Task-created build/cache directories cleaned after preserving logs.",
+      "evidence": "evidence/upstream-header-tests-native.log"
+    },
+    "upstream_real_proof": {
+      "status": "UNKNOWN",
+      "reason": "No standalone header receipt/witness workflow completed; retained .bin resources are R0BF guest binaries, not receipts.",
+      "evidence": null
+    },
+    "consensus_compatibility": {
+      "status": "FAIL",
+      "reason": "Unchanged arithmetic has observed incompatibilities and misses required policy; no patched core is claimed.",
+      "evidence": "compatibility-matrix.csv"
+    },
+    "license_compatibility": {
+      "status": "UNKNOWN",
+      "reason": "GPL dependencies/source-specific verifier terms retained; project distribution/acceptance policy is unspecified.",
+      "evidence": "license-manifest.json"
+    },
+    "security_maturity": {
+      "status": "UNKNOWN",
+      "reason": "No project acceptance policy or verified operational history for the selected snapshot/new SatoshiFi path.",
+      "evidence": null
+    },
+    "integration_review": {
+      "status": "UNKNOWN",
+      "reason": "Experimental guest/history/state code and local proof evidence exist; independent review and complete production qualification remain outstanding.",
+      "evidence": null
+    },
+    "self_hosted_evm_proof": {
+      "status": "PASS_LOCAL",
+      "reason": "Recorded isolated composite/succinct/Groth16 run on native ARM64 and positive ordinary local EVM verification; production workload/acceptance remains separate.",
+      "evidence": "rust/zkspv/groth16-integration/report.json"
+    },
+    "local_proof_scenarios": {
+      "status": "PASS_LOCAL_WITH_TEST_ONLY_MODELS",
+      "reason": "Unchanged mainnet retarget plus distinct synthetic-work fork/halt image; full mainnet fork/halt qualification remains open",
+      "evidence": "rust/zkspv/proof-scenarios/report.json"
+    }
+  },
+  "blockers": [
+    "QUALIFICATION_CONSENSUS_DIFFERENCES",
+    "LICENSE_ACCEPTANCE_UNKNOWN",
+    "SECURITY_ACCEPTANCE_POLICY_UNKNOWN",
+    "CHECKPOINT_AND_TARGET_UNKNOWN",
+    "INCOMPLETE_REAL_PROOF_SCENARIO_COVERAGE",
+    "INCOMPLETE_PRODUCTION_STATE_CONSUMER_INTEGRATION"
+  ],
+  "decision": "Preserve ordinary SPV; continue independent local integration. No new consensus replacement or automatic Rift fallback.",
+  "local_integration_updated_on": "2026-10-30",
+  "experimental_resume_format": {
+    "version": 2,
+    "classification": "NEW_INTEGRATION",
+    "used_in_production": false,
+    "status": "LOCAL_COMPONENT_PASS",
+    "evidence": "rust/zkspv/resume-policy/report.json",
+    "reason": "Bounded V2 context/LCA witnesses, ordered log, separate 1216-byte V2 journal, independent EVM state commitment checks and bounded runtime-neutral input. No activated guest/state contract or automatic V1 migration.",
+    "review_status": "UNKNOWN",
+    "journal_evm_guest_integration": "PASS_LOCAL_ONE_APPEND",
+    "journal_evm_evidence": "rust/zkspv/resume-transition/report.json",
+    "journal_evm_status": "LOCAL_COMPONENT_PASS",
+    "runtime_neutral_input_status": "LOCAL_COMPONENT_PASS",
+    "compiled_real_guest": "LOCAL_GUEST_BUILD_PASS",
+    "real_proof": "PASS_LOCAL_ONE_APPEND",
+    "state_adapter_evidence": "rust/zkspv/state-adapter/report.json",
+    "real_proof_evidence": "rust/zkspv/groth16-integration/report.json",
+    "state_proof_evidence": "rust/zkspv/state-proof-integration/report.json"
+  },
+  "experimental_state_adapter": {
+    "version": 2,
+    "classification": "NEW_INTEGRATION",
+    "status": "LOCAL_COMPONENT_PASS",
+    "used_in_production": false,
+    "evidence": "rust/zkspv/state-adapter/report.json",
+    "implemented_relay_profile": "PROOF_ONLY_V1",
+    "production_relay_profile": "NOT_SELECTED",
+    "state": "ZkBitcoinStateV2",
+    "adapter": "ZkSpvAdapter",
+    "proof_verifier": "Constructor-created pinned RiscZeroGroth16Verifier with ControlID constants; no injection or upgrade path",
+    "checkpoint": "Validated raw checkpoint; V2 initial roots derived in constructor and compared with Rust at three mainnet checkpoints",
+    "freshness": "Useful canonical-work progress required; both EVM acceptance age and canonical tip age enforced",
+    "cache": "Canonical-root-bound; re-materialize after every root change, including append",
+    "local_receipts": "Actual deployment-bound Groth16 accepted on disposable Anvil; wrong state/replay/modified journal rejected; header materialization and Fresh expiry passed",
+    "positive_test_boundary": "Separate real-proof local acceptance for one mainnet append; earlier component mock-based tests retain their original scope",
+    "consumer_bootstrap_integration": "IMPLEMENTED_LOCAL_MAINNET_ZK_PROFILE",
+    "frost_relay_authorization": "NOT_IMPLEMENTED",
+    "review_status": "UNKNOWN",
+    "real_proof_status": "LOCAL_STATE_PROOF_PASS",
+    "real_proof_evidence": "rust/zkspv/state-proof-integration/report.json",
+    "consumer_bootstrap_scope": "Signed Bitcoin policy V2 selects the mainnet proof-only backend; V1 mainnet/testnet4 and regtest remain supported. Production-code bootstrap slice, consumer graph, genuine mainnet Groth16 and real 3-of-4 DKG/FROST verified locally. No live Core, public deployment or mainnet mint qualification.",
+    "consumer_bootstrap_evidence": "ops/artifacts/zkspv/bootstrap-integration/report.json"
+  },
+  "experimental_guest": {
+    "classification": "NEW_INTEGRATION",
+    "status": "LOCAL_GUEST_BUILD_PASS",
+    "used_in_production": false,
+    "evidence": "rust/zkspv/guest-integration/report.json",
+    "program_image_id": "a4c00c90dcc2600acd756df56ae4915e2180d0ebacc20c157382ec184fe0adea",
+    "program_sha256": "e68b953a63d9f72557ed292253c605548c73cb2dae63e1e2cda94fd41c482a13",
+    "user_elf_sha256": "71cc502c87bb25d499efdc9726ac44c5ff2aacbf16b838502c13df931f83b319",
+    "network": "bitcoin-mainnet",
+    "native_tests_debug_and_release": 16,
+    "upstream_files": 887,
+    "external_dependencies_matching_upstream": {
+      "Cargo.lock": 148,
+      "guest/Cargo.lock": 220,
+      "image-tool/Cargo.lock": 142
+    },
+    "local_proof_status": "LOCAL_STARK_PASS",
+    "local_proof_evidence": "rust/zkspv/guest-integration/evidence/local-proof/proof-report.json",
+    "groth16": "PASS_LOCAL_ARM64",
+    "evm_positive_proof": "PASS_STANDALONE_VERIFIER",
+    "review_status": "UNKNOWN",
+    "local_proof_retry_report": "ops/artifacts/zkspv/guest-proof-extended-report.json",
+    "receipt_sha256": "a3bbd411cb7d24b3d90358278015fae43a85853bbdaa383d73cf3248216cdf66",
+    "receipt_kind": "composite",
+    "groth16_evidence": "rust/zkspv/groth16-integration/report.json",
+    "groth16_receipt_sha256": "4c60c72d451534f88b268793f27b2441bc1b7d094de8bfeec53747b3581fe97f",
+    "state_transition_acceptance": "PASS_LOCAL",
+    "state_transition_evidence": "rust/zkspv/state-proof-integration/report.json",
+    "retarget_proof_status": "PASS_MAINNET_CONDITIONAL_TRANSITION",
+    "retarget_proof_evidence": "rust/zkspv/proof-scenarios/report.json"
+  },
+  "experimental_proof_scenarios": {
+    "status": "LOCAL_SCENARIO_PROOFS_PASS",
+    "evidence": "rust/zkspv/proof-scenarios/report.json",
+    "used_in_production": false,
+    "mainnet_guest_unchanged": true,
+    "mainnet_fork_halt_qualified": false,
+    "scenarios": {
+      "retarget-34272": {
+        "status": "PASS_MAINNET_CONDITIONAL_TRANSITION",
+        "image_id": "a4c00c90dcc2600acd756df56ae4915e2180d0ebacc20c157382ec184fe0adea",
+        "starting_state_scope": "Native replay of real mainnet history from checkpoint 32256; conditional transition proof, not a recursive proof of that preceding history or an EVM state update"
+      },
+      "fork-work-reorg100": {
+        "status": "PASS_TEST_ONLY",
+        "image_id": "91cbdff8eaa0f6e2968e8cdce61d1be57a2aadd75c1f34e0f5f0a518de16a948",
+        "starting_state_scope": "Synthetic work/headers and native-constructed starting state; genuine proof of unchanged bounded policy under a TEST_ONLY image, not Bitcoin PoW"
+      },
+      "halt101-prefix": {
+        "status": "PASS_TEST_ONLY",
+        "image_id": "91cbdff8eaa0f6e2968e8cdce61d1be57a2aadd75c1f34e0f5f0a518de16a948",
+        "starting_state_scope": "Synthetic work/headers and native-constructed starting state; genuine proof of unchanged bounded policy under a TEST_ONLY image, not Bitcoin PoW"
+      }
+    },
+    "regression_tests": 25
+  },
+  "experimental_regtest_deposit": {
+    "status": "LOCAL_REGTEST_ZK_DEPOSIT_PASS",
+    "production_ready": false,
+    "network": "regtest",
+    "evidence": "rust/zkspv/deposit-integration/report.json",
+    "guest_image_id": "12c03eb130e4cdc5946ee7fcb09b6108ceac00d659f818a89439b52d3cbc4eca",
+    "mainnet_guest_unchanged": true,
+    "mainnet_consumer_qualified": false,
+    "state": "TestRegtestDepositState",
+    "adapter": "ZkSpvAdapter",
+    "consumer": "MiningPoolV1",
+    "confirmations": 6,
+    "satoshis": 1000000,
+    "minted_mp_base_units": 10000000000000000,
+    "mint_gas": 353349,
+    "source_bound": true,
+    "regression_tests": 30,
+    "scope": "Separate TEST_ONLY regtest linear guest/state; ordinary adapter, deposit registry and MiningPoolV1; actual Core transactions and real DKG/FROST"
+  },
+  "experimental_consumer_worker": {
+    "status": "IMPLEMENTED_PRIVATE_LOCAL_WORKER",
+    "production_ready": false,
+    "evidence": "ops/artifacts/zkspv/worker-integration/report.json",
+    "runbook": "docs/ZK_SPV_WORKER.md",
+    "mainnet_guest_unchanged": true,
+    "scope": "Durable private consumer inbox, Core inclusion validation, native witness/archive, pinned self-hosted prover stages, independent receipt verification, bounded journaled EVM state/materialization transactions and participant retry hooks.",
+    "test_boundary": "Real cached mainnet Groth16 automatically submitted on disposable EVM; simulated Core/prevalidated inbox. No new STARK or live consumer E2E in this run.",
+    "remaining": [
+      "Combined live Core/consumer fresh proving and full catch-up qualification",
+      "On-chain transport/payment activation and recovery qualification",
+      "Target operations, SLA/cost measurements and independent review"
+    ],
+    "service_funding_heartbeat_code": {
+      "status": "CODE_IMPLEMENTED_E2E_PENDING",
+      "evidence": "ops/artifacts/zkspv/worker-integration/service-code-report.json",
+      "voluntary_confederation_funding": true,
+      "combined_e2e_performed": false
+    },
+    "encrypted_transport_and_grouping": {
+      "status": "CODE_IMPLEMENTED_E2E_PENDING",
+      "evidence": "ops/artifacts/zkspv/worker-integration/transport-code-report.json",
+      "combined_e2e_performed": false
+    },
+    "admission_payment_permanent_archive": {
+      "status": "CODE_IMPLEMENTED_E2E_PENDING",
+      "evidence": "ops/artifacts/zkspv/worker-integration/automation-archive-report.json",
+      "mainnet_guest_program_unchanged": true,
+      "combined_e2e_performed": false
+    }
+  },
+  "experimental_address_crypto": {
+    "status": "CODE_IMPLEMENTED_QUALIFICATION_PENDING",
+    "evidence": "ops/artifacts/zkspv/worker-integration/address-input-code-report.json",
+    "profile": "BASE_POST_DKG_EVEN_Y__INTENT_TAPLEAF_V1",
+    "production_ready": false,
+    "ready": false,
+    "live_registry_mint_signer_enabled": false,
+    "combined_e2e_performed": false
+  },
+  "experimental_address_registry": {
+    "status": "CODE_IMPLEMENTED_QUALIFICATION_PENDING",
+    "evidence": "ops/artifacts/zkspv/worker-integration/address-registry-code-report.json",
+    "production_ready": false,
+    "ready": false,
+    "bootstrap_installed": false,
+    "live_address_client_enabled": false,
+    "live_generation_aware_signer_enabled": false,
+    "combined_e2e_performed": false,
+    "qualification_boundary": "Test-only qualification wrapper; real candidate remains QUALIFIED=false"
+  }
+}

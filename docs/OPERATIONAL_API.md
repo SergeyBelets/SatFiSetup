@@ -10,38 +10,95 @@ The policy contains `principals` (`sha256` of a high-entropy bearer token; `role
 
 `GET /health` is public. Other paths require `Authorization: Bearer …`. `GET /readiness` verifies recorded deployment receipts, their canonical block hashes, runtime code hashes and configured binding/role checks. `GET /metrics` returns operation counts by status. `/v1/operations`, `/v1/deployments`, and named `/v1/views/{name}` expose public state. Configure named views for DKG results, signing status, pool information, fee balances, withdrawal states, DAO reports, proposals and claimable balances. Each view includes EVM chain and Bitcoin network context; configure `units` with token address and decimals for financial getters.
 
-A write request only prepares an operation. An allowlisted action maps to a deployment, contract, artifact, and method. All ABI integer arguments, including array/tuple entries, are decimal strings. Example:
+A write request only prepares an operation. An allowlisted action maps to a
+deployment, contract, artifact, and method. Supply ABI integers as decimal
+strings, including values inside arrays and tuples.
 
 ```json
 {"action":"claim_dao","args":[["20742"]]}
 ```
 
-`POST /v1/operations` requires operator/admin and an `Idempotency-Key`. Keys are scoped to the action's deployment. Identical retries in that deployment return the same operation. A changed payload with the same key in that deployment returns 409. Unknown actions and reader writes are rejected. The body limit is 64 KiB. Credentials and request bodies are excluded from logs.
+`POST /v1/operations` requires the operator or admin role and an
+`Idempotency-Key`. The action selects the deployment. An identical retry in
+that deployment returns the same operation, including its current status.
+A changed payload with the same key in that deployment returns HTTP 409
+with `IDEMPOTENCY_CONFLICT`. Each deployment can use the same key independently.
+The request body limit is 64 KiB.
 
-When the same key exists in multiple visible deployments, append `?deployment=DEPLOYMENT_ID` to `GET /v1/operations/ID`. Use `--deployment DEPLOYMENT_ID` for worker `status` and `execute` in that case.
+`GET /v1/operations/ID` applies the current deployment and action allowlists
+before resolving the key. The saved action specification must match the current
+policy exactly. When multiple visible operations share the key, the response is
+HTTP 409 with `API_OPERATION_DEPLOYMENT_REQUIRED`. Retry with
+`?deployment=DEPLOYMENT_ID`, URL-encoded as needed. An invalid or blank selector
+returns HTTP 400 with `API_OPERATION_DEPLOYMENT_QUERY`. A lookup with no visible
+match returns HTTP 404.
 
-A separate local operator executes a prepared operation:
+A separate local operator executes a prepared operation. Use
+`--deployment DEPLOYMENT_ID` with `status` or `execute` to select its record.
 
 ```sh
-frost-signer ops execute --id CLAIM_ID --state ops/deployments.sqlite --identity-file /private/operator.json
-frost-signer ops status --id CLAIM_ID --state ops/deployments.sqlite
+frost-signer ops execute --deployment DEPLOYMENT_ID --id CLAIM_ID \
+  --state ops/deployments.sqlite --identity-file /private/operator.json
+frost-signer ops status --deployment DEPLOYMENT_ID --id CLAIM_ID \
+  --state ops/deployments.sqlite
 ```
 
-The 0600 identity contains an **EVM account key**, never a FROST share. Execution first verifies the deployment and uses the same durable transaction engine as bootstrap. Target-bound FROST authorization and custodian signatures must already exist where required by the contract. Failure records `RECOVERY_REQUIRED`; rerun reconciles the same signed transaction rather than allocating a replacement deployment.
+Use the operator's private `0600` EVM identity file. The worker verifies the
+deployment and checks that the target's verified artifact matches the prepared
+action. The contract enforces any required FROST authorization and custodian
+signatures. The worker serializes execution and status updates for each
+deployment and key. When another worker holds the operation lock, check its
+status after it finishes. If execution returns `AWAITING_EVM_RPC`, wait for
+the receipt, confirmed block or pending nonce. You can repeat `ops execute`
+with `--rpc "$EVM_RPC"` on a synchronized endpoint of the same chain.
+Keep the identity, deployment, key and journals. The SDK rechecks the saved
+anchors and retains signed transactions. Review `RECOVERY_REQUIRED` before
+retrying the same operation. [RPC recovery](RECOVERY.md#5-отставание-rpc-участников).
 
-The machine-readable contract is [openapi.json](openapi.json). API roles authorize preparation/execution intent; they never replace on-chain thresholds. Bearer secrets are not stored in the operations journal.
+Request and response schemas are in [openapi.json](openapi.json).
 
 API request IDs, status and events live in dedicated SQLite tables. A key that
 matches a deployment or bootstrap step ID can coexist with it in the same
 `--state` file. New executions use the sibling
 `<state filename>.api-execution.sqlite` for transaction recovery and share the
 identity's existing nonce lock. Include both databases in operator backups.
+If an execution has already started and its transaction journal is missing,
+restore the matching backup before retrying. The worker reports
+`API_OPERATION_EXECUTION_JOURNAL_MISSING` before any new transaction can be sent.
 
 Before upgrading, stop processes using the old SDK and back up the journal.
 Starting the upgraded API or running `frost-signer ops status --state JOURNAL --id ID`
-moves old API requests and their events atomically. Client IDs and statuses stay
-the same. A previously started execution resumes from its original transaction
-journal and keeps the original nonce binding.
+moves old API requests that still reside in the bootstrap tables along with their
+events in one SQLite transaction. The migration preserves client IDs and status.
+When a legacy request has an existing execution in the original journal, the
+worker verifies the saved profile digest and its runtime binding before resuming
+the same transaction and nonce. On `API_LEGACY_OPERATION_PROFILE_MISMATCH`,
+reconcile the original journal and deployment before retrying. A new scoped
+request always uses its own recovery record in the sibling execution journal.
+
+```mermaid
+flowchart TD
+    accTitle: Scoped Operational API requests and execution recovery
+    accDescr: The HTTP lookup resolves visible operations after policy checks. The local worker checks the target artifact and reconciles the transaction using the journal for that request.
+    PREPARE["POST operation<br/>Allowlisted action + Idempotency-Key"] --> KEY["Save request under deployment and key"]
+    KEY --> QUERY{"GET deployment selector valid?"}
+    QUERY -->|"Malformed or blank"| INVALID["400<br/>API_OPERATION_DEPLOYMENT_QUERY"]
+    QUERY -->|"Valid or omitted"| READ["Filter candidates by current policy"]
+    READ --> MATCH{"Visible matches"}
+    MATCH -->|"None"| MISSING["404"]
+    MATCH -->|"One"| PUBLIC["200<br/>Public request and result"]
+    MATCH -->|"Multiple"| SELECT["409<br/>Retry with deployment selector"]
+    KEY --> WORKER["Local ops execute<br/>Identify deployment and key"]
+    WORKER --> VERIFY["Verify deployment and target artifact"]
+    VERIFY --> JOURNAL{"Original execution for a legacy request?"}
+    JOURNAL -->|"Yes"| LEGACY["Verify saved profile digest<br/>and runtime binding"]
+    LEGACY -->|"Mismatch"| STOP["API_LEGACY_OPERATION_PROFILE_MISMATCH"]
+    LEGACY -->|"Valid"| SAVED{"Journal available if already started?"}
+    JOURNAL -->|"No"| NEW["Use scoped sibling execution journal"]
+    NEW --> SAVED
+    SAVED -->|"Missing"| RESTORE["Restore matching transaction journal"]
+    SAVED -->|"Available or first run"| EXECUTE["Reconcile saved transaction or execute<br/>Serialize status updates for the request"]
+```
 
 The journal is **private recovery state**, not a public export: bootstrap profiles
 can contain RPC access credentials, and pending steps contain signed transactions

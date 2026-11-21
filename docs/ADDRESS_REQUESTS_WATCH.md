@@ -203,12 +203,23 @@ of full blocks. An unavailable index or incomplete filter response produces
 cursor at the unverified range. Retry after the index is ready, or apply `"0"`
 to continue reading full blocks.
 
+If Core is behind the stored cursor and has no conflicting hash at a shared
+height, the scanner reports `WAITING_BITCOIN_RPC` and preserves the cursor
+and payment observations. Retry after Core reaches the stored height.
+A conflicting hash at a stored height starts the bounded rewind.
+[RPC lag and recovery](RECOVERY.md#5-отставание-rpc-участников).
+
 ```mermaid
 flowchart TD
     A["Apply launch config to the watch journal"] --> S{"RPC permitted?"}
     S -->|"Filter trust missing"| X["Use trusted HTTPS or loopback<br/>Or set height to 0 for full blocks"]
     S -->|"Full scan or trusted filters"| U["Refresh coverage<br/>Keep the rewind window and payment evidence"]
-    U --> B{"Historical range eligible for filters?"}
+    U --> O{"Saved hash differs at an available shared height?"}
+    O -->|"Yes"| Q["Rewind within the configured window"]
+    O -->|"No"| L{"Core behind the saved scan height?"}
+    L -->|"Yes"| P["WAITING_BITCOIN_RPC<br/>Keep cursor and observations"]
+    L -->|"No"| B{"Historical range eligible for filters?"}
+    Q --> B
     B -->|"Before configured height<br/>and outside the reorg window"| C["Core checks basic filters<br/>Check index and canonical end block"]
     B -->|"Genesis, full scan or recent blocks"| F["Read full blocks"]
     C -->|"Index or RPC error"| E["Keep cursor before the unverified range"]

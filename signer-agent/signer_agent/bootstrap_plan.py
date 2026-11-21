@@ -214,6 +214,7 @@ def build(config):
             ConfederationDAOStake=[("stakeToken", 0), ("custodianValidator", 1), ("CUSTODIAN_THRESHOLD", 2)],
             ConfederationDAOIncome=[("pool", 0), ("shareToken", 1), ("authorization", 2), ("staking", 3), ("decisions", 4)],
             ConfederationNFTPass=[("name", 0), ("symbol", 1), ("income", 2), ("priceSigner", 4)],
+            ConfederationBitcoinReserve=[("poolId", 0), ("deposits", 1), ("escrow", 2), ("confederationPool", 3)],
             BitcoinSigningBoard=[("batchRegistry", 0), ("maxPacketBytes", 1)])
 
     def deploy(name, art, *args, outputs=None):
@@ -738,7 +739,11 @@ def build(config):
     if custody_only:
         approve("require_local_custody", "escrow", "getRequireLocalCustodyOperationHash", ["$conf_pool"],
                 "requireLocalCustody", ["$conf_pool"])
-    deploy(
+    if in_kind:
+        deploy("mining", "ConfederationBitcoinReserve", p.get("pool_id", "integration-pool"), "$deposits", "$escrow", "$conf_pool",
+               outputs=[output("payout_script", "mining", "payoutScript")])
+    else:
+        deploy(
         "mining",
         "MiningPoolV1",
         p.get("pool_id", "integration-pool"),
@@ -751,7 +756,7 @@ def build(config):
             output("payout_script", "mining", "payoutScript"),
         ],
     )
-    if "token_metadata" in p:
+    if "token_metadata" in p and not in_kind:
         steps[-1]["checks"].extend(dict(contract="mp", method=key, args=[], equals=value)
             for key, value in names["mining"].items())
     # Admission must be bound while the pool is still in the explicit legacy
@@ -777,15 +782,12 @@ def build(config):
     )
     from .bootstrap_custody import extend as extend_custody
     extend_custody(p, deploy, approve)
-    approve(
-        "add_mining",
-        "conf_pool",
-        "getAddPoolOperationHash",
-        ["$mp", p.get("pool_id", "integration-pool")],
-        "addPool",
-        ["$mp", p.get("pool_id", "integration-pool")],
-        custodian=True,
-    )
+    if in_kind:
+        approve("bind_bitcoin_reserve", "conf_pool", "getBindBitcoinReserveOperationHash", ["$mining"],
+                "bindBitcoinReserve", ["$mining"], custodian=True)
+    else:
+        approve("add_mining", "conf_pool", "getAddPoolOperationHash", ["$mp", p.get("pool_id", "integration-pool")],
+                "addPool", ["$mp", p.get("pool_id", "integration-pool")], custodian=True)
     if "withdrawal_fee" in p:
         from .bootstrap_withdrawal_fee import extend
         extend(p, deploy, approve, output)

@@ -1,0 +1,15 @@
+{
+  "name": "max_outputs_11105",
+  "raw_file": "test/fixtures/funding-stripped-v1/max_outputs_11105.hex",
+  "target_vout": 11104,
+  "expected": {
+    "txid": "508d2707f95aae2e4001b7fb8fca8af4c0a8d255749f9193e6b0011dd1a87e88",
+    "raw_sha256d": "887ea8d11d01b0e693919f7455d2a8c0f48aca8ffbb701402eae5af907278d50",
+    "stripped_bytes": 99998,
+    "input_count": 1,
+    "output_count": 11105,
+    "target_value": 11105,
+    "target_script_hex": "",
+    "inputs_abi_keccak256": "f7ef5766ca0f01d488256fe35a941a0a8e914d2349aeb52c4b4d181055dd14c5"
+  }
+}

@@ -105,10 +105,81 @@ def _escrow_v2(escrow):
     return any(item.get("name") == "defaultMinerFeeLimitSats" for item in getattr(escrow, "abi", ()))
 
 
-def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None):
+# Reviewed pre-staging V3 gateway runtimes and their constructor immutable slots.
+# This identifies requests that need a stricter output policy without adding
+# either historical build to an authorization allowlist.
+_LEGACY_CUSTODY_GATEWAYS = {
+    13157: ("f906faca93d891b67af627753e767b2ad5da552ea67838b31f284e1b96f33432",
+            (1610, 3899, 4714, 6212, 6641, 9764)),
+    13270: ("136a8137de4ea7f12bae2df8b890e83cdacbeeda89aca822e0a0965e19043e6b",
+            (1717, 4012, 4827, 6325, 6754, 9877)),
+}
+
+
+def _is_custody_gateway(w3, owner, block):
+    from .bitcoin_trust import checked_runtime
+
+    at = block if block is not None else "latest"
+    try:
+        checked_runtime(w3, owner, "BitcoinCustodyTransferV2", at)
+        return True
+    except ValueError as error:
+        if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+            raise
+    code = bytearray(w3.eth.get_code(owner, block_identifier=at))
+    legacy = _LEGACY_CUSTODY_GATEWAYS.get(len(code))
+    if legacy is None:
+        return False
+    digest, offsets = legacy
+    for offset in offsets:
+        code[offset:offset + 32] = bytes(32)
+    return keccak(bytes(code)).hex() == digest
+
+
+def validate_custody_outputs(escrow, requests, block, outputs=None):
+    """An incoming handover must be accepted as one complete Bitcoin outpoint."""
+    groups = {}
+    for request in requests:
+        groups.setdefault(bytes(request[5]).hex(), []).append(request)
+    output_values = {}
+    for output in outputs or ():
+        output_values.setdefault(output["script"], []).append(int(output["amount"]))
+    checked = {}
+    for script, group in groups.items():
+        # A treasury credit or pool withdrawal cannot originate from the gateway.
+        direct = [row for row in group if not int(row[0], 16) and int(row[2], 16)]
+        if not direct:
+            continue
+        owners = {row[3] for row in direct}
+        amount = sum(row[4] for row in direct) // 10**10
+        if len(direct) == len(group) and len(owners) == 1 and (
+            outputs is None or output_values.get(script) == [amount]
+        ):
+            continue
+        for owner in owners:
+            if owner not in checked:
+                checked[owner] = _is_custody_gateway(escrow.w3, owner, block)
+            if checked[owner]:
+                raise ValueError("BTC_CUSTODY_OUTPUT_GROUP")
+
+
+def review_custody_outputs(registry, graph, plan, block):
+    spec = graph.get("contracts", {}).get("escrow")
+    if not spec or spec["artifact"] != "BitcoinWithdrawalEscrow":
+        return
+    escrow = _contract(registry, spec["address"], spec["artifact"])
+    requests = [_read(escrow.functions.requests(bytes.fromhex(ref)), block.number)
+                for ref in plan["withdrawal_refs"]]
+    validate_custody_outputs(escrow, requests, block.number, plan["outputs"])
+    if registry.w3.eth.get_block(block.number).hash != block.hash:
+        raise ValueError("BTC_OPERATION_REORG")
+
+
+def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None, outputs=None):
     if not isinstance(refs, list) or not 1 <= len(refs) <= 32 or len(set(refs)) != len(refs):
         raise ValueError("BTC_PLAN_WITHDRAWALS")
     due = {}
+    requests = []
     escrow = contracts["escrow"]
     if fee is not None and not _escrow_v2(escrow):
         raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
@@ -146,6 +217,9 @@ def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None
             from .callback_admission import validate_callback
             validate_callback(escrow, request, block)
         due[destination] = due.get(destination, 0) + amount
+        requests.append(request)
+    if fee is None:
+        validate_custody_outputs(escrow, requests, block, outputs)
     return due
 
 
@@ -166,9 +240,9 @@ def _backing(contracts, inputs, block=None, *, fully_backed=False):
 
 
 def protect_unminted_deposit(deposits, item, bitcoin, block=None, *, address_mode=False):
-    """A committed user deposit is not spendable surplus before MP issuance.
+    """A committed user deposit is not spendable surplus before token issuance.
 
-    Recorded wallet change and existing MP backing need no historical Core
+    Recorded wallet change and existing token backing need no historical Core
     lookup. Only unknown, unissued inputs require inspecting their public tx.
     This is a signer policy; threshold Bitcoin custody remains a trust boundary.
     """
@@ -202,13 +276,20 @@ def protect_custody_transfer(deposits, item, transaction, block):
     origin = _read(deposits.functions.scriptPools(keccak(bytes.fromhex(item["script"]))), block)
     if int(origin, 16) == 0:
         return
-    checked_runtime(w3, origin, "MiningPoolV1", block)
-    mining = w3.eth.contract(address=origin, abi=artifact("MiningPoolV1")["abi"])
+    kind, gateway_kind = "MiningPoolV1", "BitcoinCustodyTransfer"
+    try:
+        checked_runtime(w3, origin, kind, block)
+    except ValueError as error:
+        if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+            raise
+        kind, gateway_kind = "ConfederationBitcoinReserve", "BitcoinCustodyTransferV2"
+        checked_runtime(w3, origin, kind, block)
+    mining = w3.eth.contract(address=origin, abi=artifact(kind)["abi"])
     gateway_address = _read(mining.functions.custodyTransfer(), block)
     if int(gateway_address, 16) == 0:
         return
-    checked_runtime(w3, gateway_address, "BitcoinCustodyTransfer", block)
-    gateway = w3.eth.contract(address=gateway_address, abi=artifact("BitcoinCustodyTransfer")["abi"])
+    checked_runtime(w3, gateway_address, gateway_kind, block)
+    gateway = w3.eth.contract(address=gateway_address, abi=artifact(gateway_kind)["abi"])
     if _read(gateway.functions.isSourceFunding(bytes.fromhex(transaction["hex"])), block):
         raise ValueError("BTC_UNACCEPTED_CUSTODY_TRANSFER")
 
@@ -241,7 +322,8 @@ def _terms(contracts, plan, bitcoin=None, block=None, *, bound_root=None):
                 or [bytes(item) for item in previous_inputs] != [
                     outpoint_hash(item["outpoint"]) for item in plan["inputs"]]):
             raise ValueError("BTC_REPLACEMENT_PLAN")
-    due = _requests(contracts, plan["withdrawal_refs"], plan["wallet_script"], block, root=root, fee=fee)
+    due = _requests(contracts, plan["withdrawal_refs"], plan["wallet_script"], block,
+                    root=root, fee=fee, outputs=plan["outputs"])
     from .withdrawal_fee import obligations
     due=obligations(plan,contracts,due,block)
     for item in plan["inputs"]:
@@ -760,10 +842,11 @@ def _settle(a, manifest, key, registry, state, board, plan):
                 or int(fresh["confirmations"]) < depth):
             raise ValueError("BITCOIN_PAYMENT_REORG")
     kind = "BitcoinWithdrawalEscrowV2" if plan.get("version") == "5" else "BitcoinWithdrawalEscrow"
+    from .zk_submission import options as proof_submission
     send(registry, escrow.address, kind, "settle", [
         batch, bytes.fromhex(proof["raw"]), block_hash,
         [bytes.fromhex(item) for item in proof["siblings"]], int(proof["index"]),
-    ], graph=graph)
+    ], graph=graph, **proof_submission(registry, graph, block_hash))
     block = confirmed_block(registry.w3, graph)
     payment = escrow.functions.payment(batch).call(block_identifier=block.number)
     if registry.w3.eth.get_block(block.number).hash != block.hash:

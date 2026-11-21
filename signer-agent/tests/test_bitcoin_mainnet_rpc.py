@@ -6,6 +6,7 @@ from email.message import Message
 import io
 import json
 import os
+import ssl
 from types import SimpleNamespace
 import urllib.request
 import urllib.response
@@ -117,6 +118,33 @@ def test_mainnet_cookie_owner_checked_before_credentials_are_read(cookie, monkey
 def test_regtest_retains_legacy_readable_fixture_cookie_permission(cookie):
     cookie.chmod(0o644)
     assert BitcoinRPC("http://fixture.example", cookie).network == "regtest"
+
+
+def test_https_uses_certifi_without_disabling_certificate_or_hostname_verification(cookie, monkeypatch):
+    calls = []
+    default_context = ssl.create_default_context
+    bundle = bitcoin_rpc.certifi.where()
+
+    def context(**options):
+        tls = default_context(**options)
+        calls.append((options, tls))
+        return tls
+
+    bitcoin_rpc._public_tls.cache_clear()
+    monkeypatch.setattr(ssl, "create_default_context", context)
+    try:
+        rpc = BitcoinRPC("https://node.example", cookie, "mainnet")
+        assert len(calls) == 1
+        options, tls = calls[0]
+        handlers = [handler for handler in rpc._opener.handlers
+                    if isinstance(handler, urllib.request.HTTPSHandler)]
+        assert options == {"cafile": bundle}
+        assert len(handlers) == 1 and handlers[0]._context is tls
+        assert tls.verify_mode == ssl.CERT_REQUIRED
+        assert tls.check_hostname
+        assert tls.get_ca_certs()
+    finally:
+        bitcoin_rpc._public_tls.cache_clear()
 
 
 def test_environment_proxy_cannot_receive_cookie(cookie, monkeypatch):
@@ -307,14 +335,3 @@ def test_core_amount_accepts_long_zero_tail_without_repeated_tuple_copy():
 def test_core_amount_does_not_round_away_inexact_digit_after_long_zero_tail():
     with pytest.raises(ValueError, match="^UTXO_AMOUNT_INVALID$"):
         bitcoin_rpc.satoshis(Decimal("1." + "0" * 1_000_000 + "1"))
-
-
-def test_certificate_error_is_not_a_retryable_outage(cookie):
-    import ssl
-    rpc = BitcoinRPC("https://localhost", cookie, "mainnet")
-    def failure(*args, **kwargs):
-        raise urllib.error.URLError(ssl.SSLCertVerificationError("sensitive endpoint"))
-    rpc._opener = SimpleNamespace(open=failure)
-    with pytest.raises(bitcoin_rpc.BitcoinRPCError, match="^BITCOIN_RPC_TLS_FAILED$") as caught:
-        rpc.call("getblockchaininfo")
-    assert not bitcoin_rpc.retryable_payment_observation(caught.value)

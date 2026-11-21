@@ -19,7 +19,7 @@ def _transport_failure(error):
 
 def observation_pending(error):
     return (_transport_failure(error) or isinstance(error, (BlockNotFound, TransactionNotFound))
-            or (type(error) is ValueError and str(error) == "EVM_RECEIPT_HEAD_BEHIND"))
+            or (type(error) is ValueError and str(error) in ("EVM_RECEIPT_HEAD_BEHIND", "EVM_RPC_BEHIND")))
 
 
 def retry_observation(observe):
@@ -53,7 +53,9 @@ class TransactionPending(RuntimeError):
     def __init__(self, result):
         super().__init__("TRANSACTION_PENDING")
         self.result = dict(status="TRANSACTION_PENDING", **{
-            key: result[key] for key in ("step", "tx_hash", "reason") if key in result})
+            key: result[key] for key in ("step", "tx_hash", "original_tx_hash", "reason") if key in result})
+        from .participant_errors import participant_message
+        self.result["message"] = participant_message(result.get("reason", "TRANSACTION_PENDING"))
 
 
 class TransactionRecoveryRequired(RuntimeError):
@@ -61,6 +63,8 @@ class TransactionRecoveryRequired(RuntimeError):
         super().__init__("RECOVERY_REQUIRED")
         self.result = dict(status="RECOVERY_REQUIRED", **{
             key: result[key] for key in ("step", "tx_hash", "reason") if key in result})
+        from .participant_errors import participant_message
+        self.result["message"] = participant_message(result.get("reason", "RECOVERY_REQUIRED"))
 
 
 def apply_confirmed(runner, identity, *, timeout=86400, poll_interval=5):
@@ -93,7 +97,10 @@ def apply_confirmed(runner, identity, *, timeout=86400, poll_interval=5):
             return result
         last_pending = result if result.get("tx_hash") else None
         public = dict(status="WAITING_FOR_TRANSACTION", **{
-            key: result[key] for key in ("step", "tx_hash") if key in result}, **diagnostic)
+            key: result[key] for key in ("step", "tx_hash", "original_tx_hash", "reason") if key in result}, **diagnostic)
+        if "reason" in public:
+            from .participant_errors import participant_message
+            public["message"] = participant_message(public["reason"])
         if public != previous:
             print(json.dumps(public, sort_keys=True), file=sys.stderr, flush=True)
             previous = public

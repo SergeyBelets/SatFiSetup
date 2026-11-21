@@ -343,8 +343,10 @@ def dispatch(a, manifest, key, registry, state):
         if checked != record["arguments"][0]: raise ValueError("BTC_MINT_GENERATION_CHANGED")
         snapshot_check(registry.w3, current)
         trust_guard(manifest,registry,state,graph,mode='ADDRESS_MINT')
+        from .zk_submission import options as proof_submission
         send(registry, pool.address, "MiningPoolV1", "mintFromAddressProof",
-            [*proof, checked, record["operation_hash"]], graph=graph)
+            [*proof, checked, record["operation_hash"]], graph=graph,
+            **proof_submission(registry, graph, proof[1]))
     current = confirmed_block(registry.w3, graph)
     if not complete(configuration(registry.w3, pool, current.number), checked):
         raise ValueError("BTC_OPERATION_POSTCONDITION")

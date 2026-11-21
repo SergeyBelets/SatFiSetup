@@ -7,14 +7,15 @@ from .dkg import Participant, Registry, atomic_private
 from .dkg_protocol import Manifest
 from .dkg_transport import Mailbox
 from .secure_state import SecureState
-from .safe_errors import DiagnosticArgumentParser, emit_debug, operator_error, pending_notice
+from .safe_errors import DiagnosticArgumentParser, emit_debug
 from . import crypto
 
 
-def signing_confirmations(enrolled, *, nft_config=None, ulr_config=None):
+def signing_confirmations(enrolled, *, nft_config=None, ulr_config=None, fee_sale_config=None):
     """Select the strongest local/enrolled depth before any signing reads."""
     depth = int(enrolled)
-    for path, module in ((nft_config, 'nft_governance'), (ulr_config, 'ulr_treasury')):
+    for path, module in ((nft_config, 'nft_governance'), (ulr_config, 'ulr_treasury'),
+                         (fee_sale_config, 'fee_sale_governance')):
         if path:
             from importlib import import_module
             pin = import_module('.' + module, __package__).load_pin(path)
@@ -82,6 +83,8 @@ def main(argv):
         c.add_argument("--state")
         c.add_argument("--password-file")
         c.add_argument("--mailbox")
+        if action == "run-once":
+            c.add_argument("--confirm-abort", help="Confirm the reviewed DKG abort fingerprint")
         c.add_argument("--file")
         c.add_argument("--output")
         c.add_argument(
@@ -94,6 +97,7 @@ def main(argv):
         c.add_argument('--ulr-config', help='Reviewed common ULR staking, snapshot registry and treasury addresses')
         c.add_argument('--ulr-intent', help='Public ULR snapshot intent file when the board publishes its SHA-256')
         c.add_argument('--nft-config', help='Independently reviewed NFT entity/factory/fee-manager pin')
+        c.add_argument('--fee-sale-config', help='Independently reviewed fee sale and treasury pin')
         c.add_argument('--epoch-service-config',help='Private enrolled old-BTC-epoch service policy')
         c.add_argument("--zk-worker-config", help="Private local self-hosted SPV worker configuration")
         c.add_argument("--zk-transport-config", help="Private encrypted on-chain SPV transport configuration")
@@ -263,35 +267,15 @@ def main(argv):
                 result=bytes(c[3]).hex(),
             )
         elif a.action == "run-once":
-            try:
-                validate_bundle(bundle, state, registry)
-                if bundle.get("onchain_board"):
-                    from .onchain_transport import OnchainMailbox
+            if bundle.get("onchain_board"):
+                from .onchain_transport import OnchainMailbox
 
-                    mailbox = OnchainMailbox(
-                        registry,
-                        bundle["onchain_board"],
-                        a.identity_file,
-                        a.state + ".transactions.sqlite",
-                    )
-                else:
-                    mailbox = Mailbox(a.mailbox)
-                result = Participant(m, registry, state, mailbox).run_once()
-            except (ValueError, RuntimeError) as exc:
-                # Definitive invalid data aborts. RPC/network errors propagate without fabricating complaints.
-                if str(exc) in {
-                    "ROUND1_HASH_MISMATCH",
-                    "PACKAGE_COMMITMENT_MISMATCH",
-                    "COMMITMENT_MISMATCH",
-                    "SHARE_HASH_MISMATCH",
-                    "PUBLIC_SHARE_MISMATCH",
-                    "RESULT_MISMATCH",
-                    "CRYPTO_VALIDATION_FAILED",
-                }:
-                    from eth_utils import keccak
-
-                    registry.send("abortCeremony", m.session_id, keccak(text=str(exc)))
-                raise
+                mailbox = OnchainMailbox(
+                    registry, bundle["onchain_board"], a.identity_file, a.state + ".transactions.sqlite",
+                )
+            else:
+                mailbox = Mailbox(a.mailbox)
+            result = Participant(m, registry, state, mailbox).run_once(a.confirm_abort)
         else:
             registry.check(m)
             key = state.get(m.context.hex())
@@ -390,7 +374,8 @@ def main(argv):
                 from .ethereum_intents import require_mainnet_signing_enrollment
                 require_mainnet_signing_enrollment(bundle, m.chain_id)
                 from .config import Config
-                from .coordinator import CoordinatorClient
+                from .coordinator import CoordinatorClient, SESSION_NONE
+                from .evm_network import read_block
                 from .service import SigningService
                 from .dkg import ROOT
 
@@ -407,17 +392,22 @@ def main(argv):
                     if int(mint_context["pool"].functions.mintProofVersion().call()) == 2:
                         registry.bitcoin_graph = signing_graph(bundle, mint_context)
 
-                if not a.coordinator and a.board:
+                depth = signing_confirmations(
+                    getattr(registry, "bitcoin_graph", {}).get("evm_confirmations", "1"),
+                    nft_config=a.nft_config, ulr_config=a.ulr_config, fee_sale_config=a.fee_sale_config)
+                anchor = read_block(registry.w3, depth)
+                read_number = anchor.number
+                board_intent = None
+                if a.board and (not a.coordinator or not (a.mint_admission or a.package)):
                     from .onchain_transport import board_at
 
-                    intent = json.loads(
-                        bytes(
-                            board_at(registry.w3, a.board)
-                            .functions.intents(a.session)
-                            .call()
-                        ).decode()
-                    )
-                    a.coordinator = intent["coordinator"]
+                    published = board_at(registry.w3, a.board, anchor).functions.intents(a.session).call(
+                        block_identifier=read_number)
+                    if not published:
+                        raise ValueError("EVM_CONFIRMATIONS_PENDING")
+                    board_intent = json.loads(bytes(published).decode())
+                    if not a.coordinator:
+                        a.coordinator = board_intent["coordinator"]
                 cfg = Config(
                     rpc_url=a.rpc,
                     sender=key["participant"],
@@ -431,9 +421,7 @@ def main(argv):
                     state_path=a.state + ".signing",
                     deployment_block=0,
                     scan_chunk_size=100,
-                    confirmations=signing_confirmations(
-                        getattr(registry, "bitcoin_graph", {}).get("evm_confirmations", "1"),
-                        nft_config=a.nft_config, ulr_config=a.ulr_config),
+                    confirmations=depth,
                     poll_interval=1,
                     receipt_timeout=120,
                     gas_limit=0,
@@ -445,9 +433,10 @@ def main(argv):
                 client = CoordinatorClient(cfg)
                 client.continuity_identity_file=a.identity_file
                 client.bitcoin_graph = getattr(registry, "bitcoin_graph", {})
-                client.pin_read_snapshot()
-                read_block = getattr(client, "_read_snapshot", None)
-                read_number = read_block.number if read_block is not None else "latest"
+                client.pin_read_snapshot(anchor)
+                session = client.session(a.session)
+                if session.state == SESSION_NONE:
+                    raise ValueError("EVM_CONFIRMATIONS_PENDING")
                 contract = client.contract
                 if (
                     contract.functions.dkgRegistry().call(block_identifier=read_number).lower()
@@ -467,34 +456,16 @@ def main(argv):
                         role=bundle.get("role", a.role), require_active=False)["intent"]
                 elif a.package:
                     intent = json.loads(Path(a.package).read_text())
-                elif a.board:
-                    from .onchain_transport import board_at
-
-                    intent = json.loads(
-                        bytes(
-                            board_at(registry.w3, a.board)
-                            .functions.intents(a.session)
-                            .call(block_identifier=read_number)
-                        ).decode()
-                    )
+                elif board_intent is not None:
+                    intent = board_intent
                 else:
                     raise ValueError("PUBLIC_INTENT_REQUIRED")
                 from .ulr_treasury import resolve_board_intent
-                intent = resolve_board_intent(intent, a.ulr_intent)
+                intent = resolve_board_intent(intent, a.ulr_intent, session=a.session)
                 from .ethereum_intents import validate_signing_binding
                 validate_signing_binding(intent, bundle, client.contract.address,
                     allow_legacy_file=bool(a.package and not a.board and a.coordinator
                         and "onboarding" not in bundle and m.chain_id != 1))
-                session = client.session(a.session)
-                client.identity_file = a.identity_file
-                client.transaction_journal = getattr(registry, "transaction_journal", None)
-                from .coordinator import SESSION_FINALIZED
-                if (session.state == SESSION_FINALIZED and session.origin_contract.lower() == intent["target"].lower()
-                        and session.message_hash.hex() == intent["operation_hash"].removeprefix("0x")
-                        and intent["chain_id"] == str(m.chain_id)):
-                    from .finalize_recovery import reconcile_terminal
-                    client.check_read_snapshot()
-                    reconcile_terminal(client, session)
                 allowed_artifacts = {
                     "DKGAuthorization",
                     "SimpleMultiPool",
@@ -520,6 +491,7 @@ def main(argv):
                     "WithdrawalFeePayments",
                     "WithdrawalFeeFunding",
                     "MiningPoolV1",
+                    "ConfederationBitcoinReserve",
                     "BitcoinMintAdmission",
                     "SPVServicePaymentRegistry",
                     "CustodianDAOStaking",
@@ -528,6 +500,7 @@ def main(argv):
                     "ULRCustodianSnapshots",
                     "ULRConfederationTreasury",
                     "CustodianValidator",
+                    "FundedFeeSale",
                 }
                 artifact = intent.get("artifact")
                 if artifact not in allowed_artifacts:
@@ -543,6 +516,10 @@ def main(argv):
                 target_contract = client.w3.eth.contract(
                     address=intent["target"], abi=abi
                 )
+                if (session.message_hash.hex() != intent["operation_hash"].removeprefix("0x")
+                        or session.origin_contract.lower() != intent["target"].lower()
+                        or intent["chain_id"] != str(m.chain_id)):
+                    raise ValueError("POLICY_MISMATCH")
                 if artifact=='BitcoinDepositRegistry' and intent.get('hash_method')=='getSetAddressRegistryOperationHash':
                     client.continuity_binding=intent
                 family_operation=(artifact=='BitcoinKeyFamilyRegistry' or artifact=='BitcoinAddressRegistry' and intent.get('hash_method')=='getBindFamilyRegistryOperationHash')
@@ -557,16 +534,25 @@ def main(argv):
                         return 0
                     client.family_registry_context=(intent,bundle)
                     client.family_registry_state=state
-                if (session.message_hash.hex() != intent["operation_hash"].removeprefix("0x")
-                        or session.origin_contract.lower() != intent["target"].lower()
-                        or intent["chain_id"] != str(m.chain_id)):
-                    raise ValueError("POLICY_MISMATCH")
                 from .bootstrap_tokens import review_intent as review_token_metadata
                 review_token_metadata(client.w3, intent, bundle, read_number)
                 if "token_metadata" in bundle.get("onboarding", {}).get("invitation", {}):
                     client.token_metadata_context = (intent, bundle)
-                from .bootstrap_confederation_dao import review_session as review_dao
-                dao_scope, dao_consumed = review_dao(client.w3, intent, bundle, read_number, a.session)
+                from . import fee_sale_governance as fee_sale
+                if fee_sale.matches(intent):
+                    if a.package or not a.board or not a.fee_sale_config:
+                        raise ValueError("FEE_SALE_PUBLIC_INTENT_AND_PIN_REQUIRED")
+                    sale_pin = fee_sale.load_pin(a.fee_sale_config)
+                    dao_scope = fee_sale.review(client.w3, intent, bundle, read_number, sale_pin)
+                    if dao_scope["complete"]:
+                        client.check_read_snapshot()
+                        print(json.dumps(dict(status="ALREADY_EXECUTED", session=str(a.session),
+                                              operation_hash=intent["operation_hash"])))
+                        return 0
+                    client.fee_sale_context = (intent, bundle, sale_pin)
+                else:
+                    from .bootstrap_confederation_dao import review as review_dao
+                    dao_scope = review_dao(client.w3, intent, bundle, read_number)
                 from .bootstrap_custody import review_intent as review_custody
                 review_custody(client.w3, intent, bundle, read_number)
                 if "bitcoin_custody" in bundle.get("onboarding", {}).get("invitation", {}):
@@ -651,12 +637,9 @@ def main(argv):
                         print(json.dumps(dict(status="ALREADY_EXECUTED" if intent.get('hash_method')=='getStatusOperationHash' else "ALREADY_REGISTERED", session=str(a.session),
                             operation_hash=intent["operation_hash"], target=target_contract.address)))
                         return 0
-                consumed = dao_consumed
-                if consumed is None:
-                    consumed = executed_operation(client.w3, target_contract, artifact, intent, read_number,
-                        session=a.session, coordinator=client.contract.address,
-                        operator=bundle.get("onboarding", {}).get("invitation", {}).get("operator"))
-                if consumed:
+                if executed_operation(client.w3, target_contract, artifact, intent, read_number, session=a.session,
+                        coordinator=client.contract.address,
+                        operator=bundle.get("onboarding", {}).get("invitation", {}).get("operator")):
                     client.check_read_snapshot()
                     print(json.dumps(dict(status="ALREADY_EXECUTED", session=str(a.session),
                         operation_hash=intent["operation_hash"], target=target_contract.address)))
@@ -699,13 +682,6 @@ def main(argv):
                 ).call(block_identifier=read_number)
                 if bytes(computed) != session.message_hash:
                     raise ValueError("OPERATION_PARAMETERS_MISMATCH")
-                if (
-                    session.message_hash.hex()
-                    != intent["operation_hash"].removeprefix("0x")
-                    or session.origin_contract.lower() != intent["target"].lower()
-                    or intent["chain_id"] != str(m.chain_id)
-                ):
-                    raise ValueError("POLICY_MISMATCH")
                 if (artifact,helper)==("BitcoinBatchRegistry","getSetFeeReserveOperationHash"):
                     from .btc_fee_policy import review_binding
                     review_binding(client.w3,intent,read_number)
@@ -738,16 +714,18 @@ def main(argv):
                     if len(typed_args) != 1:
                         raise ValueError("BTC_CALLBACK_CONFIGURATION_INTENT")
                     review_callback_configuration(target_contract, typed_args[0], read_number)
-                elif (artifact, helper) == ("MiningPoolV1", "getSetMintAdmissionOperationHash"):
+                elif artifact in ("MiningPoolV1", "ConfederationBitcoinReserve") and helper == "getSetMintAdmissionOperationHash":
                     from .mint_admission import configuration
                     if len(typed_args) != 1:
                         raise ValueError("BTC_MINT_CONFIGURATION_INTENT")
                     configuration(registry.w3, typed_args[0], read_number,
                         expected_pool=target_contract.address, require_bound=False)
                 client.bitcoin_graph = getattr(registry, "bitcoin_graph", {})
+                client.identity_file = a.identity_file
                 if client.bitcoin_graph.get("usage") == "MINT_ONLY_V1":
                     from .bitcoin_trust import bitcoin_for_graph
                     client.address_mint_bitcoin = bitcoin_for_graph(client.bitcoin_graph, a.bitcoin_rpc, a.bitcoin_cookie)
+                client.transaction_journal = registry.transaction_journal
                 result = SigningService(cfg, client).approve(session).to_dict()
             else:
                 from .bitcoin_worker import sign_step
@@ -770,18 +748,25 @@ def main(argv):
     except Exception as exc:
         from .transaction_wait import TransactionPending, TransactionRecoveryRequired
         if isinstance(exc, TransactionPending):
-            print(json.dumps(pending_notice(exc.result), sort_keys=True, ensure_ascii=False))
+            print(json.dumps(exc.result, sort_keys=True))
             return 0
         if isinstance(exc, TransactionRecoveryRequired):
             emit_debug(exc, code="RECOVERY_REQUIRED")
             print(json.dumps(exc.result, sort_keys=True))
             return 2
+        if a.action in ("run-once", "sign-evm"):
+            from .transaction_wait import observation_pending
+            if observation_pending(exc) or (type(exc) is ValueError and str(exc) in (
+                    "DKG_ANCHOR_UNAVAILABLE", "EVM_CONFIRMATIONS_PENDING", "ETHEREUM_FINALITY_UNAVAILABLE")):
+                status = "WAITING_DKG_RPC" if a.action == "run-once" else "AWAITING_EVM_RPC"
+                print(json.dumps(dict(status=status)))
+                return 0
         # Exceptions from RPC may echo calldata, but never print identity/state/crypto request payloads.
-        from .participant_errors import participant_exception_code
+        from .participant_errors import participant_failure
 
-        code = participant_exception_code(exc)
-        emit_debug(exc, code=code)
-        print(json.dumps(operator_error(code, "dkg", exc), ensure_ascii=False))
+        failure = participant_failure(exc)
+        emit_debug(exc, code=failure["code"])
+        print(json.dumps(failure))
         return 2
     finally:
         cache_state.reset(cache_token)

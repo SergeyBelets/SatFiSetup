@@ -298,7 +298,8 @@ def test_retired_nonce_evidence_is_rechecked_before_any_send(failed_group, chang
         f.state.finalized = 211
     else:
         f.block.hash = HexBytes("ff" * 32)
-    with pytest.raises(ValueError, match="EVM_REORG_RECOVERY_REQUIRED"):
+    code = "EVM_RPC_BEHIND" if change == "finalized_nonce" else "EVM_REORG_RECOVERY_REQUIRED"
+    with pytest.raises(ValueError, match=code):
         recover_identity(f.lane, f.bootstrap, f.account)
     assert f.state.sent == []
 

@@ -4,8 +4,9 @@
 
 Реализован Linux backend основного worker: STARK → succinct → Groth16,
 криптопроверка receipt, собственный cache и явная публикация. Код между
-участниками одинаковый. Установка tools, Docker и личные конфиги выполняются
-на каждом хосте; готовые proofs не входят в [поставку](DISTRIBUTION.md).
+участниками одинаковый. Tools и Docker устанавливают на каждом хосте, где
+выполняется полный proving. Код и pins входят в исходную поставку.
+[Поставка и отдельный публичный архив перехода](DISTRIBUTION.md).
 
 Рабочий SDK и verifier используют RISC Zero 3.1.0 с селектором `0xe71e6620`.
 Linux x86-64 и Ubuntu WSL2 на x86-64 используют нативные CPU tools. macOS
@@ -49,8 +50,8 @@ composite и succinct. Groth16 запускает закреплённый CPU R
 к локальному брокеру одной задачи. Сам Docker-сокет доступен процессу раннера
 вне sandbox. Проверки сети и receipt работают в отдельных процессах.
 Хэши guest, входа, журнала и предыдущего receipt проверяются до
-запуска. Проверки работают и с Python `-O`. Бинарник CUDA и результаты proving
-каждый участник готовит сам. Границы полномочий закреплённого Groth16-процесса
+запуска. Проверки работают и с Python `-O`. На хосте proving используют свой
+CUDA-бинарник и локально рассчитанные результаты. Границы полномочий закреплённого Groth16-процесса
 описаны в [проверке безопасности](SECURITY_LOGIC_REVIEW_2026_11_03.md#повторная-проверка-12-ноября-2026).
 [Исходники R0VM 3.1.0](https://github.com/risc0/risc0/blob/v3.1.0/risc0/r0vm/Cargo.toml).
 
@@ -153,6 +154,9 @@ state contract, worker directory, consumer allowlist и бюджеты.
 На всех хостах совпадают chain/state, guest image, policy и публичный claim.
 Личные пути, ключи, inputs, receipts и caches остаются у владельца. Поля
 `.example.json` — шаблоны; они не становятся рабочими binding автоматически.
+Prepare-only использует native witness host без стадий RISC Zero.
+Проверка публичного journal/seal использует закреплённый EVM verifier.
+[Ключи запуска worker и проверка ZIP](ZK_SPV_WORKER.md#worker-modes-and-transition-archives).
 
 ## 4. Проверка всех рабочих стадий
 
@@ -167,7 +171,7 @@ python -m signer_agent.zk_worker prove --config "$WORKER_CONFIG"
 python -m signer_agent.zk_worker publish --config "$WORKER_CONFIG"
 ```
 
-У каждого свой prepared attempt и собственный расчёт. Чужая публикация уже
+Для независимого расчёта у каждого свой prepared attempt. Чужая публикация уже
 подготовленного перехода не заменяет собственный proof и не вызывает вторую
 платную публикацию. `run` по умолчанию считает локально; service/transport loop
 с транзакциями включается явно через `run --boundary all`.

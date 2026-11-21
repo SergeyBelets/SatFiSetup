@@ -15,7 +15,7 @@ from web3 import Web3
 from signer_agent import ulr_treasury as policy
 from signer_agent.bootstrap import artifact
 from signer_agent.dkg_protocol import Manifest
-from signer_agent.operations import canonical
+from signer_agent.operations import Journal, canonical
 
 ORIGINAL_AUTHORITY_CONTEXT = policy.authority_context
 
@@ -50,6 +50,7 @@ def env(monkeypatch):
     view = SimpleNamespace(wallet={owners[0]: 100_000 * 10**18, owners[1]: 700_000 * 10**18, owners[2]: 100},
                            staked={owners[0]: 200_000 * 10**18, owners[1]: 0, owners[2]: 0},
                            roster=[owners[0]], scope=b"q" * 32, nonce=0, complete=False, calls=[], public=None)
+    view.enrolled = {treasury.address}
     conf = [None] * 19
     conf[7], conf[8], conf[-1] = auth.address, validator.address, True
     inputs = dict(day=str(day), snapshot_block="3", inventory_evidence_hash="0x" + "44" * 32,
@@ -80,7 +81,7 @@ def env(monkeypatch):
             scope=view.scope, getConfederation=conf, validator=validator.address, getCustodians=view.roster,
             authorization=auth.address, coordinator=addr(80), registry=manifest.registry, dkgId=manifest.session_id,
             getParticipants=list(manifest.participants), threshold=2, executedOperations=view.complete,
-            operationTargets=registry.address, intents=view.public)
+            operationTargets=registry.address, intents=view.public, snapshotTreasuries=sorted(view.enrolled))
         return values[method]
 
     monkeypatch.setattr(policy, "configuration", lambda *_: (registry, staking))
@@ -88,6 +89,7 @@ def env(monkeypatch):
     monkeypatch.setattr(policy, "treasury_context", lambda *_, **__: (registry, staking, treasury, factory, "A", conf))
     monkeypatch.setattr(policy, "contract", contract)
     monkeypatch.setattr(policy, "proven", lambda _, kind, target, *args: objects[target])
+    monkeypatch.setattr(policy, "runtime_artifact", lambda *_: ("fixture", {}))
     monkeypatch.setattr(policy, "read", read)
     return SimpleNamespace(w3=w3, pin=pin, inputs=inputs, view=view, owners=owners, blocks=blocks,
                            registry=registry, staking=staking, treasury=treasury, bundle=bundle, auth=auth,
@@ -117,20 +119,37 @@ def test_snapshot_supports_active_residuals_beyond_old_masks(env, count):
     assert json.loads(evidence)["version"] == "4"
 
 
-def test_large_snapshot_board_commitment_binds_exact_intent(env, cli_env, tmp_path, monkeypatch, capsys):
-    from signer_agent import onchain_transport
-
-    owners = [addr(1000 + i) for i in range(300)]
+def fill_inventory(env, count):
+    owners = [addr(1000 + i) for i in range(count)]
     env.inputs["owners"] = owners
     env.view.roster = owners
     env.view.wallet = dict.fromkeys(owners, 100 * 10**18)
     env.view.staked = dict.fromkeys(owners, 0)
+
+
+@pytest.mark.parametrize("count,reserved", [(180, False), (300, False), (180, True)])
+def test_large_snapshot_board_commitment_binds_exact_intent(env, cli_env, tmp_path, monkeypatch, capsys,
+                                                           count, reserved):
+    from signer_agent import onchain_transport
+
+    fill_inventory(env, count)
     _, _, intent = prepare(env)
-    published = policy.board_intent(dict(intent, session="19"))
-    assert "ulr_snapshot_intent_sha256" in published
+    full = dict(intent, session="19")
+    raw = canonical(full).encode()
+    if count == 180:
+        assert policy.MAX_INLINE_SNAPSHOT_BYTES < len(raw) <= policy.MAX_BOARD_INTENT_BYTES
+    else:
+        assert len(raw) > policy.MAX_BOARD_INTENT_BYTES
+    published = policy.board_intent(full)
+    assert published[policy.SNAPSHOT_INTENT_HASH] == hashlib.sha256(raw).hexdigest()
     path = tmp_path / "snapshot.json"
     path.write_text(json.dumps(intent))
-    assert policy.resolve_board_intent(published, path) == dict(intent, session="19")
+    with pytest.raises(ValueError, match="ULR_SNAPSHOT_INTENT_FILE_REQUIRED"):
+        policy.resolve_board_intent(published, None, session=19)
+    assert policy.resolve_board_intent(published, path, session=19) == full
+    with pytest.raises(ValueError, match="ULR_SNAPSHOT_INTENT_HASH_MISMATCH"):
+        policy.resolve_board_intent(published, path, session=20)
+    assert policy.resolve_board_intent(full, None, session=19) == full
     bundle = tmp_path / "bundle.json"
     bundle.write_text(json.dumps(env.bundle))
     board = SimpleNamespace(address=addr(99))
@@ -144,14 +163,24 @@ def test_large_snapshot_board_commitment_binds_exact_intent(env, cli_env, tmp_pa
     env.w3.eth.get_transaction_receipt = lambda _: {}
     transact = cli_env.executor.transact
     cli_env.executor.transact = lambda *args: dict(transact(*args), tx_hash="fixture")
+    state = tmp_path / "state.sqlite"
+    if reserved:
+        identifier = "ulr-" + intent["operation_hash"].removeprefix("0x") + "-publish"
+        Journal(state).put("dao-request-" + identifier, dict(args=["19", Web3.to_hex(raw)]))
     assert cli_env.cli.main(["propose", "--rpc", "unused", "--config", "unused", "--bundle", str(bundle),
-        "--intent", str(path), "--sender", env.owners[0], "--deadline", str(103 * 86400), "--send"]) == 0
-    assert json.loads(cli_env.calls[-1][2][1]) == published
-    assert json.loads(capsys.readouterr().out)["snapshot_intent_sha256"] == published["ulr_snapshot_intent_sha256"]
+        "--intent", str(path), "--sender", env.owners[0], "--deadline", str(103 * 86400), "--send",
+        "--state", str(state)]) == 0
+    assert json.loads(cli_env.calls[-1][2][1]) == (full if reserved else published)
+    result = json.loads(capsys.readouterr().out)
+    if reserved:
+        assert cli_env.calls[-1][2][1] == raw
+        assert "snapshot_intent_sha256" not in result
+    else:
+        assert result["snapshot_intent_sha256"] == published[policy.SNAPSHOT_INTENT_HASH]
     intent["hash_args"][2][0] = "101"
     path.write_text(json.dumps(intent))
     with pytest.raises(ValueError, match="ULR_SNAPSHOT_INTENT_HASH_MISMATCH"):
-        policy.resolve_board_intent(published, path)
+        policy.resolve_board_intent(published, path, session=19)
 
 
 def test_snapshot_uses_wallet_plus_own_stake_at_same_historical_block(env):
@@ -207,8 +236,63 @@ def test_calldata_floor_over_network_limit_is_rejected(env):
 
 def test_known_treasury_cannot_be_omitted_from_global_active_inventory(env):
     env.pin["treasuries"].append(addr(777))
+    env.view.enrolled.add(addr(777))
     with pytest.raises(ValueError, match="COMPLETE_TREASURY_INVENTORY_REQUIRED"):
         prepare(env)
+
+
+def test_stale_pin_waits_for_the_eligible_treasury_set(env):
+    env.view.enrolled.add(addr(777))
+    with pytest.raises(ValueError, match="ULR_TREASURY_PIN_BEHIND"):
+        prepare(env)
+
+
+def test_different_rpc_heads_use_same_utc_enrollment_cutoff(env):
+    env.blocks[6] = SimpleNamespace(number=6, timestamp=env.blocks[5].timestamp + 12, hash=b"d" * 32)
+    expected, evidence = policy.snapshot_arguments(env.w3, env.pin, env.inputs, 5)
+    later_pin = dict(env.pin, treasuries=[*env.pin["treasuries"], addr(777)])
+    assert policy.snapshot_arguments(env.w3, later_pin, env.inputs, 6) == (expected, evidence)
+    assert {at for _, at, method, _ in env.view.calls if method == "snapshotTreasuries"} == {3}
+
+
+def test_inactive_confederation_keeps_zero_allocation_without_blocking_snapshot(env, monkeypatch):
+    context = policy.treasury_context
+    def historical(*args, **kwargs):
+        assert args[3] == 3
+        assert not kwargs["require_active"]
+        *bound, conf = context(*args, **kwargs)
+        return (*bound, [*conf[:-1], False])
+    monkeypatch.setattr(policy, "treasury_context", historical)
+    values, _ = policy.snapshot_arguments(env.w3, env.pin, env.inputs, 5)
+    assert values[3][0][1] == b""
+
+
+def test_immutable_registry_uses_canonical_historical_enrollment_logs(env, monkeypatch):
+    from eth_abi import encode
+    from hexbytes import HexBytes
+
+    reviewed = dict(abi=env.registry.abi, legacy_reference="ULRCustodianSnapshotsLegacy")
+    monkeypatch.setattr(policy, "runtime_artifact", lambda *_: ("fixture", reviewed))
+    monkeypatch.setattr(policy, "prove_creation", lambda *_: {"block_number": "2"})
+    topic = Web3.keccak(text="TreasuryEnrolled(bytes32,address,address,string)")
+    row = dict(address=env.registry.address, blockNumber=3, blockHash=env.blocks[3].hash,
+               transactionHash=b"t" * 32, transactionIndex=0, logIndex=0,
+               topics=[topic, env.view.scope, HexBytes(encode(["address"], [env.treasury.address]))],
+               data=HexBytes(encode(["address", "string"], [addr(4), "A"])))
+    queried = []
+
+    def get_logs(query):
+        queried.append(query)
+        # Enrollment through an unrelated factory is outside the reviewed graph.
+        unrelated = dict(row, data=HexBytes(encode(["address", "string"], [addr(777), "other"])))
+        return [unrelated, row]
+
+    env.w3.eth.get_logs = get_logs
+    anchor = env.blocks[3]
+    assert policy.snapshot_treasuries(env.w3, env.registry, 101, anchor, pin=env.pin, at=5) == {env.treasury.address}
+    assert policy.snapshot_treasuries(env.w3, env.registry, 101, anchor, pin=env.pin, at=5) == {env.treasury.address}
+    assert [(query["fromBlock"], query["toBlock"], query["address"]) for query in queried] == [
+        (2, 3, env.registry.address)]
 
 
 @pytest.mark.parametrize("timestamp", [102 * 86400, 103 * 86400])
@@ -259,6 +343,31 @@ def test_review_recomputes_report_and_refuses_tampered_weight(env):
     assert policy.review(env.w3, intent, env.bundle, 5, env.pin)["complete"] is False
     intent["hash_args"][2][0] = str(300_001 * 10**18)
     with pytest.raises(ValueError, match="WEIGHT_MISMATCH"):
+        policy.review(env.w3, intent, env.bundle, 5, env.pin)
+
+
+@pytest.mark.parametrize("scenario", ["valid", "changed_hash", "omitted_holder"])
+def test_pending_v3_snapshot_must_match_verified_inventory(env, scenario):
+    values, evidence, _ = prepare(env)
+    v4 = json.loads(evidence)
+    legacy = {name: v4[name] for name in ("chain_id", "snapshots", "staking", "snapshot_block",
+        "snapshot_block_hash", "snapshot_timestamp", "following_block_hash", "inputs", "holders", "confederations")}
+    legacy.update(version="3", eligibility_policy="HOLDERS_200K_PLUS_ACTIVE_RESIDUAL_V1")
+    if scenario == "omitted_holder":
+        omitted = env.owners[1]
+        legacy["inputs"]["owners"].remove(omitted)
+        legacy["holders"] = [row for row in legacy["holders"] if row["owner"] != omitted]
+        index = values[1].index(omitted)
+        values[1].pop(index)
+        values[2].pop(index)
+    values[0][3] = b"x" * 32 if scenario == "changed_hash" else hashlib.sha256(canonical(legacy).encode()).digest()
+    intent = policy.intent_for(env.w3, env.registry, "ULRCustodianSnapshots", policy.SNAPSHOT_METHOD,
+        values, env.auth.address, "conf_ceremony", 5, ulr_snapshot_inputs=legacy["inputs"])
+    if scenario == "valid":
+        assert not policy.review(env.w3, intent, env.bundle, 5, env.pin)["complete"]
+        return
+    error = "ULR_HOLDER_INVENTORY_INCOMPLETE" if scenario == "omitted_holder" else "ULR_SNAPSHOT_WEIGHT_MISMATCH"
+    with pytest.raises(ValueError, match=error):
         policy.review(env.w3, intent, env.bundle, 5, env.pin)
 
 
@@ -322,12 +431,17 @@ def test_pin_requires_explicit_mainnet_finality_and_unique_treasuries(tmp_path, 
     assert policy.load_pin(output) == pin
 
 
-def test_signing_guard_rechecks_published_intent_and_both_chain_snapshots(env, monkeypatch):
+@pytest.mark.parametrize("compact", [False, True])
+def test_signing_guard_rechecks_published_intent_and_both_chain_snapshots(env, monkeypatch, compact):
     from signer_agent import onchain_transport
+    fill_inventory(env, 180)
     _, _, intent = prepare(env)
+    intent["session"] = "12"
     session = SimpleNamespace(origin_contract=env.registry.address, session_id=12,
                               message_hash=policy.digest(intent["operation_hash"]))
-    env.view.public = canonical(intent).encode()
+    published = policy.board_intent(intent)
+    assert policy.SNAPSHOT_INTENT_HASH in published
+    env.view.public = canonical(published if compact else intent).encode()
     monkeypatch.setattr(policy, "checked_runtime", lambda *_: None)
     monkeypatch.setattr(onchain_transport, "board_at", lambda *_: SimpleNamespace(address=addr(99)))
     checked = []
@@ -337,6 +451,11 @@ def test_signing_guard_rechecks_published_intent_and_both_chain_snapshots(env, m
     policy.guard_signing_session(client, session)
     assert checked == [5, "latest", "anchor"]
     env.view.public = canonical(dict(intent, target=addr(123))).encode()
+    with pytest.raises(ValueError, match="PUBLIC_INTENT_REQUIRED"):
+        policy.guard_signing_session(client, session)
+    wrong_session = dict(intent, session="13")
+    client.ulr_intent_context = (wrong_session, env.bundle, env.pin)
+    env.view.public = canonical(policy.board_intent(wrong_session) if compact else wrong_session).encode()
     with pytest.raises(ValueError, match="PUBLIC_INTENT_REQUIRED"):
         policy.guard_signing_session(client, session)
 
@@ -374,6 +493,18 @@ def cli_env(env, monkeypatch):
         return original(target, at, method, *args)
     monkeypatch.setattr(policy, "read", read)
     return SimpleNamespace(cli=cli, calls=calls, executor=executor, env=env)
+
+
+def test_snapshot_roster_matches_historical_chain_even_with_later_pin(cli_env, capsys):
+    c = cli_env
+    c.env.pin["treasuries"].append(addr(777))
+    assert c.cli.main(["snapshot-roster", "--rpc", "unused", "--config", "unused",
+                       "--snapshot-day", "101", "--snapshot-block", "3"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["treasuries"] == [c.env.treasury.address]
+    assert result["missing_from_pin"] == []
+    assert result["snapshot_block_hash"] == "0x" + b"a".hex() * 32
+    assert not c.calls
 
 
 def test_daily_cli_defaults_to_simulation_and_uses_chain_utc_day(cli_env, capsys):

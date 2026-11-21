@@ -1,5 +1,7 @@
 # Custodian DAO
 
+Новые конфедерации с ULR policy V3 используют [доход в S и стейблкоинах](CONFEDERATION_DAO_IN_KIND.md). Ниже описан существующий профиль.
+
 [Documentation Index](./README.md)
 
 The separate [common ULR staking](ULR_STAKING.md) and [treasury route](ULR_TREASURIES.md)

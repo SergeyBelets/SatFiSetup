@@ -40,13 +40,17 @@ class Pipeline(WorkerPipeline):
         try:
             for past in current.get('history',[]):
                 self.lease=past;base=self.base()
-                if self.publish('probe',base)['status']!='SATISFIED':raise ValueError('CONTOUR_HEARTBEAT_HISTORY_LOST')
+                observed=self.publish('probe',base)
+                if observed['observations']['reason']=='EVM_RECEIPT_PENDING':return observed
+                if observed['status']!='SATISFIED':raise ValueError('CONTOUR_HEARTBEAT_HISTORY_LOST')
         finally:self.lease=current;self.checking_history=False
     def execute(self,action):
         if action not in ('probe','run','recover'):raise ValueError('CONTOUR_RESPONSE')
         w=self.worker
         with w.exclusive():
-            if self.lease:self.check_history()
+            if self.lease:
+                pending=self.check_history()
+                if pending:return pending
             b,state,_,_,core=self.current()
             active=w.inbox.get('attempt');current=state_wire(state.functions.getState().call(block_identifier=b.number))
             if active:
@@ -60,8 +64,16 @@ class Pipeline(WorkerPipeline):
                 return self.observation('SATISFIED','ORIGINAL_FRESH_HEARTBEAT_VERIFIED',current_fresh=bool(fresh),**self.lease['completed'])
             prior=self.context.get('prior',{}).get('observations',{})
             if self.lease is None and not self.require_proof and prior.get('reason')=='CANONICAL_INITIAL_FRESH_STATE':
-                anchor=prior['anchor'];old=w.w3.eth.get_block(int(anchor['number']))
-                if (old.number>b.number or old.hash.hex()!=anchor['hash'] or core is None
+                from signer_agent.evm_network import verify_anchor
+                from signer_agent.transaction_wait import observation_pending
+                anchor=prior['anchor']
+                try:
+                    old=verify_anchor(w.w3,int(anchor['number']),anchor['hash'],safe=b)
+                except ValueError as error:
+                    if observation_pending(error):return self.observation('WAITING','EVM_RPC_BEHIND')
+                    if str(error)!='EVM_REORG_RECOVERY_REQUIRED':raise
+                    return self.observation('RECOVERY_REQUIRED','INITIAL_FRESH_ANCHOR_LOST')
+                if (core is None
                         or state_wire(state.functions.getState().call(block_identifier=old.number))!=prior['state']
                         or not w.aligned(state,old,core) or not state.functions.isFresh().call(block_identifier=old.number)
                         or not state.functions.hasUsefulUpdate().call(block_identifier=old.number)):

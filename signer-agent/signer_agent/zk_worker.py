@@ -1,4 +1,4 @@
-"""Demand-driven self-hosted mainnet state updater, with a private local inbox.
+"""Demand-driven Bitcoin mainnet and testnet4 updater with a private local inbox.
 
 Requests are SPV service needs, never permission to mint or settle. Public or
 encrypted cross-host request transport must authenticate before using this API.
@@ -14,11 +14,12 @@ import re
 import sqlite3
 import subprocess
 import time
+from types import SimpleNamespace
 
 from web3 import Web3
 from .bootstrap import Bootstrap, artifact
 from .bitcoin_network import validate_policy, check_core, header_hash
-from .bitcoin_rpc import BitcoinRPC
+from .bitcoin_rpc import BitcoinRPC, BitcoinRPCError
 from .bitcoin_trust import checked_runtime
 from .contract_provenance import prove_creation
 from .evm_network import read_block
@@ -38,11 +39,26 @@ def state_wire(s):
             else f"{x:064x}" if i == 4 else str(x) for i, x in enumerate(s)]
 
 
-def load_config(path):
+def validate_chain_config(c):
+    validate_policy(c["bitcoin_policy"])
+    if not is_zk(c["bitcoin_policy"]):
+        raise ValueError("ZK_POLICY_REQUIRED")
+    from .bootstrap_policy import validate_confirmations
+    validate_confirmations(c, "ZK_WORKER_")
+
+
+def load_config(path, *, review=False):
     path = Path(path)
     if path.stat().st_mode & 0o077 or path.stat().st_uid != os.getuid():
         raise ValueError("ZK_WORKER_CONFIG_PERMISSIONS")
     c = read(path)
+    if review and set(c) == {"version", "chain_id", "evm_rpc", "evm_confirmations", "bitcoin_policy", "zk_state"}:
+        if (c["version"] != "1" or c["chain_id"] not in ("1", "11155111", "31337")
+                or not isinstance(c["evm_rpc"], str) or not c["evm_rpc"]
+                or not Web3.is_checksum_address(c["zk_state"])):
+            raise ValueError("ZK_WORKER_CONFIG_SCHEMA")
+        validate_chain_config(c)
+        return c
     required = {"version", "chain_id", "evm_rpc", "evm_confirmations", "bitcoin_rpc", "bitcoin_cookie",
         "bitcoin_policy", "zk_state", "identity_file", "directory", "allowed_consumers", "host_binary", "host_sha256",
         "stage_timeout_seconds", "max_stage_retries", "max_pending", "max_attempts", "minimum_free_bytes", "max_tx_gas",
@@ -57,10 +73,7 @@ def load_config(path):
             or c["version"] not in ("1", "2", "3", "4", "5", "6", "7")
             or c["chain_id"] not in ("1", "11155111", "31337")):
         raise ValueError("ZK_WORKER_CONFIG_SCHEMA")
-    validate_policy(c["bitcoin_policy"])
-    if not is_zk(c["bitcoin_policy"]): raise ValueError("ZK_POLICY_REQUIRED")
-    from .bootstrap_policy import validate_confirmations
-    validate_confirmations(c, "ZK_WORKER_")
+    validate_chain_config(c)
     from .zk_worker_prover import MAX_STAGE_TIMEOUT_SECONDS, validate_cuda
     if c.get("cuda") is not None:
         validate_cuda(c["cuda"])
@@ -77,7 +90,8 @@ def load_config(path):
         if not isinstance(value, str) or not re.fullmatch(r"[1-9][0-9]*", value) or not low <= int(value) <= high:
             raise ValueError("ZK_WORKER_CONFIG_RANGE:" + name)
     if (not isinstance(c["allowed_consumers"], dict) or not 1 <= len(c["allowed_consumers"]) <= 4096
-            or any(not Web3.is_checksum_address(k) or v not in ("MiningPoolV1", "BitcoinWithdrawalEscrow")
+            or any(not Web3.is_checksum_address(k) or v not in ("MiningPoolV1", "BitcoinWithdrawalEscrow",
+                   "ConfederationBitcoinReserve", "BitcoinWithdrawalEscrowV2")
                    for k, v in c["allowed_consumers"].items())
             or not Web3.is_checksum_address(c["zk_state"])):
         raise ValueError("ZK_WORKER_CONSUMER_POLICY")
@@ -292,8 +306,10 @@ class Worker:
         fields = {"consumer", "kind", "txid", "vout" if kind == "deposit" else "batch"}
         if set(request) != fields or kind not in ("deposit", "withdrawal") or not re.fullmatch(r"[0-9a-f]{64}", request["txid"]):
             raise ValueError("ZK_NEED_SCHEMA")
-        wanted = "MiningPoolV1" if kind == "deposit" else "BitcoinWithdrawalEscrow"
-        if self.c["allowed_consumers"].get(request["consumer"]) != wanted: raise ValueError("ZK_CONSUMER_NOT_ALLOWED")
+        wanted = self.c["allowed_consumers"].get(request["consumer"])
+        permitted = (("MiningPoolV1", "ConfederationBitcoinReserve") if kind == "deposit"
+                     else ("BitcoinWithdrawalEscrow", "BitcoinWithdrawalEscrowV2"))
+        if wanted not in permitted: raise ValueError("ZK_CONSUMER_NOT_ALLOWED")
         consumer = self.contract(request["consumer"], wanted, block)
         def call(c, name, *args): return getattr(c.functions, name)(*args).call(block_identifier=block.number)
         if kind == "deposit":
@@ -301,7 +317,8 @@ class Worker:
             if not isinstance(vout, str) or not re.fullmatch(r"0|[1-9][0-9]*", vout) or int(vout) > 2**32-1:
                 raise ValueError("ZK_NEED_VOUT")
             deposits = self.contract(call(consumer, "deposits"), "BitcoinDepositRegistry", block)
-            escrow = self.contract(call(consumer, "escrow"), "BitcoinWithdrawalEscrow", block)
+            escrow = self.contract(call(consumer, "escrow"), "BitcoinWithdrawalEscrowV2" if wanted == "ConfederationBitcoinReserve"
+                                   else "BitcoinWithdrawalEscrow", block)
             if call(deposits, "spv") != adapter.address or call(escrow, "spv") != adapter.address:
                 raise ValueError("ZK_CONSUMER_STATE_MISMATCH")
             from eth_abi import encode
@@ -352,6 +369,26 @@ class Worker:
         canonical, count = adapter.functions.getBlockStatus(header_hash(raw)).call(block_identifier=block.number)
         return dict(status="READY" if canonical and count >= depth else "NEEDS_STATE", height=height,
                     block_hash=tx["blockhash"], depth=depth, header=raw.hex())
+
+    def observe_queued_need(self, key, request, block, adapter, core):
+        retry_key = "need-observation-retry:" + key
+        retry = self.inbox.get(retry_key)
+        now = int(time.time())
+        if retry and now < retry["next_at"]:
+            return dict(status="WAITING_BITCOIN_RPC")
+        try:
+            observation = self.observe_need(request, block, adapter, core)
+        except BitcoinRPCError as error:
+            if (error.rpc_code not in (-5, -8, -28) and str(error) != "BITCOIN_RPC_FAILED"
+                    and error.http_status not in (429, 502, 503, 504)):
+                raise
+            attempts = min(8, 1 + (retry["attempts"] if retry else 0))
+            delay = min(3600, int(self.c["poll_seconds"]) * 2 ** (attempts - 1))
+            self.inbox.put(retry_key, dict(attempts=attempts, next_at=now + delay))
+            return dict(status="WAITING_BITCOIN_RPC")
+        if retry:
+            self.inbox.put(retry_key, None)
+        return observation
 
     def request(self, request, *, register_local=True):
         block, state, adapter, _, core = self.context()
@@ -480,6 +517,53 @@ class Worker:
         if boundary not in ('prepare','publish'):raise ValueError('ZK_WORKER_BOUNDARY')
         with self.exclusive():return self._tick(boundary=boundary)
 
+    def prepare_service(self):
+        """Prepare queued work and retain an exact accepted transition for the next poll."""
+        with self.exclusive():
+            return self._tick(boundary="prepare", retain_accepted=True)
+
+    def revisit_preparation(self, active, native, current, block, core):
+        attempt = active["id"]
+        anchor = active.get("evm_prepare_anchor")
+        if anchor and block.number < anchor["number"]:
+            return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
+        if current == native["after"]:
+            self.retain_accepted_archive(active, native, current, block)
+            return dict(status="STATE_ALREADY_ACCEPTED", proving_attempt_id=attempt)
+        if current != native["before"]:
+            if int(current[11]) < int(native["before"][11]):
+                if not anchor:
+                    return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
+                from .evm_network import verify_anchor
+                try:
+                    verify_anchor(self.w3, anchor["number"], anchor["hash"], safe=block)
+                except ValueError as error:
+                    if str(error) == "EVM_RPC_BEHIND":
+                        return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
+                    if str(error) != "EVM_REORG_RECOVERY_REQUIRED":
+                        raise
+                else:
+                    return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
+            status = "REVALIDATE_STATE"
+        else:
+            height = active["target_height"]
+            if core["blocks"] < height:
+                return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
+            try:
+                observed = self.bitcoin.call("getblockhash", height)
+                if observed == active["target_hash"]:
+                    return dict(status="PROOF_PREPARED", proving_attempt_id=attempt)
+                tip = self.bitcoin.call("getblockhash", core["blocks"])
+                if (tip != core["bestblockhash"]
+                        or (tip if height == core["blocks"] else self.bitcoin.call("getblockhash", height)) != observed):
+                    return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
+            except BitcoinRPCError:
+                return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
+            status = "REVALIDATE_BITCOIN"
+        self.stable(block)
+        self.inbox.put("attempt", None)
+        return dict(status=status, proving_attempt_id=attempt, retired=True)
+
     def accept_local_transition(self,active,native,current,block):
         """Retain an already accepted exact transition; never submit it again."""
         if current!=native['after']:raise ValueError('ZK_ACCEPTED_TRANSITION_MISMATCH')
@@ -534,7 +618,7 @@ class Worker:
             self.inbox.put('local-proof:'+active['id'],result)
             return result
 
-    def _tick(self, *, boundary='all'):
+    def _tick(self, *, boundary='all', retain_accepted=False):
         block, state, adapter, records, core = self.context(allow_halt=True)
         current = state_wire(state.functions.getState().call(block_identifier=block.number))
         self.stable(block)
@@ -557,11 +641,15 @@ class Worker:
                 heartbeat=maintenance
         active = self.inbox.get("attempt")
         if active:
+            if retain_accepted and active["phase"] != "PREPARED":
+                return dict(status="PUBLICATION_RECOVERY_REQUIRED", proving_attempt_id=active["id"])
             base = self.inbox.path / "attempts" / active["id"]
             native = read(base / "native.json")
             prepared=read(base/'preparation.json')
             if prepared.get('native_sha256') and sha(base/'native.json')!=prepared['native_sha256']:
                 raise ValueError('ZK_ARCHIVE_NATIVE_SUMMARY_DRIFT')
+            if retain_accepted:
+                return self.revisit_preparation(active, native, current, block, core)
             if current == native["after"]:
                 if boundary=='prepare':return dict(status='STATE_ALREADY_ACCEPTED',proving_attempt_id=active['id'])
                 self.accept_local_transition(active,native,current,block)
@@ -580,7 +668,7 @@ class Worker:
                     # A new mature consumer request may make prepared heartbeat
                     # work urgent. Never hold it until the heartbeat boundary.
                     for key, request, _ in self.inbox.needs():
-                        observation = self.observe_need(request, block, adapter, core)
+                        observation = self.observe_queued_need(key, request, block, adapter, core)
                         if observation["status"] == "NEEDS_STATE":
                             if self.c.get("service", {}).get("mode") == "paid":
                                 from .zk_worker_service import source
@@ -628,9 +716,11 @@ class Worker:
                                 proving_attempt_id=active["id"])
         if boundary=='publish':return dict(status='NO_PREPARED_ATTEMPT')
         observations = []
+        waiting_for_core = False
         aligned = self.aligned(state, block, core)
         for key, request, _ in self.inbox.needs():
-            observation = self.observe_need(request, block, adapter, core)
+            observation = self.observe_queued_need(key, request, block, adapter, core)
+            waiting_for_core |= observation["status"] == "WAITING_BITCOIN_RPC"
             if observation["status"] == "READY" and not aligned: observation["status"] = "NEEDS_STATE"
             self.inbox.status(key, observation["status"])
             if observation["status"] == "NEEDS_STATE":
@@ -650,7 +740,8 @@ class Worker:
         self.stable(block)
         from .zk_worker_batching import select as select_group
         group=select_group(self,observations,block.timestamp) if self.c.get("batching") else None
-        if not observations and not heartbeat: return dict(status="IDLE")
+        if not observations and not heartbeat:
+            return dict(status="WAITING_BITCOIN_RPC" if waiting_for_core else "IDLE")
         archive = self.archive_ref(current) if self.c.get('archive') else self.inbox.get("archive:" + current[7])
         if archive is None:
             if current[11] != "1": raise ValueError("ZK_ARCHIVE_RECOVERY_REQUIRED")
@@ -702,7 +793,7 @@ class Worker:
         attempt_id = digest([self.inbox.get("scope"), current, headers])
         need_ids = [key for key, _ in observations]
         if heartbeat and not observations: need_ids.append(heartbeat["service_job_id"])
-        if self.c.get("service"):
+        if boundary == "all" and self.c.get("service"):
             from .zk_worker_service import preflight
             preflight(self, need_ids)
         jobs = self.inbox.get("job_attempts") or {}
@@ -736,6 +827,7 @@ class Worker:
         self.inbox.db.execute("BEGIN IMMEDIATE")
         try:
             self.inbox.put("attempt", dict(id=attempt_id, phase="PREPARED", target_height=end, target_hash=target_hash,
+                evm_prepare_anchor=dict(number=block.number, hash=block.hash.hex()),
                 need_ids=need_ids, execution_group_id=group["id"] if group else None,
                 service_deadline=group["deadline"] if group else heartbeat["deadline"] if heartbeat else None,
                 broadcast_not_before=heartbeat["broadcast_not_before"] if heartbeat and not observations else 0))
@@ -761,17 +853,73 @@ def request_from_consumer(config_path, graph, request):
     finally: worker.inbox.close()
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=["request", "run", "prepare", "prove", "publish", "status", "attach-service", "service-key","archive-backup","archive-restore","observations","observation-backup","observation-restore"])
+def worker_failure(exc):
+    code = str(exc).split(":", 1)[0] if type(exc) is ValueError else "ZK_WORKER_LOCAL_FAILURE"
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", code):
+        code = "ZK_WORKER_OBSERVATION_UNAVAILABLE"
+    return dict(status="BLOCKED", reason=code)
+
+
+def bundle_action(operation, *args, **options):
+    try:
+        result = operation(*args, **options)
+    except Exception as exc:
+        result = worker_failure(exc)
+    print(json.dumps(result), flush=True)
+    return 0 if result["status"] in ("ZK_BUNDLE_EXPORTED", "ZK_BUNDLE_PREPARATION_REVIEWED",
+                                     "ZK_BUNDLE_PROOF_VERIFIED") else 2
+
+
+def compute_and_export(worker, destination):
+    from .zk_peer_bundle import check_export_destination, export_attempt
+
+    destination = check_export_destination(destination, config=worker.c)
+    computed = worker.compute_local()
+    if computed["status"] not in ("LOCAL_PROOF_COMPUTED", "LOCAL_PROOF_COMPUTED_REPLAY_REQUIRED"):
+        return computed
+    result = export_attempt(worker, destination, include_proof=True, attempt=computed["proving_attempt_id"])
+    return dict(result, computation=computed)
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="frost-signer zk-worker", description=__doc__)
+    p.add_argument("action", choices=["request", "run", "prepare", "prove", "publish", "status", "attach-service", "service-key","archive-backup","archive-restore","observations","observation-backup","observation-restore", "export-bundle", "verify-bundle"])
     p.add_argument("--config", required=True)
     p.add_argument("--request", help="Local request JSON, never executable instructions")
     p.add_argument("--once", action="store_true")
-    p.add_argument('--boundary',choices=['prove','all'],default='prove',help='run defaults to local proof only; all explicitly permits publication')
+    p.add_argument("--boundary", choices=["prepare", "prove", "export", "all"], default="prove",
+                   help="run defaults to local proving; export computes and exports once; all permits publication")
     p.add_argument('--archive-file')
     p.add_argument('--accepted-backup-sha256')
-    a = p.parse_args(); c = load_config(a.config); worker = Worker(c)
+    p.add_argument("--bundle-file", help="Public review ZIP to create or verify")
+    p.add_argument("--attempt", help="Export this local attempt ID (export-bundle only)")
+    p.add_argument("--without-proof", action="store_true", help="Export preparation evidence only")
+    p.add_argument("--require-proof", action="store_true", help="Require a verifiable Groth16 seal")
+    a = p.parse_args(argv)
+    bundle_run = a.action == "run" and a.boundary == "export"
+    bundle_command = bundle_run or a.action in ("export-bundle", "verify-bundle")
+    if bundle_command != bool(a.bundle_file) or (a.boundary == "export" and not bundle_run):
+        p.error("--bundle-file is required for export-bundle, verify-bundle or run --boundary export")
+    if (a.attempt is not None or a.without_proof) and a.action != "export-bundle":
+        p.error("--attempt and --without-proof require export-bundle")
+    if a.require_proof and a.action != "verify-bundle":
+        p.error("--require-proof requires verify-bundle")
+    if a.action == "verify-bundle":
+        from .zk_peer_bundle import verify_bundle
+
+        c = load_config(a.config, review=True)
+        context = SimpleNamespace(c=c, w3=Web3(Web3.HTTPProvider(c["evm_rpc"], request_kwargs={"timeout": 30})))
+        return bundle_action(verify_bundle, context, a.bundle_file, require_proof=a.require_proof)
+    c = load_config(a.config)
+    worker = Worker(c)
     try:
+        if bundle_run:
+            return bundle_action(compute_and_export, worker, a.bundle_file)
+        if a.action == "export-bundle":
+            from .zk_peer_bundle import export_attempt
+
+            return bundle_action(export_attempt, worker, a.bundle_file, include_proof=not a.without_proof,
+                                 attempt=a.attempt)
         if a.action in ('prepare','prove','publish'):
             try:result=worker.advance(a.action)
             except Exception as exc:
@@ -815,14 +963,13 @@ def main():
                 funding_coverage=dict(job=coverage['job'],state=coverage['state'],need_count=len(coverage['need_ids'])) if coverage else None,
                 reserved_cost_wei=str(sum(int(v) for _, v in worker.inbox.db.execute("SELECT * FROM reservations"))),
                 needs=[dict(service_job_id=k, status=s) for k, _, s in worker.inbox.needs()]))); return 0
+        run = getattr(worker, {"prepare": "prepare_service", "prove": "compute_local", "all": "tick"}[a.boundary])
         while True:
-            try: result = worker.compute_local() if a.boundary=='prove' else worker.tick()
+            try: result = run()
             except Exception as exc:
-                code = str(exc).split(":")[0] if type(exc) is ValueError else "ZK_WORKER_LOCAL_FAILURE"
-                if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", code): code = "ZK_WORKER_OBSERVATION_UNAVAILABLE"
-                result = dict(status="BLOCKED", reason=code)
+                result = worker_failure(exc)
                 from .zk_worker_heartbeat import record_status
-                record_status(worker, code)
+                record_status(worker, result["reason"])
             worker.inbox.put("last_status", result)
             if result["status"] == "WAITING_USEFUL_PROGRESS":
                 from .zk_worker_heartbeat import record_status

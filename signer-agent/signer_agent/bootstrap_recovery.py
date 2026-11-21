@@ -15,6 +15,13 @@ from .onboarding import read_private
 from .operations import Journal, canonical
 
 
+class ReplacementAwaitingFinality(ValueError):
+    def __init__(self, original_hash, replacement_hash, nonce):
+        super().__init__("EVM_REPLACEMENT_PENDING")
+        self.outcome = dict(status="CONFIRMING", reason=str(self), original_tx_hash=original_hash,
+                            tx_hash=replacement_hash, nonce=str(nonce))
+
+
 def identity_lane(identity, *, require_existing=False):
     account = Account.from_key(json.loads(read_private(identity))["private_key"])
     lock = nonce_lock_path(identity)
@@ -84,21 +91,57 @@ def signed_nonce(saved, account, chain_id):
     return signed_fields(saved, account, chain_id)["nonce"]
 
 
+def confirmed_success_floor(w3, lane, account, chain_id):
+    """Find the most recent successful receipt without scanning good history."""
+    if account is None:
+        return 0
+    from .evm_network import verify_anchor
+
+    # The chain and block-number index also works for legacy signed requests
+    # that omitted the decoded nonce from the immutable SQLite request.
+    where = """status='CONFIRMED' AND json_type(result,'$.block_number') IS NOT NULL
+               AND coalesce(json_extract(result,'$.receipt_status'),'1')='1'"""
+    with lane.db() as db:
+        db.execute(f"""CREATE INDEX IF NOT EXISTS evm_success_checkpoint ON operations(
+                      json_extract(request,'$.chain_id'), CAST(json_extract(result,'$.block_number') AS INTEGER) DESC)
+                      WHERE {where}""")
+        row = db.execute(f"""SELECT id,request,result FROM operations WHERE {where}
+                         AND json_extract(request,'$.chain_id')=?
+                         ORDER BY CAST(json_extract(result,'$.block_number') AS INTEGER) DESC LIMIT 1""",
+                         (str(chain_id),)).fetchone()
+    if row is None:
+        return 0
+    saved, result = json.loads(row["request"]), json.loads(row["result"])
+    nonce = signed_nonce(saved, account, chain_id)
+    if row["id"] != saved["tx_hash"]:
+        raise ValueError("EVM_SIGNED_TRANSACTION_BINDING")
+    number = int(result["block_number"])
+    block = verify_anchor(w3, number, result["block_hash"])
+    floor = w3.eth.get_transaction_count(account.address, block.number)
+    verify_anchor(w3, number, result["block_hash"])
+    if floor <= nonce:
+        raise ValueError("EVM_RPC_BEHIND")
+    return floor
+
+
 def protected_nonce_floor(w3, lane, account, chain_id):
     """Revalidate finalized evidence before reusing a lane with closed nonces."""
     with lane.db() as db:
         rows = db.execute(
             "SELECT id,request,result,status FROM operations WHERE json_extract(request,'$.chain_id')=? "
-            "AND (status='RETIRED' OR status='CONFIRMED' AND json_extract(result,'$.receipt_status')='0')",
+            "AND (status IN ('RETIRED','FEE_REPLACEMENT_SUPERSEDED') "
+            "OR status='CONFIRMED' AND json_extract(result,'$.receipt_status')='0')",
             (str(chain_id),)).fetchall()
+    floor = confirmed_success_floor(w3, lane, account, chain_id)
     if not rows:
-        return 0
+        return floor
     from .bootstrap_nonce_close import CLOSE_KIND
+    from .evm_network import verify_anchor
 
     finalized = anchor(w3)
-    hashes = {finalized.number: finalized.hash}
+    blocks = {finalized.number: finalized}
     retired = {row["id"]: json.loads(row["result"]) for row in rows if row["status"] == "RETIRED"}
-    sender, floor = None, 0
+    sender, closed_floor = None, 0
     for row in rows:
         saved, result = json.loads(row["request"]), json.loads(row["result"])
         nonce = signed_nonce(saved, account, chain_id)
@@ -107,7 +150,7 @@ def protected_nonce_floor(w3, lane, account, chain_id):
                 or saved.get("kind") != CLOSE_KIND and row["id"] != saved["tx_hash"]):
             raise ValueError("EVM_SIGNED_TRANSACTION_BINDING")
         sender = address
-        if row["status"] == "RETIRED":
+        if row["status"] in ("RETIRED", "FEE_REPLACEMENT_SUPERSEDED"):
             if saved.get("kind") == CLOSE_KIND:
                 # Older SDKs kept the consumption anchor on the original CREATE.
                 witness = retired.get(saved["original_tx_hash"])
@@ -118,17 +161,23 @@ def protected_nonce_floor(w3, lane, account, chain_id):
             number, block_hash = int(witness["finalized_block_number"]), witness["finalized_block_hash"]
         else:
             number, block_hash = int(result["block_number"]), result["block_hash"]
-        if not 0 <= number <= finalized.number:
+        # Some older Sepolia journals promoted the winner at depth alone.
+        # Its recorded block still needs to match, even while finality is pending.
+        premature = row["status"] == "FEE_REPLACEMENT_SUPERSEDED" and chain_id == 11155111 and number > finalized.number
+        if number < 0:
             raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
-        if number not in hashes:
-            hashes[number] = w3.eth.get_block(number).hash
-        if hashes[number] != HexBytes(block_hash):
+        if number not in blocks:
+            blocks[number] = verify_anchor(w3, number, block_hash, safe=None if premature else finalized)
+        if HexBytes(blocks[number].hash) != HexBytes(block_hash):
             raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
-        floor = max(floor, nonce + 1)
-    if (w3.eth.get_transaction_count(sender, finalized.number) < floor
-            or w3.eth.get_block(finalized.number).hash != finalized.hash):
-        raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
-    return floor
+        if premature:
+            raise ReplacementAwaitingFinality(row["id"], result["tx_hash"], nonce)
+        closed_floor = max(closed_floor, nonce + 1)
+    count = w3.eth.get_transaction_count(sender, finalized.number)
+    verify_anchor(w3, finalized.number, finalized.hash)
+    if count < closed_floor:
+        raise ValueError("EVM_RPC_BEHIND")
+    return max(floor, closed_floor)
 
 
 def receipt_at(w3, saved, block):
@@ -152,6 +201,8 @@ def check_receipt_binding(receipt, result):
 
 
 def acknowledge_revert(identity, tx_hash, rpc):
+    from .bootstrap_replacement import ALTERNATIVE
+
     account, lock, lane = identity_lane(identity)
     tx_hash = HexBytes(tx_hash).hex()
     with lock.open("a") as locked:
@@ -160,6 +211,8 @@ def acknowledge_revert(identity, tx_hash, rpc):
         saved = entry["request"]
         if entry["status"] == "RETIRED":
             raise ValueError("CREATE_GROUP_RECOVERY_REQUIRED")
+        if entry["status"] == ALTERNATIVE:
+            raise ValueError("EVM_REPLACEMENT_RECONCILE_FIRST")
         if "source_journal" in saved:
             step = Journal(saved["source_journal"]).get(saved["operation"])["request"]
             if step.get("create_group"):

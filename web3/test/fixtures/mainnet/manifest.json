@@ -1,0 +1,65 @@
+{
+  "network": "bitcoin-mainnet",
+  "first_height": 32246,
+  "checkpoint_height": 32256,
+  "last_height": 36288,
+  "checkpoint_included_in_chainwork": true,
+  "header_count": 4043,
+  "retarget_boundaries": [
+    34272,
+    36288
+  ],
+  "bitcoin_core_version": "/Satoshi:29.0.0/",
+  "bitcoin_core_commit": "f490f5562d4b20857ef8d042c050763795fd43da",
+  "source_url": "https://download.dfinity.systems/testdata/mainnet_headers_800k.json.gz",
+  "source_sha256": "fb58cd3c0e2efe298eeb96751ae2276e938b39e2f1d9760ea47a9f3a8288d214",
+  "source_manifest": "https://github.com/dfinity/ic/blob/master/MODULE.bazel",
+  "verification": "All headers 1..36288 accepted by isolated Bitcoin Core29.0 submitheader on mainnet; each fixture record checked by getblockheader(hash,true). No peers or live RPC.",
+  "anchors": {
+    "32246": {
+      "hash": "0000000002d1dd994dfc95421a6ef1a36262da828461abe3c6a1fec6161086d3",
+      "bits": "1d00ffff",
+      "chainwork": "00000000000000000000000000000000000000000000000000007df77df77df7",
+      "time": 1262146941,
+      "mediantime": 1262145242
+    },
+    "32256": {
+      "hash": "000000004f2886a170adb7204cb0c7a824217dd24d11a74423d564c4e0904967",
+      "bits": "1d00d86a",
+      "chainwork": "00000000000000000000000000000000000000000000000000007e01acd42dd2",
+      "time": 1262153464,
+      "mediantime": 1262150214
+    },
+    "34271": {
+      "hash": "000000005e36047e39452a7beaaa6721048ac408a3e75bb60a8b0008713653ce",
+      "bits": "1d00d86a",
+      "chainwork": "00000000000000000000000000000000000000000000000000008751410913c0",
+      "time": 1263249842,
+      "mediantime": 1263247807
+    },
+    "34272": {
+      "hash": "000000002732d387256b57cabdcb17767e3d30e220ea73f844b1907c0b5919ea",
+      "bits": "1d00c428",
+      "chainwork": "000000000000000000000000000000000000000000000000000087528f22ef20",
+      "time": 1263250117,
+      "mediantime": 1263248193
+    },
+    "36287": {
+      "hash": "00000000128d789579ffbec00203a371cbb39cee27df35d951fd66e62ed59258",
+      "bits": "1d00c428",
+      "chainwork": "000000000000000000000000000000000000000000000000000091984ca8a7c0",
+      "time": 1264424481,
+      "mediantime": 1264422152
+    },
+    "36288": {
+      "hash": "0000000040514b192e6ca247d83388bf11cb1d5e980610ae2c6324cbb0594b32",
+      "bits": "1d00be71",
+      "chainwork": "00000000000000000000000000000000000000000000000000009199a4c92090",
+      "time": 1264424879,
+      "mediantime": 1264422694
+    }
+  },
+  "headers_sha256": "0f16ff696da6f1d222adbbd4e0a5e416eadf1a5aa4c17c02c2d463af7ad1bbf8",
+  "expected_sha256": "a18d8be9a29e930ece703580a306a0650464877c9d3c14039d61f06acbaca21e",
+  "genesis_prefix_sha256": "487add5a5d7efddbe49ad6d20f5c7c1fb5fc6953b758acc6072867262981d8d7"
+}

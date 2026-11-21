@@ -36,6 +36,8 @@ TOOLS = {
     "zk-testnet4-host": ("SATOHSI_ZK_TESTNET4_WORKER_HOST", "ops/.local-tools/zk-worker/satoshifi-testnet4-zk-worker-host"),
     "zk-host": ("SATOHSI_ZK_WORKER_HOST", "ops/.local-tools/zk-worker/satoshifi-zk-worker-host"),
 }
+CACHED_ZK_EVIDENCE_ENV = "SATOHSI_ZK_ACCEPTANCE_RECEIPT_DIR"
+CACHED_ZK_EVIDENCE = "rust/zkspv/state-proof-integration/evidence/local-state"
 REQUIRED = {"python": ("crypto", "zk-host"), "contracts": ("forge", "solc"),
     "evm": ("anvil", "crypto"), "zk-cached": ("anvil", "crypto", "zk-host"),
     "zk-testnet4": ("anvil", "crypto", "zk-testnet4-host"),
@@ -76,10 +78,35 @@ def source_hashes():
     paths += list((ROOT / "web3/contracts/src").rglob("*.sol"))
     paths += list((ROOT / "web3/test").rglob("*.sol"))
     paths += list((ROOT / "config").glob("system-bootstrap-*.json"))
-    paths += [ROOT / "config/zk-prover-linux-x86_64.json"]
+    paths += [ROOT / "config/zk-prover-linux-x86_64.json", ROOT / "config/zk-prover-3.1.0.json"]
+    zk = ROOT / "rust/zkspv"
+    paths += [zk / "state-adapter/foundry.toml", zk / "risc0-release/Cargo.toml",
+        zk / "risc0-release/Cargo.lock", zk / "groth16-integration/src/main.rs",
+        zk / "groth16-integration/src/bin/wrap_groth16.rs", zk / "vendor/risc0-ethereum-3.1.0/pin.json"]
+    for folder in ("state-adapter/contracts", "state-adapter/test", "vendor/risc0-ethereum-3.1.0/contracts"):
+        paths += list((zk / folder).rglob("*.sol"))
     paths += [ROOT / "web3/foundry.toml", ROOT / "frost-crypto/src/main.rs",
-        ROOT / "signer-agent/pyproject.toml"]
+        ROOT / "signer-agent/pyproject.toml", ROOT / "signer-agent/requirements.lock"]
     return {str(p.relative_to(ROOT)): sha(p) for p in sorted(set(paths)) if p.is_file()}
+
+
+def zk_artifact_problems(*, testnet4, check_build):
+    state = "ZkBitcoinTestnet4StateV2" if testnet4 else "ZkBitcoinStateV2"
+    consumers = ("ZkTestnet4SpvAdapter", "ZkTestnet4SPVServiceStateView") if testnet4 else ("ZkSpvAdapter",)
+    verifier = "RiscZeroGroth16Verifier"
+    problems = []
+    for name in (state, verifier, *consumers):
+        relative = f"rust/zkspv/state-adapter/out/{name}.sol/{name}.json"
+        path = ROOT / relative
+        if not path.is_file():
+            problems.append("artifact:" + relative)
+        elif check_build and name in (state, verifier):
+            from signer_agent.zk_spv import require_patched_build
+            try:
+                require_patched_build(json.loads(path.read_text()))
+            except (OSError, ValueError, AttributeError):
+                problems.append("artifact:ZK_VERIFIER_3_1_BUILD_REQUIRED:" + relative)
+    return problems
 
 
 def preflight(modes, directory, suite_plan=None):
@@ -97,7 +124,8 @@ def preflight(modes, directory, suite_plan=None):
         if not platform['signer']: missing.append(platform['reason'])
         if mode in ('zk-cached','zk-fresh') and not platform['local_prover_supported']:
             missing.append('platform:local prover requires macOS arm64 or Linux/WSL2 x86-64')
-        if mode != "contracts": missing += ["python:"+n for n in deps]
+        if mode != "contracts":
+            missing += ["python:"+n for n in deps if n != "eth_tester" or not mode.startswith("zk-")]
         if free < minimum[mode]: missing.append("disk:"+str(minimum[mode]))
         if mode in ("evm", "bitcoin") and not Path(sys.executable).with_name("frost-signer").is_file():
             missing.append("installed:frost-signer (pip install --no-deps -e ./signer-agent)")
@@ -106,16 +134,18 @@ def preflight(modes, directory, suite_plan=None):
             if mode == "bitcoin":
                 artifacts += [ROOT / "web3/contracts/out/SPVServicePayment.t.sol/GasStateFixture.json",
                     ROOT / "web3/contracts/out/GasCallerFixture.sol/GasCallerAvailabilityFixture.json"]
-            if mode in ("python", "zk-cached", "zk-fresh"):
+            if mode == "python":
                 artifacts += [ROOT / "rust/zkspv/state-adapter/out/ZkBitcoinStateV2.sol/ZkBitcoinStateV2.json"]
             missing += ["artifact:"+str(p.relative_to(ROOT)) for p in artifacts if not p.is_file()]
-        if mode == "zk-testnet4":
-            required = ROOT / "rust/zkspv/state-adapter/out/ZkBitcoinTestnet4StateV2.sol/ZkBitcoinTestnet4StateV2.json"
-            if not required.is_file(): missing.append("artifact:"+str(required.relative_to(ROOT)))
+        if mode in ("zk-cached", "zk-fresh", "zk-testnet4"):
+            missing += zk_artifact_problems(testnet4=mode == "zk-testnet4", check_build="web3" not in deps)
         if mode == "zk-cached":
-            evidence = ROOT / "rust/zkspv/state-proof-integration/evidence/local-state"
-            missing += ["receipt:"+f for f in ("groth16/receipt.bin", "groth16/verified/seal.bin", "state.journal")
-                if not (evidence / f).is_file()]
+            supplied = os.environ.get(CACHED_ZK_EVIDENCE_ENV)
+            evidence = Path(supplied).expanduser() if supplied else ROOT / CACHED_ZK_EVIDENCE
+            files = ("groth16/verified/seal.bin", "state.journal")
+            if not supplied:
+                files += ("groth16/receipt.bin", "state.input")
+            missing += ["receipt:"+f for f in files if not (evidence / f).is_file()]
         if mode == "bitcoin" and tools["bitcoind"]:
             v = subprocess.run([tools["bitcoind"], "-version", "-nosettings"], capture_output=True, text=True, timeout=10)
             if v.returncode or "v30.3" not in v.stdout: missing.append("Core:30.3 required")
@@ -204,13 +234,20 @@ def nodes(directory, env, bitcoin=False):
 
 def execute(mode, directory, environment, suite_plan=None):
     env = dict(environment)
+    scope = SCOPE[mode]
     junit = directory / "pytest.xml"
     base = [sys.executable, "-m", "pytest", "-x", "-q", "-o", "junit_family=legacy",
         "--basetemp="+str(directory/"pytest"), "--junitxml="+str(junit)]
     if mode == "python": command = base + ["signer-agent/tests"]
     elif mode == "signer": command = base + ['signer-agent/tests/'+name for name in SIGNER_TESTS]
     elif mode == "evm": command = base + ["tests/e2e/test_system_bootstrap.py"]
-    elif mode == "zk-cached": command = base + ["tests/e2e/test_zk_bootstrap_e2e.py", "tests/e2e/test_zk_worker_e2e.py"]
+    elif mode == "zk-cached":
+        command = base + ["tests/e2e/test_zk_bootstrap_e2e.py"]
+        if env.get(CACHED_ZK_EVIDENCE_ENV):
+            env[CACHED_ZK_EVIDENCE_ENV] = str(Path(env[CACHED_ZK_EVIDENCE_ENV]).expanduser().resolve())
+            scope = "local EVM verification of a supplied 3.1 proof (no fresh proving)"
+        else:
+            command.append("tests/e2e/test_zk_worker_e2e.py")
     elif mode == "zk-testnet4": command = base + ["tests/e2e/test_zk_testnet4_e2e.py"]
     elif mode == "bitcoin":
         excluded = ("test_zk_testnet4_e2e.py", "test_system_bootstrap.py", "test_zk_bootstrap_e2e.py", "test_zk_worker_e2e.py")
@@ -233,7 +270,7 @@ def execute(mode, directory, environment, suite_plan=None):
             raise RuntimeError("SOLIDITY_INCOMPLETE")
         count = report["passed"]
     else: count = check_junit(junit)
-    return dict(status="PASSED", tests=count, command=command, scope=SCOPE[mode])
+    return dict(status="PASSED", tests=count, command=command, scope=scope)
 
 
 def main(argv=None):

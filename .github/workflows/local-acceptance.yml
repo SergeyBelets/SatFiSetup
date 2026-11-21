@@ -1,0 +1,65 @@
+name: Portable signer and Bitcoin lifecycle
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-acceptance:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+        mode: [signer, contracts, evm, bitcoin]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.5
+      - name: Pinned Rust and fresh workstation build
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
+          python -m venv .venv
+          .venv/bin/python ops/bootstrap_host.py build
+          .venv/bin/python -m pip install -e './signer-agent[test,evm-test]'
+          .venv/bin/python ops/bootstrap_host.py check --role signer
+          cargo +1.89.0 test --locked --manifest-path frost-crypto/Cargo.toml
+          .venv/bin/python ops/check_contract_sizes.py --output "$RUNNER_TEMP/contract-sizes.json"
+      - name: Bitcoin Core 30.3 checksum verification
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          case "$(uname -s)-$(uname -m)" in
+            Linux-x86_64) core_arch=x86_64-linux-gnu ;;
+            Darwin-arm64) core_arch=arm64-apple-darwin ;;
+            Darwin-x86_64) core_arch=x86_64-apple-darwin ;;
+            *) exit 1 ;;
+          esac
+          export CORE_ARCHIVE="bitcoin-30.3-${core_arch}.tar.gz"
+          curl --fail --silent --show-error --remote-name "https://bitcoincore.org/bin/bitcoin-core-30.3/${CORE_ARCHIVE}"
+          curl --fail --silent --show-error --remote-name https://bitcoincore.org/bin/bitcoin-core-30.3/SHA256SUMS
+          python -c 'import os,pathlib,hashlib; p=pathlib.Path(os.environ["CORE_ARCHIVE"]); expected=next(x.split()[0] for x in pathlib.Path("SHA256SUMS").read_text().splitlines() if x.split()[-1]==p.name); assert hashlib.sha256(p.read_bytes()).hexdigest()==expected'
+          tar -xzf "$CORE_ARCHIVE"
+          echo "$RUNNER_TEMP/bitcoin-30.3/bin" >> "$GITHUB_PATH"
+      - name: Run isolated acceptance layer
+        env:
+          ACCEPTANCE_MODE: ${{ matrix.mode }}
+        run: .venv/bin/python -m ops.system_modes run --mode "$ACCEPTANCE_MODE" --output "$RUNNER_TEMP/system-mode-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-lifecycle-results-${{ matrix.os }}-${{ matrix.mode }}
+          path: |
+            ${{ runner.temp }}/system-mode-results/report.json
+            ${{ runner.temp }}/system-mode-results/**/pytest.xml
+            ${{ runner.temp }}/system-mode-results/**/solidity.json
+            ${{ runner.temp }}/contract-sizes.json

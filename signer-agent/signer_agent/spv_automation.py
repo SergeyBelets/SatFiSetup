@@ -70,7 +70,8 @@ def observation(w3,policy,state_address,need,bitcoin,allowed):
     if state.functions.halted().call():raise ValueError('MAINNET_RELAY_HALTED')
     worker=Worker.__new__(Worker);worker.w3=w3;worker.bitcoin=bitcoin
     worker.c=dict(policy,allowed_consumers=allowed)
-    core=check_core(bitcoin,'mainnet',policy['bitcoin_policy'])
+    bitcoin_policy = policy["bitcoin_policy"]
+    core = check_core(bitcoin, bitcoin_policy["network"], bitcoin_policy)
     result=worker.observe_need(need,b,adapter,core)
     if result['status']=='NEEDS_STATE' and worker.aligned(state,b,core) and state.functions.isFresh().call(block_identifier=b.number):
         current=state.functions.getState().call(block_identifier=b.number)
@@ -95,7 +96,8 @@ def validate_payment(c,p):
         or not isinstance(p['allowed_service_identities'],list) or not 1<=len(p['allowed_service_identities'])<=32
         or not Web3.is_checksum_address(p['treasury'])):raise ValueError('SPV_PAYMENT_POLICY')
     for address,kind in p['allowed_consumers'].items():
-        if not Web3.is_checksum_address(address) or kind not in ('MiningPoolV1','BitcoinWithdrawalEscrow'):raise ValueError('SPV_PAYMENT_POLICY')
+        if not Web3.is_checksum_address(address) or kind not in ('MiningPoolV1','BitcoinWithdrawalEscrow',
+                'ConfederationBitcoinReserve','BitcoinWithdrawalEscrowV2'):raise ValueError('SPV_PAYMENT_POLICY')
     if any(not Web3.is_checksum_address(a) for a in p['allowed_service_identities']):raise ValueError('SPV_PAYMENT_POLICY')
     binding=p['binding']
     if any(binding.get(k)!=c[k] for k in ('chain_id','evm_confirmations','bitcoin_policy','factory','confederation_id')):raise ValueError('SPV_PAYMENT_BINDING')

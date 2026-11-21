@@ -5,7 +5,7 @@
 [Холодный старт с нуля](COLD_START.md): единый порядок подготовки, ролей,
 финансирования, DKG, relay/ZK, ручной рассылки и первого smoke.
 
-Актуализация от 12 ноября 2026. [Конфигуратор](LAUNCH_CONFIGURATOR.md) ·
+Актуализация от 21 ноября 2026. [Конфигуратор](LAUNCH_CONFIGURATOR.md) ·
 [Математика экономики](LAUNCH_MATHEMATICS.md) · [Архитектура](ARCHITECTURE.md).
 
 Mermaid-исходники находятся на этой странице; [SVG/PNG и source hashes](DIAGRAMS.md)
@@ -299,12 +299,16 @@ Consumer дополнительно проверяет confirmations/maturity и
 условия. Fresh не является доказательством включения конкретной транзакции.
 Материализация header не разрешает повторный mint одного outpoint.
 
-## 7. Каждый считает сам; в EVM не нужен N-of-N набор proofs
+## 7. Подготовка, расчёт и независимая проверка ZK
 
-Каждый участник готовит собственный attempt из своего Core и закреплённого
-before state, выполняет native validation и prover, проверяет receipt и
-сохраняет локальную запись происхождения. Выпуск в поставку готовых working
-proofs/receipts, inputs/journals и caches исключён; static R0BF — код программы.
+Воркеры готовят переход по своим данным Core и закреплённому before state.
+Участник может независимо рассчитать proof или проверить публичный ZIP с
+доказательством, рассчитанным на выделенной машине. Отправитель использует
+`run --boundary export` или `export-bundle`, получатель — `verify-bundle
+--require-proof` со своими RPC и пинами. Для непрерывной подготовки переходов
+без proving работает `run --boundary prepare`. Рабочие файлы в ZIP ограничены
+публичным journal и seal с манифестом. Поставка исходников по-прежнему идёт
+отдельно и исключает рабочие доказательства и архивы. Static R0BF — код программы.
 В новом графе state закрепляет verifier RISC Zero 3.1.0. Перед подписью
 SDK сверяет привязку state/adapter/verifier, а при публикации принимает seal
 с селектором `0xe71e6620`. Исторические seals 3.0.3 отклоняются.
@@ -317,21 +321,25 @@ receipt hash через HMAC приватного installation key. Это кл�
 какой физический компьютер выполнил prover. Он не заменяет криптографическую
 проверку receipt и не превращает ZK в t-of-N protocol.
 
-Один выбранный publisher явно отправляет один подходящий transition proof;
-контракту не требуется по receipt от каждого участника. Другие участники
-обязаны независимо выполнить рабочий расчёт по принятой операционной политике,
-но не дублировать уже принятый transition. Их journals/seals не обязаны быть
-побайтово одинаковыми. Identity publisher не является новым владельцем BTC.
+Один выбранный publisher явно отправляет свой локально рассчитанный transition
+proof. Другие участники сверяют тот же закреплённый state и verifier через
+свои RPC. Проверка архива не даёт разрешения на публикацию или FROST-подпись и
+не записывает полученный seal в локальный authenticated cache.
+[Режимы запуска и ZIP](ZK_SPV_WORKER.md).
 
 ```mermaid
 sequenceDiagram
-    participant A as Участник A
-    participant B as Участник B
+    participant A as Prover и выбранный publisher
+    participant B as Участник FROST
     participant S as ZK state
     A->>S: Прочитать state v и сверить verifier 3.1.0
     B->>S: Прочитать state v и сверить verifier 3.1.0
-    A->>A: Собственный prepare и prove перехода v к v+1
-    B->>B: Собственный prepare и prove перехода v к v+1
+    opt Локальная подготовка на машине участника
+        B->>B: run --boundary prepare для перехода v к v+1
+    end
+    A->>A: Native prepare и prove перехода v к v+1
+    A-->>B: ZIP с публичным journal и seal
+    B->>S: verify-bundle через свой RPC и pinned verifier
     A->>S: Publish собственного proof с seal 0xe71e6620
     S-->>A: Проверить seal, journal и before, принять v+1
     B->>S: Повторно прочитать текущее состояние
@@ -376,7 +384,7 @@ sequenceDiagram
     C->>E: EVM_AUTH FROST: reserve и bind точного txid
     C->>B: BTC_SPEND FROST подписи каждого input, broadcast
     B-->>C: Canonical блок и требуемые confirmations
-    C->>C: Каждый считает собственный header-transition proof
+    C->>C: Локальный расчёт или независимая проверка публичного ZIP
     C->>Z: Выбранный publisher отправляет свой proof
     Z-->>E: Принятое состояние, Fresh и canonical header
     C->>E: Tx inclusion proof и точные settlement данные
@@ -390,13 +398,12 @@ proof включения **будущей** транзакции появляе�
 разным сообщениям и не подменяют друг друга. В relay-профиле на соответствующем
 шаге выполняется relay sync и обычная inclusion-проверка.
 
-При обмене внешнего MP на cBTC source federation сначала реально переводит
-BTC под ключ конфедерации; исходный settlement/burn и destination SPV acceptance
-предшествуют выдаче локальных долей через `depositFor`. Это не только перевод
-учётного токена. Дальнейший cBTC withdrawal подписывают кастодианы назначения
-собственным BTC_SPEND ключом; представитель и исходные участники не входят
-в этот ключ. При этом старые source obligations и root enrollment не исчезают.
-Подробности: [Bitcoin custody transfer](BITCOIN_CUSTODY_TRANSFER.md).
+При обмене внешнего MP исходная федерация переводит BTC под ключ конфедерации
+и погашает MP по доказательству выплаты. Конфедерация проверяет этот расчёт и
+доказательство поступления BTC. В ULR policy V3 она напрямую выпускает S под
+принятый выход. В прежнем профиле выпуск cBTC использует локальные MP и
+`depositFor`. Платёж при погашении S или cBTC подписывают кастодианы
+конфедерации своим BTC_SPEND ключом. [Bitcoin custody transfer](BITCOIN_CUSTODY_TRANSFER.md).
 
 Governance stake/unstake, owner claim, permissionless treasury payout по уже
 утверждённому snapshot и prefunded startup pay не требуют нового BTC signing

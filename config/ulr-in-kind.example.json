@@ -1,0 +1,7 @@
+{
+  "version": "3",
+  "mode": "create",
+  "bitcoin_backend": "relay",
+  "candidate_threshold_wei": "200000000000000000000000",
+  "default_miner_fee_sats": "1000"
+}

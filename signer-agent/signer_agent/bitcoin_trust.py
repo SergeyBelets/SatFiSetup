@@ -18,18 +18,31 @@ def checked_runtime(w3, address, kind, block):
 
 
 def runtime_artifact(w3, address, kind, block):
-    """Identify the exact reviewed build, including the pre-fix immutable treasury."""
+    """Identify the exact reviewed build, including supported immutable ULR deployments."""
     compiled = artifact(kind)
     actual = bytes(w3.eth.get_code(address, block_identifier=block))
     try:
         _check_runtime(actual, compiled["deployedBytecode"])
     except ValueError as error:
-        if kind != "ULRConfederationTreasury" or str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+        if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
             raise
-        reference = Path(__file__).resolve().parents[1] / "contracts/ULRConfederationTreasuryLegacy.json"
-        legacy = json.loads(reference.read_text())
-        _check_runtime(actual, legacy["deployedBytecode"])
-        compiled = dict(legacy, abi=compiled["abi"])
+        references = {
+            "ULRConfederationTreasury": ("ULRConfederationTreasuryV1", "ULRConfederationTreasuryLegacy"),
+            "ULRCustodianSnapshots": ("ULRCustodianSnapshotsLegacy",),
+        }
+        for name in references.get(kind, ()):
+            path = Path(__file__).resolve().parents[1] / "contracts" / (name + ".json")
+            legacy = json.loads(path.read_text())
+            try:
+                _check_runtime(actual, legacy["deployedBytecode"])
+            except ValueError as mismatch:
+                if str(mismatch) != "BTC_CONTRACT_BUILD_MISMATCH":
+                    raise
+                continue
+            compiled = dict(legacy, abi=compiled["abi"], legacy_reference=name)
+            break
+        else:
+            raise
     return Web3.keccak(actual).hex(), compiled
 
 
@@ -333,9 +346,10 @@ def discover_registry(manifest, key, registry, board_address, *, address_signing
         if address_signing: options["address_signing"] = True
         reviewed = inspect_registry(manifest, key, registry, intent["target"], **options)
         graph = reviewed["graph"]
-        if invite["version"] in ("3", "4", "5", "6") and graph["withdrawal_policy"] != {
-            name: invite[name] for name in ("min_p2wpkh_sats", "min_p2tr_sats")
-        }:
+        expected_policy = {name: invite[name] for name in ("min_p2wpkh_sats", "min_p2tr_sats")}
+        if invite.get("ulr", {}).get("version") == "3":
+            expected_policy["default_miner_fee_sats"] = invite["ulr"]["default_miner_fee_sats"]
+        if invite["version"] in ("3", "4", "5", "6") and graph["withdrawal_policy"] != expected_policy:
             raise ValueError("BTC_BOARD_WITHDRAWAL_POLICY_MISMATCH")
         if invite["version"] in ("3", "4", "5", "6") and any(
             value != invite["bitcoin_confirmations"]

@@ -6,11 +6,14 @@
 `BitcoinSigningBoard`, что и [обычные Bitcoin-платежи](BITCOIN_ONCHAIN_RUNBOOK.md).
 Они работают с выбранной в приглашении комбинацией Ethereum и Bitcoin сетей.
 Доказательства загружаются из вашего Bitcoin Core; файлы между участниками не
-передаются. На публичном Bitcoin relay должен быть синхронизирован, SPV guard
-должен быть свежим. Ethereum finality/depth сохраняется.
+передаются. Для relay на публичном Bitcoin требуется синхронизированный relay
+со свежим SPV guard. Для ZK дождитесь свежего state и материализации заголовка
+платежа относительно текущего canonical root. Ethereum finality/depth
+сохраняются из приглашения.
+[Проверка и повтор вызова с ZK](ZK_SPV_BOOTSTRAP.md#retry-after-a-proof-call-reverts).
 
 Нужны завершённые DKG, bootstrap, локально проверенный и закреплённый registry,
-созданный signing board и действующий keeper relay. Переменные `BOARD`,
+созданный signing board и действующий keeper выбранного SPV. Переменные `BOARD`,
 `SIGNING_BOARD`, `EVM_RPC`, `BTC_RPC`, `BTC_COOKIE` задают публичные адреса и
 локальные соединения. `IDENTITY`, `STATE`, `PASSWORD` у каждого участника свои:
 state — файл `btc_ceremony.enc`, пароль — локальный файл с правами 0600.
@@ -22,9 +25,17 @@ mint proposal — действующий `BitcoinMintAdmission.operator` (в н�
 Исполнить уже подписанный intent может другой участник.
 
 Входящая [передача обеспечения](BITCOIN_CUSTODY_TRANSFER.md) имеет отдельный
-маршрут: исходный `settle`/burn и destination SPV, затем `finalize` и выпуск cBTC.
+маршрут. За исходным `settle` и сжиганием MP следуют SPV назначения и
+`finalize`, который выпускает S в V3 или cBTC в прежнем профиле.
 Её нельзя провести как обычный fresh deposit или потратить до принятия как
 свободную Bitcoin-казну. Перенос не сдвигает nonce обычной mint-заявки.
+
+Для прямого депозита в конфедерацию V3 укажите адрес `ConfederationBitcoinReserve`
+в `--mining-pool`, его BTC-скрипт назначения и полную сумму выпуска S в
+базовых единицах. `mintFromProof` распределяет её между получателем и DAO
+после проверки доказательства. Ниже примеры суммы обозначены как MP для
+графа федерации. Разделы выплат из Bitcoin-казны относятся к прежнему escrow.
+[Выпуск и погашение S в V3](CONFEDERATION_DAO_IN_KIND.md).
 
 ## Выпуск MP по подтверждённому депозиту
 

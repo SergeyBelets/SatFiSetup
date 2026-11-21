@@ -1,0 +1,11 @@
+# Stable source bytes and Solidity metadata across macOS, Linux and Windows/WSL.
+*.py text eol=lf
+*.rs text eol=lf
+*.sol text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.bin binary
+*.r0bf binary

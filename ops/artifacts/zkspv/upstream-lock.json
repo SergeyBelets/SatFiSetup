@@ -1,0 +1,560 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-27",
+  "status": "PASS",
+  "status_scope": "source identity and retained file hashes only; not production qualification",
+  "integration_revision": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "audit_revisions": {
+    "sigma_scope": "ee7505a57ab2daefaded90f6148c3aa29d68fef2",
+    "sigma_fixes": "650ed94df1672bcbf4dbce760ea536463526befc",
+    "cantina_scope": "738e68ee8321eb2e5d78e2f94dfe0b99b4957dd2",
+    "cantina_post_fix": null
+  },
+  "archives": [
+    {
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://codeload.github.com/chainwayxyz/citrea/tar.gz/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "sha256": "591197b7a10896859d873a757d53ae39edd541414702b17c15a82d3f4d0b12c6",
+      "bytes": 22794379
+    },
+    {
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "tag": "v3.0.1",
+      "url": "https://codeload.github.com/risc0/risc0-ethereum/tar.gz/365e7b2db4f620fa256580c27558d2623362b9ae",
+      "sha256": "3127fade73dcf4c34829a4de88f48d348e45922c0d611a59b213d153c8166a70",
+      "bytes": 329788
+    }
+  ],
+  "resolved_components": [
+    {
+      "name": "bitcoin",
+      "version": "0.32.5",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "ce6bc65742dea50536e35ad42492b234c27904a27f0abdcbce605015cb4ea026"
+    },
+    {
+      "name": "crypto-bigint",
+      "version": "0.4.9",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "ef2b4b23cddf68b89b8f8069890e8c270d54e2d5fe1b143820234805e4cb17ef"
+    },
+    {
+      "name": "crypto-bigint",
+      "version": "0.5.5",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76"
+    },
+    {
+      "name": "risc0-binfmt",
+      "version": "3.0.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "1c8f97f81bcdead4101bca06469ecef481a2695cd04e7e877b49dea56a7f6f2a"
+    },
+    {
+      "name": "risc0-build",
+      "version": "3.0.3",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "1bbb512d728e011d03ce0958ca7954624ee13a215bcafd859623b3c63b2a3f60"
+    },
+    {
+      "name": "risc0-ethereum-contracts",
+      "version": "3.0.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "9a604f09f459f456fd9ef4919c6efcaa6a787a6f9ffcd76cfc81eae1860584a1"
+    },
+    {
+      "name": "risc0-zkvm",
+      "version": "3.0.3",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "3fcce11648a9ff60b8e7af2f0ce7fbf8d25275ab6d414cc91b9da69ee75bc978"
+    }
+  ],
+  "files": [
+    {
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/COPYING",
+      "upstream_path": "COPYING",
+      "repository": "https://github.com/bitcoin/bitcoin",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "url": "https://raw.githubusercontent.com/bitcoin/bitcoin/ee42d59d4de970769ebabf77b89ff4269498f61e/COPYING",
+      "sha256": "7c4a87f43afaf667b4c2187af92ebdd27310a24cec113f973e058e3300a76002",
+      "bytes": 1142,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/arith_uint256.cpp",
+      "upstream_path": "src/arith_uint256.cpp",
+      "repository": "https://github.com/bitcoin/bitcoin",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "url": "https://raw.githubusercontent.com/bitcoin/bitcoin/ee42d59d4de970769ebabf77b89ff4269498f61e/src/arith_uint256.cpp",
+      "sha256": "33099a41d032d02f49f2d0269f31749c6b9d7cee3fdc8ce0c3cadfe46786d1a8",
+      "bytes": 6473,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/chain.cpp",
+      "upstream_path": "src/chain.cpp",
+      "repository": "https://github.com/bitcoin/bitcoin",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "url": "https://raw.githubusercontent.com/bitcoin/bitcoin/ee42d59d4de970769ebabf77b89ff4269498f61e/src/chain.cpp",
+      "sha256": "f22d9f8f444e6949d5e1a45d3b8e35f565bef0b7e8c0fd7707ffe56ea6352032",
+      "bytes": 6011,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/pow.cpp",
+      "upstream_path": "src/pow.cpp",
+      "repository": "https://github.com/bitcoin/bitcoin",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "url": "https://raw.githubusercontent.com/bitcoin/bitcoin/ee42d59d4de970769ebabf77b89ff4269498f61e/src/pow.cpp",
+      "sha256": "a01f9a36201f1f28de72cf1a82ed67634a47b03bb5d3387eef961f461cbc2002",
+      "bytes": 6546,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/COPYING",
+      "upstream_path": "COPYING",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/COPYING",
+      "sha256": "75834a24bfdb7ebd0539cd9fc497ebc7583f624521fc48dc606c78db2f2b949d",
+      "bytes": 34489,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/Cargo.lock",
+      "upstream_path": "Cargo.lock",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/Cargo.lock",
+      "sha256": "34afe1d5794f6189857d239d2b03309b175d7c58d74004578e6861201a33d9ca",
+      "bytes": 326506,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/Cargo.toml",
+      "upstream_path": "Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/Cargo.toml",
+      "sha256": "a41f4fd0d848d6a33ee942e6e5fc7fd0a28662b94b35c6b1c437d6e07d9d9d0a",
+      "bytes": 9412,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/SECURITY.md",
+      "upstream_path": "SECURITY.md",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/SECURITY.md",
+      "sha256": "c8c05b2574d972d56b4ac860a321a214cb2f22c13ed4d0a5b30ef94717fae95a",
+      "bytes": 3464,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/audits/Sigma_Prime_Chainway_Citrea_Security_Assessment_Report_v2_2.pdf",
+      "upstream_path": "audits/Sigma_Prime_Chainway_Citrea_Security_Assessment_Report_v2_2.pdf",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/audits/Sigma_Prime_Chainway_Citrea_Security_Assessment_Report_v2_2.pdf",
+      "sha256": "45478dfbe1361e212878f8ea91262c729f9a874f03a2ba569dfb96d431636f8b",
+      "bytes": 510358,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/audits/cantina_competition_citrea_jul2025.pdf",
+      "upstream_path": "audits/cantina_competition_citrea_jul2025.pdf",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/audits/cantina_competition_citrea_jul2025.pdf",
+      "sha256": "5c1edf271cc2936f266a5a80ed5d2734af3a76362bff9e464e4077f567e8ddab",
+      "bytes": 608620,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/Cargo.toml",
+      "upstream_path": "crates/bitcoin-da/Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/Cargo.toml",
+      "sha256": "f5bd2a4ac797d0556193a4ebca61f162dc02057165c4f988b2d66767777d3638",
+      "bytes": 2071,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/LICENSE",
+      "upstream_path": "crates/bitcoin-da/LICENSE",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/LICENSE",
+      "sha256": "3e5c09a11b3451be7ac17e43725f674868a6b22b938675cd77204b7bba009c1e",
+      "bytes": 11337,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/network_constants.rs",
+      "upstream_path": "crates/bitcoin-da/src/network_constants.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/src/network_constants.rs",
+      "sha256": "882e7d37e8ff4aa5090c84ba08aa9921be5d06d4cefcde13a06dff581f8bb5d4",
+      "bytes": 4726,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/spec/block_hash.rs",
+      "upstream_path": "crates/bitcoin-da/src/spec/block_hash.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/src/spec/block_hash.rs",
+      "sha256": "8ed6426d4f622bf4772eb3850adb1a14c14ec64f30c3e867da0fddf968d25362",
+      "bytes": 1754,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/spec/header.rs",
+      "upstream_path": "crates/bitcoin-da/src/spec/header.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/src/spec/header.rs",
+      "sha256": "c710c6a4fdc97ae07c1e07e490f1618c1e0d50f625534f057d344758ea83388f",
+      "bytes": 5984,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/spec/mod.rs",
+      "upstream_path": "crates/bitcoin-da/src/spec/mod.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/src/spec/mod.rs",
+      "sha256": "169825daa534a40a04f7581ce6612a8eb61cc8bfefe020efc2e61ceea096216a",
+      "bytes": 1721,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/verifier.rs",
+      "upstream_path": "crates/bitcoin-da/src/verifier.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/src/verifier.rs",
+      "sha256": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+      "bytes": 40077,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/block-882547.bin",
+      "upstream_path": "crates/bitcoin-da/test_data/mainnet/block-882547.bin",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/test_data/mainnet/block-882547.bin",
+      "sha256": "8e63cf192c0b79411e85298f63d0c355f9bbcba39922c5f5369059bba5b20938",
+      "bytes": 1935974,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/chainwork_test_hashes.json",
+      "upstream_path": "crates/bitcoin-da/test_data/mainnet/chainwork_test_hashes.json",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/test_data/mainnet/chainwork_test_hashes.json",
+      "sha256": "32822bacfff54e54116669f555cc31fe3976c7b4f41dc9fb9c313124c0926437",
+      "bytes": 83722,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/headers-40310-42346.txt",
+      "upstream_path": "crates/bitcoin-da/test_data/mainnet/headers-40310-42346.txt",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/test_data/mainnet/headers-40310-42346.txt",
+      "sha256": "845c4c282fa8d258276b6ab2d5c4f8c4504c1e4d0d34ecfbb59bb9e8d4cda039",
+      "bytes": 327957,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/headers-872918-874954.txt",
+      "upstream_path": "crates/bitcoin-da/test_data/mainnet/headers-872918-874954.txt",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/test_data/mainnet/headers-872918-874954.txt",
+      "sha256": "fa68376444d68b54ef41282cb9a103ebc3a39a9aba455e70342b6ac9526e6fa8",
+      "bytes": 327957,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/light-client-prover/src/circuit/mod.rs",
+      "upstream_path": "crates/light-client-prover/src/circuit/mod.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/light-client-prover/src/circuit/mod.rs",
+      "sha256": "f07b120c59fe203f1a2dd8d85942ffadf76e8b18a67341edb62f04098b77c8b6",
+      "bytes": 37063,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/primitives/Cargo.toml",
+      "upstream_path": "crates/primitives/Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/primitives/Cargo.toml",
+      "sha256": "96529b312145dd607ec6169ac96a39e47746bae8b59c7f5c4ad64f91bb727bdb",
+      "bytes": 476,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/risc0/Cargo.toml",
+      "upstream_path": "crates/risc0/Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/risc0/Cargo.toml",
+      "sha256": "69f85cf3aba37bb89cf462ab6d7d08e59c0ee290eea4ba17c63e8a87126b361d",
+      "bytes": 1960,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/risc0/src/host/local.rs",
+      "upstream_path": "crates/risc0/src/host/local.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/risc0/src/host/local.rs",
+      "sha256": "67cd43e0736ce078c5a5a0126bac3292b086b1ec1c1f1010bbe8ff88c510d5ab",
+      "bytes": 6252,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/risc0/src/host/mod.rs",
+      "upstream_path": "crates/risc0/src/host/mod.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/risc0/src/host/mod.rs",
+      "sha256": "feaa9561b77b9d593532b1e7d9a1fd4077240ef079eb476c6e97cbf006aa033d",
+      "bytes": 5801,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/sovereign-sdk/LICENSE",
+      "upstream_path": "crates/sovereign-sdk/LICENSE",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/sovereign-sdk/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/sovereign-sdk/rollup-interface/Cargo.toml",
+      "upstream_path": "crates/sovereign-sdk/rollup-interface/Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/sovereign-sdk/rollup-interface/Cargo.toml",
+      "sha256": "6463f666e8450ee4de0f6b40c8720057eb92a44f3c7729763ac03557070dfce8",
+      "bytes": 1623,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/crates/sovereign-sdk/rollup-interface/src/state_machine/da.rs",
+      "upstream_path": "crates/sovereign-sdk/rollup-interface/src/state_machine/da.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/sovereign-sdk/rollup-interface/src/state_machine/da.rs",
+      "sha256": "8d71f71da0c9b9758890b59a82d109ff505f9ece19d3341cf94eace4eb66ffb7",
+      "bytes": 18839,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/docs/dev-setup.md",
+      "upstream_path": "docs/dev-setup.md",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/docs/dev-setup.md",
+      "sha256": "626b2b389322dc2c408118e44859433aedeb09ed45a69013d017de162739b1d1",
+      "bytes": 1372,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/docs/light-client-circuit.md",
+      "upstream_path": "docs/light-client-circuit.md",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/docs/light-client-circuit.md",
+      "sha256": "c8c9c004add4d96bca3b6db3882c9175b706fd83181aae18aea434ab9ab27d24",
+      "bytes": 7439,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/guests/risc0/light-client-proof/bitcoin/Cargo.lock",
+      "upstream_path": "guests/risc0/light-client-proof/bitcoin/Cargo.lock",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/guests/risc0/light-client-proof/bitcoin/Cargo.lock",
+      "sha256": "21317bd18455069f27b45d52b6b1c18aefbe7c28e066209549fc64d638ee1caa",
+      "bytes": 79541,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/guests/risc0/light-client-proof/bitcoin/Cargo.toml",
+      "upstream_path": "guests/risc0/light-client-proof/bitcoin/Cargo.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/guests/risc0/light-client-proof/bitcoin/Cargo.toml",
+      "sha256": "adf8b0201750d6d1f2a4b88831f66a7227aa7b9f20b385d3e9c23d024d0fc5b6",
+      "bytes": 1977,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/guests/risc0/light-client-proof/bitcoin/src/bin/light_client_proof_bitcoin.rs",
+      "upstream_path": "guests/risc0/light-client-proof/bitcoin/src/bin/light_client_proof_bitcoin.rs",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/guests/risc0/light-client-proof/bitcoin/src/bin/light_client_proof_bitcoin.rs",
+      "sha256": "3e1ff9221d7674f39a7bdce9de0429aee7a2d12cb3a5f50469561d2308e492e1",
+      "bytes": 4287,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/citrea-2ed54463/rust-toolchain.toml",
+      "upstream_path": "rust-toolchain.toml",
+      "repository": "https://github.com/chainwayxyz/citrea",
+      "commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+      "url": "https://raw.githubusercontent.com/chainwayxyz/citrea/2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/rust-toolchain.toml",
+      "sha256": "b539da3f6dce30d7816847249ba9e18439421bdfe4e9a4d6fdb79415690d6c32",
+      "bytes": 113,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/Cargo.lock",
+      "upstream_path": "Cargo.lock",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/Cargo.lock",
+      "sha256": "db18bbbc314a84e0c20b2fb28f4645520d49b5b499093361d85f173bf7765515",
+      "bytes": 139906,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/Cargo.toml",
+      "upstream_path": "Cargo.toml",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/Cargo.toml",
+      "sha256": "1d26705d7eb18fd22f89467554eae19716fe1bb657eb7bd3275174721d5195c7",
+      "bytes": 2176,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/LICENSE",
+      "upstream_path": "LICENSE",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/LICENSE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "bytes": 10174,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/IRiscZeroSelectable.sol",
+      "upstream_path": "contracts/src/IRiscZeroSelectable.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/IRiscZeroSelectable.sol",
+      "sha256": "54a8a39dd427e8ec21db31815d80a3df6df992d3244a2370ba21517dde7dd11b",
+      "bytes": 1671,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/IRiscZeroVerifier.sol",
+      "upstream_path": "contracts/src/IRiscZeroVerifier.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/IRiscZeroVerifier.sol",
+      "sha256": "cfd7c80872313134d028c0250ddc86036448fb4df290ce4dba113ea80646e180",
+      "bytes": 9572,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/StructHash.sol",
+      "upstream_path": "contracts/src/StructHash.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/StructHash.sol",
+      "sha256": "9fd507fc30726dcecf35a7a1d16b2ffe34561721fa37895bb75b9c3cf07f0131",
+      "bytes": 3162,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/Util.sol",
+      "upstream_path": "contracts/src/Util.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/Util.sol",
+      "sha256": "4711aa3c42754c996278f62091ffd1422132512e0900a9cdea3fe54235fa5896",
+      "bytes": 2835,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/ControlID.sol",
+      "upstream_path": "contracts/src/groth16/ControlID.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/groth16/ControlID.sol",
+      "sha256": "753535e844a84a28b275fe21bd4c30022266b27bcdaa9b189220dece220accfa",
+      "bytes": 1076,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/Groth16Verifier.sol",
+      "upstream_path": "contracts/src/groth16/Groth16Verifier.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/groth16/Groth16Verifier.sol",
+      "sha256": "14bdf78c8b6168b12a5235395d42b8daabb48ee29d49913bb06d20071f156fd6",
+      "bytes": 8436,
+      "modified": false
+    },
+    {
+      "path": "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/RiscZeroGroth16Verifier.sol",
+      "upstream_path": "contracts/src/groth16/RiscZeroGroth16Verifier.sol",
+      "repository": "https://github.com/risc0/risc0-ethereum",
+      "commit": "365e7b2db4f620fa256580c27558d2623362b9ae",
+      "url": "https://raw.githubusercontent.com/risc0/risc0-ethereum/365e7b2db4f620fa256580c27558d2623362b9ae/contracts/src/groth16/RiscZeroGroth16Verifier.sol",
+      "sha256": "f24784fb625b8a82232c79f21db28f759593e29a287a4f9865cc6e78d36eb283",
+      "bytes": 8236,
+      "modified": false
+    }
+  ],
+  "deployment": {
+    "chain_id": null,
+    "address": null,
+    "block_number": null,
+    "block_hash": null,
+    "runtime_code_hash": null,
+    "reason": "No public deployment requested or performed; no target supplied."
+  },
+  "historical_verifiers": [
+    {
+      "path": "ops/artifacts/zkspv/evidence/sigma-scope-verifier.rs",
+      "commit": "ee7505a57ab2daefaded90f6148c3aa29d68fef2",
+      "upstream_path": "crates/bitcoin-da/src/verifier.rs",
+      "sha256": "4526ea9165654b13f72e57680f1b818f20511040500c5987994a2202fe1389ff",
+      "bytes": 34021,
+      "diff": "ops/artifacts/zkspv/evidence/sigma-scope-to-integration.patch"
+    },
+    {
+      "path": "ops/artifacts/zkspv/evidence/sigma-fixes-verifier.rs",
+      "commit": "650ed94df1672bcbf4dbce760ea536463526befc",
+      "upstream_path": "crates/bitcoin-da/src/verifier.rs",
+      "sha256": "e37157af1441bfe298a5a8c460f79b1d7eb18be606a291153ee7056487f295ff",
+      "bytes": 34241,
+      "diff": "ops/artifacts/zkspv/evidence/sigma-fixes-to-integration.patch"
+    },
+    {
+      "path": "ops/artifacts/zkspv/evidence/cantina-verifier.rs",
+      "commit": "738e68ee8321eb2e5d78e2f94dfe0b99b4957dd2",
+      "upstream_path": "crates/bitcoin-da/src/verifier.rs",
+      "sha256": "cf1c549632a1a2f8ef2a57e69860a8a7bf1f78afaeb13dcad48afe680c70254f",
+      "bytes": 36548,
+      "diff": "ops/artifacts/zkspv/evidence/cantina-to-integration.patch"
+    }
+  ]
+}

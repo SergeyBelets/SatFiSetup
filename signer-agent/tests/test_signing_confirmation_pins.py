@@ -56,8 +56,8 @@ def test_durable_share_delivery_waits_for_same_strict_depth(monkeypatch):
     captured=[]
     class Runner:
         wire=staticmethod(bootstrap.Bootstrap.wire)
-        def __init__(self,profile,state,*,evm_confirmation_floor):
-            captured.append((profile,evm_confirmation_floor))
+        def __init__(self,profile,state,*,evm_confirmation_floor,evm_rpc_override):
+            captured.append((profile,evm_confirmation_floor,evm_rpc_override))
             self.journal=NS(get=lambda key:dict(result=dict(tx_hash='same-durable-tx')))
         def apply_confirmed(self,identity):return dict(status='VERIFIED')
     monkeypatch.setattr(bootstrap,'Bootstrap',Runner)
@@ -68,8 +68,9 @@ def test_durable_share_delivery_waits_for_same_strict_depth(monkeypatch):
     client.check_read_snapshot=lambda:None
     client.identity_file='own-identity';client.transaction_journal='own-journal'
     assert client._send(NS(address=addr(8),fn_name='submitNonceCommitments',args=[]))=='same-durable-tx'
-    profile,floor=captured[0]
+    profile,floor,rpc=captured[0]
     assert profile['evm_confirmations']=='1' and floor==3
+    assert rpc == client.config.rpc_url
     assert client.bitcoin_graph['evm_confirmations']=='1'
 
 

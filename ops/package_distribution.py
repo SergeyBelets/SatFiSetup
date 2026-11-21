@@ -45,6 +45,8 @@ NEW_SOURCES = ('signer-agent/signer_agent/bootstrap_custody.py',
     'rust/zkspv/vendor/risc0-ethereum-3.1.0/contracts/src/groth16/Groth16Verifier.sol',
     'rust/zkspv/vendor/risc0-ethereum-3.1.0/contracts/src/groth16/RiscZeroGroth16Verifier.sol',
     'signer-agent/contracts/ULRConfederationTreasuryLegacy.json',
+    'signer-agent/contracts/ULRConfederationTreasuryV1.json',
+    'signer-agent/contracts/ULRCustodianSnapshotsLegacy.json',
     'signer-agent/tests/test_zk_linux_port.py',
     'signer-agent/tests/test_signing_target_substitution.py',
     'tests/e2e/test_signing_verifier_substitution.py',
@@ -67,7 +69,49 @@ NEW_SOURCES += ('signer-agent/signer_agent/nft_governance.py','signer-agent/sign
     'tests/e2e/test_nft_governance.py')
 NEW_SOURCES += ('signer-agent/signer_agent/bootstrap_recovery.py', 'signer-agent/signer_agent/bootstrap_nonce_close.py',
     'signer-agent/tests/test_bootstrap_recovery.py','ops/zkspv/r0vm-3.0.3-segment-limit.patch')
+NEW_SOURCES += ('signer-agent/signer_agent/bootstrap_nonce_legacy.py',
+    'signer-agent/tests/test_bootstrap_nonce_legacy.py')
+NEW_SOURCES += ('signer-agent/signer_agent/zk_submission.py',)
 NEW_SOURCES += ('signer-agent/signer_agent/launch_rpc.py', 'signer-agent/tests/test_launch_rpc.py')
+NEW_SOURCES += ('signer-agent/signer_agent/finalization_recovery.py',
+    'signer-agent/tests/test_finalization_recovery.py', 'tests/e2e/test_frost_finalize_race.py',
+    'signer-agent/signer_agent/bootstrap_replacement.py', 'signer-agent/tests/test_bootstrap_replacement.py',
+    'tests/e2e/test_evm_pending_replacement.py')
+NEW_SOURCES += (
+    'config/ulr-in-kind.example.json', 'docs/CONFEDERATION_DAO_IN_KIND.md',
+    'signer-agent/signer_agent/bitcoin_issuer.py',
+    'signer-agent/signer_agent/bootstrap_confederation_dao.py',
+    'signer-agent/signer_agent/bootstrap_native_s.py',
+    'signer-agent/signer_agent/confederation_dao_cli.py',
+    'signer-agent/signer_agent/confederation_dao_report.py',
+    'signer-agent/tests/test_confederation_dao_report.py',
+    'signer-agent/tests/test_in_kind_bitcoin_payment.py',
+    'signer-agent/tests/test_in_kind_withdrawal.py',
+    'tests/e2e/test_in_kind_bootstrap.py',
+    'web3/contracts/src/federation/BitcoinCustodyTransferV2.sol',
+    'web3/contracts/src/federation/BitcoinWithdrawalEscrowV2.sol',
+    'web3/contracts/src/federation/ConfederationBitcoinReserve.sol',
+    'web3/contracts/src/federation/ConfederationDAOIncome.sol',
+    'web3/contracts/src/federation/ConfederationDAOStake.sol',
+    'web3/contracts/src/federation/ConfederationNFTPass.sol',
+    'web3/contracts/src/federation/ConfederationPoolV2.sol',
+    'web3/contracts/src/federation/ConfederationPoolV2Deployer.sol',
+    'web3/contracts/src/federation/ConfederationShareV2Deployer.sol',
+    'web3/contracts/src/tokens/ConfederationShareV2.sol',
+    'web3/test/BitcoinWithdrawalEscrowV2.t.sol',
+    'web3/test/ConfederationBacking.t.sol',
+    'web3/test/ConfederationDAOIncome.t.sol')
+NEW_SOURCES += ('docs/RECOVERY.md',)
+NEW_SOURCES += (
+    'signer-agent/contracts/FundedFeeSale.json',
+    'signer-agent/signer_agent/fee_sale_cli.py',
+    'signer-agent/signer_agent/fee_sale_governance.py',
+    'signer-agent/signer_agent/zk_peer_bundle.py',
+    'signer-agent/tests/test_fee_sale_governance.py',
+    'signer-agent/tests/test_zk_peer_bundle.py',
+    'web3/contracts/src/federation/FundedFeeSale.sol',
+    'web3/test/FundedFeeSale.t.sol',
+)
 TEXT_SUFFIXES = {'.py','.rs','.sol','.js','.cjs','.mjs','.ts','.tsx','.jsx','.toml','.lock','.md',
     '.json','.yml','.yaml','.sh','.patch','.txt','.csv','.tsv','.svg','.hex','.raw','.example','.c','.h','.cpp','.S'}
 
@@ -87,7 +131,7 @@ def reason(name):
     if path.parts[:2]==('ops','artifacts'):return 'local_evidence_or_old_package'
     if 'evidence' in path.parts:return 'generated_evidence'
     if path.name.startswith('.env') and path.name!='.env.example':return 'private_configuration'
-    if path.suffix in {'.sqlite','.db','.enc','.cookie','.log','.xml','.r0','.elf','.r0bf','.journal','.input','.key'}:return 'local_generated_data'
+    if path.suffix in {'.sqlite','.db','.enc','.cookie','.log','.xml','.r0','.elf','.r0bf','.journal','.input','.key','.seal'}:return 'local_generated_data'
     if path.name.endswith(('.tar','.tar.gz','.tgz','.zip')):return 'nested_archive'
     if path.suffix=='.bin':
         if name.startswith(('web3/test/fixtures/','tests/vectors/')) and not any(t in path.name.lower() for t in ('receipt','seal','proof','journal')):return None

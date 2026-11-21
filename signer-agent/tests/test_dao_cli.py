@@ -76,9 +76,8 @@ def test_cli_never_emits_provider_credentials_on_error(monkeypatch, capsys):
     monkeypatch.setattr(DAOClient, "load", fail)
     assert main(["status"]) == 2
     output = capsys.readouterr().out
-    result = json.loads(output)
-    assert result["status"] == "ERROR" and result["code"] == "ConnectionError"
-    assert result["message"] and result["next_action"]
+    assert json.loads(output) == {"status": "ERROR", "code": "ConnectionError",
+                                 "message": "The RPC connection failed. Check the endpoint and try again."}
     assert "secret" not in output
 
 

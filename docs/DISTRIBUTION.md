@@ -8,10 +8,12 @@
 Экономические параметры и формулы новой сборки: [конфигуратор](LAUNCH_CONFIGURATOR.md)
 и [математическое описание](LAUNCH_MATHEMATICS.md).
 
-Каждый участник ZK-профиля сам вычисляет proof рабочего Bitcoin-перехода.
-Проверка чужого receipt не заменяет этот расчёт. В поставку не входят receipts,
-seals, подготовленные inputs/journals рабочих переходов, caches, приватные
-состояния участников, готовые пакеты прошлых запусков и локальные результаты.
+Участники получают единый исходный архив с кодом, программами и pins.
+В него не входят receipts, seals, подготовленные inputs/journals рабочих
+переходов, caches и приватное состояние. Отдельный публичный архив одного
+перехода служит для независимой проверки после подготовки или proving.
+Worker публикует результат собственного расчёта из своего рабочего каталога.
+[Архив перехода и границы его применения](#публичный-архив-перехода).
 
 Исходники guest/verifier, Cargo locks, контрольные image ID/хеши и неизменяемый
 R0BF-код mainnet и testnet4 guests входят в код протокола. R0BF не содержит proof перехода;
@@ -47,13 +49,15 @@ proofs и хранятся отдельно. Старые архивы сохр�
 ```mermaid
 flowchart TD
   accTitle: Поставка кода без готовых proofs
-  accDescr: Из developer checkout выделяется проверяемый source archive. Готовые proofs, приватные состояния и старые архивы остаются локально; каждый участник собирает хост самостоятельно.
+  accDescr: Участники сверяют исходный архив с кодом и pins. Затем настраивают хост в своей роли. Для проверки ZIP нужен EVM RPC, для подготовки нужен native witness, для proving нужны локальные tools.
   DEV["Согласованный developer checkout"] --> FILTER["Фильтр путей и содержимого<br/>ops.package_distribution"]
   FILTER --> ARCH["Participant archive + manifest<br/>Код, pinned guest program и параметры проверки"]
   FILTER -->|"Оставить локально"| LOCAL["Исторические proofs и evidence<br/>Рабочие inputs, journals, caches и секреты"]
   ARCH --> CHECK["Каждый сверяет общий SHA256<br/>и состав manifest"]
-  CHECK --> BUILD["Свой venv, FROST и Solidity<br/>Witness host и proving tools"]
-  BUILD --> OWN["Свои RPC, identity и worker directory<br/>Собственный расчёт рабочих proofs"]
+  CHECK --> BUILD["Свой SDK и Solidity<br/>FROST для подписантов"]
+  BUILD --> REVIEW["Проверка ZIP<br/>Свой EVM RPC и закреплённый граф"]
+  BUILD --> PREP["Подготовка переходов<br/>Native witness host и архивный Core"]
+  PREP -->|"На prover-хосте"| OWN["Pinned proving tools и Docker<br/>Собственный расчёт proof"]
 ```
 
 Из согласованного checkout оператор собирает новый архив:
@@ -99,7 +103,9 @@ python ops/bootstrap_host.py check --role signer --state-dir "$LOCAL"
 Собираются native FROST и оба Solidity-проекта: обычные контракты и отдельный
 state-adapter. Платформенные build outputs не передаются между участниками.
 
-Для witness host нужен полный upstream Citrea commit
+Worker подготовки и proving использует witness host выбранной Bitcoin-сети.
+Верификация публичного ZIP обращается к своему EVM RPC и закреплённому verifier.
+Для mainnet witness host нужен полный upstream Citrea commit
 `2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8`. Его source archive должен иметь SHA256
 `591197b7a10896859d873a757d53ae39edd541414702b17c15a82d3f4d0b12c6`.
 Подготовка зависимостей выполняется заранее; только затем — offline build:
@@ -126,7 +132,10 @@ python -m ops.zkspv.worker_build --prepared "$LOCAL/native-source" \
 proofs или старого SDK snapshot. В worker config укажите собственные
 `host_binary` и `host_sha256` из результата локальной сборки.
 
-Для рабочих proofs установите R0VM, bridge и wrapper 3.1.0 по
+Для testnet4 используйте отдельную сборку host и guest.
+[Сборка testnet4](ZK_TESTNET4_SEPOLIA.md).
+
+На хосте полного proving установите R0VM, bridge и wrapper 3.1.0 по
 [инструкции для Linux/WSL2 и macOS](ZK_PROVER_LINUX.md#2-локальная-воспроизводимая-сборка-tools).
 Сохраните локальную запись сборки и загрузите закреплённый Groth16-образ.
 При переходе с 3.0.3 создайте новый рабочий каталог и новый ZK-граф.
@@ -169,7 +178,7 @@ sequenceDiagram
   B->>B: Сохранить свой receipt и принятый архив<br/>published=false, повторной транзакции нет
 ```
 
-Эта схема не вводит proof quorum и не обеспечивает автоматический одновременный
+Этот вариант независимого расчёта не вводит proof quorum и не обеспечивает автоматический одновременный
 старт всех участников. Подготовьте attempts до продвижения state выбранным
 publisher. Сверка локальных результатов выполняется по публичному claim;
 контракт не собирает аттестации всех вычислявших машин.
@@ -211,6 +220,83 @@ source/input bindings и актуальность state/Core. Для прежн�
 loop нужно явное `run --boundary all`; остальные участники его не запускают
 вместо локального расчёта. Это сохраняет budgets, fee/nonce journals и recovery,
 не создавая повторные платные транзакции из каждого независимого расчёта.
+
+## Публичный архив перехода
+
+На машине со своим worker и pinned native helper можно запустить отдельную
+подготовку. Она берёт запросы из локального inbox или heartbeat и фиксирует
+подготовленный переход. Для тяжёлого расчёта тот же оператор использует
+свой prover с закреплёнными инструментами и поручает ему сформировать архив.
+Если подготовка и расчёт идут на разных машинах, каждая готовит свой attempt
+из проверенных источников. ZIP служит проверке и не переносит полный witness
+или рабочее состояние prover.
+
+```mermaid
+flowchart TD
+    accTitle: Подготовка, proving и публичная проверка одного перехода
+    accDescr: Режим prepare готовит входы по локальным RPC. Prover рассчитывает seal и может отдать публичный ZIP. Получатель сверяет доказательство и EVM контекст, а публикация использует собственный результат publisher.
+    CORE["Свой архивный Bitcoin Core<br/>Закреплённый EVM state и policy"] --> PREP["Worker: run --boundary prepare<br/>Подготовить attempt и journal"]
+    PREP --> PREVIEW["export-bundle --without-proof<br/>Manifest и journal"]
+    PREP --> PROVE["Свой prover: run --boundary export<br/>STARK, succinct и Groth16"]
+    PROVE --> ZIP["Публичный ZIP<br/>Manifest, journal и seal"]
+    PREVIEW --> CHECK["Получатель: verify-bundle<br/>Проверить согласованный EVM граф"]
+    ZIP --> CHECK
+    CHECK --> REVIEW["Read-only evidence для FROST review<br/>Состояние, свежесть и проверка seal"]
+    PROVE --> OWN["Свой local-result и origin record"]
+    OWN --> PUB["Явный publish выбранного worker<br/>Повторная проверка актуальности"]
+```
+
+На машине с локально подготовленным attempt для разового вычисления и
+экспорта используйте `--boundary export`. Для выгрузки результата выбранного
+attempt повторно запустите `export-bundle --attempt ID`. Возьмите
+`ATTEMPT_ID` из поля `proving_attempt_id` результата подготовки. Укажите разные
+абсолютные пути в уже созданном каталоге вне приватного worker directory и
+архива Bitcoin-истории. После записи нового файла возвращается
+`ZK_BUNDLE_EXPORTED` с `published=false`. Сохраните `bundle_sha256`
+для сверки у получателя. Копирование принятой Bitcoin-истории выполняется
+отдельной командой резервирования `archive-backup`.
+
+```sh
+# Подготовка одной итерации без proving и публикации
+frost-signer zk-worker run --config "$WORKER_CONFIG" \
+  --boundary prepare --once
+frost-signer zk-worker export-bundle --config "$WORKER_CONFIG" \
+  --attempt "$ATTEMPT_ID" --without-proof --bundle-file "$PREPARED_ZIP"
+
+# Расчёт и отдельный экспорт на машине prover
+frost-signer zk-worker run --config "$PROVER_CONFIG" \
+  --boundary export --bundle-file "$PUBLIC_ZIP"
+
+# Получатель проверяет доказательство по своему закреплённому EVM графу
+frost-signer zk-worker verify-bundle --config "$REVIEW_CONFIG" \
+  --bundle-file "$PUBLIC_ZIP" --require-proof
+```
+
+В подготовленном архиве находятся `manifest.json` и `state.journal`
+(1 216 байт). Архив с доказательством добавляет `groth16.seal` (260 байт).
+Канонический ZIP без сжатия ограничен 8 192 байтами. Manifest фиксирует
+контекст и хеши файлов. Witness `state.input`, локальные receipts и HMAC origin,
+ключи, RPC-данные, кэши стадий, журналы транзакций и принятая Bitcoin-история
+остаются в приватном worker directory.
+
+Для `REVIEW_CONFIG` достаточно JSON с полями `version: "1"`, `chain_id`,
+`evm_rpc`, `evm_confirmations`, `bitcoin_policy` и `zk_state`. Возьмите полную
+политику из согласованного графа и свой EVM RPC, задайте файлу права `0600`.
+Для архива подготовки опустите `--require-proof`. Проверка работает через
+закреплённый EVM verifier без Bitcoin cookie, кошелька и prover.
+`ZK_BUNDLE_PREPARATION_REVIEWED` означает проверку подготовленного
+контекста. `ZK_BUNDLE_PROOF_VERIFIED` означает проверку seal для этого
+journal. Читайте `onchain_state_relation` и `onchain_fresh` отдельно.
+`MATCHES_PREDECESSOR` указывает совпадение с исходным commitment,
+`ALREADY_ACCEPTED` — совпадение с результатом, `DIFFERENT_STATE` —
+расхождение. `onchain_fresh` относится к проверенному подтверждённому блоку
+EVM. При расхождении без остановки готовьте новый переход от подтверждённого
+state. При `onchain_halted=true` разберите остановку по принятой политике.
+`publication_authorized=false` отражает границу команды проверки.
+Она не выдаёт локальное происхождение чужому результату. До финансовой
+подписи сохраняются самостоятельные проверки FROST, включения транзакции,
+актуальности состояния и политики выбранного развёртывания.
+[Режимы worker](ZK_SPV_WORKER.md#worker-modes-and-transition-archives).
 
 ## Собственный cache и восстановление
 
@@ -257,8 +343,9 @@ completion-report. Это позволяет восстановиться пос
 [Linux ZK runbook](ZK_PROVER_LINUX.md) описывает локальную сборку pinned tools,
 bubblewrap/seccomp, Docker и обязательные probes. Linux ARM64 пока не поддерживает
 полный prover. На неподдерживаемой платформе публикация приглашения и `join-chain`
-ZK-группы блокируются до работы с собственным ключом. Скачанный peer proof
-не заменяет свой расчёт. Компонентные Linux-проверки не заменяют полный
+ZK-группы блокируются до работы с собственным ключом. Эти ограничения
+enrollment относятся к участию в графе, отдельная проверка ZIP использует
+EVM RPC. Публикация worker требует локального результата. Компонентные Linux-проверки не заменяют полный
 fresh-proof прогон и физическую проверку WSL2.
 
 Новый uncached proof требует не менее 8 GiB свободного места и фактически

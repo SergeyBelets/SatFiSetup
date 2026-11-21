@@ -22,8 +22,11 @@ PENDING_ERRORS = frozenset((
     "BTC_SIGNATURE_PACKETS_MISSING", "PAYMENT_DEPTH", "MAINNET_RELAY_STALE",
     "PAYMENT_NOT_CONFIRMED", "BITCOIN_OBSERVATION_UNAVAILABLE",
     "MAINNET_CORE_NOT_SYNCED", "MAINNET_TXINDEX_NOT_SYNCED",
-    "CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE",
+    "CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE", "EVM_RPC_BEHIND", "BlockNotFound",
 ))
+BITCOIN_POLL_ACTIONS = frozenset(("btc-commit", "btc-sign", "btc-broadcast", "btc-settle", "btc-relay"))
+BITCOIN_POLL_ERRORS = frozenset(("BITCOIN_RPC_FAILED", "BITCOIN_RPC_REJECTED", "MAINNET_CORE_REORG_DURING_CHECK",
+                               "BTC_RECOVERY_CHANGED"))
 
 
 def invoke(group, arguments):
@@ -40,8 +43,11 @@ def invoke(group, arguments):
     except (ValueError, TypeError):
         raise ValueError("FLOW_INVALID_RESULT") from None
     if result.get("status") == "ERROR":
-        if result.get("code") in PENDING_ERRORS:
-            return dict(status="WAITING", reason=result["code"])
+        code = result.get("code")
+        if code in PENDING_ERRORS or (
+            group == "dkg" and arguments and arguments[0] in BITCOIN_POLL_ACTIONS and code in BITCOIN_POLL_ERRORS
+        ):
+            return dict(status="WAITING", reason=code)
         # The nested CLI has already sanitized it, but keep this boundary strict.
         raise ValueError(participant_exception_code(ValueError(result.get("code"))))
     if code not in (0, 2):
@@ -72,7 +78,7 @@ def dkg_tick(a):
                 rows[role] = dict(status="NOT_A_PARTICIPANT")
                 continue
         phase = status["ceremonies"][role]["status"]
-        if phase in ("FAILED", "EXPIRED"):
+        if phase == "FAILED":
             raise ValueError("CEREMONY_TERMINAL_FAILURE")
         if phase == "NOT_STARTED":
             rows[role] = dict(status="NOT_STARTED")
@@ -83,6 +89,8 @@ def dkg_tick(a):
         rows[role] = invoke("dkg", ["run-once", "--role", role,
             "--state", state, "--password-file", Path(a.directory) / "password",
             *_flags(a, ("board", "rpc", "identity_file", "bitcoin_rpc", "bitcoin_cookie"))])
+    if any(row["status"] == "DKG_REVIEW_REQUIRED" for row in rows.values()):
+        return dict(status="DKG_REVIEW_REQUIRED", ceremonies=rows), False
     complete = all(row["status"] in ("ACTIVE", "NOT_A_PARTICIPANT") for row in rows.values())
     return dict(status="ACTIVE" if complete else "IN_PROGRESS", ceremonies=rows), complete
 
@@ -94,13 +102,10 @@ def payment_tick(a, phase):
     actions = ("btc-commit", "btc-sign") if a.actor == "signer" else ("btc-broadcast", "btc-settle")
     successes = ({"COMMITTED"}, {"SIGNED"}) if a.actor == "signer" else ({"BROADCAST"}, {"PAID", "BTC_PAYMENT_SETTLED"})
     result = invoke("dkg", [actions[phase], *common])
-    if (a.actor == "operator" and phase == 0 and result["status"] == "PAID"
-            and result.get("bitcoin_observation") == "CONFIRMED"):
-        return result, len(actions), True
     if result["status"] == "RECOVERY_REQUIRED":
         raise ValueError("PAYMENTS_PAUSED_FOR_RECOVERY")
-    if result["status"] == "OBSERVATION_UNAVAILABLE" and result.get("retryable") is False:
-        raise ValueError(participant_exception_code(ValueError(result["error_code"])))
+    if a.actor == "operator" and result["status"] in successes[1]:
+        return result, len(actions), True
     if result["status"] in successes[phase]:
         phase += 1
     return result, phase, phase == len(actions)
@@ -122,6 +127,7 @@ def main(argv):
             source.add_argument("--profile")
             source.add_argument("--deployment")
             c.add_argument("--state", required=True)
+            c.add_argument("--rpc", help="Override the EVM RPC transport for this deployment")
             funding = c.add_mutually_exclusive_group()
             funding.add_argument("--pause-for-funding", action="store_true")
             funding.add_argument("--funding-complete", action="store_true")
@@ -153,7 +159,7 @@ def main(argv):
         if a.action == "dkg":
             result, complete = dkg_tick(a)
         elif a.action == "bootstrap":
-            options = _flags(a, ("profile", "deployment", "state", "identity_file", "bitcoin_rpc", "bitcoin_cookie"))
+            options = _flags(a, ("profile", "deployment", "state", "identity_file", "rpc", "bitcoin_rpc", "bitcoin_cookie"))
             if not funding_requested:
                 if a.pause_for_funding: options += ["--pause-for-funding"]
                 if a.funding_complete: options += ["--funding-complete"]
@@ -161,7 +167,7 @@ def main(argv):
                 options += _flags(a, ("funding_min_wei", "funding_operator_min_wei"))
                 options += _flags(a, ("accept_ulr_distribution",))
             result = invoke("bootstrap", ["resume", *options])
-            funding_requested = True
+            funding_requested |= result["status"] != "AWAITING_EVM_RPC"
             complete = result["status"] == "VERIFIED"
         elif a.action == "payment":
             result, phase, complete = payment_tick(a, phase)
@@ -180,7 +186,7 @@ def main(argv):
             previous = output
         if complete:
             return 0
-        if result["status"] == "RECOVERY_REQUIRED":
+        if result["status"] in ("RECOVERY_REQUIRED", "DKG_REVIEW_REQUIRED"):
             return 2
         remaining = deadline - time.monotonic()
         if a.once or remaining <= 0:

@@ -219,10 +219,10 @@ class Pipeline:
                 receipt=saved.get('receipt',{})
                 if not receipt.get('transaction_hash') or not receipt.get('block_hash'):return True
                 from signer_agent.bootstrap import Bootstrap
-                from web3.exceptions import TransactionNotFound
                 check=Bootstrap.__new__(Bootstrap);check.w3=self.requester.w3;check.profile=self.requester.c
-                try:verified=check.verify_receipt(dict(tx_hash=receipt['transaction_hash'],block_hash=receipt['block_hash']))
-                except TransactionNotFound:return True
+                observed=dict(tx_hash=receipt['transaction_hash'],block_hash=receipt['block_hash'])
+                if 'block_number' in receipt:observed['block_number']=receipt['block_number']
+                verified=check.observe_receipt(observed)
                 if verified is None:return True
             elif saved.get('status') not in ('COVERED','STALE_QUOTE','REJECTED'):return True
         return False

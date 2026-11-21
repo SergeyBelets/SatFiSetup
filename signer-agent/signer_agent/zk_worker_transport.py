@@ -125,7 +125,8 @@ class WorkerTransport:
                 except Exception:w.inbox.put("payment_link_error:"+local,"SPV_CANONICAL_PAYMENT_LINK_PENDING")
             status=statuses.get(local,"QUEUED")
             if result.get("status") in ("HALTED","HALT_OBSERVED_UNCONFIRMED"):status="HALTED"
-            elif result.get("status")=="BLOCKED" and status!="COMPLETED":status="OBSERVATION_UNAVAILABLE"
+            elif status == "WAITING_BITCOIN_RPC" or (result.get("status") == "BLOCKED" and status != "COMPLETED"):
+                status = "OBSERVATION_UNAVAILABLE"
             group=w.inbox.get("need_group:"+local)
             body=dict(version="1",request_id=link["request_id"],operation_id=link["operation_id"],status=status,
                 local_need_id=local,execution_group_id=group,service_deadline=str(link["deadline"]),

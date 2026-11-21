@@ -232,11 +232,15 @@ def test_terminal_sessions_do_not_touch_nonces_or_send_again(tmp_path, monkeypat
     assert state.get("existing-nonce") == stored
 
 
-@pytest.mark.parametrize("state_at_send", ["already_finalized", "finalized_during_preflight", "still_open"])
+@pytest.mark.parametrize("state_at_send", ["already_finalized", "finalized_during_preflight",
+                     "finalized_after_send", "different_result", "still_open"])
 def test_finalize_checks_current_session_before_sending(state_at_send):
+    from signer_agent.transaction_wait import TransactionRecoveryRequired
+
     address = FakeClient.address
     message = b"m" * 32
-    state = 2 if state_at_send == "already_finalized" else 1
+    signature = b"s" * 64
+    state = 2 if state_at_send in ("already_finalized", "different_result") else 1
     submitted = []
 
     def session():
@@ -252,13 +256,23 @@ def test_finalize_checks_current_session_before_sending(state_at_send):
 
     call = SimpleNamespace(call=preflight)
     functions = SimpleNamespace(getSession=lambda _: SimpleNamespace(call=session),
-                                finalizeSession=lambda *_: call)
+        finalizeSession=lambda *_: call, getResult=lambda _: SimpleNamespace(
+            call=lambda: (b"x" * 64 if state_at_send == "different_result" else signature, message)))
 
     def send(candidate):
+        nonlocal state
         submitted.append(candidate)
+        if state_at_send == "finalized_after_send":
+            state = 2
+            raise TransactionRecoveryRequired(dict(reason="TRANSACTION_REVERTED"))
         return "tx"
 
     client = SimpleNamespace(sender=address, contract=SimpleNamespace(functions=functions), _send=send)
-    result = CoordinatorClient.finalize(client, 1, b"s" * 64, message)
+    if state_at_send == "different_result":
+        with pytest.raises(ValueError, match="FROST_FINALIZATION_RESULT_MISMATCH"):
+            CoordinatorClient.finalize(client, 1, signature, message)
+        assert not submitted
+        return
+    result = CoordinatorClient.finalize(client, 1, signature, message)
     assert result == ("tx" if state_at_send == "still_open" else None)
-    assert submitted == ([call] if state_at_send == "still_open" else [])
+    assert submitted == ([call] if state_at_send in ("still_open", "finalized_after_send") else [])

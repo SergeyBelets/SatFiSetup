@@ -353,9 +353,10 @@ def test_proof_inspection_failure_cannot_become_state_publication(pipeline):
     assert e.publishes==0
 
 
-def test_missing_confirmed_receipt_requires_recovery_not_a_new_transaction(pipeline):
+def test_missing_confirmed_receipt_waits_without_a_new_transaction(pipeline):
     e=pipeline;e.prepared();e.proved();e.call('state_update','run');e.receipts.clear()
-    assert e.call('state_update','recover')[1]['observations']['reason']=='CONFIRMED_RECEIPT_UNAVAILABLE'
+    result=e.call('state_update','recover')[1]
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
     assert e.publishes==1
 
 

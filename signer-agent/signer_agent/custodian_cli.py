@@ -42,7 +42,10 @@ def approve(a):
     board = board_at(w3, a.board)
     profile = assembled_profile(w3, a.board)
     from .evm_network import read_block
-    block = read_block(w3, int(profile.get("evm_confirmations", "1")))
+    from . import fee_sale_governance as fee_sale
+    sale_pin = fee_sale.load_pin(a.fee_sale_config) if getattr(a, "fee_sale_config", None) else None
+    confirmations = max(int(profile.get("evm_confirmations", "1")), int(sale_pin["confirmations"]) if sale_pin else 1)
+    block = read_block(w3, confirmations)
     read_number = block.number
 
     def check_snapshot():
@@ -63,16 +66,23 @@ def approve(a):
         "ConfederationNFTPass",
         "FederationFeeManager",
         "ConfederationFactory",
+        "FundedFeeSale",
     ):
         raise ValueError("CUSTODIAN_TARGET_UNSUPPORTED")
     target = w3.eth.contract(address=intent["target"], abi=artifact(kind)["abi"])
     from .onchain_transport import ceremony_bundle
-    from .bootstrap_confederation_dao import enabled as dao_enabled, review_session as review_dao
+    from .bootstrap_confederation_dao import enabled as dao_enabled, review as review_dao
 
-    dao_scope = dao_consumed = None
-    if dao_enabled(profile):
-        dao_scope, dao_consumed = review_dao(w3, intent, ceremony_bundle(w3, a.board, "conf_ceremony"),
-                                              read_number, session)
+    dao_scope = None
+    sale_review = None
+    if fee_sale.matches(intent):
+        if sale_pin is None or sale_pin["role"] != "conf_ceremony":
+            raise ValueError("FEE_SALE_PUBLIC_INTENT_AND_PIN_REQUIRED")
+        sale_bundle = ceremony_bundle(w3, a.board, "conf_ceremony")
+        sale_review = fee_sale.review(w3, intent, sale_bundle, read_number, sale_pin)
+        dao_scope = sale_review["authority"].address, sale_review["validator"]
+    elif dao_enabled(profile):
+        dao_scope = review_dao(w3, intent, ceremony_bundle(w3, a.board, "conf_ceremony"), read_number)
     ulr_review = None
     if dao_scope is not None:
         authorization, validator = dao_scope
@@ -98,6 +108,17 @@ def approve(a):
         != profile["conf_ceremony"]["id"][2:]
     ):
         raise ValueError("SESSION_DKG_MISMATCH")
+    from .operation_status import executed_operation, verify_executed_session
+    if any(item is not None and item["complete"] for item in (ulr_review, sale_review)):
+        verify_executed_session(auth, coordinator, target.address, op, session, read_number)
+        check_snapshot()
+        return dict(status="ALREADY_EXECUTED", session=str(session),
+                    operation_hash=op.hex(), target=target.address)
+    if ulr_review is None and sale_review is None and executed_operation(w3, target, kind, intent, read_number, session=session,
+                                                operator=profile.get("operator")):
+        check_snapshot()
+        return dict(status="ALREADY_EXECUTED", session=str(session),
+                    operation_hash=op.hex(), target=target.address)
     if dao_scope is not None and not coordinator.functions.isFinalized(session).call(block_identifier=read_number):
         check_snapshot()
         return dict(status="AWAITING_FROST_FINALIZATION", session=str(session), operation_hash=op.hex(),
@@ -110,18 +131,6 @@ def approve(a):
         or result[6] < result[5]
     ):
         raise ValueError("FROST_APPROVAL_REQUIRED")
-    from .operation_status import executed_operation
-    if ulr_review is not None:
-        complete = ulr_review["complete"]
-    elif dao_consumed is not None:
-        complete = dao_consumed
-    else:
-        complete = executed_operation(w3, target, kind, intent, read_number, session=session,
-                                      operator=profile.get("operator"))
-    if complete:
-        check_snapshot()
-        return dict(status="ALREADY_EXECUTED", session=str(session),
-                    operation_hash=op.hex(), target=target.address)
     name = intent["hash_method"]
     if not name.startswith("get") or not name.endswith("OperationHash"):
         raise ValueError("POLICY_HASH_HELPER")
@@ -138,6 +147,9 @@ def approve(a):
         from .bootstrap_custody import review_intent
         review_intent(w3, intent, ceremony_bundle(w3, a.board, "conf_ceremony"), read_number)
         check_snapshot()
+    if sale_review is not None and fee_sale.review(w3, intent, sale_bundle, "latest",
+            sale_pin, require_finalized=False)["complete"]:
+        raise ValueError("FEE_SALE_OPERATION_COMPLETE")
     c = w3.eth.contract(address=validator, abi=artifact("CustodianValidator")["abi"])
     if (
         account.address not in c.functions.getCustodians().call(block_identifier=read_number)
@@ -150,7 +162,7 @@ def approve(a):
             mode=profile["mode"],
             chain_id=str(w3.eth.chain_id),
             bitcoin_network=profile["bitcoin_network"],
-            evm_confirmations=profile["evm_confirmations"],
+            evm_confirmations=str(confirmations),
             evm_rpc=a.rpc,
             contracts={
                 "validator": dict(

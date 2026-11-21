@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from web3 import Web3
 
-from signer_agent import bitcoin_onchain_payment as payment, callback_admission
+from signer_agent import bitcoin_onchain_payment as payment, bitcoin_trust, callback_admission
 
 
 @pytest.mark.parametrize("fee,first_limit,gross,error", [
@@ -45,3 +45,42 @@ def test_user_funded_miner_fee_uses_individual_limits_and_aggregates_same_destin
         return
     assert payment._requests(contracts, refs, wallet, 7, fee=fee) == {destination: 2 * gross - fee}
     assert validated == [0, 1]
+
+
+def test_source_handover_keeps_one_exact_output_with_no_unrelated_requests(monkeypatch):
+    addresses = [Web3.to_checksum_address(f"0x{i:040x}") for i in range(4)]
+    zero, gateway, legacy_owner, token = addresses
+    script = "5120" + "ab" * 32
+    wallet = "5120" + "cd" * 32
+    refs = ["11" * 32, "22" * 32, "33" * 32]
+    rows = {
+        bytes.fromhex(ref): (zero, index, token, owner, amount * 10**10, bytes.fromhex(script), bytes(32), 1)
+        for index, (ref, owner, amount) in enumerate(zip(refs, [gateway, gateway, legacy_owner], [500, 700, 500]))
+    }
+
+    def call(value):
+        return SimpleNamespace(call=lambda **_: value)
+
+    escrow = SimpleNamespace(
+        w3=SimpleNamespace(eth=SimpleNamespace(get_code=lambda *_args, **_kwargs: b"")),
+        functions=SimpleNamespace(requests=lambda ref: call(rows[ref]), minP2TRSats=lambda: call(330)),
+    )
+
+    def runtime(w3, address, kind, block):
+        assert w3 is escrow.w3 and kind == "BitcoinCustodyTransferV2" and block == 7
+        if address != gateway:
+            raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+
+    monkeypatch.setattr(bitcoin_trust, "checked_runtime", runtime)
+    assert payment._requests({"escrow": escrow}, refs[:2], wallet, 7) == {script: 1200}
+    with pytest.raises(ValueError, match="BTC_CUSTODY_OUTPUT_GROUP"):
+        payment._requests({"escrow": escrow}, refs, wallet, 7)
+
+    def outputs(*amounts):
+        return [dict(script=script, amount=str(amount)) for amount in amounts]
+
+    assert payment._requests({"escrow": escrow}, refs[:2], wallet, 7, outputs=outputs(1200)) == {script: 1200}
+    for malformed in (outputs(500, 700), outputs(1300)):
+        with pytest.raises(ValueError, match="BTC_CUSTODY_OUTPUT_GROUP"):
+            payment._requests({"escrow": escrow}, refs[:2], wallet, 7, outputs=malformed)
+    payment.validate_custody_outputs(escrow, [rows[bytes.fromhex(refs[2])]], 7, outputs(500))

@@ -1,0 +1,21 @@
+[package]
+name = "satohsi-frost-crypto"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+frost-secp256k1-tr = { version = "=2.2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+rand = "=0.8.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+hpke = { version = "=0.12.0", features = ["x25519", "std"] }
+k256 = { version = "=0.13.4", features = ["arithmetic", "schnorr"] }
+sha2 = "0.10"
+zeroize = "1"
+bitcoin = { version = "=0.32.7", features = ["serde"] }
+
+[profile.release]
+panic = "abort"
+lto = true

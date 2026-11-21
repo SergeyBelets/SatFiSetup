@@ -7,11 +7,12 @@ STARK → succinct → Groth16 pipeline, verifies the receipt independently,
 can explicitly submit the state transition, wait for configured EVM confirmations and
 materializes the transaction's Bitcoin header against the current history root.
 
-Current participant rule: each participant computes working proofs locally.
-Ready proofs and caches are excluded from the [participant distribution](DISTRIBUTION.md).
-`run` defaults to computation only. Publication requires `publish` or explicit
-`run --boundary all`; it accepts this installation's own authenticated result.
-Historical reports below retain their original source snapshots.
+Select a worker mode for the task. A preparation service stops at the native
+input and journal. A prover computes locally and can export a separate
+public transition archive for another participant to verify. The verifier
+uses it as read-only evidence, while publication uses an authenticated
+result from the publisher's own worker. The [participant source distribution](DISTRIBUTION.md)
+contains source and pins. Historical reports below retain their original snapshots.
 
 The original same-machine inbox authenticates its caller through OS ownership
 and private filesystem permissions. V3 adds the separate encrypted on-chain
@@ -32,7 +33,7 @@ paths from actual long Core/FROST/Groth16/EVM qualification. V7 adds
 local blocking and journal recovery while retaining the mainnet guest. It does
 not guarantee global on-chain halt or completeness of unpublished history.
 
-## Current local checks and retained tools
+## Retained local checks and tools
 
 The [local acceptance report](../ops/artifacts/zkspv/acceptance-20261102/local-acceptance-report.json)
 records the full local Python/contract runs. All three previously excluded native
@@ -78,15 +79,20 @@ dependency pins; it does not rebuild or change the mainnet guest. Retain the
 prepared sources and qualified tools outside temporary storage for an operational
 installation. Record the installed binary's SHA-256 as `host_sha256`.
 
-Copy [the config template](../config/zkspv-worker.example.json), replace every
-placeholder and set mode `0600`. The template intentionally fails validation.
+Copy the matching configuration template for
+[mainnet](../config/zkspv-worker.example.json) or
+[testnet4](../config/zkspv-testnet4-worker.example.json). Replace every
+placeholder and set mode `0600`.
 `bitcoin_policy` must be the **complete exact V2 policy from the enrolled graph**,
 not a new checkpoint or a partial policy. Set `zk_state` to `contracts.relay.address`
-and add actual consumer checksum addresses to `allowed_consumers`; only
-`MiningPoolV1` and `BitcoinWithdrawalEscrow` are supported. A request checks their
-runtime, creation provenance, adapter binding and actual Bitcoin transaction.
-Mainnet Bitcoin is required; EVM chain 1, 11155111 or 31337 is independent.
-The existing public-network EVM finality rules still apply.
+and add actual consumer checksum addresses to `allowed_consumers`.
+Use the enrolled artifact names `MiningPoolV1` and `BitcoinWithdrawalEscrow`
+for the legacy graph, or `ConfederationBitcoinReserve` and
+`BitcoinWithdrawalEscrowV2` for V3. Each request checks runtime, creation
+provenance, adapter binding and the actual Bitcoin transaction. Mainnet and
+testnet4 have separate native hosts, guests and state contracts. EVM chain
+1, 11155111 or 31337 is selected independently, with its existing finality rules.
+[Testnet4 initial state](ZK_TESTNET4_SEPOLIA.md#4-initial-state-собственные-proofs-и-fresh-barrier).
 
 Use a private `0700` worker directory and the existing identity file format.
 The identity funds only state submission and header materialization, through the
@@ -94,34 +100,63 @@ existing shared nonce lane and transaction journal. Use explicit gas/cost limits
 treasury caller provisioning remains explicit. V4 may admit/quote and pay only
 under separately enabled issuer/payer policies; it never treats a future claim
 or paid marker as the publisher's spendable balance.
-Bitcoin Core must satisfy the enrolled mainnet full-node policy and expose the
+Bitcoin Core must satisfy the enrolled full-node policy and expose the
 transactions/blocks needed for independent inclusion checking.
 
 Before a new STARK, preflight requires the pinned tools, exact local image
-for the selected platform and working strict/loopback isolation. Darwin uses
-the original ARM64 container pin; Linux uses the amd64 pin in
-[`zk-prover-linux-x86_64.json`](../config/zk-prover-linux-x86_64.json). The worker
-never pulls an image or downloads tools automatically. A cached receipt can be
-checked without that Docker image, but still requires its own authenticated
-origin, the pinned inspector, guest program and strict isolation.
+and working strict/loopback isolation. The current release uses RISC Zero
+3.1.0 and the pinned linux/amd64 Groth16 image on both prover platforms.
+The worker requires preinstalled tools. A cached receipt still requires its
+authenticated origin, the pinned inspector, guest program and strict isolation.
+[Prover tools and image pins](ZK_PROVER_LINUX.md).
 
-## Running and requesting
+## Worker modes and transition archives
+
+| Mode | Work performed | Expected entry point |
+| --- | --- | --- |
+| Prepare only | Observe a queued request or heartbeat and prepare the native transition input and journal | `run --boundary prepare` |
+| Local proof | Prepare and compute the worker's authenticated local result | `run` or `run --boundary prove` |
+| Compute and export | Compute one local result and write a separate public ZIP for independent review | `run --boundary export --bundle-file FILE` |
+| Publisher | Publish the worker's own result, or run the explicitly enabled full service loop | `publish` or `run --boundary all` |
 
 ```sh
-python -m signer_agent.zk_worker run --config /absolute/private/worker.json
-python -m signer_agent.zk_worker status --config /absolute/private/worker.json
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary prepare
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary export \
+  --bundle-file "$PUBLIC_ARCHIVE"
+frost-signer zk-worker status --config "$WORKER_CONFIG"
 # Designated publisher only: permits transactions and their recovery.
-python -m signer_agent.zk_worker run --config /absolute/private/worker.json --boundary all
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary all
 ```
 
-The first command computes locally and sends no transactions. Run only one of
-the loops under the participant's process supervisor. The explicit publisher
-loop advances publication, confirmations and materialization. `run --once`
-executes one selected step and returns exit code 2
-on `BLOCKED`; multiple steps are needed for proving, confirmations and header
-materialization. JSON status is emitted after each step. A proof step can last
-hours; stage logs and completion reports live in `directory/attempts/<id>`.
-No supervisor or startup service is installed automatically.
+Choose one service process per worker directory. Prepare-only uses the native
+witness helper, local inbox or heartbeat, and enrolled chain/policy. It stops
+before proving and before any EVM write. It may read the configured funding
+policy. It leaves on-chain transport and payment automation to the publisher
+loop. Prepare-only does not require the proving tools or Docker image.
+If another publisher has already landed the exact prepared transition, the
+loop retains the accepted archive locally. `AWAITING_EVM_RPC` or
+`WAITING_BITCOIN_RPC` keeps the selected attempt while the node catches up.
+If a stable observation invalidates an unsubmitted attempt, the loop returns
+`REVALIDATE_STATE` or `REVALIDATE_BITCOIN` with `retired=true`. It retains
+the attempt files and can prepare again on the next poll. A pending `SENDING`
+attempt stays with the publisher's journal recovery.
+The explicit publisher loop also advances confirmations and
+materialization. `run --once` executes one step and returns exit code 2 on
+`BLOCKED`; export mode is already one-shot. Give each export a new ZIP path.
+If no attempt can proceed, it reports the blocking status without an archive.
+JSON status is emitted after each step. Stage logs and completion reports are
+in `directory/attempts/<id>`. Run the chosen command under your own supervisor
+for continuous service.
+
+Export a specific worker attempt again with `export-bundle --attempt ID`.
+Use `--without-proof` to share a prepared transition for input review.
+In the full archive the journal and seal are evidence for the exact
+transition. `verify-bundle` reviews the enrolled graph and confirmed EVM
+state without a prover, spending identity or Bitcoin RPC credentials.
+The archive does not replace Bitcoin transaction inclusion, monetary policy,
+or ordinary FROST checks. [Archive contents and distribution boundaries](DISTRIBUTION.md#публичный-архив-перехода).
+
+## Running and requesting
 
 Add `--zk-worker-config /absolute/private/worker.json` to the existing participant
 `btc-mint-propose`/`btc-mint-execute`/`btc-mint-retry` or `btc-settle` operation. The participant verifies the
@@ -163,7 +198,7 @@ remain waiting and are re-observed by the worker.
 * `max_attempts` bounds distinct proof inputs per request, including catch-up
   batches. `max_headers_per_sync` in the enrolled policy caps each batch at 1..64.
   `max_stage_retries` separately bounds retries after explicit failed-stage
-  completion reports. `stage_timeout_seconds` is per proving stage (60..14400).
+  completion reports. `stage_timeout_seconds` is per proving stage (60..86400).
 * `minimum_free_bytes` is checked before each new stage (at least 8 GiB).
   `max_tx_gas`, `max_transaction_cost_wei` and `max_total_cost_wei` are enforced
   before signing. The upper gas cost is reserved atomically and conservatively;
@@ -174,6 +209,12 @@ remain waiting and are re-observed by the worker.
   Root changes invalidate materialized headers; the worker rebuilds their paths.
   Completed/ready needs are re-observed after reorgs. Consumer financial checks
   remain authoritative if the chain changes after an observation.
+* A queued need with a temporarily unavailable Bitcoin observation returns
+  `WAITING_BITCOIN_RPC`. The worker stores its next retry time, with a delay
+  starting at `poll_seconds` and capped at one hour. Other needs and heartbeat
+  can continue. An enrolled persistent observer reports `ZK_OBSERVATION_CORE_BEHIND`
+  for lower chainwork or a different tip at equal chainwork and keeps its
+  existing journal. [RPC lag and recovery](RECOVERY.md#5-отставание-rpc-участников).
 * SQLite WAL/FULL, durable preparation files, the admitted-header archive and the
   existing signed-transaction journal support restart. A process lock prevents
   simultaneous worker steps. Cache hits are cryptographically verified each time;

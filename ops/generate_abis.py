@@ -6,7 +6,7 @@ p.add_argument('--zk',action='store_true',help='Also require the isolated mainne
 a=p.parse_args()
 root=Path(__file__).resolve().parents[1]
 # The owner withdrawal client independently checks the canonical NFT discount.
-for name in ('BitcoinCustodyTransfer','FederationNFTModifier','RecipientWalletV1','RecipientPolicy','BitcoinIncidentMessageBoard'):
+for name in ('BitcoinCustodyTransfer','FederationNFTModifier','RecipientWalletV1','RecipientPolicy','BitcoinIncidentMessageBoard','FundedFeeSale'):
     source = root/'web3/contracts/out'/f'{name}.sol'/f'{name}.json'
     expected = json.dumps(json.loads(source.read_text())['abi'], indent=2)+'\n'
     output = root/'signer-agent/contracts'/f'{name}.json'

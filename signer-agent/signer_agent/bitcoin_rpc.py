@@ -83,79 +83,81 @@ def observation_error(error):
             result["rpc_error_code"] = error.rpc_code
         if type(error.http_status) is int and 100 <= error.http_status <= 599:
             result["http_status"] = error.http_status
-            if error.http_status in (401, 403):
-                result["error_code"] = "BITCOIN_RPC_AUTH_REJECTED"
     return result
 
 
-def retryable_payment_observation(error):
-    """Only classify reads; this classification never authorizes a send retry."""
-    if isinstance(error, BitcoinRPCError):
-        if error.http_status in (401, 403):
-            return False
-        if error.rpc_code is not None:
-            return error.rpc_code in (-28, -5)
-        if error.http_status in (429, 502, 503, 504):
-            return True
-        return error.http_status is None and error.args in (
-            ("BITCOIN_RPC_FAILED",), ("BITCOIN_RPC_RESPONSE_INVALID",))
-    return isinstance(error, (TimeoutError, ConnectionError)) or (
-        type(error) is ValueError and error.args in (
-            ("MAINNET_CORE_NOT_SYNCED",), ("MAINNET_TXINDEX_NOT_SYNCED",),
-            ("BITCOIN_RPC_RESPONSE_INVALID",)))
-
-
-def _core_hash(value):
-    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
-
-
-def payment_position(bitcoin, txid, record):
-    """Bind a verbose Core observation to the requested transaction and block."""
-    if not isinstance(record, dict) or record.get("txid") != txid:
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-    if "blockhash" not in record:
-        # Core omits both blockhash and confirmations for a mempool tx. A
-        # truncated verbose result by itself is not evidence of a lost block.
-        confirmations = record.get("confirmations", 0)
-        witness = record.get("hash")
-        if type(confirmations) is not int or confirmations != 0 or not _core_hash(witness):
-            raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
+def payment_in_mempool(bitcoin, txid):
+    try:
         entry = bitcoin.call("getmempoolentry", txid)
-        if not isinstance(entry, dict) or entry.get("wtxid") != witness:
-            raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-        return 0, None, None
-    block = record["blockhash"]
-    confirmations = record.get("confirmations")
-    if not _core_hash(block) or type(confirmations) is not int or confirmations < -1:
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
+    except BitcoinRPCError as error:
+        if error.rpc_code != -5:
+            raise
+        return False
+    if not isinstance(entry, dict) or type(entry.get("vsize")) is not int or entry["vsize"] <= 0:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    return True
+
+
+def payment_block(transaction, txid, depth, *, bitcoin):
+    """Return the payment's named block, or None for an observed loss of depth."""
+    if (not isinstance(transaction, dict) or transaction.get("txid") != txid
+            or not isinstance(transaction.get("hex"), str) or not transaction["hex"]):
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    block = transaction.get("blockhash")
+    confirmations = transaction.get("confirmations")
+    if "confirmations" not in transaction and "blockhash" not in transaction:
+        # Core omits both fields for mempool transactions, but a partial RPC
+        # response can have the same shape. Confirm mempool membership first.
+        if payment_in_mempool(bitcoin, txid):
+            return None
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    if (type(confirmations) is not int
+            or confirmations > 0 and (not isinstance(block, str) or not re.fullmatch(r"[0-9a-f]{64}", block))):
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    return block if confirmations >= depth else None
+
+
+def payment_block_height(bitcoin, block):
     header = bitcoin.call("getblockheader", block)
-    if (not isinstance(header, dict) or header.get("hash") != block
-            or type(header.get("height")) is not int or header["height"] < 0):
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-    check_payment_block(bitcoin, header["height"], block)
-    return confirmations, block, header["height"]
+    height = header.get("height") if isinstance(header, dict) else None
+    if type(height) is not int or height < 0:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    check_payment_block(bitcoin, block, height)
+    return height
 
 
-def check_payment_block(bitcoin, height, block):
+def check_payment_block(bitcoin, block, height):
     current = bitcoin.call("getblockhash", height)
-    if not _core_hash(current):
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
+    if not isinstance(current, str) or not re.fullmatch(r"[0-9a-f]{64}", current):
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
     if current != block:
         raise ValueError("BITCOIN_PAYMENT_REORG")
 
 
-def checked_payment_proof(bitcoin, txid, block, height):
+def check_known_payment_anchor(bitcoin, block):
+    """Check the original settlement block even when Core cannot look up its txid."""
+    if not isinstance(block, str) or not re.fullmatch(r"[0-9a-f]{64}", block) or block == "0" * 64:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    header = bitcoin.call("getblockheader", block)
+    if not isinstance(header, dict) or header.get("hash") != block:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    height = header.get("height")
+    if type(height) is not int or height < 0:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    # A node can know the old header before it has caught up to that height.
+    # A side-header status alone does not establish a conflicting active block.
+    check_payment_block(bitcoin, block, height)
+
+
+def verify_payment_proof(bitcoin, txid, block):
     proof = bitcoin.call("gettxoutproof", [txid], block)
-    if not isinstance(proof, str) or len(proof) % 2 or not re.fullmatch(r"[0-9a-f]+", proof):
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-    included = bitcoin.call("verifytxoutproof", proof)
-    if not isinstance(included, list) or any(not _core_hash(item) for item in included):
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-    if not included:
+    if not isinstance(proof, str) or not proof:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    matches = bitcoin.call("verifytxoutproof", proof)
+    if not isinstance(matches, list) or any(not isinstance(item, str) for item in matches):
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+    if txid not in matches:
         raise ValueError("INVALID_PAYMENT_PROOF")
-    if included != [txid]:
-        raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-    check_payment_block(bitcoin, height, block)
     return proof
 
 
@@ -307,10 +309,6 @@ class BitcoinRPC:
             raise
         except _RPCFailure as error:
             raise BitcoinRPCError(str(error), http_status=http_status) from None
-        except (ssl.SSLError, urllib.error.URLError) as error:
-            cause = getattr(error, "reason", error)
-            code = "BITCOIN_RPC_TLS_FAILED" if isinstance(cause, ssl.SSLError) else "BITCOIN_RPC_FAILED"
-            raise BitcoinRPCError(code, http_status=http_status) from None
         except Exception:
             # Core/proxies can include arbitrary strings, paths, URLs and
             # credentials in errors. None of that crosses the CLI boundary.

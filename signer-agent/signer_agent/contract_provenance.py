@@ -96,7 +96,7 @@ def prove_creation(w3, address, kind, args, latest, *, birth_hint=None):
     hint = None if birth_hint is None else int(birth_hint)
     if hint is not None and not 1 <= hint <= latest:
         raise ValueError("BTC_CREATION_BLOCK_MISMATCH")
-    if kind == "ULRConfederationTreasury":
+    if kind in ("ULRConfederationTreasury", "ULRCustodianSnapshots"):
         runtime_hash, compiled = runtime_artifact(w3, address, kind, latest)
     else:
         runtime_hash = checked_runtime(w3, address, kind, latest)

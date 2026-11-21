@@ -170,7 +170,8 @@ def test_completion_requires_original_transport_envelope_and_canonical_receipts(
         saved['result']['nonce']='77';j.update(key,'CONFIRMED',saved['result'])
     try:result=e.execute()
     except ValueError:return
-    assert result['status']=='RECOVERY_REQUIRED'
+    assert result['status']==('WAITING' if mutation=='receipt' else 'RECOVERY_REQUIRED')
+    if mutation=='receipt':assert result['observations']['reason']=='EVM_RECEIPT_PENDING'
 
 
 def test_lost_status_record_write_recovers_same_receipt_after_later_generations(controlled,monkeypatch):

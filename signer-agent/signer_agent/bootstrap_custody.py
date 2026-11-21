@@ -50,7 +50,9 @@ def extend(profile, deploy, approve):
     policy = profile.get("bitcoin_custody")
     if policy is None:
         return
-    deploy("custody_transfer", "BitcoinCustodyTransfer", "$mining", "$conf_pool", sources_args(policy))
+    from .bootstrap_confederation_dao import enabled
+    deploy("custody_transfer", "BitcoinCustodyTransferV2" if enabled(profile) else "BitcoinCustodyTransfer",
+           "$mining", "$conf_pool", sources_args(policy))
     approve("bind_custody_transfer", "mining", "getSetCustodyTransferOperationHash", ["$custody_transfer"],
             "setCustodyTransfer", ["$custody_transfer"])
 
@@ -89,6 +91,9 @@ def review_intent(w3, intent, bundle, at):
         return getattr(c.functions, getter)(*args).call(block_identifier=at)
     from .bootstrap_confederation_dao import enabled
     in_kind = enabled(invite)
+    if in_kind:
+        from .bootstrap_native_s import review
+        return review(w3, intent, bundle, at)
     pool_kind = "ConfederationPoolV2" if in_kind else "ConfederationMultiPool"
     escrow_kind = "BitcoinWithdrawalEscrowV2" if in_kind else "BitcoinWithdrawalEscrow"
     kind, method = intent.get("artifact"), intent.get("hash_method")

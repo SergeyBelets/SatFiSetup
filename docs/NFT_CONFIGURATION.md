@@ -5,6 +5,11 @@
 Актуализация: 5 ноября 2026. [Параметры организаций](FEDERATION_CONFEDERATION_SETUP.md) ·
 [Холодный старт](COLD_START.md) · [Комиссии](FEE_FLOW.md) · [Токены](TOKENS.md).
 
+Для V3 bootstrap развёртывает коллекцию `ConfederationNFTPass`. FROST и
+кастодианы одобряют тариф, оператор подписывает цену для покупателя, а покупка
+за S выпускает NFT. [Порядок покупки и скидок V3](CONFEDERATION_DAO_IN_KIND.md#nft-и-эксплуатация).
+Далее описан управляемый выпуск через `FederationFeeManager` для прежних профилей.
+
 `FederationNFTModifier` — ERC721, уменьшающий service fee. Он не даёт DKG share,
 членство, custodian status или stake reward. Новый `FederationFeeManager` создаёт
 коллекцию и выпускает NFT по отдельным FROST-одобрениям; в конфедерации дополнительно

@@ -1,8 +1,0 @@
-{
-  "executable": "/usr/local/bin/docker",
-  "socket": "/Users/dmitrysubbotin/.docker/run/docker.sock",
-  "config": "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/halt101-prefix/groth16/docker-config",
-  "image": "risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
-  "name": "satoshifi-groth16-283d266306ac45bc9385ff5950229ecd",
-  "log": "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/halt101-prefix/groth16/docker-commands.jsonl"
-}

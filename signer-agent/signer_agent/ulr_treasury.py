@@ -10,9 +10,10 @@ import re
 from pathlib import Path
 
 from web3 import Web3
+from web3._utils.events import get_event_data
 
 from .bootstrap import artifact, encode_args
-from .bitcoin_trust import checked_runtime
+from .bitcoin_trust import checked_runtime, runtime_artifact
 from .contract_provenance import prove_creation
 from .dao_client import address, wire
 from .operations import canonical, public_data
@@ -23,8 +24,13 @@ MIN_ULR = 200_000 * 10**18
 SUPPLY = 10_000_000 * 10**18
 MAX_HOLDERS = 4096
 MAX_BOARD_INTENT_BYTES = 32768
+# Posting full intents writes each 32-byte word to a new storage slot. The
+# board's size limit exceeds the usable space under the transaction gas cap.
+MAX_INLINE_SNAPSHOT_BYTES = 16 * 1024
 MAX_SNAPSHOT_INTENT_BYTES = 4 * 1024 * 1024
 SNAPSHOT_METHOD = "getPublishDayOperationHash"
+ACTIVATE_TREASURY_METHOD = "getActivateTreasuryOperationHash"
+SNAPSHOT_INTENT_HASH = "ulr_snapshot_intent_sha256"
 
 
 def requires_review(intent, bundle):
@@ -137,7 +143,7 @@ def configuration(w3, pin, at):
     return registry, staking
 
 
-def treasury_context(w3, pin, target, at, *, configured=None):
+def treasury_context(w3, pin, target, at, *, configured=None, require_active=True):
     registry, staking = configured or configuration(w3, pin, at)
     if target not in pin["treasuries"]:
         raise ValueError("ULR_TREASURY_NOT_PINNED")
@@ -147,7 +153,7 @@ def treasury_context(w3, pin, target, at, *, configured=None):
     proven(w3, "ULRConfederationTreasury", target, at, treasury_args(treasury, at))
     factory = proven(w3, "ConfederationFactory", factory, at)
     conf = read(factory, at, "getConfederation", conf_id)
-    if (not conf[-1] or read(treasury, at, "snapshots") != registry.address
+    if ((require_active and not conf[-1]) or read(treasury, at, "snapshots") != registry.address
             or read(treasury, at, "staking") != staking.address
             or read(treasury, at, "authorization") != conf[7]
             or read(treasury, at, "validator") != conf[8]
@@ -158,13 +164,61 @@ def treasury_context(w3, pin, target, at, *, configured=None):
     return registry, staking, treasury, factory, conf_id, conf
 
 
-def snapshot_arguments(w3, pin, inputs, at):
-    """Recompute every reported weight at the last EVM block of a completed UTC day."""
-    public_data(inputs)
-    if set(inputs) != {"day", "snapshot_block", "inventory_evidence_hash", "owners", "treasuries"}:
-        raise ValueError("ULR_SNAPSHOT_INPUTS")
-    registry, staking = configuration(w3, pin, at)
-    day, height = number(inputs["day"]), number(inputs["snapshot_block"])
+def snapshot_treasuries(w3, registry, day, anchor, *, pin, at):
+    """Use the registry's enrollment history at the agreed UTC cutoff."""
+    height = anchor.number
+    _, reviewed = runtime_artifact(w3, registry.address, "ULRCustodianSnapshots", height)
+    if "legacy_reference" not in reviewed:
+        return set(read(registry, height, "snapshotTreasuries", day))
+
+    from .evm_log_paging import log_pages
+
+    # Historical logs in older registries may include enrollments outside the
+    # approved factory graph. Derive trusted factories from reviewed pins first.
+    factories, required = set(), set()
+    for candidate in pin["treasuries"]:
+        _, _, treasury, factory, _, _ = treasury_context(w3, pin, candidate, at, require_active=False)
+        factories.add(factory.address)
+        scope = read(treasury, at, "scope")
+        if read(registry, height, "treasuries", scope) == treasury.address:
+            required.add(treasury.address)
+
+    cache = getattr(w3, "_ulr_treasury_history", None)
+    if cache is None:
+        cache = w3._ulr_treasury_history = {}
+    key = registry.address, height, bytes(anchor.hash), frozenset(factories), frozenset(required)
+    if key in cache:
+        return cache[key]
+    proof = prove_creation(w3, registry.address, "ULRCustodianSnapshots", None, height)
+    event = next(item for item in reviewed["abi"] if item.get("name") == "TreasuryEnrolled")
+    topic = Web3.to_hex(Web3.keccak(text="TreasuryEnrolled(bytes32,address,address,string)"))
+    scopes, targets = set(), set()
+    for page in log_pages(w3, int(proof["block_number"]), height, topics=[topic],
+                          initial_span=100_000, address=registry.address):
+        for log in page:
+            decoded = get_event_data(w3.codec, event, log)
+            if decoded["args"]["factory"] not in factories:
+                continue
+            scope, treasury = decoded["args"]["scope"], decoded["args"]["treasury"]
+            number = decoded["blockNumber"]
+            if (decoded["address"] != registry.address or log.get("removed")
+                    or not int(proof["block_number"]) <= number <= height or scope in scopes or treasury in targets
+                    or bytes(w3.eth.get_block(number).hash) != bytes(decoded["blockHash"])
+                    or read(registry, height, "treasuries", scope) != treasury):
+                raise ValueError("ULR_TREASURY_HISTORY_MISMATCH")
+            scopes.add(scope)
+            targets.add(treasury)
+            if len(targets) > 64:
+                raise ValueError("ULR_TREASURY_INVENTORY")
+    if not required <= targets:
+        raise ValueError("ULR_TREASURY_HISTORY_MISMATCH")
+    if bytes(w3.eth.get_block(height).hash) != bytes(anchor.hash):
+        raise ValueError("ULR_SNAPSHOT_REORG")
+    cache[key] = frozenset(targets)
+    return cache[key]
+
+
+def snapshot_blocks(w3, staking, day, height, at):
     current = w3.eth.get_block(at)
     if day < read(staking, at, "firstEligibleDay") or day >= current.timestamp // 86400 or height >= current.number:
         raise ValueError("ULR_SNAPSHOT_DAY")
@@ -174,6 +228,17 @@ def snapshot_arguments(w3, pin, inputs, at):
             or bytes(following.parentHash) != bytes(anchor.hash)
             or not anchor.timestamp < end <= following.timestamp or following.number > current.number):
         raise ValueError("ULR_LAST_BLOCK_OF_DAY_REQUIRED")
+    return current, anchor, following
+
+
+def snapshot_arguments(w3, pin, inputs, at):
+    """Recompute every reported weight at the last EVM block of a completed UTC day."""
+    public_data(inputs)
+    if set(inputs) != {"day", "snapshot_block", "inventory_evidence_hash", "owners", "treasuries"}:
+        raise ValueError("ULR_SNAPSHOT_INPUTS")
+    registry, staking = configuration(w3, pin, at)
+    day, height = number(inputs["day"]), number(inputs["snapshot_block"])
+    current, anchor, following = snapshot_blocks(w3, staking, day, height, at)
     digest(inputs["inventory_evidence_hash"])
     candidates = inputs["owners"]
     if not isinstance(candidates, list) or len(candidates) > MAX_HOLDERS or len(set(candidates)) != len(candidates):
@@ -183,19 +248,23 @@ def snapshot_arguments(w3, pin, inputs, at):
     targets = inputs["treasuries"]
     if (not isinstance(targets, list) or not targets or len(targets) > 64 or len(set(targets)) != len(targets)):
         raise ValueError("ULR_TREASURY_INVENTORY")
-    if set(targets) != set(pin["treasuries"]):
+    eligible_treasuries = snapshot_treasuries(w3, registry, day, anchor, pin=pin, at=at)
+    if not eligible_treasuries <= set(pin["treasuries"]):
+        raise ValueError("ULR_TREASURY_PIN_BEHIND")
+    if set(targets) != eligible_treasuries:
         raise ValueError("ULR_COMPLETE_TREASURY_INVENTORY_REQUIRED")
     allocations, conf_evidence, roster_records, active = [], [], [], set()
     for target in targets:
-        _, _, treasury, factory, conf_id, _ = treasury_context(w3, pin, target, at, configured=(registry, staking))
-        scope = read(treasury, at, "scope")
-        if read(registry, at, "treasuries", scope) != target:
+        _, _, treasury, _, _, conf = treasury_context(
+            w3, pin, target, height, configured=(registry, staking), require_active=False
+        )
+        scope = read(treasury, height, "scope")
+        if read(registry, height, "treasuries", scope) != target:
             raise ValueError("ULR_TREASURY_NOT_ENROLLED")
-        conf = read(factory, height, "getConfederation", conf_id)
-        if not conf[-1] or conf[8] != read(treasury, at, "validator"):
+        if conf[8] != read(treasury, height, "validator"):
             raise ValueError("ULR_HISTORICAL_CONFEDERATION_BINDING")
         validator = contract(w3, "CustodianValidator", conf[8])
-        members = read(validator, height, "getCustodians")
+        members = read(validator, height, "getCustodians") if conf[-1] else []
         active.update(members)
         roster_records.append((target, scope, validator.address, members))
     owners, weights, observations = [], [], []
@@ -263,22 +332,47 @@ def snapshot_calldata_limit(w3, registry, args, operation, block):
         raise ValueError("ULR_SNAPSHOT_TRANSACTION_GAS")
 
 
-def board_intent(intent):
-    encoded = canonical(intent).encode()
-    if len(encoded) <= MAX_BOARD_INTENT_BYTES:
-        return intent
-    if intent.get("hash_method") != SNAPSHOT_METHOD or len(encoded) > MAX_SNAPSHOT_INTENT_BYTES:
-        raise ValueError("ULR_PUBLIC_INTENT_TOO_LARGE")
+def _snapshot_intent(intent):
+    return intent.get("artifact") == "ULRCustodianSnapshots" and intent.get("hash_method") == SNAPSHOT_METHOD
+
+
+def _snapshot_envelope(intent, encoded):
     envelope = {key: value for key, value in intent.items() if key not in ("hash_args", "ulr_snapshot_inputs")}
-    envelope["ulr_snapshot_intent_sha256"] = hashlib.sha256(encoded).hexdigest()
+    envelope[SNAPSHOT_INTENT_HASH] = hashlib.sha256(encoded).hexdigest()
+    return envelope
+
+
+def board_intent(intent):
+    if SNAPSHOT_INTENT_HASH in intent:
+        raise ValueError("ULR_SNAPSHOT_INTENT_HASH_MISMATCH")
+    encoded = canonical(public_data(intent)).encode()
+    snapshot = _snapshot_intent(intent)
+    if len(encoded) <= (MAX_INLINE_SNAPSHOT_BYTES if snapshot else MAX_BOARD_INTENT_BYTES):
+        return intent
+    if not snapshot or len(encoded) > MAX_SNAPSHOT_INTENT_BYTES:
+        raise ValueError("ULR_PUBLIC_INTENT_TOO_LARGE")
+    envelope = _snapshot_envelope(intent, encoded)
     if len(canonical(envelope).encode()) > MAX_BOARD_INTENT_BYTES:
         raise ValueError("ULR_PUBLIC_INTENT_TOO_LARGE")
     return envelope
 
 
-def resolve_board_intent(published, path):
-    if "ulr_snapshot_intent_sha256" not in published:
+def matches_board_intent(published, intent):
+    if SNAPSHOT_INTENT_HASH in intent:
+        return False
+    if SNAPSHOT_INTENT_HASH not in published:
+        return published == intent
+    if not _snapshot_intent(intent):
+        return False
+    encoded = canonical(intent).encode()
+    return len(encoded) <= MAX_SNAPSHOT_INTENT_BYTES and _snapshot_envelope(intent, encoded) == published
+
+
+def resolve_board_intent(published, path, *, session):
+    if SNAPSHOT_INTENT_HASH not in published:
         return published
+    if published.get("session") != str(session):
+        raise ValueError("ULR_SNAPSHOT_INTENT_HASH_MISMATCH")
     if path is None:
         raise ValueError("ULR_SNAPSHOT_INTENT_FILE_REQUIRED")
     with Path(path).open("rb") as stream:
@@ -286,9 +380,20 @@ def resolve_board_intent(published, path):
     if len(data) > MAX_SNAPSHOT_INTENT_BYTES:
         raise ValueError("ULR_PUBLIC_INTENT_TOO_LARGE")
     intent = dict(public_data(json.loads(data)), session=published["session"])
-    if "ulr_snapshot_intent_sha256" in intent or board_intent(intent) != published:
+    if not matches_board_intent(published, intent):
         raise ValueError("ULR_SNAPSHOT_INTENT_HASH_MISMATCH")
     return intent
+
+
+def _legacy_evidence_hash(evidence):
+    # Reconstruct the deployed v3 format from the same checked holdings and
+    # rosters. The new supply proof is still required for an old pending intent.
+    legacy = json.loads(evidence)
+    for key in ("threshold_wei", "attributed_supply_wei", "observed_wei", "unaccounted_wei",
+                "unattributed_staking_balance_wei", "token_balance_wei"):
+        del legacy[key]
+    legacy.update(version="3", eligibility_policy="HOLDERS_200K_PLUS_ACTIVE_RESIDUAL_V1")
+    return Web3.to_hex(hashlib.sha256(canonical(legacy).encode()).digest())
 
 
 def intent_for(w3, target, kind, helper, args, authority, role, at, **extra):
@@ -316,6 +421,7 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
     allowed = {
         ("ULRCustodianSnapshots", "getPublishDayOperationHash"),
         ("ULRCustodianSnapshots", "getEnrollTreasuryOperationHash"),
+        ("ULRCustodianSnapshots", ACTIVATE_TREASURY_METHOD),
         ("ULRConfederationTreasury", "getSpendOperationHash"),
         ("CustodianDAOFeeRouter", "getSetFeeSharesOperationHash"),
         ("CustodianDAOFeeRouter", "getSetTreasuryOperationHash"),
@@ -333,8 +439,13 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
     if kind == "ULRCustodianSnapshots":
         if target.address != registry.address:
             raise ValueError("ULR_SNAPSHOT_BINDING")
-        if helper == "getPublishDayOperationHash":
+        if helper in (SNAPSHOT_METHOD, ACTIVATE_TREASURY_METHOD):
             authority = read(registry, at, "authorization")
+            if helper == ACTIVATE_TREASURY_METHOD:
+                _, _, treasury, _, _, _ = treasury_context(w3, pin, args[0], at)
+                scope = read(treasury, at, "scope")
+                if read(registry, at, "treasuries", scope) != treasury.address:
+                    raise ValueError("ULR_TREASURY_NOT_ENROLLED")
         else:
             _, _, treasury, factory, conf_id, conf = treasury_context(w3, pin, args[2], at)
             if args[:2] != [factory.address, conf_id] or bundle.get("role") != "conf_ceremony":
@@ -423,9 +534,15 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
                 raise ValueError("ULR_SNAPSHOT_RECEIPT")
         else:
             snapshot_calldata_limit(w3, registry, args, op, at)
-            expected, _ = snapshot_arguments(w3, pin, intent["ulr_snapshot_inputs"], at)
-            if wire(expected) != intent["hash_args"]:
-                raise ValueError("ULR_SNAPSHOT_WEIGHT_MISMATCH")
+            expected, evidence = snapshot_arguments(w3, pin, intent["ulr_snapshot_inputs"], at)
+            computed = wire(expected)
+            if computed != intent["hash_args"]:
+                computed[0][3] = _legacy_evidence_hash(evidence)
+                if computed != intent["hash_args"]:
+                    raise ValueError("ULR_SNAPSHOT_WEIGHT_MISMATCH")
+    elif helper == ACTIVATE_TREASURY_METHOD and complete:
+        if not read(registry, at, "activeTreasuries", scope):
+            raise ValueError("ULR_TREASURY_NOT_ACTIVE")
     elif helper == "getEnrollTreasuryOperationHash" and complete:
         scope = read(treasury, at, "scope")
         if read(registry, at, "treasuries", scope) != treasury.address:
@@ -506,7 +623,9 @@ def guard_signing_session(client, session):
     from .onchain_transport import board_at
     for number_ in (anchor.number, "latest"):
         board = board_at(client.w3, bundle["onchain_board"], client.w3.eth.get_block(number_))
-        if json.loads(bytes(read(board, number_, "intents", session.session_id))) != board_intent(intent):
+        published = json.loads(bytes(read(board, number_, "intents", session.session_id)))
+        if (published.get("session", str(session.session_id)) != str(session.session_id)
+                or not matches_board_intent(published, intent)):
             raise ValueError("ULR_PUBLIC_INTENT_REQUIRED")
         if review(client.w3, intent, bundle, number_, pin, require_finalized=number_ != "latest")["complete"]:
             raise ValueError("ULR_OPERATION_COMPLETE")

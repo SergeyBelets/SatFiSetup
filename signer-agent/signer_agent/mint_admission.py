@@ -39,8 +39,15 @@ def configuration(w3, address, block, *, expected_pool=None, expected_operator=N
         raise ValueError("BTC_MINT_ADMISSION_POOL_MISMATCH")
     arguments = [pool_address, expected_operator] if expected_operator is not None else None
     prove_creation(w3, address, "BitcoinMintAdmission", arguments, number)
-    pool = _contract(w3, pool_address, "MiningPoolV1", number)
-    prove_creation(w3, pool_address, "MiningPoolV1", None, number)
+    pool_kind = "MiningPoolV1"
+    try:
+        pool = _contract(w3, pool_address, pool_kind, number)
+    except ValueError as error:
+        if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+            raise
+        pool_kind = "ConfederationBitcoinReserve"
+        pool = _contract(w3, pool_address, pool_kind, number)
+    prove_creation(w3, pool_address, pool_kind, None, number)
     auth = _contract(w3, _read(pool, number, "authorization"), "DKGAuthorization", number)
     prove_creation(w3, auth.address, "DKGAuthorization", None, number)
     coordinator = _contract(w3, _read(auth, number, "coordinator"), "FROSTCoordinator", number)
@@ -57,7 +64,7 @@ def configuration(w3, address, block, *, expected_pool=None, expected_operator=N
     if w3.eth.get_block(number).hash != anchor.hash:
         raise ValueError("BTC_MINT_ADMISSION_REORG")
     return dict(board=board, pool=pool, authorization=auth, coordinator=coordinator,
-                dkg_id=dkg_id, result_hash=result_hash, anchor=anchor)
+                dkg_id=dkg_id, result_hash=result_hash, anchor=anchor, pool_kind=pool_kind)
 
 
 def _operation_hash(context, kind, method, arguments, nonce):
@@ -133,13 +140,13 @@ def session_record(w3, address, session, block, *, role=None, require_active=Tru
             raise ValueError("BTC_MINT_ADMISSION_CLAIM_MISMATCH")
         else:
             fence_valid = int(_read(pool, number, "mintProofVersion")) == 1
-        if digest != _operation_hash(context, "MiningPoolV1", execution, arguments, nonce):
+        if digest != _operation_hash(context, context.get("pool_kind", "MiningPoolV1"), execution, arguments, nonce):
             raise ValueError("BTC_MINT_ADMISSION_HASH_MISMATCH")
         active = (fence_valid and not attempt[4] and int(claim[6]) == session
                   and int(_read(pool, number, "nonce")) == nonce
                   and int(_read(board, number, "slotSession", nonce)) == session
                   and bool(_read(board, number, "active", session)))
-        kind, method, target = "MiningPoolV1", "getMintOperationHash", pool.address
+        kind, method, target = context.get("pool_kind", "MiningPoolV1"), "getMintOperationHash", pool.address
         if mode == 2: method = "getAddressMintOperationHash"
         elif mode == 1: method = "getCustodyMintOperationHash"
         reference = bytes(attempt[0]).hex()
@@ -194,7 +201,7 @@ def guard_signing_session(client, session):
         return
     anchor = getattr(client, "_read_snapshot", None) or client.w3.eth.get_block("latest")
     kind = None
-    for candidate in ("MiningPoolV1", "BitcoinMintAdmission"):
+    for candidate in ("MiningPoolV1", "ConfederationBitcoinReserve", "BitcoinMintAdmission"):
         try:
             checked_runtime(client.w3, session.origin_contract, candidate, anchor.number)
         except ValueError as exc:
@@ -205,12 +212,12 @@ def guard_signing_session(client, session):
             break
     if kind is None:
         return  # Other typed monetary operations keep their existing policy.
-    if kind == "MiningPoolV1":
+    if kind in ("MiningPoolV1", "ConfederationBitcoinReserve"):
         pool = client.w3.eth.contract(address=session.origin_contract, abi=artifact(kind)["abi"])
         context = getattr(client, "custody_context", None)
         if context:
             intent, bundle, _ = context
-            if (intent.get("artifact") == "MiningPoolV1"
+            if (intent.get("artifact") == kind
                     and intent.get("hash_method") == "getSetCustodyTransferOperationHash"):
                 if ("bitcoin_custody" not in bundle.get("onboarding", {}).get("invitation", {})
                         or intent.get("target", "").lower() != pool.address.lower()

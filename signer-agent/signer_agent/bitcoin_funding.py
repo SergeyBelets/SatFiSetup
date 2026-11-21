@@ -69,13 +69,24 @@ def _distribution(a):
 
 def _mining(registry, contracts, wallet_script, block):
     address = contracts["deposits"].functions.scriptPools(keccak(bytes.fromhex(wallet_script))).call(block_identifier=block.number)
-    checked_runtime(registry.w3, address, "MiningPoolV1", block.number)
-    mining = _contract(registry, address, "MiningPoolV1")
+    kind = "MiningPoolV1"
+    try:
+        checked_runtime(registry.w3, address, kind, block.number)
+    except ValueError as error:
+        if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+            raise
+        kind = "ConfederationBitcoinReserve"
+        checked_runtime(registry.w3, address, kind, block.number)
+    mining = _contract(registry, address, kind)
     read = lambda name: getattr(mining.functions, name)().call(block_identifier=block.number)
     if (read("deposits") != contracts["deposits"].address or read("escrow") != contracts["escrow"].address
             or read("authorization") != contracts["authorization"].address
             or bytes(read("payoutScript")).hex() != wallet_script):
         raise ValueError("BTC_MINT_POOL_BINDING")
+    if kind == "ConfederationBitcoinReserve":
+        prove_creation(registry.w3, address, kind, [read("poolId"), contracts["deposits"].address,
+            contracts["escrow"].address, read("confederationPool")], block.number)
+        return mining
     token = _contract(registry, read("mpToken"), "PoolMpToken")
     prove_creation(registry.w3, address, "MiningPoolV1", [read("poolId"),
         contracts["deposits"].address, contracts["escrow"].address,
@@ -230,7 +241,8 @@ def dispatch(a, manifest, key, registry, state, board):
     if mint:
         target = _mining(registry, contracts, wallet_script, block)
         args = _mint_args(a)
-        helper, method, kind = "getMintOperationHash", "mintFromProof", "MiningPoolV1"
+        from .bitcoin_issuer import kind as issuer_kind
+        helper, method, kind = "getMintOperationHash", "mintFromProof", issuer_kind(target)
         completed = _mint_complete(target, args, block)
         operation = "mint"
     else:
@@ -358,7 +370,9 @@ def dispatch(a, manifest, key, registry, state, board):
                 raise ValueError("BTC_OPERATION_SESSION_MISMATCH")
             send(registry, authorization.address, "DKGAuthorization", "authorizeOperation",
                  [session, operation_hash, target.address], graph=graph)
-        send(registry, target.address, kind, method, [*execute_args, operation_hash], graph=graph)
+        from .zk_submission import options as proof_submission
+        submission = proof_submission(registry, graph, execute_args[2]) if mint else {}
+        send(registry, target.address, kind, method, [*execute_args, operation_hash], graph=graph, **submission)
     block = confirmed_block(registry.w3, graph)
     completed = _mint_complete(target, args, block) if mint else _treasury_complete(target, args, block)[0]
     if not completed:

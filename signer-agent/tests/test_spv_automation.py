@@ -11,6 +11,30 @@ def budget_policy():
     return dict(max_tx_gas='100000',max_transaction_cost_wei='100',max_total_cost_wei='150',max_job_cost_wei='100',max_attempts_per_job='2')
 
 
+@pytest.mark.parametrize("network", ["mainnet", "testnet4"])
+def test_automation_observation_uses_enrolled_bitcoin_network(monkeypatch, network):
+    from signer_agent.spv_automation import observation
+
+    bitcoin = object()
+    policy = dict(network=network)
+    core = dict(blocks=200)
+    block = NS(number=1)
+    state = NS(functions=NS(halted=lambda: NS(call=lambda: False)))
+    monkeypatch.setattr("signer_agent.evm_network.read_block", lambda *_: block)
+    monkeypatch.setattr("signer_agent.zk_spv.inspect_binding", lambda *_: (state, None, None, None))
+
+    def checked_core(actual_bitcoin, expected_network, actual_policy):
+        assert (actual_bitcoin, expected_network, actual_policy) == (bitcoin, network, policy)
+        return core
+
+    monkeypatch.setattr("signer_agent.bitcoin_network.check_core", checked_core)
+    monkeypatch.setattr("signer_agent.zk_worker.Worker.observe_need",
+        lambda *_: dict(status="WAITING_BITCOIN"))
+    monkeypatch.setattr("signer_agent.zk_worker.Worker.stable", lambda *_: None)
+    assert observation(None, dict(bitcoin_policy=policy, evm_confirmations="12"), "state",
+        {"kind": "withdrawal"}, bitcoin, {}) == (dict(status="WAITING_BITCOIN"), core)
+
+
 def test_budget_is_per_identity_durable_and_reservations_do_not_reset(tmp_path):
     ident=tmp_path/'payer.json';write(ident,dict(private_key='11'*32))
     p=budget_policy();b=Budget(ident,'registry:payer',p,'job1')

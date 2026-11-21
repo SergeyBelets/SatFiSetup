@@ -16,8 +16,11 @@ def approval(monkeypatch):
     target, authorization, validator, coordinator, registry, treasury = addresses
     account = Account.from_key((1).to_bytes(32, 'big'))
     op, dkg_id = b'o' * 32, b'd' * 32
+    dkg_result, group_key = b'r' * 32, b'g' * 64
     fixture = SimpleNamespace(chain=11155111, depth=12, reads=[], private_reads=[], sent=[],
-        changed=False, reorg_at=None, finalized=True, codes=[])
+        changed=False, reorg_at=None, finalized=True, codes=[], session_result=dkg_result, consumed=False)
+    fixture.session = [1, account.address, group_key, op, True, 3, 3, 1000, True,
+        '0x' + '00' * 20, 0, 0, 0, 0, 0, target, 0, 0, b'', 0]
     anchor = SimpleNamespace(number=42, hash=b'a' * 32)
     intent = dict(operation_hash=op.hex(), chain_id=str(fixture.chain), artifact='FederationFeeManager',
         target=target, coordinator=coordinator, hash_method='getSetTreasuryOperationHash', hash_args=[treasury])
@@ -35,6 +38,9 @@ def approval(monkeypatch):
                         getEnrollTreasuryOperationHash=op,
                         custodianValidator=validator, frostMultisig=authorization, coordinator=coordinator,
                         dkgRegistry=registry, registry=registry, sessionDKGId=dkg_id,
+                        dkgId=dkg_id, resultHash=dkg_result, sessionDKGResult=fixture.session_result,
+                        threshold=3, groupPubkey=group_key, consumedSessions=fixture.consumed,
+                        getSession=fixture.session,
                         getAuthorizationResult=(0, op, fixture.finalized or block_identifier == 'latest', 0, target, 3, 3),
                         getCustodians=[account.address], custodianSigned=False, executedOperations=False)
                     if method == fixture.reorg_at:
@@ -115,6 +121,52 @@ def test_ulr_enrollment_uses_reviewed_confederation_and_same_confirmed_quorum(ap
     assert len(f.private_reads)==len(f.sent)==1
     f.finalized=False;f.private_reads.clear();f.sent.clear()
     with pytest.raises(ValueError,match='FROST_APPROVAL_REQUIRED'):custodian_cli.approve(f.args)
+    assert not f.private_reads and not f.sent
+
+
+@pytest.fixture
+def executed_ulr_approval(approval, monkeypatch):
+    f = approval
+    auth, validator = [Web3.to_checksum_address('0x' + format(i, '040x')) for i in (2, 3)]
+    f.intent.update(artifact='ULRCustodianSnapshots', hash_method='getEnrollTreasuryOperationHash')
+    monkeypatch.setattr(custodian_cli, 'ulr_context', lambda *args: (auth, validator, dict(complete=True)))
+    f.finalized = False
+    return f
+
+
+def test_completed_ulr_repeat_does_not_require_finalizing_a_second_session(executed_ulr_approval):
+    f = executed_ulr_approval
+    assert custodian_cli.approve(f.args) == dict(status='ALREADY_EXECUTED', session='1',
+        operation_hash=f.args.operation_hash, target=f.intent['target'])
+    assert ('getSession', 42) in f.reads and ('getAuthorizationResult', 42) not in f.reads
+    assert not f.private_reads and not f.sent
+
+
+@pytest.mark.parametrize('field,value', [
+    (0, 2), (2, b'x' * 64), (3, b'x' * 32), (4, False), (5, 2), (8, False),
+    (9, '0x' + '10' * 20), (15, '0x' + '11' * 20),
+])
+def test_completed_ulr_rejects_a_different_repeat_session(executed_ulr_approval, field, value):
+    f = executed_ulr_approval
+    f.session[field] = value
+    with pytest.raises(ValueError, match='POLICY_MISMATCH'):
+        custodian_cli.approve(f.args)
+    assert not f.private_reads and not f.sent
+
+
+@pytest.mark.parametrize('failure', ['dkg', 'receipt', 'reorg'])
+def test_completed_ulr_rechecks_original_authority_and_snapshot(executed_ulr_approval, failure):
+    f = executed_ulr_approval
+    error = 'POLICY_MISMATCH'
+    if failure == 'dkg':
+        f.session_result = b'x' * 32
+    elif failure == 'receipt':
+        f.consumed = True
+    else:
+        f.reorg_at = 'getSession'
+        error = 'EVM_SIGNING_SNAPSHOT_REORG'
+    with pytest.raises(ValueError, match=error):
+        custodian_cli.approve(f.args)
     assert not f.private_reads and not f.sent
 
 

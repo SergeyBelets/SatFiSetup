@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 from .contour import digest,private_write,sha
-from .contour_calls import Calls,Required,Hold,Progress
+from .contour_calls import Calls,Required,Hold,Progress,ObservationPending
 from signer_agent.onboarding import read_private
 from signer_agent.address_transport import Client,load_config as address_config
 from signer_agent.address_registration_client import Driver
@@ -182,6 +182,7 @@ class Pipeline:
                 return self.result('WAITING','ADDRESS_PHASE_AWAITING_CANONICAL_PROBE',current=out)
             except Required:return self.result('ABSENT','ORIGINAL_ADDRESS_OPERATION_REQUIRED')
             except Progress:return self.result('ABSENT','ORIGINAL_ADDRESS_OPERATION_PROGRESS')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_ADDRESS_RECOVERY_REQUIRED')
         finally:os.close(fd)
 

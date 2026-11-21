@@ -219,6 +219,10 @@ def test_in_kind_config_builds_signed_sepolia_testnet4_graph(tmp_path, backend, 
     assert steps["escrow"]["artifact"] == "BitcoinWithdrawalEscrowV2"
     assert steps["escrow"]["args"][3:] == [invite["min_p2wpkh_sats"], invite["min_p2tr_sats"], "125"]
     assert steps["staking"]["artifact"] == "ConfederationDAOStake"
+    assert steps["mining"]["artifact"] == "ConfederationBitcoinReserve"
+    assert steps["custody_transfer"]["artifact"] == "BitcoinCustodyTransferV2"
+    assert steps["bind_bitcoin_reserve"]["method"] == "bindBitcoinReserve"
+    assert not any(output.get("name") == "mp" for step in steps.values() for output in step.get("outputs", []))
     assert "$decisions" in steps["dao_income"]["args"]
     assert "converter" not in steps and "startup_rewards" not in steps and "ulr_treasury" not in steps
 

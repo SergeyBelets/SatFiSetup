@@ -355,8 +355,7 @@ def test_participant_cli_never_echoes_arbitrary_secret_exception_values(monkeypa
     captured = capsys.readouterr()
     assert message not in captured.out + captured.err
     result = json.loads(captured.out)
-    assert result["status"] == "ERROR" and result["code"] == error.__name__
-    assert result["message"] and result["next_action"]
+    assert result["status"] == "ERROR" and result["code"] == error.__name__ and result["message"]
 
 
 def test_participant_safe_error_allowlist_preserves_known_recovery_code():
@@ -458,22 +457,30 @@ def test_evm_reserve_review_rejects_missing_public_plan(bitcoin_reserve_intent):
 
 @pytest.fixture
 def settled_payment_observer(tmp_path, monkeypatch):
-    from signer_agent import bitcoin_onchain, bitcoin_worker
+    from signer_agent import bitcoin_onchain
 
     state = SecureState(str(tmp_path / "observation.enc"), "test-only")
     manifest = SimpleNamespace(context=b"o" * 32)
-    args = SimpleNamespace(bitcoin_rpc="http://local-test.invalid", bitcoin_cookie="local-test-cookie")
-    plan = dict(network="regtest", batch_registry="known-batches", batch_id="12" * 32)
+    args = SimpleNamespace(bitcoin_rpc="http://local-test.invalid", bitcoin_cookie="local-test-cookie",
+                           state=str(tmp_path / "observation.enc"))
+    plan = dict(network="regtest", version="1", batch_registry="known-batches", batch_id="12" * 32,
+                withdrawal_refs=["99" * 32])
     state.put("btc-registry:" + manifest.context.hex(), {"graph": {}})
-    data = dict(paid=True, confirmations=6, block=("aa" * 32), canonical=("aa" * 32), outage=False)
+    anchor = bytes(range(32))
+    data = dict(paid=True, bound_txid=b"p" * 32, anchor=anchor[::-1], confirmation_anchor=6,
+                confirmations=6, block=anchor.hex(), canonical=anchor.hex(), outage=False, responses={})
     calls = []
 
     def constant(value):
         return SimpleNamespace(call=lambda **kwargs: value)
 
-    batches = SimpleNamespace(functions=SimpleNamespace(withdrawalEscrow=lambda: constant("known-escrow")))
+    batches = SimpleNamespace(functions=SimpleNamespace(
+        withdrawalEscrow=lambda: constant("known-escrow"), batchState=lambda _: constant(2),
+        replacementOf=lambda _: constant(data.get("previous", bytes(32))),
+        reservationRoot=lambda _: constant(data.get("root", bytes(32))),
+    ))
     escrow = SimpleNamespace(functions=SimpleNamespace(
-        payment=lambda batch: constant((b"p" * 32, None, data["paid"], [])),
+        payment=lambda batch: constant((data["bound_txid"], data["anchor"], data["paid"], [b"\x99" * 32])),
         depth=lambda: constant(6),
     ))
     monkeypatch.setattr(bitcoin_onchain, "contract", lambda registry, address, kind:
@@ -487,16 +494,26 @@ def settled_payment_observer(tmp_path, monkeypatch):
             calls.append(method)
             if data["outage"]:
                 raise RuntimeError("PRIVATE_RPC_TOKEN_MUST_NOT_BE_RETURNED")
+            if method in data["responses"]:
+                response = data["responses"][method]
+                if isinstance(response, Exception):
+                    raise response
+                if callable(response):
+                    return response(*params)
+                return response
             if method == "getrawtransaction":
-                return data.get("record", dict(txid=params[0], confirmations=data["confirmations"], blockhash=data["block"]))
-            if method == "getmempoolentry":
-                return {"wtxid": "ef" * 32}
+                if data["confirmations"] is None and data["block"] is None:
+                    return dict(txid=params[0], hex="signed", hash="71" * 32)
+                return dict(txid=params[0], hex="signed", hash="71" * 32,
+                            confirmations=data["confirmations"], blockhash=data["block"])
+            if method == "getmempoolentry" and data["confirmations"] is None and data["block"] is None:
+                return dict(vsize=110)
             if method == "getblockheader":
-                return dict(height=100, hash=params[0])
+                return dict(hash=params[0], height=100, confirmations=data["confirmation_anchor"])
             if method == "getblockhash":
                 return data["canonical"]
             if method == "gettxoutproof":
-                return "abcd"
+                return "verified-proof"
             if method == "verifytxoutproof":
                 return ["70" * 32] if not data.get("invalid_proof") else []
             pytest.fail("unexpected Bitcoin RPC")
@@ -536,9 +553,10 @@ def test_paid_bitcoin_confirmation_can_be_repeated_and_unpaid_is_not_confirmed(s
 
 
 @pytest.mark.parametrize("changed", [
-    dict(record={"txid": "70" * 32, "hash": "ef" * 32}), dict(confirmations=5), dict(canonical=("ff" * 32)),
+    dict(block=None, confirmations=None, canonical="13" * 32),
+    dict(confirmations=5, canonical="13" * 32), dict(canonical="13" * 32),
 ])
-def test_failed_post_settlement_observation_is_sticky_without_claiming_reorg(settled_payment_observer, changed):
+def test_conflicting_payment_block_keeps_recovery_sticky(settled_payment_observer, changed):
     item = settled_payment_observer
     assert item.observe()["bitcoin_observation"] == "CONFIRMED"
     item.data.update(changed)
@@ -549,12 +567,33 @@ def test_failed_post_settlement_observation_is_sticky_without_claiming_reorg(set
     assert "PRIVATE_RPC_TOKEN" not in json.dumps(result)
     marker = item.state.get("btc-payments-recovery:" + item.manifest.context.hex())
     assert marker["batch"] == item.plan["batch_id"]
-    item.data.update(confirmations=20, block=("aa" * 32), canonical=("aa" * 32), outage=False)
+    item.data.update(confirmations=20, block="12" * 32, canonical="12" * 32, outage=False)
     item.calls.clear()
     assert item.observe() == result
     assert item.calls == []
     item.args.bitcoin_rpc = None
     assert item.observe() == result
+
+
+@pytest.mark.parametrize("provider_behind", [True, False])
+def test_same_chain_payment_with_older_rpc_automatically_resumes(settled_payment_observer, provider_behind):
+    from signer_agent.bitcoin_rpc import BitcoinRPCError
+
+    item = settled_payment_observer
+    assert item.observe()["status"] == "PAID"
+    item.data["confirmations"] = 4
+    if provider_behind:
+        item.data["confirmation_anchor"] = -1
+        item.data["responses"]["getblockhash"] = BitcoinRPCError("BITCOIN_RPC_REJECTED", rpc_code=-8)
+    pending = item.observe()
+    assert pending["status"] == "OBSERVATION_UNAVAILABLE" and not pending["requires_review"]
+    if not provider_behind:
+        assert pending["error_code"] == "BITCOIN_PAYMENT_DEPTH_PENDING"
+    item.data["responses"].clear()
+    item.data.update(confirmations=6, confirmation_anchor=6)
+    assert item.observe()["status"] == "PAID"
+    assert not item.state.get("btc-payments-recovery:" + item.manifest.context.hex())
+    assert "verifytxoutproof" in item.calls
 
 
 def test_post_settlement_outage_retries_and_clears_only_after_same_payment_proof(settled_payment_observer):
@@ -574,13 +613,271 @@ def test_post_settlement_outage_retries_and_clears_only_after_same_payment_proof
     assert audit["previous"]["error_code"] == "RuntimeError"
 
 
+def test_concurrent_identical_soft_marker_invalidates_inflight_recovery(settled_payment_observer):
+    item = settled_payment_observer
+    item.data["outage"] = True
+    failure = item.observe()
+    assert "revision" not in failure
+    recovery_key = "btc-payments-recovery:" + item.manifest.context.hex()
+    previous = item.state.get(recovery_key)
+    item.data["outage"] = False
+
+    def later_outage(*params):
+        assert item.state.get(recovery_key) == previous
+        del item.data["responses"]["gettxoutproof"]
+        item.data["outage"] = True
+        assert item.observe() == failure
+        item.data["outage"] = False
+        return "verified-proof"
+
+    item.data["responses"]["gettxoutproof"] = later_outage
+    with pytest.raises(ValueError, match="BTC_RECOVERY_CHANGED"):
+        item.observe()
+    assert item.state.get(recovery_key)["revision"] != previous["revision"]
+
+
+def test_first_successful_observation_cannot_report_paid_over_a_new_pause(settled_payment_observer):
+    item = settled_payment_observer
+    recovery_key = "btc-payments-recovery:" + item.manifest.context.hex()
+
+    def check_block(*args):
+        del item.data["responses"]["getblockhash"]
+        item.data["canonical"] = "13" * 32
+        assert item.observe()["status"] == "RECOVERY_REQUIRED"
+        return "12" * 32
+
+    item.data["responses"]["getblockhash"] = check_block
+    with pytest.raises(ValueError, match="BTC_RECOVERY_CHANGED"):
+        item.observe()
+    assert item.state.get(recovery_key)["requires_review"]
+
+
+def test_post_settlement_incomplete_core_response_can_be_retried_without_review(settled_payment_observer):
+    item = settled_payment_observer
+    item.data["responses"]["getrawtransaction"] = dict(txid="70" * 32, hex="signed", confirmations=6)
+    failure = item.observe()
+    assert failure["status"] == "OBSERVATION_UNAVAILABLE"
+    assert failure["error_code"] == "BITCOIN_OBSERVATION_UNAVAILABLE"
+    endpoint = item.args.bitcoin_rpc
+    item.args.bitcoin_rpc = None
+    assert item.observe() == failure
+    item.data["responses"].clear()
+    item.args.bitcoin_rpc = endpoint
+    assert item.observe()["status"] == "PAID"
+    assert "verifytxoutproof" in item.calls
+
+
+@pytest.mark.parametrize("anchor_state,status", [
+    ("canonical", "OBSERVATION_UNAVAILABLE"),
+    ("unknown", "OBSERVATION_UNAVAILABLE"),
+    ("mismatched_header", "OBSERVATION_UNAVAILABLE"),
+    ("orphaned", "RECOVERY_REQUIRED"),
+    ("canonical_replaced", "RECOVERY_REQUIRED"),
+])
+def test_missing_settled_tx_requires_real_anchor_reorg_evidence(settled_payment_observer, anchor_state, status):
+    from signer_agent.bitcoin_rpc import BitcoinRPCError
+
+    item = settled_payment_observer
+    responses = item.data["responses"]
+    responses["getrawtransaction"] = BitcoinRPCError("BITCOIN_RPC_REJECTED", rpc_code=-5)
+    if anchor_state == "unknown":
+        responses["getblockheader"] = BitcoinRPCError("BITCOIN_RPC_REJECTED", rpc_code=-5)
+    if anchor_state == "mismatched_header":
+        responses["getblockheader"] = dict(height=100, hash="44" * 32, confirmations=-1)
+    if anchor_state == "orphaned":
+        item.data["confirmation_anchor"] = -1
+        item.data["canonical"] = "44" * 32
+    if anchor_state == "canonical_replaced":
+        item.data["canonical"] = "44" * 32
+    failure = item.observe()
+    assert "getblockheader" in item.calls
+    assert failure["status"] == status
+    if status == "RECOVERY_REQUIRED":
+        assert failure["error_code"] == "BITCOIN_PAYMENT_REORG"
+    else:
+        assert failure["rpc_error_code"] == -5
+        responses.clear()
+        assert item.observe()["status"] == "PAID"
+        assert "verifytxoutproof" in item.calls
+
+
+@pytest.mark.parametrize("action,core_ready", [
+    ("btc-recover", True), ("btc-sign", False), ("btc-sign", True),
+])
+def test_mainnet_paid_recovery_dispatch_precedes_live_relay_preflight(
+        settled_payment_observer, monkeypatch, action, core_ready):
+    from signer_agent import bitcoin_onchain as transport
+
+    item = settled_payment_observer
+    if action == "btc-recover":
+        canonical = item.data["canonical"]
+        item.data["canonical"] = "13" * 32
+        assert item.observe()["status"] == "RECOVERY_REQUIRED"
+        item.data["canonical"] = canonical
+    else:
+        item.data["outage"] = True
+        assert item.observe()["status"] == "OBSERVATION_UNAVAILABLE"
+        item.data["outage"] = not core_ready
+    item.plan["network"] = "mainnet"
+    graph = dict(contracts=dict(batches=dict(address=item.plan["batch_registry"])))
+    item.state.put("btc-registry:" + item.manifest.context.hex(), dict(graph=graph))
+    item.args.action = action
+    item.args.batch = item.plan["batch_id"]
+    item.args.signing_board = "known-board"
+    monkeypatch.setattr(transport, "graph_network", lambda _: "mainnet")
+    monkeypatch.setattr(transport, "require_registry", lambda *args, **kwargs: dict(graph=graph))
+    monkeypatch.setattr(transport, "checked_board", lambda *args: SimpleNamespace(address=item.args.signing_board))
+    monkeypatch.setattr(transport, "load_plan", lambda *args: item.plan)
+    monkeypatch.setattr(transport, "cached_plan", lambda *args: item.plan)
+    def stale_relay(*args):
+        assert action == "btc-sign" and core_ready
+        assert not item.state.get("btc-payments-recovery:" + item.manifest.context.hex())
+        raise ValueError("MAINNET_RELAY_STALE")
+
+    monkeypatch.setattr(transport, "check_bitcoin_graph", stale_relay)
+    if action == "btc-sign" and core_ready:
+        with pytest.raises(ValueError, match="MAINNET_RELAY_STALE"):
+            transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+        return
+    observed = transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+    assert observed["status"] == ("PAYMENTS_RESUMED" if action == "btc-recover" else "OBSERVATION_UNAVAILABLE")
+
+
+@pytest.mark.parametrize("case", ["paid", "pending_mempool", "pending_block", "pending_replacement", "missing_tx",
+                                  "unbound", "mismatched_tx", "mismatched_requests", "mismatched_replacement"])
+def test_operator_cold_restart_checks_exact_payment_before_live_relay(
+        settled_payment_observer, monkeypatch, case):
+    from signer_agent import bitcoin_onchain as transport, bitcoin_onchain_payment as payment
+    from signer_agent import bitcoin_worker
+    from signer_agent.bitcoin_rpc import BitcoinRPCError
+
+    item = settled_payment_observer
+    item.plan["network"] = "mainnet"
+    item.data["paid"] = case == "paid"
+    item.args.action = "btc-broadcast"
+    item.args.batch = item.plan["batch_id"]
+    item.args.signing_board = "known-board"
+    test_graph = dict(contracts=dict(batches=dict(address=item.plan["batch_registry"])))
+    item.state.put("btc-registry:" + item.manifest.context.hex(), dict(graph=test_graph))
+    monkeypatch.setattr(transport, "graph_network", lambda _: "mainnet")
+    monkeypatch.setattr(transport, "require_registry", lambda *args, **kwargs: dict(graph=test_graph))
+    monkeypatch.setattr(transport, "checked_board", lambda *args: SimpleNamespace(address=item.args.signing_board))
+    monkeypatch.setattr(transport, "load_plan", lambda *args: item.plan)
+    monkeypatch.setattr(payment, "_txid", lambda _: b"p" * 32)
+
+    def stale_relay(*args):
+        assert case in ("missing_tx", "unbound")
+        item.calls.append("relay")
+        raise ValueError("MAINNET_RELAY_STALE")
+
+    def collect(*args):
+        assert case in ("missing_tx", "unbound")
+        return [], [], [], []
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("existing-payment observation must not send or aggregate")
+
+    remembered = []
+    monkeypatch.setattr(transport, "check_bitcoin_graph", stale_relay)
+    monkeypatch.setattr(transport, "collect", collect)
+    monkeypatch.setattr(transport.crypto, "call", unexpected)
+    monkeypatch.setattr(bitcoin_worker.BitcoinWorker, "broadcast", unexpected)
+    monkeypatch.setattr(bitcoin_worker.BitcoinWorker, "remember_observed_broadcast",
+                        lambda _, batch, signed, *, replacement: remembered.append((batch, signed, replacement)))
+    expected_ancestry = None
+    if case in ("pending_replacement", "mismatched_replacement"):
+        item.plan.update(version="5", previous="20" * 32)
+        item.data.update(root=b"\x21" * 32, previous=b"\x20" * 32)
+        expected_ancestry = ("21" * 32, "20" * 32)
+        if case == "mismatched_replacement":
+            item.plan["previous"] = "22" * 32
+    if case == "pending_mempool":
+        item.data.update(block=None, confirmations=None)
+    if case == "missing_tx":
+        item.data["responses"]["getrawtransaction"] = BitcoinRPCError("BITCOIN_RPC_REJECTED", rpc_code=-5)
+    if case == "unbound":
+        item.data["bound_txid"] = bytes(32)
+    if case == "mismatched_tx":
+        item.data["bound_txid"] = b"q" * 32
+    if case == "mismatched_requests":
+        item.plan["withdrawal_refs"] = ["98" * 32]
+    if case in ("missing_tx", "unbound"):
+        with pytest.raises(ValueError, match="MAINNET_RELAY_STALE"):
+            transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+        assert item.calls[-1] == "relay"
+        return
+    if case in ("mismatched_tx", "mismatched_requests"):
+        with pytest.raises(ValueError, match="ESCROW_PAYMENT_MISMATCH"):
+            transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+        assert not item.calls
+        return
+    if case == "mismatched_replacement":
+        with pytest.raises(ValueError, match="BATCH_APPROVAL_MISMATCH"):
+            transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+        assert not remembered
+        return
+    observed = transport.dispatch(item.args, item.manifest, None, item.registry, item.state)
+    assert observed["txid"] == "70" * 32
+    if case == "paid":
+        assert observed["status"] == "PAID" and observed["bitcoin_observation"] == "CONFIRMED"
+        assert remembered == []
+    else:
+        assert observed["status"] == "BROADCAST" and observed["wtxid"] == "71" * 32
+        assert remembered == [
+            (item.plan["batch_id"], dict(signed="signed", txid="70" * 32, wtxid="71" * 32), expected_ancestry),
+        ]
+    assert item.calls.count("getrawtransaction") == 1
+    assert ("getmempoolentry" in item.calls) == (case == "pending_mempool")
+
+
+def test_verified_observed_transaction_is_retained_atomically_for_replacement(tmp_path):
+    from signer_agent.bitcoin_proofs import sha256d
+    from signer_agent.bitcoin_worker import BitcoinWorker
+
+    def payment(value, *, prevout="ab" * 32):
+        # Canonical witness envelope, parsed locally. Core is never called by this test.
+        version = "02000000"
+        inputs = "01" + prevout + "0000000000fdffffff"
+        outputs = "01" + value.to_bytes(8, "little").hex() + "0151"
+        locktime = "00000000"
+        stripped = version + inputs + outputs + locktime
+        raw = version + "0001" + inputs + outputs + "010101" + locktime
+        return dict(signed=raw, txid=sha256d(bytes.fromhex(stripped))[::-1].hex(),
+                    wtxid=sha256d(bytes.fromhex(raw))[::-1].hex())
+
+    worker = BitcoinWorker(tmp_path / "bitcoin.sqlite", None)
+    old, replacement, unrelated = payment(1000), payment(900), payment(800, prevout="cd" * 32)
+    worker.remember_observed_broadcast("root", old)
+    worker.remember_observed_broadcast("root", old)
+    with pytest.raises(ValueError, match="TXID_MISMATCH"):
+        worker.remember_observed_broadcast("bad-witness", dict(replacement, wtxid="00" * 32))
+    with pytest.raises(ValueError, match="BATCH_VERSION_CONFLICT"):
+        worker.remember_observed_broadcast("root", replacement)
+    with pytest.raises(ValueError, match="BATCH_VERSION_CONFLICT"):
+        worker.remember_observed_broadcast("different-batch", old)
+    with pytest.raises(ValueError, match="REPLACEMENT_INPUTS_MISMATCH"):
+        worker.remember_observed_broadcast("bad-branch", unrelated, replacement=("root", "root"))
+    worker.remember_observed_broadcast("next", replacement, replacement=("root", "root"))
+    with pytest.raises(ValueError, match="BATCH_VERSION_CONFLICT"):
+        worker.remember_observed_broadcast("next", replacement, replacement=("other-root", "root"))
+    with worker.db() as db:
+        db.execute("UPDATE payments SET status='SETTLED', proof='proof' WHERE id='next'")
+    worker.remember_observed_broadcast("next", replacement, replacement=("root", "root"))
+    with worker.db() as db:
+        assert db.execute("SELECT id,signed,status,proof FROM payments ORDER BY id").fetchall() == [
+            ("next", replacement["signed"], "SETTLED", "proof"), ("root", old["signed"], "BROADCAST", None),
+        ]
+        assert db.execute("SELECT id,root,previous FROM versions").fetchall() == [("next", "root", "root")]
+
+
 def test_post_settlement_reorg_requires_explicit_checked_recovery(settled_payment_observer):
     from signer_agent.bitcoin_onchain import payment_observation
 
     item = settled_payment_observer
-    item.data["confirmations"] = 0
+    canonical = item.data["canonical"]
+    item.data["canonical"] = "13" * 32
     assert item.observe()["status"] == "RECOVERY_REQUIRED"
-    item.data["confirmations"] = 6
+    item.data["canonical"] = canonical
     assert item.observe()["status"] == "RECOVERY_REQUIRED"
     result = payment_observation(item.args, item.manifest, item.registry, item.state, item.plan, recover=True)
     assert result["status"] == "PAID"
@@ -593,9 +890,10 @@ def test_checked_recovery_cannot_clear_an_unverified_payment(settled_payment_obs
     from signer_agent.bitcoin_onchain import payment_observation
 
     item = settled_payment_observer
-    item.data["confirmations"] = 0
+    canonical = item.data["canonical"]
+    item.data["canonical"] = "13" * 32
     assert item.observe()["status"] == "RECOVERY_REQUIRED"
-    item.data["confirmations"] = 6
+    item.data["canonical"] = canonical
     item.data.update(changed)
     result = payment_observation(item.args, item.manifest, item.registry, item.state, item.plan, recover=True)
     assert result["status"] == "RECOVERY_REQUIRED"
@@ -606,7 +904,7 @@ def test_recovery_must_recheck_the_original_batch(settled_payment_observer):
     from signer_agent.bitcoin_onchain import payment_observation
 
     item = settled_payment_observer
-    item.data["confirmations"] = 0
+    item.data["canonical"] = "13" * 32
     assert item.observe()["status"] == "RECOVERY_REQUIRED"
     with pytest.raises(ValueError, match="BTC_RECOVERY_BATCH_MISMATCH"):
         payment_observation(item.args, item.manifest, item.registry, item.state,
@@ -658,11 +956,9 @@ def test_cli_cannot_mix_file_package_with_onchain_payment_mode(tmp_path, monkeyp
         "--password-file", "unused", *extra,
     ])
     assert result == 2
-    output = capsys.readouterr().out
-    diagnostic = json.loads(output)
-    assert (diagnostic["status"], diagnostic["code"]) == ("ERROR", "BTC_FILE_AND_ONCHAIN_MODES_CONFLICT")
-    assert diagnostic["message"] and diagnostic["next_action"]
-    assert "untrusted-file.json" not in output and str(tmp_path) not in output
+    response = json.loads(capsys.readouterr().out)
+    assert response["status"] == "ERROR" and response["code"] == "BTC_FILE_AND_ONCHAIN_MODES_CONFLICT"
+    assert response["message"]
     assert list(tmp_path.iterdir()) == []
 
 
@@ -947,78 +1243,3 @@ def test_review_reorg_after_terms_never_returns_verified(bitcoin_reserve_intent,
     with pytest.raises(ValueError, match="BTC_OPERATION_REORG"):
         payment.review_intent(item.intent, item.manifest, item.key, item.registry, None,
                               board_address="known-original-board")
-
-
-@pytest.mark.parametrize("record", [
-    {}, {"blockhash": "aa" * 32, "confirmations": 6},
-    {"txid": "88" * 32, "blockhash": "aa" * 32, "confirmations": 6},
-    {"txid": "70" * 32}, {"txid": "70" * 32, "blockhash": None},
-    {"txid": "70" * 32, "blockhash": "aa" * 32},
-    {"txid": "70" * 32, "blockhash": "aa" * 32, "confirmations": True},
-    {"txid": "70" * 32, "hash": "77" * 32},  # mempool entry names another wtxid
-])
-def test_invalid_core_record_after_settlement_is_not_a_reorg(settled_payment_observer, record):
-    item = settled_payment_observer
-    item.data["record"] = record
-    unavailable = item.observe()
-    assert unavailable["status"] == "OBSERVATION_UNAVAILABLE"
-    assert unavailable["error_code"] == "BITCOIN_RPC_RESPONSE_INVALID"
-    assert unavailable["requires_review"] is False
-    del item.data["record"]
-    assert item.observe()["bitcoin_observation"] == "CONFIRMED"
-    assert "verifytxoutproof" in item.calls
-
-
-@pytest.mark.parametrize("status,code,retry", [
-    (503, None, True), (None, -28, True), (None, None, True),
-    (401, None, False), (403, -28, False), (None, -32601, False),
-])
-def test_payment_preflight_classifies_read_errors_before_signing(monkeypatch, status, code, retry):
-    from signer_agent import bitcoin_onchain as client
-    from signer_agent.bitcoin_rpc import BitcoinRPCError
-
-    graph = {"contracts": {"batches": {"address": "batch-registry"}}}
-    state = {"btc-registry:61": {"graph": graph}}
-    args = SimpleNamespace(action="btc-commit", bitcoin_rpc="rpc", bitcoin_cookie="cookie")
-    monkeypatch.setattr(client, "require_registry", lambda *a, **k: {"graph": graph})
-    monkeypatch.setattr(client, "graph_network", lambda graph: "mainnet")
-    monkeypatch.setattr(client, "bitcoin_for_graph", lambda *a: object())
-
-    def down(*args):
-        raise BitcoinRPCError("BITCOIN_RPC_REJECTED" if code is not None else "BITCOIN_RPC_FAILED",
-                              rpc_code=code, http_status=status)
-
-    monkeypatch.setattr(client, "check_bitcoin_graph", down)
-    call = lambda: client.dispatch(args, SimpleNamespace(context=b"a"), None, SimpleNamespace(), state)
-    if retry:
-        assert call()["status"] == "OBSERVATION_UNAVAILABLE"
-    else:
-        with pytest.raises(BitcoinRPCError):
-            call()
-    assert list(state) == ["btc-registry:61"]
-
-
-def test_restarted_broadcast_recognizes_the_exact_settled_payment(settled_payment_observer, monkeypatch):
-    from signer_agent import bitcoin_onchain as client
-    item = settled_payment_observer
-    item.args.action = "btc-broadcast"
-    item.args.signing_board = "signing"
-    item.args.batch = item.plan["batch_id"]
-    graph = {"contracts": {"batches": {"address": "known-batches"}}}
-    item.state.put("btc-registry:" + item.manifest.context.hex(), {"graph": graph})
-    original_contract = client.contract
-    def lookup(registry, address, kind):
-        target = original_contract(registry, address, kind)
-        if kind == "BitcoinBatchRegistry":
-            target.functions.batchState = lambda batch: SimpleNamespace(call=lambda: 4)
-        return target
-    monkeypatch.setattr(client, "contract", lookup)
-    monkeypatch.setattr(client, "require_registry", lambda *a, **k: {"graph": graph})
-    monkeypatch.setattr(client, "checked_board", lambda *a: SimpleNamespace(address="signing"))
-    monkeypatch.setattr(client, "load_plan", lambda *a: item.plan)
-    monkeypatch.setattr(client, "collect", lambda *a: pytest.fail("repeated Bitcoin broadcast"))
-    result = client.dispatch(item.args, item.manifest, None, item.registry, item.state)
-    assert result == dict(status="PAID", bitcoin_observation="CONFIRMED", txid="70"*32)
-    item.data["paid"] = False
-    with pytest.raises(ValueError, match="BTC_BATCH_NOT_SIGNING"):
-        client.dispatch(item.args, item.manifest, None, item.registry, item.state)

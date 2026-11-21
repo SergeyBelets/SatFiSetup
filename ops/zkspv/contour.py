@@ -37,6 +37,13 @@ def sha(path):
 def digest(value): return hashlib.sha256(canonical(value).encode()).hexdigest()
 
 
+def pending_evm_observation(observed):
+    reason = observed['observations'].get('reason')
+    if observed['status'] == 'WAITING' and reason in ('EVM_RECEIPT_PENDING', 'EVM_RPC_BEHIND'):
+        return reason
+    return None
+
+
 def private_write(path, value):
     fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:
@@ -208,6 +215,9 @@ class Contour:
                     # Keep the first receipt stable so downstream input commitments survive polling.
                     if record['status'] != 'COMPLETED': self.journal.update(stage['id'], 'COMPLETED', observed)
                     continue
+                pending = pending_evm_observation(observed)
+                if pending:
+                    return dict(status='WAITING', stage=stage['id'], reason=pending, production_ready=False)
                 if record['status'] == 'COMPLETED': raise ValueError('CONTOUR_COMPLETION_LOST')
                 if observed['status'] in ('WAITING', 'RECOVERY_REQUIRED'):
                     return dict(status=observed['status'], stage=stage['id'], production_ready=False)
@@ -271,6 +281,9 @@ class Contour:
                     if sha(relative_file(self.directory,file))!=expected_hash:raise ValueError('CONTOUR_INVOCATION_CHANGED')
                     execution_files[file]=expected_hash
                 current=self.invoke(stage,'probe',saved) if refresh else saved
+                pending = pending_evm_observation(current)
+                if pending:
+                    return dict(status='WAITING',stages=rows,next_stage=stage['id'],reason=pending)
                 if current['status']!='SATISFIED' or current['artifacts']!=saved['artifacts']:
                     return dict(status='RECOVERY_REQUIRED',stages=rows,next_stage=stage['id'],reason='COMPLETION_LOST')
                 rows.append(dict(stage=stage['id'],capability=stage['capability'],result_sha256=digest(saved),

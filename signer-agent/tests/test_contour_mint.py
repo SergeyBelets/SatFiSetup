@@ -41,6 +41,11 @@ def mint(request,tmp_path,monkeypatch):
     if g:need['intent_id']=g.claim[0].hex()
     graph=d.graph if d else e.graph
     graph.update(version='2',bitcoin_network='mainnet',bitcoin_policy=wc['bitcoin_policy'],evm_confirmations='1')
+    adapter_address=Web3.to_checksum_address("0x" + "ad" * 20)
+    graph['contracts']['spv_guard']=dict(address=adapter_address,artifact='ZkSpvAdapter')
+    adapter=NS(address=adapter_address,functions=NS(
+        getBlockStatus=lambda _:NS(call=lambda **kw:(True, 12)),
+        materializedHeaders=lambda _:NS(call=lambda **kw:(b'r'*32, b'm'*32, 100))))
     e.registry.identity_file=str(identity);e.registry.transaction_journal=str(identity)+'.transactions.sqlite'
     proof=[b'raw',e.arguments[1],b'b'*32,[],0,e.arguments[2],e.arguments[3]]
     monkeypatch.setattr(bitcoin_funding,'_mint_proof',lambda *a:deepcopy(proof))
@@ -99,6 +104,9 @@ def mint(request,tmp_path,monkeypatch):
     e.w,e.c,e.need,e.mode,e.runtime=w,c,need,mode,runtime;e.transactions={};e.receipts={};e.raws=[];e.crash=None;e.current_ready=True
     e.generation=g.view if g else None
     old_eth=e.w3.eth
+    def contract(address, **kwargs):
+        if address==adapter_address:return adapter
+        return old_eth.contract(address,**kwargs)
     def receipt(txid):
         if txid not in e.receipts:raise TransactionNotFound(txid)
         return e.receipts[txid]
@@ -119,7 +127,7 @@ def mint(request,tmp_path,monkeypatch):
         e.transactions[txid]=tx;e.raws.append(raw)
         e.receipts[txid]=AttributeDict(dict(status=1,blockNumber=123,blockHash=b'b'*32,transactionHash=bytes.fromhex(txid),logs=[]))
         return bytes.fromhex(txid)
-    e.w3.eth=NS(chain_id=31337,block_number=200,get_block=e.block,contract=old_eth.contract,get_code=lambda *a,**kw:b'fixture-code',
+    e.w3.eth=NS(chain_id=31337,block_number=200,get_block=e.block,contract=contract,get_code=lambda *a,**kw:b'fixture-code',
         get_transaction_count=lambda *a:len(e.transactions),get_transaction=transaction,get_transaction_receipt=receipt,
         send_raw_transaction=send_raw,wait_for_transaction_receipt=lambda txid,**kw:receipt(txid))
     e.w3.provider=NS(endpoint_uri='http://127.0.0.1:1')
@@ -216,6 +224,16 @@ def test_mint_receipt_reorg_is_not_replaced_by_a_completion_marker(mint):
     e=mint;complete(e);key=next(iter(e.receipts));e.receipts[key]=dict(e.receipts[key],blockHash=b'z'*32)
     e.receipts[key]=AttributeDict(e.receipts[key])
     with pytest.raises(ValueError,match='REORG'):e.execute()
+
+
+def test_confirmed_mint_waits_for_its_receipt_without_resending(mint):
+    e=mint;complete(e);original=list(e.raws);key=next(iter(e.receipts))
+    receipt=e.receipts.pop(key)
+    result=e.execute('recover')
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
+    assert e.raws==original
+    e.receipts[key]=receipt
+    assert e.execute()['status']=='SATISFIED' and e.raws==original
 
 
 def test_mint_fee_caps_are_enforced_before_signature(mint):
@@ -332,9 +350,14 @@ def test_membership_stale_root_does_not_start_a_second_materialization(materiali
     assert e.member_calls==1 and not e.member_raw
 
 
-def test_membership_confirmed_receipt_loss_is_a_hold(materialization):
+def test_membership_confirmed_receipt_loss_waits_and_recovers_exact_result(materialization):
     e=materialization;e.member('run');e.member('recover');assert e.member()['status']=='SATISFIED'
-    e.receipts.clear();assert e.member()['status']=='RECOVERY_REQUIRED'
+    receipts=dict(e.receipts)
+    raw=e.member_raw
+    e.receipts.clear();result=e.member()
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
+    e.receipts.update(receipts)
+    assert e.member()['status']=='SATISFIED' and e.member_raw==raw
 
 
 def test_cached_membership_adoption_does_not_bypass_finality_regression(materialization):
@@ -345,7 +368,10 @@ def test_cached_membership_adoption_does_not_bypass_finality_regression(material
     def context(**kw):
         b,*tail=old(**kw);return (AttributeDict(dict(b,number=9)),*tail)
     e.worker.context=context
-    assert e.member()['status']=='RECOVERY_REQUIRED'
+    result=e.member()
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RPC_BEHIND'
+    e.worker.context=old
+    assert e.member()['status']=='SATISFIED' and e.member_calls==0
 
 
 @pytest.mark.parametrize('corrupt',[False,True])

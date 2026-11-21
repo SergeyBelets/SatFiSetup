@@ -86,7 +86,7 @@ def extend(p, deploy, call, approve):
 
 def manifest(bootstrap):
     names = ("dao_token", "usd", "conf_pool", "conf_shares", "staking", "dao_income", "decisions", "nft_pass",
-             "fee_manager", "validator", "escrow", "signing_board")
+             "fee_manager", "validator", "escrow", "signing_board", "mining", "custody_transfer")
     if not all(name in bootstrap.contracts for name in names):
         return dict(version="3", status="BOOTSTRAP_PENDING", ready=False)
     from .ulr_treasury import read
@@ -100,6 +100,8 @@ def manifest(bootstrap):
         ("dao_income", "shareToken", "conf_shares"), ("dao_income", "passSale", "nft_pass"),
         ("nft_pass", "income", "dao_income"), ("fee_manager", "nftModifier", "nft_pass"),
         ("validator", "candidateStaking", "staking"), ("decisions", "staking", "staking"),
+        ("conf_pool", "bitcoinReserve", "mining"), ("mining", "confederationPool", "conf_pool"),
+        ("mining", "shareToken", "conf_shares"), ("mining", "custodyTransfer", "custody_transfer"),
     )
     if not all(read(nodes[source], at.number, method) == nodes[target].address for source, method, target in links):
         return dict(version="3", status="BOOTSTRAP_PENDING", ready=False)
@@ -116,14 +118,10 @@ def manifest(bootstrap):
 
 
 def review(w3, intent, bundle, at):
-    scope, _ = review_session(w3, intent, bundle, at, session=None)
-    return scope
-
-
-def review_session(w3, intent, bundle, at, session):
-    """Authenticate the DAO graph, then distinguish a consumed session from a new operation."""
+    """Authenticate the new money graph before either FROST or custodian approval."""
     kind, helper = intent.get("artifact"), intent.get("hash_method")
-    dao_methods = {"getAddStablecoinOperationHash", "getBindPassSaleOperationHash", "getSettlementOperationHash"}
+    reports = {"getSettlementOperationHash", "getStageExpensesOperationHash"}
+    dao_methods = {"getAddStablecoinOperationHash", "getBindPassSaleOperationHash"} | reports
     relevant = (kind in ("ConfederationDAOIncome", "ConfederationNFTPass")
         or kind == "CustodianValidator" and helper in CUSTODIAN_METHODS
         or (kind, helper) in {("ConfederationPoolV2", "getBindDAOIncomeOperationHash"),
@@ -132,11 +130,12 @@ def review_session(w3, intent, bundle, at, session):
             ("CustodianDAODecisionBoard", "getCreateOperationHash")})
     invite = bundle.get("onboarding", {}).get("invitation", {})
     if not enabled(invite):
-        if kind in ("ConfederationDAOIncome", "ConfederationNFTPass", "ConfederationPoolV2", "BitcoinWithdrawalEscrowV2"):
+        if kind in ("ConfederationDAOIncome", "ConfederationNFTPass", "ConfederationPoolV2", "BitcoinWithdrawalEscrowV2",
+                    "ConfederationBitcoinReserve", "BitcoinCustodyTransferV2"):
             raise ValueError("CONFEDERATION_DAO_PROFILE")
-        return None, None
+        return None
     if not relevant:
-        return None, None
+        return None
 
     from .bitcoin_trust import checked_runtime
     from .contract_provenance import prove_creation
@@ -223,6 +222,21 @@ def review_session(w3, intent, bundle, at, session):
             raise ValueError("ULR_SHARED_ROOT_CODE_HASH")
     direct(staking, "ConfederationDAOStake", [token.address, validator.address, threshold])
 
+    op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
+    executed = get(auth, "executedOperations", op)
+    if executed and get(auth, "operationTargets", op) != target.address:
+        raise ValueError("POLICY_MISMATCH")
+
+    if not executed and kind == "CustodianValidator" and helper in CUSTODIAN_METHODS:
+        if helper == "getAddCustodianOperationHash" and (
+                get(validator, "isCustodian", args[0]) or not get(staking, "isCustodianCandidate", args[0])):
+            raise ValueError("CONFEDERATION_DAO_CANDIDATE")
+        if helper == "getRemoveCustodianOperationHash" and not get(validator, "isCustodian", args[0]):
+            raise ValueError("CONFEDERATION_DAO_CUSTODIAN")
+        if helper == "getSetMinCustodiansOperationHash":
+            count = get(validator, "getCustodianCount")
+            integer(args[0], (2 * count + 2) // 3, count)
+
     if kind == "CustodianDAODecisionBoard":
         direct(target, kind, [staking.address, auth.address])
         if get(validator, "candidateStaking") != staking.address:
@@ -267,31 +281,9 @@ def review_session(w3, intent, bundle, at, session):
                 raise ValueError("CONFEDERATION_DAO_BINDING")
             direct(sale, "ConfederationNFTPass", [names["confederation_share"]["name"] + " Pass",
                 names["confederation_share"]["symbol"] + "-PASS", income.address, manager, invite["operator"]])
-        if helper == "getSettlementOperationHash":
+        if not executed and helper in reports:
             from .confederation_dao_report import review as review_report
             review_report(w3, intent, invite["evm_confirmations"], at)
-    # Once consumed, the original membership change has already changed the
-    # eligibility predicates. Authenticate that exact operation before using them.
-    consumed = None
-    membership_change = kind == "CustodianValidator" and helper in (
-        "getAddCustodianOperationHash", "getRemoveCustodianOperationHash")
-    if session is not None and (membership_change or kind == "ConfederationNFTPass"):
-        from .operation_status import executed_operation
-        if intent.get("role") != bundle["role"] or str(intent.get("session", session)) != str(session):
-            raise ValueError("POLICY_MISMATCH")
-        consumed = executed_operation(w3, target, kind, intent, at, session=session,
-                                      dao_authorization=auth.address)
-
-    if kind == "CustodianValidator" and helper in CUSTODIAN_METHODS and not consumed:
-        if helper == "getAddCustodianOperationHash" and (
-                get(validator, "isCustodian", args[0]) or not get(staking, "isCustodianCandidate", args[0])):
-            raise ValueError("CONFEDERATION_DAO_CANDIDATE")
-        if helper == "getRemoveCustodianOperationHash" and not get(validator, "isCustodian", args[0]):
-            raise ValueError("CONFEDERATION_DAO_CUSTODIAN")
-        if helper == "getSetMinCustodiansOperationHash":
-            count = get(validator, "getCustodianCount")
-            integer(args[0], (2 * count + 2) // 3, count)
-
     if w3.eth.get_block(at).hash != anchor.hash:
         raise ValueError("EVM_SIGNING_SNAPSHOT_REORG")
-    return (auth.address, validator.address), consumed
+    return auth.address, validator.address

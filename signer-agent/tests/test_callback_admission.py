@@ -62,12 +62,21 @@ def test_authentic_callback_has_exact_source_and_one_snapshot(monkeypatch, pool_
     env = environment(monkeypatch, confederation)
     if pool_deployer == "ConfederationPoolV2Deployer":
         env.escrow.abi = [{"name": "defaultMinerFeeLimitSats"}]
+        env.request[2] = env.names["share"]
+        env.data["pool"]["getWithdrawal"][1] = env.names["share"]
     admission.validate_callback(env.escrow, env.request, 123)
     assert set(env.reads) == {123}
     expected = ["CallbackPoolRegistry", pool_deployer, share_deployer]
     if confederation:
         expected.append("CustodianValidator")
     assert [row[1] for row in env.origins] == expected
+
+
+def test_native_s_callback_rejects_a_federation_mp_as_redemption_asset(monkeypatch):
+    env = environment(monkeypatch, True)
+    env.escrow.abi = [{"name": "defaultMinerFeeLimitSats"}]
+    with pytest.raises(ValueError, match="BTC_CALLBACK_REQUEST_MISMATCH"):
+        admission.validate_callback(env.escrow, env.request, 123)
 
 
 def test_confederation_callback_requires_authentic_bound_custodian(monkeypatch):

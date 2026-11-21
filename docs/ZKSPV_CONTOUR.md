@@ -43,11 +43,13 @@ python -m ops.zkspv.contour step --config "$CONTOUR_CONFIG"
 
 Stages are ordered. Each subsequent stage receives hashes of the original
 completed predecessor results. Every `step` freshly probes predecessors and
-rehashes frozen artifacts. Lost completion or a changed artifact stops further
-work. Probes must verify exact historical completion where appropriate; a
-completed payment need not remain an unused UTXO or become newly authorized.
+rehashes frozen artifacts. A conflicting canonical block or changed artifact
+stops further work. If a probe cannot yet observe a saved EVM block or receipt,
+it returns `WAITING` with `EVM_RPC_BEHIND` or `EVM_RECEIPT_PENDING`. The original
+result and its predecessor commitment stay in the journal. Probes verify
+historical completion, including payments whose UTXO was subsequently spent.
 
-Twenty capabilities are required: bootstrap, Bitcoin funding, withdrawal preparation, consumer request,
+The controller tracks 25 capabilities, including bootstrap, Bitcoin funding, withdrawal preparation, consumer request,
 encrypted transport, admission/payment, proof preparation, fresh proving, state update, membership, service status, SMP1 mint,
 address mint, BTC/MP/S withdrawals, reconciliation, incident recovery, old-epoch
 service and continuity. Missing capabilities stay explicit, even after a subset
@@ -67,6 +69,8 @@ flowchart TD
   STARTED -->|explicit recover| RECOVER["Original engine and journals"]
   RECOVER -->|fresh probe| STARTED
   STARTED -->|ABSENT without recovery driver| RECOVERY_REQUIRED
+  COMPLETED -->|saved EVM block or receipt temporarily unavailable| WAIT["WAITING<br/>Original result stays in the journal"]
+  WAIT -->|same completion verified| COMPLETED
   COMPLETED -->|completion lost or artifact changed| HOLD
 ```
 
@@ -300,8 +304,10 @@ The suite composes these original adapters into up to 512 dependency-linked
 jobs. One `step` delegates at most one child action/recovery. Durable round-robin
 scheduling lets unrelated jobs progress when another consumer waits or loses
 evidence. Parent commitments are included in the child's immutable binding and
-every invocation. Child drivers inherit both controller locks. A completed
-parent losing its receipt or artifacts blocks its descendants.
+every invocation. Child drivers inherit both controller locks. If a completed
+parent's RPC is behind, its descendants wait for a verified probe. A changed
+receipt anchor or artifact remains a recovery condition. The saved job
+commitment is preserved while unrelated jobs can progress.
 
 The [suite recipe](../config/zkspv-contour-suite.example.json) includes concrete
 typed driver recipes for every row below. Absolute private inputs are operator

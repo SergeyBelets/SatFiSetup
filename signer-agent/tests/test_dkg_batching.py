@@ -12,7 +12,8 @@ from signer_agent import onchain_transport as transport
 from signer_agent.dkg_protocol import Manifest
 from signer_agent.dkg_transport import Mailbox, sign
 from signer_agent.operations import canonical
-from signer_agent.dkg import Registry
+from signer_agent.dkg import Participant, Registry
+from signer_agent.secure_state import SecureState
 
 
 @pytest.fixture
@@ -220,3 +221,86 @@ def test_transport_default_nonmainnet_is_one_block_but_explicit_depth_is_enforce
     assert transport._transport_block(w3, 12).number == 89
     with pytest.raises(ValueError, match="EVM_CONFIRMATIONS_PENDING"):
         transport._transport_block(w3, 256)
+
+
+def round_fixture(f, tmp_path):
+    r = Registry.__new__(Registry)
+    r.account = f.accounts[0]
+    r.bitcoin_graph = dict(evm_confirmations="3")
+    heads = dict(first=20, second=19)
+    endpoint = dict(name="first")
+    hashes = {}
+    operations, reads = [], []
+
+    def get_block(wanted):
+        number = heads[endpoint["name"]] if wanted == "latest" else int(wanted)
+        return AttributeDict(dict(number=number, hash=hashes.get(number, number.to_bytes(32, "big")),
+                                  timestamp=1000 + number))
+
+    def call(method, answer):
+        def read(block_identifier):
+            reads.append((method, block_identifier))
+            return answer
+        return SimpleNamespace(call=read)
+
+    r.w3 = SimpleNamespace(eth=SimpleNamespace(chain_id=31337, get_block=get_block))
+    info = [0, 0, 0, f.manifest.threshold, 1, 1080]
+    ceremony = [f.manifest.context]
+    r.contract = SimpleNamespace(functions=SimpleNamespace(
+        ceremonies=lambda *args: call("ceremony", ceremony),
+        getSessionInfo=lambda *args: call("phase", info),
+        getSessionParticipants=lambda *args: call("participants", list(f.manifest.participants)),
+        round1Hashes=lambda *args: call("round1", bytes(32))))
+    r.send = lambda *args: operations.append(args)
+    f.box.registry = r
+    f.box._checked_snapshot = lambda _, block: f.snapshots.append(block.number)
+    state = SecureState(tmp_path / "state.enc", "only-local-test-material")
+    p = Participant(f.manifest, r, state, f.box)
+    return SimpleNamespace(p=p, info=info, operations=operations, reads=reads, heads=heads,
+                           endpoint=endpoint, hashes=hashes, state=state)
+
+
+def test_dkg_round_pins_registry_and_board_and_waits_for_behind_provider(batching, tmp_path, monkeypatch):
+    f = batching
+    local = round_fixture(f, tmp_path)
+
+    def work(info, ceremony):
+        local.endpoint["name"] = "second"
+        local.p.r.read("round1Hashes", f.manifest.session_id, f.manifest.participants[0])
+        f.box.get(f.manifest, "key", f.manifest.participants[0])
+        return dict(status="WAITING_PACKAGE")
+
+    monkeypatch.setattr(local.p, "_run_once", work)
+    assert local.p.run_once()["status"] == "WAITING_PACKAGE"
+    assert {number for _, number in local.reads} == {18}
+    assert f.reads[-1][-1] == 18
+    assert f.snapshots == [18]
+    anchor_key = "chain:" + local.p.key
+    retained = local.state.get(anchor_key)
+    assert retained["number"] == "18"
+    assert local.p.run_once()["status"] == "WAITING_DKG_RPC"
+    assert local.state.get(anchor_key) == retained
+    local.heads["second"] = 20
+    assert local.p.run_once()["status"] == "WAITING_PACKAGE"
+    local.hashes[18] = b"x" * 32
+    with pytest.raises(ValueError, match="^DKG_ANCHOR_REORG$"):
+        local.p.run_once()
+
+
+def test_dkg_timeout_requires_explicit_review_and_keeps_legacy_round1(batching, tmp_path):
+    local = round_fixture(batching, tmp_path)
+    local.info[5] = 1000
+    anchor_key = "chain:" + local.p.key
+    local.state.put(anchor_key, dict(number="21", hash="ff" * 32))
+    progress = dict(stage="round1", round1={"package": "aabb"})
+    local.state.put(local.p.key, progress)
+    report = local.p.run_once()
+    assert report["status"] == "DKG_REVIEW_REQUIRED" and report["reason"] == "CEREMONY_TIMEOUT"
+    assert local.operations == []
+    assert local.state.get(local.p.key) == progress
+    assert local.state.get(anchor_key)["version"] == "2"
+    with pytest.raises(ValueError, match="DKG_ABORT_CONFIRMATION_MISMATCH"):
+        local.p.run_once("incorrect")
+    assert local.operations == []
+    assert local.p.run_once(report["confirm_abort"])["status"] == "DKG_ABORTED"
+    assert local.operations == [("advancePhase", batching.manifest.session_id)]

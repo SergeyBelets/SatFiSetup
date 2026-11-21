@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from .contour import digest,private_write,sha
-from .contour_calls import Calls,Required,Hold,Progress
+from .contour_calls import Calls,Required,Hold,Progress,ObservationPending
 from signer_agent import address_status as policy
 from signer_agent.address_status_client import Driver,request_id
 from signer_agent.bootstrap import Bootstrap
@@ -267,6 +267,7 @@ class Pipeline:
                 return self.result('SATISFIED','EXACT_INCIDENT_TRANSITION_AND_ENCRYPTED_STATUS_RETAINED',
                     generation=str(self.r.change[2]+1),messages=dict(request=self.record['delivery']['message_id'],status=notice['key']))
             except Required:return self.result('ABSENT','ORIGINAL_INCIDENT_OPERATION_REQUIRED')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_INCIDENT_RECOVERY_REQUIRED')
             except Progress:return self.result('ABSENT','ORIGINAL_INCIDENT_OPERATION_PROGRESS')
             finally:

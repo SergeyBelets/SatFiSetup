@@ -154,7 +154,8 @@ def test_exact_receipt_and_original_envelope_required(envelopes,mutation):
     if mutation=='raw':
         j=Journal(actor.c['identity_file']+'.transactions.sqlite');key=saved['profile']['deployment_id']+':send';row=j.get(key)
         row['result']['nonce']='7';j.update(key,'CONFIRMED',row['result'])
-    with pytest.raises((calls.Hold,ValueError)):e.controller('probe').pending()
+    error=calls.ObservationPending if mutation=='receipt' else ValueError
+    with pytest.raises(error):e.controller('probe').pending()
     assert len(e.raws)==1
 
 
@@ -178,9 +179,7 @@ def withdrawal(envelopes,request,tmp_path,monkeypatch):
         def check_network(self):pass
         def call(self,method,*args):
             if method=='getrawtransaction':
-                if not e.btc_known:
-                    from signer_agent.bitcoin_rpc import BitcoinRPCError
-                    raise BitcoinRPCError('BITCOIN_RPC_REJECTED', -5)
+                if not e.btc_known:raise ValueError('fixture unbroadcast')
                 return raw
             if method=='testmempoolaccept':return [dict(allowed=True)]
             if method=='sendrawtransaction':

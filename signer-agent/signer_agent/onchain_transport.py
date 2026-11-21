@@ -1,6 +1,7 @@
 """EVM-only discovery, enrollment and HPKE ciphertext transport; no external relay."""
 
 import json
+from contextlib import contextmanager
 from eth_account import Account
 from web3 import Web3
 from .bootstrap import artifact, Bootstrap
@@ -39,7 +40,7 @@ def _canonical_snapshot(w3, block):
         raise ValueError("ONCHAIN_ORIGIN_REORG")
 
 
-def _board_and_invitation(w3, address, block, *, birth_hint=None):
+def _board_and_invitation(w3, address, block, *, birth_hint=None, pinned=False):
     from .onboarding import validate_invite
     from .contract_provenance import prove_creation
 
@@ -73,7 +74,7 @@ def _board_and_invitation(w3, address, block, *, birth_hint=None):
                            **({"birth_hint": birth_hint} if birth_hint is not None else {}))
     if Web3.to_checksum_address(proof["sender"]) != invite["operator"]:
         raise ValueError("BOARD_CREATOR_MISMATCH")
-    if invite["version"] in ("4", "5", "6"):
+    if not pinned and invite["version"] in ("4", "5", "6"):
         safe = _transport_block(w3, int(invite["evm_confirmations"]))
         # safe already subtracts the enrolled depth (and caps at finalized on
         # chain 1); do not subtract that depth a second time from creation.
@@ -126,7 +127,7 @@ def transact(w3, identity_file, state, board, method, args):
             dict(id="send", kind="call", contract="board", method=method, args=args)
         ],
     )
-    result = Bootstrap(profile, state).apply_confirmed(identity_file)
+    result = Bootstrap(profile, state, evm_rpc_override=w3.provider.endpoint_uri).apply_confirmed(identity_file)
     if result["status"] != "VERIFIED":
         raise ValueError("BOARD_TRANSACTION_UNCONFIRMED")
     return result
@@ -254,16 +255,30 @@ class OnchainMailbox:
         self.identity = identity_file
         self.state = state
 
-    def _checked_snapshot(self, manifest):
+    @contextmanager
+    def at_block(self, manifest, block):
+        self._checked_snapshot(manifest, block)
+        self._round_block = block
+        try:
+            yield
+        finally:
+            self._round_block = None
+
+    def _checked_snapshot(self, manifest, block=None):
         w3 = self.registry.w3
-        block = _transport_block(w3)
-        board, invite = _board_and_invitation(w3, self.board.address, block)
-        # _board_and_invitation may validate discovery at an older enrolled
-        # depth. Its returned contract is not a block-bound object: packet and
-        # registry reads must independently use that same enrolled depth.
-        if invite["version"] in ("4", "5", "6"):
-            block = _transport_block(w3, int(invite["evm_confirmations"]))
+        if block is not None:
+            board, invite = _board_and_invitation(w3, self.board.address, block, pinned=True)
+            depth = getattr(self.registry, "bitcoin_graph", {}).get(
+                "evm_confirmations", "12" if w3.eth.chain_id == 1 else "1")
+            if int(depth) < int(invite.get("evm_confirmations", "1")):
+                raise ValueError("EVM_CONFIRMATIONS_PENDING")
+        else:
+            block = _transport_block(w3)
             board, invite = _board_and_invitation(w3, self.board.address, block)
+            # The discovery return value does not bind later reads to a block.
+            if invite["version"] in ("4", "5", "6"):
+                block = _transport_block(w3, int(invite["evm_confirmations"]))
+                board, invite = _board_and_invitation(w3, self.board.address, block)
         registry_at(w3, self.registry.contract.address, block)
         if (board.functions.registry().call(block_identifier=block["number"])
                 != self.registry.contract.address or manifest.registry != self.registry.contract.address):
@@ -282,7 +297,7 @@ class OnchainMailbox:
         return block
 
     def get(self, manifest, kind, sender, recipient=""):
-        block = self._checked_snapshot(manifest)
+        block = getattr(self, "_round_block", None) or self._checked_snapshot(manifest)
         payload = self.board.functions.packet(
             manifest.session_id, KINDS[kind], sender, recipient or ZERO
         ).call(block_identifier=block["number"])
@@ -333,7 +348,7 @@ class OnchainMailbox:
             group.append(packet)
             size += len(packet[4])
         groups.append(group)
-        block = self._checked_snapshot(manifest)
+        block = getattr(self, "_round_block", None) or self._checked_snapshot(manifest)
         unpublished = []
         for group in groups:
             missing = False

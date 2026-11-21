@@ -33,7 +33,9 @@ class Core:
             if args[0] in self.missing:raise ValueError('ARCHIVE_UNAVAILABLE_FIXTURE')
             return self.headers[args[0]][1].hex()
         raise AssertionError(method)
-    def info(self):return dict(bestblockhash=self.tip,blocks=self.headers[self.tip][0],chainwork='ff'*32)
+    def info(self):
+        height = self.headers[self.tip][0]
+        return dict(bestblockhash=self.tip, blocks=height, chainwork=f"{height + 1:064x}")
 
 
 def evm(tip='aa'*32,at=100):return dict(number=7,hash='bb'*32,timestamp=at,state=['ANCHOR_FIXTURE',tip])
@@ -90,12 +92,69 @@ def test_never_processed_orphan_witness_is_not_silently_skipped(tmp_path):
     assert [e['payload']['tip'] for _,e in log.events('CORE_PROCESSED')]==[old,core.tip];b.close()
 
 
-def test_evm_a_to_b_to_a_and_core_a_to_b_to_a_are_retained(tmp_path):
+def test_evm_a_to_b_to_a_remains_in_history_without_accepting_stale_bitcoin_view(tmp_path):
     b=box(tmp_path);log=Log(b);core=Core();a=core.extend(None,200,'11');log.observe(core,core.info(),evm('A'))
-    parent=core.headers[a][1][4:36][::-1].hex();core.extend(parent,2,'22');log.observe(core,core.info(),evm('B'))
-    core.tip=a;log.observe(core,core.info(),evm('A'))
-    assert len(log.events('CORE_DETECTED'))==3
+    parent=core.headers[a][1][4:36][::-1].hex();best=core.extend(parent,2,'22');log.observe(core,core.info(),evm('B'))
+    core.tip=a
+    with pytest.raises(ValueError, match="ZK_OBSERVATION_CORE_BEHIND"):
+        log.observe(core,core.info(),evm('A'))
+    core.tip=best;log.observe(core,core.info(),evm('A'))
+    assert len(log.events('CORE_DETECTED'))==2
     assert [e['payload']['state'][1] for _,e in log.events('EVM_OBSERVED')]==['A','B','A'];b.close()
+
+
+@pytest.mark.parametrize("behind_by", [1, 101, 150])
+def test_same_chain_lag_preserves_bitcoin_highwater_across_restart(tmp_path, behind_by):
+    inbox = box(tmp_path)
+    log = Log(inbox)
+    core = Core()
+    tip = core.extend(None, 251, '11')
+    checkpoint = log.observe(core, core.info(), evm())
+    core.tip = next(h for h, (height, _) in core.headers.items() if height == 250 - behind_by)
+    with pytest.raises(ValueError, match="ZK_OBSERVATION_CORE_BEHIND"):
+        log.observe(core, core.info(), evm(at=110))
+    log = Log(inbox)
+    assert log.rows[-1][1] == checkpoint and not log.events('INCIDENT')
+    assert log.events('CORE_PROCESSED')[-1][1]['payload']['tip'] == tip
+    core.tip = tip
+    core.extend(tip, 1, '22')
+    log.observe(core, core.info(), evm(at=120))
+    assert log.events('CORE_PROCESSED')[-1][1]['payload']['tip'] == core.tip
+    assert log.events('CORE_PROCESSED')[-1][1]['payload']['reorg_depth'] == 0
+    log.fence(); inbox.close()
+
+
+def test_legacy_unprocessed_shorter_view_is_resolved_without_losing_highwater(tmp_path):
+    inbox = box(tmp_path)
+    log = Log(inbox)
+    core = Core()
+    tip = core.extend(None, 251, '11')
+    log.observe(core, core.info(), evm())
+    ancestor = next(h for h, (height, _) in core.headers.items() if height == 100)
+    stale = log.append('CORE_DETECTED', dict(tip=ancestor, height=100, chainwork=f"{101:064x}", evm=evm()))
+    log = Log(inbox)
+    log.observe(core, core.info(), evm(at=120))
+    assert log.events('CORE_BEHIND')[-1][1]['payload']['detected'] == stale
+    assert log.events('CORE_PROCESSED')[-1][1]['payload']['tip'] == tip
+    assert not log.events('INCIDENT')
+    log.fence(); inbox.close()
+
+
+def test_shorter_competing_chain_with_more_work_is_still_observed(tmp_path):
+    inbox = box(tmp_path)
+    log = Log(inbox)
+    core = Core()
+    common = core.extend(None, 180, '11')
+    core.extend(common, 20, '22')
+    log.observe(core, core.info(), evm())
+    shorter = core.extend(common, 19, '33')
+    # Abstract weighted-work fixture. Observation classifies competing chains
+    # by the checked work supplied by Core and uses headers to locate the fork.
+    log.observe(core, dict(core.info(), chainwork=f"{201:064x}"), evm(at=110))
+    processed = log.events('CORE_PROCESSED')[-1][1]['payload']
+    assert processed['tip'] == shorter and processed['reorg_depth'] == 20
+    assert not log.events('INCIDENT')
+    log.fence(); inbox.close()
 
 
 def test_rollback_of_worker_database_is_restored_from_independent_original_lane(tmp_path):

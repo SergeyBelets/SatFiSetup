@@ -96,7 +96,7 @@ def encode_args(inputs, values):
 
 
 class Bootstrap:
-    def __init__(self, profile, state, bitcoin=None, *, evm_confirmation_floor=None):
+    def __init__(self, profile, state, bitcoin=None, *, evm_confirmation_floor=None, evm_rpc_override=None):
         self.profile = public_data(profile)
         self.bitcoin = bitcoin
         if profile.get("mode") not in ("mock", "integration", "backed"):
@@ -113,17 +113,19 @@ class Bootstrap:
         ):
             raise ValueError("INTEGRATION_NETWORK_NOT_ALLOWED")
         self.w3 = Web3(
-            Web3.HTTPProvider(profile["evm_rpc"], request_kwargs={"timeout": 20})
+            Web3.HTTPProvider(evm_rpc_override or profile["evm_rpc"], request_kwargs={"timeout": 20})
         )
         self.journal = Journal(state)
         self.contracts = dict(profile.get("contracts", {}))
         self.values = {}
         self.prefix = profile["deployment_id"]
         request = dict(profile=profile, version="1")
+        prior, changed_rpc = None, False
         if evm_confirmation_floor is not None:
             if type(evm_confirmation_floor) is not int or not 1 <= evm_confirmation_floor <= 256:
                 raise ValueError("EVM_CONFIRMATIONS_POLICY")
             self._evm_confirmation_floor = evm_confirmation_floor
+        if evm_confirmation_floor is not None or evm_rpc_override is not None:
             try:
                 prior = self.journal.get(self.prefix)["request"]
             except KeyError:
@@ -131,14 +133,23 @@ class Bootstrap:
             if prior is not None and prior.get("version") == "1":
                 saved = prior["profile"]
                 # Signing retries use the same operation and nonce journal when
-                # a participant strengthens their local receipt depth.
-                if ({k: v for k, v in saved.items() if k != "evm_confirmations"}
-                        == {k: v for k, v in profile.items() if k != "evm_confirmations"}):
-                    self._evm_confirmation_floor = max(evm_confirmation_floor, int(saved.get("evm_confirmations", "1")))
+                # local receipt depth or transport changes.
+                allowed = set()
+                if evm_confirmation_floor is not None:
+                    allowed.add("evm_confirmations")
+                if evm_rpc_override is not None:
+                    allowed.add("evm_rpc")
+                if ({k: v for k, v in saved.items() if k not in allowed}
+                        == {k: v for k, v in profile.items() if k not in allowed}):
+                    self._evm_confirmation_floor = max(evm_confirmation_floor or 1, int(saved.get("evm_confirmations", "1")))
                     request = prior
-        self.journal.put(self.prefix, request)
+                    changed_rpc = evm_rpc_override is not None and evm_rpc_override != saved["evm_rpc"]
         if self.w3.eth.chain_id != int(profile["chain_id"]):
             raise ValueError("CHAIN_MISMATCH")
+        if changed_rpc:
+            from .bootstrap_parallel import verify_source_anchors
+            verify_source_anchors(self.w3, self.journal, self.prefix, allow_recovery=True)
+        self.journal.put(self.prefix, request)
         if self.w3.eth.chain_id == 1 or self.evm_confirmations != 1:
             from .evm_network import read_block
             read_block(self.w3, self.evm_confirmations)
@@ -337,11 +348,14 @@ class Bootstrap:
                     elif info[4] != 4 and block.timestamp > info[5]:
                         failure = "CEREMONY_TIMEOUT"
                 elif step["method"] == "getAuthorizationResult":
-                    session = self.contract(step["contract"]).functions.getSession(
-                        *[int(value) for value in self.resolve(step["args"])]).call(block_identifier=block.number)
+                    coordinator = self.contract(step["contract"])
+                    session_id, = [int(value) for value in self.resolve(step["args"])]
+                    session = coordinator.functions.getSession(session_id).call(block_identifier=block.number)
                     if session[10] == 3:
                         failure = "SIGNING_TERMINAL_FAILURE"
-                    elif session[10] != 2 and block.timestamp > session[7]:
+                    elif (session[10] != 2 and block.timestamp > session[7]
+                            and coordinator.functions.getNonceSetStatus(session_id).call(
+                                block_identifier=block.number)[4] < session[5]):
                         failure = "SIGNING_DEADLINE_EXPIRED"
                 try:
                     value = self.read(self.fn(step)) if failure is None else None
@@ -372,14 +386,12 @@ class Bootstrap:
         that condition to remain true forever. Legacy unanchored observations
         need one conservative revalidation before they may open the barrier.
         """
-        from .evm_network import read_block
+        from .evm_network import read_block, verify_anchor
+        from .transaction_wait import observation_pending
         anchor = result.get("read_anchor")
         if anchor is not None:
-            number = int(anchor["number"])
-            block = self.w3.eth.get_block(number)
-            safe = read_block(self.w3, self.evm_confirmations)
-            if block.hash.hex() != anchor["hash"] or number > safe.number:
-                raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+            verify_anchor(self.w3, int(anchor["number"]), anchor["hash"],
+                          safe=read_block(self.w3, self.evm_confirmations))
             return
         probe = dict(result)
         probe.pop("outputs", None)
@@ -388,9 +400,10 @@ class Bootstrap:
             ready, failure = self.observe_read_step(step, probe)
             if not ready or failure or probe.get("outputs", {}) != result.get("outputs", {}):
                 raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
-        except Exception:
+        except Exception as error:
             self.values, self.contracts = old_values, old_contracts
-            self.journal.update(key, "RECOVERY_REQUIRED", result)
+            if not observation_pending(error):
+                self.journal.update(key, "RECOVERY_REQUIRED", result)
             raise
         result.update(probe)
         self.journal.update(key, "CONFIRMED", result)
@@ -502,14 +515,19 @@ class Bootstrap:
 
     def verify_receipt(self, result, *, receipt=None):
         from .bootstrap_recovery import check_receipt_binding
+        from .evm_network import verify_anchor
 
         if receipt is None:
-            receipt = self.w3.eth.get_transaction_receipt(result["tx_hash"])
+            try:
+                receipt = self.w3.eth.get_transaction_receipt(result["tx_hash"])
+            except TransactionNotFound:
+                if "block_number" in result and result.get("block_hash"):
+                    verify_anchor(self.w3, int(result["block_number"]), result["block_hash"])
+                raise
         check_receipt_binding(receipt, result)
+        verify_anchor(self.w3, receipt.blockNumber, receipt.blockHash)
         if receipt.status != 1:
             raise ValueError("TRANSACTION_REVERTED")
-        if self.w3.eth.get_block(receipt.blockNumber).hash != receipt.blockHash:
-            raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
         if self.w3.eth.block_number - receipt.blockNumber + 1 < self.evm_confirmations:
             return None
         if self.w3.eth.chain_id == 1:
@@ -517,6 +535,17 @@ class Bootstrap:
             if not receipt_finalized(self.w3, receipt.blockNumber, receipt.blockHash, self.evm_confirmations):
                 return None
         return receipt
+
+    def observe_receipt(self, result):
+        """Observe a known transaction without treating RPC availability as a fork."""
+        from .transaction_wait import observation_pending
+
+        try:
+            return self.verify_receipt(result)
+        except Exception as error:
+            if not observation_pending(error):
+                raise
+            return None
 
     def verify_checks(self, step, receipt=None):
         """Recheck persistent bindings now and transient effects at their receipt.
@@ -623,7 +652,8 @@ class Bootstrap:
                 raise ValueError('BOOTSTRAP_ZK_BINDING_PROFILE')
         from .bootstrap_parallel import parallel_groups, apply_group, recover_identity, restore_signed, save_signed
         from .bootstrap_create import creation_groups, apply_group as apply_creation
-        from .bootstrap_recovery import check_receipt_binding, require_resume_lane, signed_nonce
+        from .bootstrap_recovery import (ReplacementAwaitingFinality, check_receipt_binding,
+                                         require_resume_lane, signed_nonce)
         groups = parallel_groups(self.profile["steps"])
         creates = creation_groups(self.profile["steps"])
         self.check_external_components()
@@ -659,6 +689,8 @@ class Bootstrap:
                     try:
                         pending = apply_creation(self, creates[group], account, identity, dry_run=dry_run, verify=verify,
                             before_submit=before_submit)
+                    except ReplacementAwaitingFinality as error:
+                        return dict(step=step["id"], create_group=group, **error.outcome)
                     except ValueError as error:
                         if str(error) != "TRANSACTION_REVERTED":
                             raise
@@ -675,6 +707,8 @@ class Bootstrap:
                     try:
                         pending = apply_group(self, groups[group], account, identity, dry_run=dry_run, verify=verify,
                             before_submit=before_submit)
+                    except ReplacementAwaitingFinality as error:
+                        return dict(step=step["id"], parallel_group=group, **error.outcome)
                     except ValueError as error:
                         if str(error) != "TRANSACTION_REVERTED":
                             raise
@@ -719,7 +753,8 @@ class Bootstrap:
                                     bitcoin=result, manifest=manifest)
                     self.journal.update(key, "CONFIRMED", result)
                     continue
-                if step["kind"] in ("wait", "read") and entry["status"] == "RECOVERY_REQUIRED":
+                if (step["kind"] in ("wait", "read") and entry["status"] == "RECOVERY_REQUIRED"
+                        and result.get("reason") != "SIGNING_DEADLINE_EXPIRED"):
                     raise ValueError("PRIOR_TRANSACTION_RECOVERY_REQUIRED")
                 if entry["status"] == "CONFIRMED":
                     if step["kind"] in ("wait", "read"):
@@ -729,11 +764,11 @@ class Bootstrap:
                         try:
                             receipt = self.verify_receipt(result)
                         except TransactionNotFound:
-                            raise ValueError("EVM_REORG_RECOVERY_REQUIRED") from None
+                            raise ValueError("EVM_RPC_BEHIND") from None
                         if receipt is None:
                             if self.evm_confirmations > int(self.profile.get("evm_confirmations", "1")):
                                 return dict(status="CONFIRMING", step=step["id"], tx_hash=result["tx_hash"])
-                            raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+                            raise ValueError("EVM_RPC_BEHIND")
                     self.outputs(step, result)
                     self.verify_checks(step, receipt)
                     continue
@@ -767,14 +802,25 @@ class Bootstrap:
                     fcntl.flock(nl, fcntl.LOCK_EX)
                     identity_journal = Journal(str(nonce_lock) + ".sqlite")
                     saved = restore_signed(identity_journal, self, key, step, result)
-                    if saved is not None and "raw_transaction" not in result:
+                    if saved is not None and result.get("tx_hash") != saved["tx_hash"]:
                         result.update(saved)
                         self.journal.update(key, "SIGNED", result)
                     if recover_only and "raw_transaction" not in result:
                         return dict(status="NOT_SIGNED", step=step["id"])
                     if "raw_transaction" in result:
                         signed_nonce(result, account, self.w3.eth.chain_id)
-                    floor = recover_identity(identity_journal, self, account)
+                    replacements = {}
+                    reservations = set()
+                    try:
+                        floor = recover_identity(identity_journal, self, account, replacements=replacements,
+                                                 reservations=reservations)
+                    except ReplacementAwaitingFinality as error:
+                        return dict(step=step["id"], **error.outcome)
+                    replacement = replacements.get((str(self.journal.path.resolve()), key))
+                    if replacement:
+                        if replacement["status"] == "BROADCAST":
+                            return dict(step=step["id"], **replacement)
+                        result = replacement["result"]
                     if "raw_transaction" not in result:
                         transfer_before = None
                         if step.get("verify_token_transfer"):
@@ -783,8 +829,11 @@ class Bootstrap:
                                 self.resolve(transfer["recipient"])
                             ).call()
                         nonce = self.w3.eth.get_transaction_count(account.address, "pending")
-                        if nonce < floor:
-                            raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+                        if nonce < max(floor, max(reservations, default=-1) + 1):
+                            waiting = next((item for item in replacements.values() if item["status"] == "BROADCAST"), None)
+                            if waiting is not None:
+                                return dict(step=step["id"], **waiting)
+                            raise ValueError("EVM_RPC_BEHIND")
                         tx = self.build_transaction(step, account, nonce)
                         signed = account.sign_transaction(tx)
                         raw = bytes(signed.raw_transaction)
@@ -795,7 +844,8 @@ class Bootstrap:
                         )
                         if transfer_before is not None:
                             result["transfer_balance_before"] = str(transfer_before)
-                        save_signed(identity_journal, self, key, step, result)
+                        save_signed(identity_journal, self, key, step, result, allow_fee_replacement=(
+                            type(self) is Bootstrap and before_submit is None and step["kind"] == "call"))
                     else:
                         # Adopt an older per-step reservation whose process
                         # crashed before the legacy global-journal write.
@@ -820,8 +870,9 @@ class Bootstrap:
                         except Exception:
                             return dict(status="BROADCAST", step=step["id"], tx_hash=result["tx_hash"])
                     check_receipt_binding(receipt, result)
-                    if receipt.status == 0 and self.w3.eth.get_block(receipt.blockNumber).hash != receipt.blockHash:
-                        raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+                    if receipt.status == 0:
+                        from .evm_network import verify_anchor
+                        verify_anchor(self.w3, receipt.blockNumber, receipt.blockHash)
                     result.update(
                         block_number=str(receipt.blockNumber),
                         block_hash=receipt.blockHash.hex(),
@@ -863,7 +914,8 @@ class Bootstrap:
         with self.journal.db() as db:
             row = db.execute(
                 "SELECT id,status,result FROM operations WHERE substr(id,1,?)=? "
-                "AND status IN ('REVERTED','RECOVERY_REQUIRED') ORDER BY rowid LIMIT 1",
+                "AND status IN ('REVERTED','RECOVERY_REQUIRED') "
+                "AND coalesce(json_extract(result,'$.reason'),'')!='SIGNING_DEADLINE_EXPIRED' ORDER BY rowid LIMIT 1",
                 (len(prefix), prefix),
             ).fetchone()
         if row is None:
@@ -878,17 +930,24 @@ class Bootstrap:
 
 def main(argv):
     p = DiagnosticArgumentParser()
-    p.add_argument("action", choices=["plan", "apply", "resume", "verify", "acknowledge-revert", "recover-create-group", "recheck"])
+    p.add_argument("action", choices=["plan", "apply", "resume", "verify", "acknowledge-revert",
+                                      "recover-create-group", "recheck", "replace-pending", "bind-legacy-nonce"])
     p.add_argument("--profile")
     p.add_argument("--deployment")
     p.add_argument("--state", default="ops/deployments.sqlite")
     p.add_argument("--identity-file")
     p.add_argument("--tx-hash")
-    p.add_argument("--rpc")
+    p.add_argument("--rpc", help="Override the local EVM RPC transport without changing the saved deployment")
+    p.add_argument("--source-journal", help="Original durable FROST transaction journal for bind-legacy-nonce")
     recovery = p.add_mutually_exclusive_group()
     recovery.add_argument("--confirm-recovery", metavar="FINGERPRINT", help="Retire a reviewed failed CREATE group")
     recovery.add_argument("--prepare-nonce-close", action="store_true", help="Review an exact zero-value nonce close")
     recovery.add_argument("--confirm-nonce-close", metavar="FINGERPRINT", help="Authorize that exact nonce close")
+    p.add_argument("--confirm-replacement", metavar="FINGERPRINT", help="Send the reviewed fee replacement for this call")
+    p.add_argument("--max-fee-per-gas-wei", help="Replacement EIP-1559 fee cap in wei")
+    p.add_argument("--max-priority-fee-per-gas-wei", help="Replacement EIP-1559 tip cap in wei")
+    p.add_argument("--gas-limit", help="Replacement gas limit, defaults to the previous attempt's limit")
+    p.add_argument("--max-cost-wei", help="Explicit maximum gas cost plus transferred value in wei")
     p.add_argument("--step")
     p.add_argument("--bitcoin-rpc")
     p.add_argument("--bitcoin-cookie")
@@ -903,13 +962,43 @@ def main(argv):
     p.add_argument("--ulr-distribution-complete", action="store_true")
     p.add_argument("--accept-ulr-distribution")
     a = p.parse_args(argv)
-    return _run(a)
+    try:
+        return _run(a)
+    except ValueError as error:
+        if str(error) != "EVM_RPC_BEHIND":
+            raise
+        print(json.dumps(dict(status="AWAITING_EVM_RPC", reason="EVM_RPC_BEHIND")))
+        return 2
 
 
 def _run(a):
     if a.action != "recover-create-group" and (a.confirm_recovery is not None
             or a.prepare_nonce_close or a.confirm_nonce_close is not None):
         raise ValueError("RECOVERY_INPUTS_REQUIRED")
+    if a.source_journal is not None and a.action != "bind-legacy-nonce":
+        raise ValueError("EVM_LEGACY_NONCE_INPUTS_REQUIRED")
+    replacement = (a.confirm_replacement, a.max_fee_per_gas_wei,
+                   a.max_priority_fee_per_gas_wei, a.gas_limit, a.max_cost_wei)
+    if a.action == "replace-pending":
+        if (not all((a.identity_file, a.rpc, a.tx_hash, a.max_fee_per_gas_wei,
+                     a.max_priority_fee_per_gas_wei, a.max_cost_wei)) or a.profile or a.deployment or a.dry_run):
+            raise ValueError("EVM_REPLACEMENT_INPUTS_REQUIRED")
+        from .bootstrap_replacement import replace_pending
+
+        result = replace_pending(a.identity_file, a.rpc, a.tx_hash, fee=a.max_fee_per_gas_wei,
+            priority=a.max_priority_fee_per_gas_wei, max_cost=a.max_cost_wei, gas=a.gas_limit,
+            confirmed=a.confirm_replacement)
+        print(json.dumps(result, indent=2))
+        return 2 if result["status"] == "EVM_REPLACEMENT_SEND_UNCERTAIN" else 0
+    if any(value is not None for value in replacement):
+        raise ValueError("EVM_REPLACEMENT_INPUTS_REQUIRED")
+    if a.action == "bind-legacy-nonce":
+        if not all((a.identity_file, a.rpc, a.tx_hash, a.source_journal)) or a.profile or a.deployment or a.dry_run:
+            raise ValueError("EVM_LEGACY_NONCE_INPUTS_REQUIRED")
+        from .bootstrap_nonce_legacy import bind_legacy_nonce
+
+        print(json.dumps(bind_legacy_nonce(a.identity_file, a.source_journal, a.rpc, a.tx_hash), indent=2))
+        return 0
     if a.action == "acknowledge-revert":
         if not (a.identity_file and a.rpc and a.tx_hash):
             raise ValueError("RECOVERY_INPUTS_REQUIRED")
@@ -917,7 +1006,7 @@ def _run(a):
         print(json.dumps(acknowledge_revert(a.identity_file, a.tx_hash, a.rpc), indent=2))
         return 0
     if a.action == "recover-create-group":
-        if not (a.identity_file and a.deployment) or a.profile or a.dry_run or a.rpc:
+        if not (a.identity_file and a.deployment) or a.profile or a.dry_run:
             raise ValueError("RECOVERY_INPUTS_REQUIRED")
         from .bootstrap_recovery import recover_create_group
         if not Path(a.state).is_file():
@@ -926,7 +1015,7 @@ def _run(a):
             profile = Journal(a.state).get(a.deployment)["request"]["profile"]
         except KeyError:
             raise ValueError("CREATE_GROUP_RECOVERY_JOURNAL") from None
-        result = recover_create_group(Bootstrap(profile, a.state), a.identity_file, a.confirm_recovery,
+        result = recover_create_group(Bootstrap(profile, a.state, evm_rpc_override=a.rpc), a.identity_file, a.confirm_recovery,
                                       prepare_close=a.prepare_nonce_close, confirm_close=a.confirm_nonce_close)
         print(json.dumps(result, indent=2))
         return 0 if result["status"] == "CREATE_GROUP_RETRY_READY" else 2
@@ -935,7 +1024,7 @@ def _run(a):
             raise ValueError("RECOVERY_INPUTS_REQUIRED")
         from .bootstrap_recovery import recheck_receipt
         profile = Journal(a.state).get(a.deployment)["request"]["profile"]
-        print(json.dumps(recheck_receipt(Bootstrap(profile, a.state), a.step), indent=2))
+        print(json.dumps(recheck_receipt(Bootstrap(profile, a.state, evm_rpc_override=a.rpc), a.step), indent=2))
         return 0
     if a.profile:
         path = Path(a.profile)
@@ -964,7 +1053,7 @@ def _run(a):
         bitcoin = BitcoinRPC(a.bitcoin_rpc, a.bitcoin_cookie, profile["bitcoin_network"], profile["bitcoin_policy"])
     elif a.bitcoin_rpc or a.bitcoin_cookie:
         raise ValueError("REGTEST_MAINNET_POLICY_MIXED")
-    result = Bootstrap(profile, a.state, bitcoin=bitcoin).apply(
+    result = Bootstrap(profile, a.state, bitcoin=bitcoin, evm_rpc_override=a.rpc).apply(
         a.identity_file, a.dry_run, a.action == "verify", defer_zk_freshness=a.defer_zk_freshness,
         pause_for_funding=a.pause_for_funding,
         funding_complete=a.funding_complete, funding_min_wei=a.funding_min_wei,

@@ -365,7 +365,8 @@ def test_dkg_and_evm_authorization_senders_preserve_bitcoin_network_and_confirma
     from signer_agent.coordinator import CoordinatorClient
     sent = []
     class Sender:
-        def __init__(self, profile, state, *, evm_confirmation_floor=None):
+        def __init__(self, profile, state, *, evm_confirmation_floor=None, evm_rpc_override):
+            assert evm_rpc_override == profile["evm_rpc"]
             sent.append((profile, evm_confirmation_floor))
             self.journal = SimpleNamespace(get=lambda key: dict(result=dict(tx_hash="durable-tx")))
         def apply_confirmed(self, identity):

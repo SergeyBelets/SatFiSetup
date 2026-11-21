@@ -173,7 +173,8 @@ class Suite:
                 result[key]=dict(status='RECOVERY_REQUIRED',reason='JOB_EVIDENCE_CHECK_FAILED');continue
             result[key]=audit
             saved=self.journal.get('job:'+key)
-            if saved['status']=='COMPLETED' and (audit['status']!='VERIFIED' or audit.get('commitment')!=saved['result']['commitment']):
+            if (saved['status']=='COMPLETED' and audit['status']!='WAITING'
+                    and (audit['status']!='VERIFIED' or audit.get('commitment')!=saved['result']['commitment'])):
                 result[key]=dict(status='RECOVERY_REQUIRED',reason='COMPLETED_JOB_CHANGED')
         return result
 
@@ -188,7 +189,8 @@ class Suite:
             cursor=self.journal.get('suite')['result'].get('cursor',0)
             candidates=self.ordered[cursor:]+self.ordered[:cursor]
             for key in candidates:
-                if audits[key]['status'] in ('VERIFIED','INPUT_REQUIRED','DEPENDENCY_BLOCKED','DEPENDENCY_PENDING','RECOVERY_REQUIRED'):continue
+                if audits[key]['status'] in ('VERIFIED','INPUT_REQUIRED','DEPENDENCY_BLOCKED',
+                                              'DEPENDENCY_PENDING','WAITING','RECOVERY_REQUIRED'):continue
                 child=self.child(key);self.journal.update('suite','RUNNING',dict(cursor=(self.ordered.index(key)+1)%len(self.ordered)))
                 # Child STARTED is committed before spawning; its own original
                 # run/recover engine is the sole authority for a new envelope.

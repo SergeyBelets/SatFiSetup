@@ -30,8 +30,8 @@ from .frost_math import (
     verify_signature_share,
 )
 from .secure_state import SecureState
-from .safe_errors import exception_code
-from .transaction_wait import TransactionPending, TransactionRecoveryRequired
+from .participant_errors import participant_failure
+from .safe_errors import emit_debug
 
 
 LOG = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ SIGNING_GUARDS = (
     "guard_verifier", "guard_mint_session", "guard_gas_session", "guard_bitcoin_session",
     "guard_address_registration_session", "guard_btc_fee_session",
     "guard_withdrawal_fee_session", "guard_ulr_treasury_session", "guard_token_metadata_session", "guard_custody_session",
-    "guard_nft_session",
+    "guard_nft_session", "guard_fee_sale_session",
 )
 
 
@@ -148,17 +148,15 @@ class SigningService:
             return ActionResult(session.session_id, "complete", "signature share already submitted")
         return self._submit_share(session, participants, commitments)
 
-    def _terminal_result(self, session: Session) -> Optional[ActionResult]:
+    @staticmethod
+    def _terminal_result(session: Session) -> Optional[ActionResult]:
         """Honor the caller's confirmed snapshot before touching nonce state.
 
-        A finalized session never needs a new signature. A durable participant
-        can still have its own reverted EVM transaction to reconcile. An aborted, absent, or unknown session
+        Repeating an approved CLI command after another signer finalized the
+        session is a read-only success. An aborted, absent, or unknown session
         must never produce a new commitment or retransmit a signature share.
         """
         if session.state == SESSION_FINALIZED:
-            if isinstance(self.client, CoordinatorClient):
-                from .finalize_recovery import reconcile_terminal
-                reconcile_terminal(self.client, session)
             return ActionResult(session.session_id, "finalized", "session already finalized")
         if session.state == SESSION_ABORTED:
             return ActionResult(session.session_id, "blocked", "session is aborted")
@@ -314,13 +312,15 @@ class SigningService:
         result = ActionResult(session.session_id, "signed", "verifiable scalar share submitted", tx_hash)
         if self.config.auto_finalize:
             try:
-                finalized = self.try_finalize(session, participants, commitments)
+                refresh = getattr(self.client, "finalization_snapshot", None)
+                finalized = (self.try_finalize(refresh(session)) if refresh is not None
+                             else self.try_finalize(session, participants, commitments))
                 if finalized is not None:
                     return finalized
-            except (TransactionPending, TransactionRecoveryRequired):
-                raise
             except Exception as exc:
-                LOG.warning("share submitted but automatic finalization failed code=%s", exception_code(exc))
+                failure = participant_failure(exc)
+                emit_debug(exc, code=failure["code"])
+                LOG.warning("share submitted; automatic finalization code=%s. %s", failure["code"], failure["message"])
         return result
 
     def try_finalize(

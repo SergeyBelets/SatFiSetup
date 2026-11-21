@@ -94,7 +94,9 @@ def dispatch(a,manifest,key,registry,state,graph,contracts,target,args,block):
         if not sdk._approved_current(record):raise ValueError('BTC_MINT_AUTHORIZATION_NOT_APPROVED')
         current,current_cg,proof=review()
         if current_cg!=cg:raise ValueError('BTC_MINT_GENERATION_CHANGED')
-        send(registry,target.address,'MiningPoolV1','mintFromProofV2',[*proof,cg,record['operation_hash']],graph=graph)
+        from .zk_submission import options as proof_submission
+        send(registry,target.address,'MiningPoolV1','mintFromProofV2',[*proof,cg,record['operation_hash']],
+             graph=graph, **proof_submission(registry, graph, proof[2]))
     current=confirmed_block(registry.w3,graph)
     if not complete(target,contracts,args,current):raise ValueError('BTC_OPERATION_POSTCONDITION')
     snapshot_check(registry.w3,current)

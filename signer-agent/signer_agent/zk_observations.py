@@ -166,12 +166,21 @@ class Log:
         incidents=self.events('INCIDENT')
         if incidents:raise ValueError(incidents[0][1]['payload']['code'])
         if any(e['payload']['reorg_depth']>100 for _,e in self.events('CORE_PROCESSED')):raise ValueError('ZK_OBSERVATION_KNOWN_DEEP_REORG')
-        done={e['payload']['detected'] for _,e in self.events('CORE_PROCESSED')}
+        done=self._resolved_detections()
         if any(h not in done for h,_ in self.events('CORE_DETECTED')):raise ValueError('ZK_OBSERVATION_WITNESS_REQUIRED')
 
-    def process(self,bitcoin,detected):
+    def _resolved_detections(self):
+        return {e['payload']['detected'] for _,e in
+                [*self.events('CORE_PROCESSED'), *self.events('CORE_BEHIND')]}
+
+    def process(self,bitcoin,detected,detected_work):
         key,e=detected;p=e['payload'];height=p['height'];tip=p['tip']
         processed=self.events('CORE_PROCESSED');old=processed[-1][1]['payload'] if processed else None
+        if old and tip != old['tip'] and int(p['chainwork'],16) <= detected_work[old['detected']]:
+            # A pre-upgrade pending detection can have lower work than the
+            # preceding observation. Resolve it without changing the Core anchor.
+            self.append('CORE_BEHIND',dict(detected=key,compared_with=old['detected']))
+            return
         prior=old['headers'][:102] if old else [];known={x['hash']:x['height'] for x in prior}
         target=max(0,min(height-101,(old['height']-101) if old else height-101))
         chunks=[(h,e['payload']) for h,e in self.events('CORE_WITNESS_CHUNK') if e['payload']['detected']==key]
@@ -219,13 +228,23 @@ class Log:
     def _observe(self,bitcoin,core,evm):
         # First retain detection, before any branch RPC or queue mutation.
         detected=self.events('CORE_DETECTED')
+        detected_work={h:int(e['payload']['chainwork'],16) for h,e in detected}
+        work=int(core['chainwork'],16)
+        if detected:
+            highest=max(detected,key=lambda item:detected_work[item[0]])
+            prior=highest[1]['payload']
+            if work<detected_work[highest[0]] or work==detected_work[highest[0]] and core['bestblockhash']!=prior['tip']:
+                raise ValueError('ZK_OBSERVATION_CORE_BEHIND')
         if not detected or detected[-1][1]['payload']['tip']!=core['bestblockhash']:
-            self.append('CORE_DETECTED',dict(tip=core['bestblockhash'],height=int(core['blocks']),chainwork=core['chainwork'],evm=evm))
+            payload=dict(tip=core['bestblockhash'],height=int(core['blocks']),chainwork=core['chainwork'],evm=evm)
+            h=self.append('CORE_DETECTED',payload)
+            detected.append((h,dict(payload=payload)))
+            detected_work[h]=work
         anchors=self.events('EVM_OBSERVED')
         if not anchors or anchors[-1][1]['payload']!=evm:self.append('EVM_OBSERVED',evm)
-        done={e['payload']['detected'] for _,e in self.events('CORE_PROCESSED')}
-        for item in self.events('CORE_DETECTED'):
-            if item[0] not in done:self.process(bitcoin,item)
+        done=self._resolved_detections()
+        for item in detected:
+            if item[0] not in done:self.process(bitcoin,item,detected_work)
         if bitcoin.call('getbestblockhash')!=core['bestblockhash']:raise ValueError('MAINNET_CORE_REORG_DURING_CHECK')
         try:self.drain()
         except ValueError as exc:

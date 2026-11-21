@@ -18,6 +18,25 @@ def _write(path, value):
         output.write(value if isinstance(value, bytes) else (canonical(value) + "\n").encode())
 
 
+def _snapshot_publication(intent, state, identifier):
+    if state is not None and intent["hash_method"] == policy.SNAPSHOT_METHOD:
+        try:
+            saved = Journal(state).get("dao-request-" + identifier)["request"]
+        except KeyError:
+            pass
+        else:
+            # An earlier SDK may have reserved an exact inline publication.
+            # Preserve those bytes across the transport size policy upgrade.
+            session, saved_body = saved["args"]
+            public = bytes.fromhex(saved_body.removeprefix("0x"))
+            envelope = json.loads(public)
+            if session != intent["session"] or not policy.matches_board_intent(envelope, intent):
+                raise ValueError("ULR_SNAPSHOT_INTENT_HASH_MISMATCH")
+            return envelope, public
+    envelope = policy.board_intent(intent)
+    return envelope, canonical(envelope).encode()
+
+
 def _executor(w3, pin, at, target, authority=None, kind=None):
     client = object.__new__(DAOClient)
     client.w3, client.block = w3, at
@@ -74,7 +93,7 @@ def pay_attempt(w3, at, state, key, waiting_for_balance):
 
 def main(argv):
     parser = DiagnosticArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["snapshot-prepare", "enroll-prepare", "spend-prepare", "router-prepare",
+    parser.add_argument("action", choices=["snapshot-prepare", "snapshot-roster", "enroll-prepare", "activate-prepare", "spend-prepare", "router-prepare",
         "candidate-bind-prepare", "candidate-admit-prepare", "candidate-remove-prepare", "voting-prepare",
         "candidates", "delegate", "undelegate", "vote", "approve", "stake", "unstake", "wallet", "claim", "propose", "execute", "pay", "status"])
     parser.add_argument("--rpc", required=True)
@@ -91,6 +110,8 @@ def main(argv):
     parser.add_argument("--decision")
     parser.add_argument("--choice", choices=["against", "for", "abstain"])
     parser.add_argument("--days", nargs="+")
+    parser.add_argument("--snapshot-day")
+    parser.add_argument("--snapshot-block")
     parser.add_argument("--metadata-uri")
     parser.add_argument("--content-hash")
     parser.add_argument("--duration")
@@ -149,9 +170,21 @@ def main(argv):
             args.send, args.state, args.id or "ulr-claim-simulation")
         print(json.dumps(result))
         return 0
-    registry, _ = policy.configuration(w3, pin, at.number)
+    registry, staking = policy.configuration(w3, pin, at.number)
     bundle = json.loads(Path(args.bundle).read_text()) if args.bundle else None
     read = lambda target, method, *values: policy.read(target, at.number, method, *values)
+    if args.action == "snapshot-roster":
+        if args.snapshot_day is None or args.snapshot_block is None:
+            raise ValueError("ULR_SNAPSHOT_INPUTS_REQUIRED")
+        day, height = policy.number(args.snapshot_day), policy.number(args.snapshot_block)
+        _, anchor, following = policy.snapshot_blocks(w3, staking, day, height, at.number)
+        targets = policy.snapshot_treasuries(w3, registry, day, anchor, pin=pin, at=at.number)
+        if (w3.eth.get_block(height).hash != anchor.hash or w3.eth.get_block(height + 1).hash != following.hash
+                or w3.eth.get_block(at.number).hash != at.hash):
+            raise ValueError("ULR_SNAPSHOT_REORG")
+        print(json.dumps(dict(day=str(day), snapshot_block=str(height), snapshot_block_hash=Web3.to_hex(anchor.hash),
+                              treasuries=sorted(targets), missing_from_pin=sorted(targets - set(pin["treasuries"])))))
+        return 0
     if args.action.endswith("-prepare"):
         if not bundle or not args.intent:
             raise ValueError("ULR_BUNDLE_AND_INTENT_REQUIRED")
@@ -168,6 +201,12 @@ def main(argv):
             if args.action == "enroll-prepare":
                 intent = policy.intent_for(w3, registry, "ULRCustodianSnapshots", "getEnrollTreasuryOperationHash",
                     [factory.address, conf_id, treasury.address], conf[7], bundle["role"], at.number)
+            elif args.action == "activate-prepare":
+                _, reviewed = policy.runtime_artifact(w3, registry.address, "ULRCustodianSnapshots", at.number)
+                if "legacy_reference" in reviewed:
+                    raise ValueError("ULR_TREASURY_ACTIVATION_UNSUPPORTED")
+                intent = policy.intent_for(w3, registry, "ULRCustodianSnapshots", policy.ACTIVATE_TREASURY_METHOD,
+                    [treasury.address], read(registry, "authorization"), bundle["role"], at.number)
             elif args.action == "spend-prepare":
                 intent = policy.intent_for(w3, treasury, "ULRConfederationTreasury", "getSpendOperationHash",
                     [address(args.recipient), policy.number(args.amount), policy.number(args.deadline)],
@@ -241,16 +280,17 @@ def main(argv):
                 if len(events) != 1:
                     raise ValueError("ULR_SESSION_RECEIPT")
                 sid = int(events[0]["args"]["sessionId"])
-                envelope = policy.board_intent(dict(intent, session=str(sid)))
-                public = canonical(envelope).encode()
+                envelope, public = _snapshot_publication(dict(intent, session=str(sid)), args.state,
+                    identifier + "-publish")
                 executor.transact("board", "publishIntent", [sid, public], sender, args.identity_file,
                     True, args.state, identifier + "-publish")
                 result = dict(status="AWAITING_PARTICIPANTS", session=str(sid), operation_hash=intent["operation_hash"])
-                if "ulr_snapshot_intent_sha256" in envelope:
-                    result["snapshot_intent_sha256"] = envelope["ulr_snapshot_intent_sha256"]
+                if policy.SNAPSHOT_INTENT_HASH in envelope:
+                    result["snapshot_intent_sha256"] = envelope[policy.SNAPSHOT_INTENT_HASH]
             print(json.dumps(result))
             return 0
         method = {"getPublishDayOperationHash": "publishDay", "getEnrollTreasuryOperationHash": "enrollTreasury",
+                  policy.ACTIVATE_TREASURY_METHOD: "activateTreasury",
                   "getSpendOperationHash": "spend", "getSetFeeSharesOperationHash": "setFeeShares",
                   "getSetTreasuryOperationHash": "setTreasury", "getBindCandidateStakingOperationHash": "bindCandidateStaking",
                   "getAddCustodianOperationHash": "addCustodian", "getRemoveCustodianOperationHash": "removeCustodian",

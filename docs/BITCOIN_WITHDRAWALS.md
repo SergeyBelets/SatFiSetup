@@ -1,5 +1,10 @@
 # Bitcoin withdrawal lifecycle v1
 
+Новые конфедерации с ULR policy V3 погашают S из своего BTC-резерва. Комиссия
+майнеров вычитается из BTC-выплаты, а комиссия протокола перечисляется DAO в S
+после подтверждения выплаты. Ниже описан прежний профиль с выводом MP.
+[Порядок и расчёт V3](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров).
+
 [Схемы: SVG/PNG и hashes текущих Mermaid-исходников](DIAGRAMS.md).
 
 V6 profiles use Bitcoin Core 30.3, FROST `BTC_SPEND` DKG,
@@ -29,7 +34,7 @@ is only the retained legacy path. See the [separate crypto review](BITCOIN_ONCHA
 
 ## Issuance
 
-The new custody profile uses independent custodian-only EVM/BTC epochs.
+The local-MP custody profile uses independent custodian-only EVM/BTC epochs.
 An external source MP reaches cBTC through
 [`BitcoinCustodyTransfer`](BITCOIN_CUSTODY_TRANSFER.md): source Bitcoin payment
 and MP burn, then exact destination output acceptance, then local MP/CS issuance.
@@ -126,9 +131,21 @@ An unbound request can be refunded once. A bound request can be refunded only
 when its batch was safely cancelled in Reserved state. Once Signing begins,
 time, mempool absence and RPC failure never authorize refunds. Pool rejection
 and timeout cancellation both pass through the escrow's same guard. A signed
-payment remains locked while an authorized replacement is prepared. Invalidation
-with a token refund is not implemented; there is no unsafe timeout escape hatch. A deep reorg after accepted SPV settlement is
-an operational recovery incident, not a reason to remint automatically.
+payment remains locked while an authorized replacement is prepared.
+
+After settlement, an unavailable Bitcoin block or a same-chain observation
+with insufficient depth returns `OBSERVATION_UNAVAILABLE`. The depth check
+can report `BITCOIN_PAYMENT_DEPTH_PENDING`. Retry with the same batch, Bitcoin
+txid and journal. The temporary pause clears after the SDK returns to the
+required depth and verifies the exact payment proof. A conflicting canonical
+hash at the original payment height triggers `RECOVERY_REQUIRED` and requires
+explicit recovery. [Bitcoin payment recovery](RECOVERY.md#2-проверка-bitcoin-платежа-после-settlement).
+
+On a ZK profile, a newer history root can require materialization of the same
+payment header. If the EVM settlement has reverted, retry `dkg btc-settle`
+with the same batch and journal after current-root materialization. The SDK
+must verify a canonical final revert and simulate the same call before it
+opens a new EVM attempt. [ZK call recovery](ZK_SPV_BOOTSTRAP.md#retry-after-a-proof-call-reverts).
 
 The lower-level operator CLI uses a separate EVM identity for relaying; participant
 FROST secrets never enter these commands. The following examples use regtest:
@@ -183,15 +200,14 @@ The batch follows `Reserved -> Signing` or, for an original batch only,
 `Payment.settled`, request states and `spentInputs` prevent replay. An approved
 replacement creates a new batch version and never releases the original inputs.
 
-`RECOVERY_REQUIRED` is a **local BitcoinWorker journal status**. A confirmation
-check can set it when a transaction disappears without a visible replacement,
-loses previously accepted confirmations, or fails the canonical-block check.
-It pauses that journal's broadcasts and has no automatic transition back to
-normal operation. A failed initial broadcast alone leaves saved bytes available
-for retry. Neither condition changes escrow state or enables a refund. A valid
-canonical proof can still be submitted to the escrow independently of the worker
-journal, provided the relay is operational; incident recovery must not be
-implemented by deleting the journal or signer state.
+`RECOVERY_REQUIRED` is a **local BitcoinWorker journal status**. The worker
+pauses broadcasts when the canonical block hash at a recorded payment height
+conflicts with its saved proof. A missing response or insufficient depth on the
+same chain produces `OBSERVATION_UNAVAILABLE` and can clear after a successful
+recheck. A failed initial broadcast leaves the saved bytes available for
+retry. The escrow keeps the requests locked during these checks. Preserve the
+worker and signer journals during recovery. A relayer can submit a valid
+canonical proof directly to the escrow with a fresh and healthy SPV backend.
 
 
 ## Authorized fee replacement (17 October)

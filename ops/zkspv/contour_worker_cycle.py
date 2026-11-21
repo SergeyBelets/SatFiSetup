@@ -31,7 +31,9 @@ class Pipeline(Original):
         try:
             for entry in self.cycle['history']:
                 self.lease=entry
-                if self.publish('probe',self.base())['status']!='SATISFIED':raise ValueError('CONTOUR_CYCLE_HISTORY_LOST')
+                observed=self.publish('probe',self.base())
+                if observed['observations']['reason']=='EVM_RECEIPT_PENDING':return observed
+                if observed['status']!='SATISFIED':raise ValueError('CONTOUR_CYCLE_HISTORY_LOST')
         finally:self.lease=active;self.verifying_history=False
 
     def enough(self,b,state,adapter,core):
@@ -54,7 +56,8 @@ class Pipeline(Original):
                 if action=='probe':return self.observation('ABSENT','CONSUMER_PROOF_CYCLE_REQUIRED')
                 self.cycle=dict(history=[])
                 self.lease={k:deepcopy(v) for k,v in self.outer.items() if k!='cycle'};self.save()
-            self.verify_history()
+            pending=self.verify_history()
+            if pending:return pending
             if self.cycle.get('completed'):
                 result=self.publish('probe',self.base())
                 if result['status']!='SATISFIED':return result

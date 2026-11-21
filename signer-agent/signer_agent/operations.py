@@ -294,8 +294,9 @@ class OperationJournal(Journal):
             clauses.append(f"json_extract(request,'$.spec.deployment') IN ({placeholders})")
             args.extend(deployments)
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        limit = " LIMIT 1000" if key is None else ""
         with self.db() as c:
-            rows = c.execute(f"SELECT * FROM {self.records}{where} ORDER BY rowid DESC LIMIT 1000", args).fetchall()
+            rows = c.execute(f"SELECT * FROM {self.records}{where} ORDER BY rowid DESC{limit}", args).fetchall()
         return [decode_entry(row) for row in rows]
 
     def put(self, key, request):
@@ -308,18 +309,20 @@ class OperationJournal(Journal):
         storage = hashlib.sha256(canonical([deployment, key]).encode()).hexdigest().rjust(self.max_id_length, ":")
         return self.external(super().put(storage, dict(request, client_id=key)))
 
-    def find(self, key, deployments):
-        if not key:
+    def find(self, key, deployments, *, visible=None):
+        if not key or len(key) > 200:
             raise ValueError("INVALID_IDEMPOTENCY_KEY")
         rows = self.scoped_rows(key, deployments)
+        if visible is not None:
+            rows = [row for row in rows if visible(row)]
         if len(rows) > 1:
             raise ValueError("API_OPERATION_DEPLOYMENT_REQUIRED")
         if not rows:
             raise KeyError(key)
         return rows[0]
 
-    def get(self, key, *, deployments=None):
-        return self.external(self.find(key, deployments))
+    def get(self, key, *, deployments=None, visible=None):
+        return self.external(self.find(key, deployments, visible=visible))
 
     def update(self, key, status, result, *, deployments=None):
         super().update(self.find(key, deployments)["id"], status, result)

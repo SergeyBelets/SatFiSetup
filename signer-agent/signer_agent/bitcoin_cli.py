@@ -199,7 +199,8 @@ def main(argv):
             if w3.eth.chain_id != int(a.chain_id):
                 raise ValueError("CHAIN_MISMATCH")
             relay = _checked_mainnet_relay(w3, a.relay, policy)
-            _inspect_mainnet_relay(w3, bitcoin, relay, policy, a.evm_confirmations)
+            if a.action != "recover":
+                _inspect_mainnet_relay(w3, bitcoin, relay, policy, a.evm_confirmations)
         worker = BitcoinWorker(a.state, bitcoin)
         result = (worker.broadcast(a.batch, json.loads(Path(a.signed).read_text()), a.replaces)
                   if a.action == "broadcast" else worker.confirmation(a.batch, recover=a.action == "recover"))

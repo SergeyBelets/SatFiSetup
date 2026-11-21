@@ -5,10 +5,11 @@ SatoshiFi custodian SDK and the operator's monitoring backend.
 | Path | What it is |
 | --- | --- |
 | `signer-agent/` | `frost-signer` CLI: on-chain DKG, FROST signing, bootstrap, ZK-SPV worker |
-| `rust/zkspv/` | ZK-SPV guest, prover host, state adapter and proof evidence |
-| `ops/` | Host setup (`bootstrap_host.py`), ZK contour scripts used by the worker |
-| `docs/` | Runbooks and protocol documents |
-| `config/` | Example policies and service configs |
+| `rust/zkspv/` | ZK-SPV guest, worker host and state adapter sources with pins |
+| `web3/`, `frost-crypto/`, `js/` | Solidity contracts, native FROST, JS helpers (built on each host) |
+| `ops/` | Host setup (`bootstrap_host.py`), packaging, ZK build and contour scripts |
+| `docs/`, `config/`, `tests/` | Runbooks, example configs, integration tests |
+| `SDK_README.md`, `distribution-manifest.json` | SDK overview and SHA256 of every SDK file |
 | `backend/` | AWS SAM stack behind `api.btcyield.online`: monitoring, Telegram bot, alarms |
 | `tools/satoshifi_api.py` | Client for the monitoring API (participant reports, operator calls) |
 | `site/` | Browser-side signed-text formats for `btcyield.online` |
@@ -22,8 +23,15 @@ git clone https://github.com/SergeyBelets/SatFiSetup.git ~/satfi-sdk
 cd ~/satfi-sdk/signer-agent
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.lock && pip install -e '.[evm-test]'
-python -m pytest -q @tests/recovery_cases.txt      # 352 tests
+cd .. && python ops/bootstrap_host.py build     # native FROST and both Solidity projects
+python -m pytest signer-agent/tests -q
 ```
+
+The SDK part of this repository is the participant source distribution
+(`python -m ops.package_distribution`): source and pins only, no proofs,
+receipts, caches or private state. `distribution-manifest.json` lists SHA256
+of every SDK file. ZK worker modes (prepare, export, verify-bundle, publish)
+are described in `docs/ZK_SPV_WORKER.md` and `docs/DISTRIBUTION.md`.
 
 Then follow, in order:
 

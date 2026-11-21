@@ -143,26 +143,35 @@ def test_no_policy_preserves_historical_roster():
         assert role_inputs(invite, role) == (invite["participants"], invite["threshold"])
 
 
-@pytest.mark.parametrize("attack", [None, "escrow_runtime", "different_batch", "different_verifier"])
+@pytest.mark.parametrize("attack", [None, "escrow_runtime", "different_batch", "different_verifier",
+    "coordinator_admin", "coordinator_registry", "wrong_dkg_epoch", "wrong_dkg_result",
+    "wrong_chain", "wrong_role", "frost_verifier_runtime"])
 def test_in_kind_first_escrow_binding_reviews_enrolled_graph(monkeypatch, attack):
-    from signer_agent import bootstrap_custody, bootstrap, bitcoin_trust, contract_provenance, dkg_protocol, zk_spv
+    from signer_agent import bootstrap_custody, bootstrap, bitcoin_trust, contract_provenance, dkg_protocol, zk_spv, bootstrap_native_s
 
     invite = custody_invite()
     invite["ulr"] = {"version": "3", "default_miner_fee_sats": "100"}
     manifest = NS(session_id=bytes.fromhex(invite["sessions"]["conf_ceremony"]),
                   participants=invite["participants"][1:], threshold=int(invite["bitcoin_custody"]["threshold"]),
-                  registry=Web3.to_checksum_address(f"0x{1:040x}"))
+                  registry=Web3.to_checksum_address(f"0x{1:040x}"), chain_id=31337, purpose="EVM_AUTH", context=b"context")
     coordinator, authorization, batch, escrow, relay = [
         Web3.to_checksum_address(f"0x{index:040x}") for index in range(2, 7)]
     values = {
         batch: dict(authorization=authorization),
+        coordinator: dict(defaultVerifier=Web3.to_checksum_address(f"0x{7:040x}"), dkgRegistry=manifest.registry,
+                          hasRole=False),
         escrow: dict(batches=relay if attack == "different_batch" else batch, spv=relay,
-                     depth=int(invite["bitcoin_confirmations"])),
+                     depth=int(invite["bitcoin_confirmations"]), depositRegistry="0x" + "00" * 20),
         authorization: dict(registry=manifest.registry, coordinator=coordinator,
                             getParticipants=manifest.participants, threshold=manifest.threshold,
-                            dkgId=manifest.session_id),
-        manifest.registry: dict(getCompletedResult=[None, None, None, None, b"group"]),
+                            dkgId=manifest.session_id, resultHash=b"result"),
+        manifest.registry: dict(getCompletedResult=[manifest.context, b"result", None, None, b"group"]),
     }
+    if attack == "coordinator_admin": values[coordinator]["hasRole"] = True
+    if attack == "coordinator_registry": values[coordinator]["dkgRegistry"] = relay
+    if attack == "wrong_dkg_epoch": values[authorization]["dkgId"] = b"x" * 32
+    if attack == "wrong_dkg_result": values[authorization]["resultHash"] = b"other"
+    if attack == "wrong_chain": manifest.chain_id = 1
 
     def contract(address, **_):
         def getter(name):
@@ -172,6 +181,8 @@ def test_in_kind_first_escrow_binding_reviews_enrolled_graph(monkeypatch, attack
     def checked(w3, address, kind, block):
         assert block == 7
         if kind == "BitcoinWithdrawalEscrowV2" and attack == "escrow_runtime":
+            raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+        if kind == "FROSTVerifier" and attack == "frost_verifier_runtime":
             raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
 
     def prove(w3, address, kind, args, block):
@@ -195,15 +206,20 @@ def test_in_kind_first_escrow_binding_reviews_enrolled_graph(monkeypatch, attack
     monkeypatch.setattr(bitcoin_trust, "checked_runtime", checked)
     monkeypatch.setattr(contract_provenance, "prove_creation", prove)
     monkeypatch.setattr(zk_spv, "review_consumer", verify_spv)
-    w3 = NS(eth=NS(contract=contract))
+    monkeypatch.setattr(bootstrap_native_s, "Manifest", NS(from_dict=lambda _: manifest))
+    monkeypatch.setattr(bootstrap_native_s, "artifact", lambda _: dict(abi=[]))
+    monkeypatch.setattr(bootstrap_native_s, "checked_runtime", checked)
+    monkeypatch.setattr(bootstrap_native_s, "prove_creation", prove)
+    w3 = NS(eth=NS(contract=contract, chain_id=31337, get_block=lambda _: NS(number=7, hash=b"anchor")))
     intent = dict(artifact="BitcoinBatchRegistry", hash_method="getSetWithdrawalEscrowOperationHash",
                   target=batch, coordinator=coordinator, hash_args=[escrow])
-    bundle = dict(role="conf_ceremony", onboarding=dict(invitation=invite))
+    bundle = dict(role="evm_ceremony" if attack == "wrong_role" else "conf_ceremony",
+                  onboarding=dict(invitation=invite))
     if attack is None:
         bootstrap_custody.review_intent(w3, intent, bundle, 7)
         assert checked_verifiers == [escrow]
     else:
-        with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD|BITCOIN_CUSTODY_GATEWAY|ZK_CONSUMER"):
+        with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD|BITCOIN_CUSTODY_GATEWAY|BITCOIN_CUSTODY_AUTHORIZATION|ZK_CONSUMER"):
             bootstrap_custody.review_intent(w3, intent, bundle, 7)
 
 
@@ -247,7 +263,8 @@ def test_representative_flow_never_loads_or_creates_a_custodian_private_state(tm
 
 
 @pytest.mark.parametrize("source_funding", [False, True])
-def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, source_funding):
+@pytest.mark.parametrize("native_s", [False, True])
+def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, source_funding, native_s):
     from signer_agent import bitcoin_trust
     from signer_agent.bitcoin_onchain_payment import protect_unminted_deposit
     origin = Web3.to_checksum_address("0x" + "ab" * 20)
@@ -265,14 +282,20 @@ def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, 
         scriptPools=lambda _: call(origin)))
     txid = "aa" * 32
     bitcoin = NS(call=lambda *args: dict(txid=txid, hex="00", vout=[]))
-    monkeypatch.setattr(bitcoin_trust, "checked_runtime", lambda w, address, kind, block: reads.append((kind, block)))
+    def checked(w, address, kind, block):
+        reads.append((kind, block))
+        if native_s and kind == "MiningPoolV1":
+            raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+    monkeypatch.setattr(bitcoin_trust, "checked_runtime", checked)
     item = dict(outpoint=txid + ":0", script="5120" + "11" * 32)
     if source_funding:
         with pytest.raises(ValueError, match="BTC_UNACCEPTED_CUSTODY_TRANSFER"):
             protect_unminted_deposit(deposits, item, bitcoin, 123)
     else:
         protect_unminted_deposit(deposits, item, bitcoin, 123)
-    assert reads == [("MiningPoolV1", 123), ("BitcoinCustodyTransfer", 123)]
+    assert reads == ([("MiningPoolV1", 123), ("ConfederationBitcoinReserve", 123),
+                     ("BitcoinCustodyTransferV2", 123)] if native_s else
+                    [("MiningPoolV1", 123), ("BitcoinCustodyTransfer", 123)])
 
 
 @pytest.mark.parametrize("attack", [None, "missing_board", "wrong_epoch", "wrong_registry", "wrong_coordinator"])

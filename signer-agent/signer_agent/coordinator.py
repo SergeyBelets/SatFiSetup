@@ -160,19 +160,39 @@ class CoordinatorClient:
             graph["evm_confirmations"] = str(local)
         return graph
 
-    def pin_read_snapshot(self):
+    def pin_read_snapshot(self, snapshot=None):
         """Use the strongest enrolled/local depth and mainnet finality for one round."""
         from .bitcoin_trust import confirmed_block
 
         graph = self._confirmation_graph()
-        self._read_snapshot = confirmed_block(self.w3, graph) if (
-            self.w3.eth.chain_id == 1 or "evm_confirmations" in graph) else None
+        self._read_snapshot = snapshot
+        if snapshot is None and (self.w3.eth.chain_id == 1 or "evm_confirmations" in graph):
+            self._read_snapshot = confirmed_block(self.w3, graph)
         self.check_read_snapshot()
 
     def check_read_snapshot(self):
         block = getattr(self, "_read_snapshot", None)
         if block is not None and self.w3.eth.get_block(block.number).hash != block.hash:
             raise ValueError("EVM_SIGNING_SNAPSHOT_REORG")
+
+    def finalization_snapshot(self, session):
+        """Read a new confirmed observation after our own share receipt."""
+        previous = getattr(self, "_read_snapshot", None)
+        if previous is None:
+            return session
+        from .bitcoin_trust import confirmed_block
+
+        self.check_read_snapshot()
+        block = confirmed_block(self.w3, self._confirmation_graph())
+        if block.number < previous.number:
+            raise ValueError("EVM_RPC_BEHIND")
+        self.pin_read_snapshot(block)
+        current = self.session(session.session_id)
+        immutable = ("session_id", "creator", "message_hash", "group_pubkey", "threshold", "deadline",
+                     "message_bound", "enforce_shares_check", "verifier_override", "origin_contract")
+        if any(getattr(current, name) != getattr(session, name) for name in immutable):
+            raise ValueError("EVM_SIGNING_SNAPSHOT_REORG")
+        return current
 
     def _read_call(self, call):
         block = getattr(self, "_read_snapshot", None)
@@ -250,6 +270,10 @@ class CoordinatorClient:
 
     def guard_nft_session(self, session):
         from .nft_governance import guard_signing_session
+        guard_signing_session(self, session)
+
+    def guard_fee_sale_session(self, session):
+        from .fee_sale_governance import guard_signing_session
         guard_signing_session(self, session)
 
     def session(self, session_id: int) -> Session:
@@ -351,32 +375,29 @@ class CoordinatorClient:
         return self._send(self.contract.functions.rejectSignatureRequest(session_id, reason))
 
     def finalize(self, session_id: int, signature: bytes, message_hash: bytes) -> Optional[str]:
+        from .transaction_wait import TransactionRecoveryRequired
+
         def finalized():
             latest = Session.from_contract(self.contract.functions.getSession(session_id).call())
-            return latest.state == SESSION_FINALIZED and latest.message_hash == message_hash
+            if latest.state != SESSION_FINALIZED:
+                return False
+            confirmed_signature, confirmed_message = self.contract.functions.getResult(session_id).call()
+            if bytes(confirmed_signature) != signature or bytes(confirmed_message) != message_hash:
+                raise ValueError("FROST_FINALIZATION_RESULT_MISMATCH")
+            return True
 
-        from .finalize_recovery import reconcile_session
-        from .transaction_wait import TransactionRecoveryRequired
         if finalized():
-            reconcile_session(self, session_id, signature, message_hash, terminal=True)
             return None
         call = self.contract.functions.finalizeSession(session_id, signature, message_hash)
         try:
             call.call({"from": self.sender})
-        except ContractLogicError:
-            if finalized():
-                reconcile_session(self, session_id, signature, message_hash, terminal=True)
-                return None
-            raise
-        try:
             return self._send(call)
-        except ContractLogicError:
-            if finalized():
-                reconcile_session(self, session_id, signature, message_hash, terminal=True)
+        except TransactionRecoveryRequired as error:
+            if error.result.get("reason") == "TRANSACTION_REVERTED" and finalized():
                 return None
             raise
-        except TransactionRecoveryRequired:
-            if reconcile_session(self, session_id, signature, message_hash):
+        except ContractLogicError:
+            if finalized():
                 return None
             raise
 
@@ -428,7 +449,8 @@ class CoordinatorClient:
                          contracts={'target':dict(address=call.address,artifact='FROSTCoordinator',runtime_hash=Web3.keccak(self.w3.eth.get_code(call.address)).hex())},
                          steps=[dict(id='send',kind='call',contract='target',method=call.fn_name,args=values)])
             floor = int(self._confirmation_graph().get("evm_confirmations", "1"))
-            b=Bootstrap(profile,self.transaction_journal,evm_confirmation_floor=floor)
+            b=Bootstrap(profile,self.transaction_journal,evm_confirmation_floor=floor,
+                        evm_rpc_override=self.config.rpc_url)
             if b.apply_confirmed(self.identity_file)['status']!='VERIFIED': raise ValueError('TRANSACTION_UNCONFIRMED')
             return b.journal.get(profile['deployment_id']+':send')['result']['tx_hash']
         if self.chain_id == 1:

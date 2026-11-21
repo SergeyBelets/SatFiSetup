@@ -1,5 +1,6 @@
 """Authenticated public Bitcoin coordination; secret nonce material never leaves SecureState."""
 import json
+from secrets import token_hex
 from web3 import Web3
 from . import crypto
 from .bootstrap import Bootstrap, artifact
@@ -10,15 +11,13 @@ from .bitcoin_trust import (checked_runtime, require_registry, graph_network, bi
 from .contract_provenance import prove_creation, check_proof_anchor
 from .operations import canonical
 from .bitcoin_network import is_public_network, relay_artifact
-from .bitcoin_rpc import (BitcoinRPCError, checked_payment_proof, observation_error,
-                          payment_position, retryable_payment_observation)
 
 
 def contract(registry, address, kind):
     return registry.w3.eth.contract(address=Web3.to_checksum_address(address), abi=artifact(kind)["abi"])
 
 
-def send(registry, address, kind, method, args, *, graph=None):
+def send(registry, address, kind, method, args, *, graph=None, zk_proof=None):
     """Idempotent durable submission, with canonical receipt validation on every retry."""
     if not getattr(registry, "identity_file", None):
         raise ValueError("LOCAL_EVM_IDENTITY_REQUIRED")
@@ -31,10 +30,17 @@ def send(registry, address, kind, method, args, *, graph=None):
                    contracts={"target": dict(address=address, artifact=kind,
                         runtime_hash=Web3.keccak(registry.w3.eth.get_code(address)).hex())},
                    steps=[dict(id="send", kind="call", contract="target", method=method, args=values)])
+    if zk_proof is not None:
+        from .zk_submission import submit
+        return submit(registry, profile, *zk_proof, _send_profile)
+    return _send_profile(registry, profile)
+
+
+def _send_profile(registry, profile):
     controller = getattr(registry, 'transaction_controller', None)
     if controller is not None:
         return controller.submit(registry, profile)
-    runner = Bootstrap(profile, registry.transaction_journal)
+    runner = Bootstrap(profile, registry.transaction_journal, evm_rpc_override=profile["evm_rpc"])
     result = runner.apply_confirmed(registry.identity_file)
     if result["status"] != "VERIFIED":
         raise ValueError("BTC_TRANSACTION_UNCONFIRMED")
@@ -195,6 +201,8 @@ def publish_values(manifest, key, registry, board, plan, kind, values):
             missing = True
     snapshot_check(registry.w3, block)
     if missing:
+        from .bitcoin_onchain_payment import review_custody_outputs
+        review_custody_outputs(registry, getattr(registry, "bitcoin_graph", {}), plan, block)
         # Include the identical full set on retries, including packets already
         # present. Never repartition a pending signed operation or reuse nonces.
         send(registry, board.address, "BitcoinSigningBoard", "publishBatch",
@@ -366,12 +374,30 @@ def _pause_status(marker):
     return "RECOVERY_REQUIRED" if marker.get("requires_review", True) else "OBSERVATION_UNAVAILABLE"
 
 
-def payment_observation(a, manifest, registry, state, plan, *, recover=False):
+def _pause_result(marker):
+    return dict(status=_pause_status(marker), **{key: value for key, value in marker.items() if key != "revision"})
+
+
+def _escrow_payment(registry, graph, plan):
+    snapshot = confirmed_block(registry.w3, graph)
+    batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
+    # Both escrow generations expose the same payment and depth read ABI.
+    escrow = contract(registry, batches.functions.withdrawalEscrow().call(block_identifier=snapshot.number),
+        "BitcoinWithdrawalEscrow")
+    payment = escrow.functions.payment(bytes.fromhex(plan["batch_id"])).call(block_identifier=snapshot.number)
+    snapshot_check(registry.w3, snapshot)
+    return snapshot, batches, escrow, payment
+
+
+def payment_observation(a, manifest, registry, state, plan, *, recover=False, escrow_payment=None):
     """Retry unavailable observations; clear a genuine reorg only by checked recovery.
 
     The pause never licenses replacement payments or a nonce reset. Recovery
     requires the exact settled transaction to be canonical again at escrow depth.
     """
+    from .bitcoin_rpc import (BitcoinRPCError, check_known_payment_anchor, check_payment_block,
+                              observation_error, payment_block, payment_block_height, verify_payment_proof)
+
     recovery_key = "btc-payments-recovery:" + manifest.context.hex()
     previous = state.get(recovery_key)
     if previous and previous.get("kind")=="BTC_FEE_RESERVE":
@@ -379,44 +405,58 @@ def payment_observation(a, manifest, registry, state, plan, *, recover=False):
     if previous and previous["batch"] != plan["batch_id"]:
         if recover:
             raise ValueError("BTC_RECOVERY_BATCH_MISMATCH")
-        return dict(status=_pause_status(previous), **previous)
+        return _pause_result(previous)
     if previous and _pause_status(previous) == "RECOVERY_REQUIRED" and not recover:
-        return dict(status="RECOVERY_REQUIRED", **previous)
+        return _pause_result(previous)
     pinned = state.get("btc-registry:" + manifest.context.hex())
     if not pinned:
         raise ValueError("BTC_REGISTRY_NOT_PINNED")
-    snapshot = confirmed_block(registry.w3, pinned["graph"])
-    batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
-    # Both escrow generations expose the same payment and depth read ABI.
-    escrow = contract(registry, batches.functions.withdrawalEscrow().call(block_identifier=snapshot.number),
-        "BitcoinWithdrawalEscrow")
-    payment = escrow.functions.payment(bytes.fromhex(plan["batch_id"])).call(block_identifier=snapshot.number)
-    snapshot_check(registry.w3, snapshot)
+    snapshot, _, escrow, payment = escrow_payment or _escrow_payment(registry, pinned["graph"], plan)
     if not payment[2]:
         if previous:
             raise ValueError("BTC_RECOVERY_PAYMENT_MISMATCH")
         return None
     txid = bytes(payment[0])[::-1].hex()
+    anchor = payment[1]
+    original_block = anchor[::-1].hex() if isinstance(anchor, bytes) and len(anchor) == 32 and any(anchor) else None
     if previous and txid != previous["txid"]:
         raise ValueError("BTC_RECOVERY_PAYMENT_MISMATCH")
     if not a.bitcoin_rpc or not a.bitcoin_cookie:
-        if previous or recover:
+        if recover:
             raise ValueError("BITCOIN_RPC_REQUIRED")
+        if previous:
+            return _pause_result(previous)
         return dict(status="PAID", txid=txid, bitcoin_observation="NOT_CHECKED")
     try:
-        pinned = state.get("btc-registry:" + manifest.context.hex())
-        if not pinned:
-            raise ValueError("BTC_REGISTRY_NOT_PINNED")
         bitcoin = bitcoin_for_graph(pinned["graph"], a.bitcoin_rpc, a.bitcoin_cookie)
         if plan["network"] != graph_network(pinned["graph"]):
             raise ValueError("BITCOIN_NETWORK_MISMATCH")
         bitcoin.check_network()
-        transaction = bitcoin.call("getrawtransaction", txid, True)
-        confirmations, block_hash, height = payment_position(bitcoin, txid, transaction)
-        if confirmations < escrow.functions.depth().call(block_identifier=snapshot.number):
-            raise ValueError("BITCOIN_PAYMENT_REORG")
+        try:
+            transaction = bitcoin.call("getrawtransaction", txid, True)
+        except BitcoinRPCError as error:
+            if error.rpc_code == -5 and original_block:
+                try:
+                    check_known_payment_anchor(bitcoin, original_block)
+                except ValueError as anchor_error:
+                    if str(anchor_error) == "BITCOIN_PAYMENT_REORG":
+                        snapshot_check(registry.w3, snapshot)
+                        raise anchor_error from None
+                except BitcoinRPCError:
+                    pass  # Keep the original structured error if the old block cannot be read.
+            raise
+        depth = escrow.functions.depth().call(block_identifier=snapshot.number)
+        block_hash = payment_block(transaction, txid, depth, bitcoin=bitcoin)
+        if original_block and (block_hash is None or (block_hash != original_block and not recover)):
+            check_known_payment_anchor(bitcoin, original_block)
+        if block_hash is None:
+            raise ValueError("BITCOIN_PAYMENT_DEPTH_PENDING")
+        height = payment_block_height(bitcoin, block_hash)
+        # Recovery independently checks Core's merkle proof for the exact paid
+        # txid. An arbitrary healthy RPC response is not sufficient to unpause.
         if previous or recover:
-            checked_payment_proof(bitcoin, txid, block_hash, height)
+            verify_payment_proof(bitcoin, txid, block_hash)
+            check_payment_block(bitcoin, block_hash, height)
         snapshot_check(registry.w3, snapshot)
     except Exception as error:
         # Unavailable observations still block spending, but recover by retry.
@@ -427,13 +467,12 @@ def payment_observation(a, manifest, registry, state, plan, *, recover=False):
         detail = dict(batch=plan["batch_id"], txid=txid,
                       reason="SETTLED_PAYMENT_NOT_INDEPENDENTLY_CONFIRMED",
                       requires_review=requires_review, **diagnostic)
-        if not requires_review and not retryable_payment_observation(error):
-            detail["retryable"] = False
         with state.exclusive():
             if state.get(recovery_key) != previous:
                 raise ValueError("BTC_RECOVERY_CHANGED")
-            state.put(recovery_key, detail)
-        return dict(status=_pause_status(detail), **detail)
+            # An identical second outage must still invalidate an older recovery read.
+            state.put(recovery_key, dict(detail, revision=token_hex(16)))
+        return _pause_result(detail)
     if previous:
         with state.exclusive():
             if state.get(recovery_key) != previous:
@@ -443,6 +482,10 @@ def payment_observation(a, manifest, registry, state, plan, *, recover=False):
                            evm_number=str(snapshot.number), evm_hash=snapshot.hash.hex(),
                            manually_reviewed=bool(recover)))
             state.put(recovery_key, {})
+    elif state.get(recovery_key):
+        # A newer pause may have been recorded while the first observation
+        # was still on the wire.
+        raise ValueError("BTC_RECOVERY_CHANGED")
     return dict(status="PAID", txid=txid, bitcoin_observation="CONFIRMED")
 
 
@@ -460,19 +503,65 @@ def retry_payment_observation(a, manifest, registry, state):
     return result if result and result["status"] != "PAID" else None
 
 
-def _payment_graph_preflight(registry, graph, bitcoin):
-    """Wait only on a transient read, before signing or transmitting anything."""
+def _observed_broadcast(a, manifest, registry, state, plan, graph):
+    """Resume an exact escrow payment from confirmed EVM state and Bitcoin Core."""
+    from .bitcoin_onchain_payment import _previous, _txid
+    from .bitcoin_rpc import BitcoinRPCError, payment_block, payment_block_height, payment_in_mempool
+    from .bitcoin_worker import BitcoinWorker
+
+    escrow_payment = _escrow_payment(registry, graph, plan)
+    snapshot, batches, _, payment = escrow_payment
+    bound_txid = bytes(payment[0])
+    if bound_txid == bytes(32):
+        return None
+    if bound_txid != _txid(plan) or [bytes(item).hex() for item in payment[3]] != plan["withdrawal_refs"]:
+        raise ValueError("ESCROW_PAYMENT_MISMATCH")
+    if payment[2]:
+        if not a.bitcoin_rpc or not a.bitcoin_cookie:
+            raise ValueError("BITCOIN_RPC_REQUIRED")
+        return payment_observation(a, manifest, registry, state, plan, escrow_payment=escrow_payment)
+    batch_id = bytes.fromhex(plan["batch_id"])
+    if batches.functions.batchState(batch_id).call(block_identifier=snapshot.number) != 2:
+        return None
+    bitcoin = bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
+    bitcoin.check_network()
+    txid = bound_txid[::-1].hex()
     try:
-        if graph_network(graph) == "regtest":
-            bitcoin.check_network()
-        else:
-            check_bitcoin_graph(registry, graph, bitcoin)
+        transaction = bitcoin.call("getrawtransaction", txid, True)
     except BitcoinRPCError as error:
-        if error.rpc_code != -5 and retryable_payment_observation(error):
-            return dict(status="OBSERVATION_UNAVAILABLE", **observation_error(error))
-        if error.http_status in (401, 403):
-            raise BitcoinRPCError("BITCOIN_RPC_AUTH_REJECTED", http_status=error.http_status) from None
+        if error.rpc_code == -5:
+            return None
         raise
+    block = payment_block(transaction, txid, 1, bitcoin=bitcoin)
+    if block is not None:
+        try:
+            payment_block_height(bitcoin, block)
+        except ValueError as error:
+            if str(error) != "BITCOIN_PAYMENT_REORG":
+                raise
+            raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE") from None
+    elif "confirmations" in transaction:
+        if transaction["confirmations"] != 0 or not payment_in_mempool(bitcoin, txid):
+            return None
+    wtxid = transaction.get("hash")
+    try:
+        hex_value(wtxid, 32)
+    except ValueError:
+        raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE") from None
+    replaces = _previous(plan)
+    replacement = None
+    if any(replaces):
+        if bytes(batches.functions.replacementOf(batch_id).call(block_identifier=snapshot.number)) != replaces:
+            raise ValueError("BATCH_APPROVAL_MISMATCH")
+        root = bytes(batches.functions.reservationRoot(batch_id).call(block_identifier=snapshot.number))
+        if not any(root) or root == batch_id:
+            raise ValueError("BATCH_APPROVAL_MISMATCH")
+        replacement = root.hex(), replaces.hex()
+    snapshot_check(registry.w3, snapshot)
+    worker = BitcoinWorker(a.state + ".bitcoin.sqlite", bitcoin)
+    worker.remember_observed_broadcast(plan["batch_id"], dict(signed=transaction["hex"], txid=txid, wtxid=wtxid),
+                                       replacement=replacement)
+    return dict(status="BROADCAST", txid=txid, wtxid=wtxid)
 
 
 def dispatch(a, manifest, key, registry, state):
@@ -497,17 +586,18 @@ def dispatch(a, manifest, key, registry, state):
         return management(a, manifest, key, registry, state, graph)
     if a.action in ("btc-relay", "btc-network-status"):
         return network_action(a, registry, graph)
+    if a.action in ("btc-commit", "btc-sign", "btc-broadcast"):
+        paused = retry_payment_observation(a, manifest, registry, state)
+        if paused:
+            return paused
     bitcoin = None
-    if is_public_network(graph_network(graph)) and a.action != "btc-status":
+    # Observation and checked recovery need the pinned escrow and exact Core
+    # proof, even when the relay has fallen behind during an outage.
+    if is_public_network(graph_network(graph)) and a.action not in ("btc-status", "btc-recover", "btc-broadcast"):
         bitcoin = bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
         if a.action not in ("btc-settle","btc-mint-propose","btc-mint-execute","btc-mint-retry",
                              "btc-treasury-propose","btc-treasury-execute"):
-            if a.action in ("btc-commit", "btc-sign", "btc-broadcast", "btc-recover"):
-                unavailable = _payment_graph_preflight(registry, graph, bitcoin)
-                if unavailable:
-                    return unavailable
-            else:
-                check_bitcoin_graph(registry, graph, bitcoin)
+            check_bitcoin_graph(registry, graph, bitcoin)
     if a.action=='btc-import-plan':
         from pathlib import Path
         from .bitcoin_onchain_plan import validate_plan,MAX_FEE_PLAN_BYTES
@@ -574,21 +664,10 @@ def dispatch(a, manifest, key, registry, state):
         if observed and observed["status"] == "PAID":
             return dict(observed, status="PAYMENTS_RESUMED", batch=plan["batch_id"])
         return observed
-    if a.action in ("btc-commit", "btc-sign", "btc-broadcast"):
-        paused = retry_payment_observation(a, manifest, registry, state)
-        if paused:
-            return paused
     if a.action == "btc-broadcast":
-        # A restarted operator starts in broadcast phase even after settlement.
-        # Only the confirmed escrow record for its original batch can finish it.
-        batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
-        if batches.functions.batchState(bytes.fromhex(a.batch)).call() != 2:
-            observed = payment_observation(a, manifest, registry, state, plan)
-            if observed:
-                if observed.get("bitcoin_observation") == "NOT_CHECKED":
-                    raise ValueError("BITCOIN_RPC_REQUIRED")
-                return observed
-            raise ValueError("BTC_BATCH_NOT_SIGNING")
+        observed = _observed_broadcast(a, manifest, registry, state, plan, graph)
+        if observed:
+            return observed
     if a.action in ("btc-propose", "btc-execute", "btc-settle"):
         if a.action == "btc-settle":
             observed = payment_observation(a, manifest, registry, state, plan)
@@ -602,6 +681,8 @@ def dispatch(a, manifest, key, registry, state):
         if previous and previous != raw:
             raise ValueError("BTC_PLAN_CONFLICT")
         if not previous:
+            from .bitcoin_onchain_payment import review_custody_outputs
+            review_custody_outputs(registry, graph, plan, confirmed_block(registry.w3, graph))
             if plan.get('version')=='4':
                 from .withdrawal_fee_transport import publish_plan
                 def publish(method,args,part):
@@ -647,9 +728,10 @@ def dispatch(a, manifest, key, registry, state):
     if missing_c or missing_s:
         raise ValueError("BTC_SIGNATURE_PACKETS_MISSING")
     bitcoin = bitcoin or bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
-    unavailable = _payment_graph_preflight(registry, graph, bitcoin)
-    if unavailable:
-        return unavailable
+    bitcoin.check_network()
+    check_bitcoin_graph(registry, graph, bitcoin)
+    from .bitcoin_onchain_payment import review_custody_outputs
+    review_custody_outputs(registry, graph, plan, confirmed_block(registry.w3, graph))
     from .bitcoin_input_keys import build, guard, versioned
     guard(manifest,key,plan,registry,graph)
     built = build(plan)

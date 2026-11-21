@@ -4,10 +4,12 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sys
 from types import SimpleNamespace as NS
 
 import pytest
 from web3 import Web3
+from signer_agent import zk_worker
 from signer_agent.zk_worker import Inbox, Worker, load_config, state_wire
 from signer_agent.zk_spv import VERIFIER_SELECTOR
 from signer_agent.zk_worker_prover import ROOT, LocalProver, read, sha, write
@@ -152,6 +154,226 @@ def test_worker_prepare_restart_publish_materialize_and_no_duplicate(tmp_path, m
     w.inbox.close()
 
 
+def test_prepare_service_without_publish_identity_or_prover(tmp_path, monkeypatch, capsys):
+    from signer_agent import zk_service_issuer, zk_worker_service, zk_worker_transport
+
+    worker = make_worker(tmp_path)
+    model = simulated(worker, monkeypatch, tmp_path)
+    worker.c.update(service={"mode": "confederation"}, transport={"enabled": True}, automation={"enabled": True})
+    worker.inbox.enqueue(dict(kind="deposit", consumer=next(iter(worker.c["allowed_consumers"])),
+                              txid="33" * 32, vout="0"))
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Prepare-only must leave proving, service authorization and publication off")
+
+    monkeypatch.setattr(zk_worker, "load_config", lambda path: worker.c)
+    monkeypatch.setattr(zk_worker, "Worker", lambda config: worker)
+    monkeypatch.setattr(zk_worker, "LocalProver", forbidden)
+    monkeypatch.setattr(zk_worker_service, "preflight", forbidden)
+    monkeypatch.setattr(zk_worker_service, "reserve", forbidden)
+    monkeypatch.setattr(zk_worker_transport, "WorkerTransport", forbidden)
+    monkeypatch.setattr(zk_service_issuer, "tick", forbidden)
+    worker.publish = forbidden
+    monkeypatch.setattr(worker, "close", lambda: None)
+
+    assert zk_worker.main(["run", "--config", "config.json", "--boundary", "prepare", "--once"]) == 0
+    attempt = worker.inbox.get("attempt")
+    assert json.loads(capsys.readouterr().out) == dict(status="PROOF_PREPARED", proving_attempt_id=attempt["id"])
+    base = worker.inbox.path / "attempts" / attempt["id"]
+    assert (base / "state.input").is_file() and not (base / "local-result").exists()
+    assert not Path(worker.c["identity_file"]).exists()
+
+    native = read(base / "native.json")
+    model.update(state=native["after"], fresh=True)
+    assert worker.advance("prepare")["status"] == "STATE_ALREADY_ACCEPTED"
+    assert worker.inbox.get("attempt") == attempt
+    assert worker.prepare_service()["status"] == "STATE_ALREADY_ACCEPTED"
+    assert worker.inbox.get("attempt") is None
+    assert worker.inbox.get("archive:" + native["after"][7]) == native["archive"]
+    assert worker.prepare_service() == {"status": "MATERIALIZATION_REQUIRED"}
+    assert worker.inbox.db.execute("SELECT COUNT(*) FROM reservations").fetchone()[0] == 0
+    assert not (worker.inbox.path / "membership").exists()
+    worker.inbox.close()
+
+
+def test_prepare_service_keeps_publication_recovery_ownership(tmp_path, monkeypatch):
+    worker = make_worker(tmp_path)
+    model = simulated(worker, monkeypatch, tmp_path)
+    worker.inbox.enqueue(dict(kind="deposit", consumer=next(iter(worker.c["allowed_consumers"])),
+                              txid="44" * 32, vout="0"))
+    assert worker.prepare_service()["status"] == "PROOF_PREPARED"
+    active = dict(worker.inbox.get("attempt"), phase="SENDING")
+    worker.inbox.put("attempt", active)
+    assert worker.prepare_service()["status"] == "PUBLICATION_RECOVERY_REQUIRED"
+
+    native = read(worker.inbox.path / "attempts" / active["id"] / "native.json")
+    model.update(state=native["after"], fresh=True)
+    assert worker.prepare_service()["status"] == "PUBLICATION_RECOVERY_REQUIRED"
+    assert worker.inbox.get("attempt") == active
+    assert worker.inbox.get("archive:" + native["after"][7]) is None
+    assert model["proves"] == 0 and model["sends"] == []
+    worker.inbox.close()
+
+
+def test_prepare_service_retires_stale_state_and_keeps_lagging_evm_attempt(tmp_path, monkeypatch):
+    worker = make_worker(tmp_path)
+    model = simulated(worker, monkeypatch, tmp_path)
+    worker.inbox.enqueue(dict(kind="deposit", consumer=next(iter(worker.c["allowed_consumers"])),
+                              txid="45" * 32, vout="0"))
+    assert worker.prepare_service()["status"] == "PROOF_PREPARED"
+    active = worker.inbox.get("attempt")
+    base = worker.inbox.path / "attempts" / active["id"]
+    original = worker.context()
+    worker.context = lambda **kwargs: (NS(number=0, hash=bytes(32)), *original[1:])
+    assert worker.prepare_service()["status"] == "AWAITING_EVM_RPC"
+    assert worker.inbox.get("attempt") == active
+
+    worker.context = lambda **kwargs: original
+    other = read(base / "native.json")["after"]
+    other[7] = "55" * 32
+    model["state"] = other
+    assert worker.advance("prepare")["status"] == "REVALIDATE_STATE"
+    assert worker.inbox.get("attempt") == active
+    assert worker.prepare_service() == dict(status="REVALIDATE_STATE", proving_attempt_id=active["id"], retired=True)
+    assert worker.inbox.get("attempt") is None
+    assert (base / "preparation.json").is_file()
+    with pytest.raises(ValueError, match="^ZK_ARCHIVE_RECOVERY_REQUIRED$"):
+        worker.prepare_service()
+    assert model["proves"] == 0 and model["sends"] == []
+    worker.inbox.close()
+
+
+def test_prepare_service_retires_stale_bitcoin_only_after_consistent_observation(tmp_path, monkeypatch):
+    worker = make_worker(tmp_path)
+    model = simulated(worker, monkeypatch, tmp_path)
+    worker.inbox.enqueue(dict(kind="deposit", consumer=next(iter(worker.c["allowed_consumers"])),
+                              txid="46" * 32, vout="0"))
+    assert worker.prepare_service()["status"] == "PROOF_PREPARED"
+    active = worker.inbox.get("attempt")
+    base = worker.inbox.path / "attempts" / active["id"]
+    original = worker.context()
+    new_hash = "66" * 32
+    worker.context = lambda **kwargs: (*original[:-1], dict(blocks=active["target_height"] - 1))
+    assert worker.prepare_service()["status"] == "WAITING_BITCOIN_RPC"
+    assert worker.inbox.get("attempt") == active
+
+    worker.context = lambda **kwargs: (*original[:-1], dict(blocks=active["target_height"], bestblockhash=active["target_hash"]))
+    observations = iter([new_hash, active["target_hash"]])
+    worker.bitcoin.call = lambda *args: next(observations)
+    assert worker.prepare_service()["status"] == "WAITING_BITCOIN_RPC"
+    assert worker.inbox.get("attempt") == active
+
+    worker.context = lambda **kwargs: (*original[:-1], dict(blocks=active["target_height"], bestblockhash=new_hash))
+    worker.bitcoin.call = lambda *args: new_hash
+    assert worker.advance("prepare")["status"] == "REVALIDATE_BITCOIN"
+    assert worker.inbox.get("attempt") == active
+    assert worker.prepare_service() == dict(status="REVALIDATE_BITCOIN", proving_attempt_id=active["id"], retired=True)
+    assert worker.inbox.get("attempt") is None
+    assert (base / "preparation.json").is_file()
+    assert model["proves"] == 0 and model["sends"] == []
+    worker.inbox.close()
+
+
+def test_worker_bundle_cli_export_is_one_shot_and_verification_is_read_only(tmp_path, monkeypatch, capsys):
+    cfg = config(tmp_path)
+    config_path = tmp_path / "config.json"
+    write(config_path, cfg)
+    bundle = tmp_path / "review.zip"
+    attempt = "12" * 32
+    calls = []
+    computed = dict(status="LOCAL_PROOF_COMPUTED", proving_attempt_id=attempt, published=False)
+    worker = NS(c=cfg, compute_local=lambda: calls.append("compute") or computed,
+                close=lambda: calls.append("close"))
+    monkeypatch.setattr(zk_worker, "Worker", lambda cfg: worker)
+
+    def check(destination, *, config):
+        assert config == cfg
+        calls.append(("check", Path(destination)))
+        if Path(destination).exists():
+            raise ValueError("ZK_PEER_BUNDLE_OUTPUT_EXISTS")
+        return Path(destination)
+
+    def export(current, destination, *, include_proof, attempt):
+        assert current is worker
+        calls.append(("export", Path(destination), include_proof, attempt))
+        return dict(status="ZK_BUNDLE_EXPORTED", published=False)
+
+    review_cfg = {key: cfg[key] for key in ("version", "chain_id", "evm_rpc", "evm_confirmations", "bitcoin_policy", "zk_state")}
+
+    def verify(context, source, *, require_proof):
+        assert context.c == review_cfg and not hasattr(context, "inbox")
+        assert context.w3.provider.endpoint_uri == cfg["evm_rpc"]
+        calls.append(("verify", Path(source), require_proof))
+        return dict(status="ZK_BUNDLE_PROOF_VERIFIED", published=False)
+
+    monkeypatch.setitem(sys.modules, "signer_agent.zk_peer_bundle", NS(check_export_destination=check,
+                        export_attempt=export, verify_bundle=verify))
+    flags = ["--config", str(config_path), "--bundle-file", str(bundle)]
+    assert zk_worker.main(["run", "--boundary", "export", *flags]) == 0
+    assert calls == [("check", bundle), "compute", ("export", bundle, True, attempt), "close"]
+    assert json.loads(capsys.readouterr().out)["computation"] == computed
+
+    calls.clear()
+    bundle.touch()
+    assert zk_worker.main(["run", "--boundary", "export", *flags]) == 2
+    assert calls == [("check", bundle), "close"]
+    assert json.loads(capsys.readouterr().out) == {"status": "BLOCKED", "reason": "ZK_PEER_BUNDLE_OUTPUT_EXISTS"}
+
+    calls.clear()
+    assert zk_worker.main(["export-bundle", *flags, "--attempt", attempt, "--without-proof"]) == 0
+    assert calls == [("export", bundle, False, attempt), "close"]
+    assert json.loads(capsys.readouterr().out)["status"] == "ZK_BUNDLE_EXPORTED"
+
+    calls.clear()
+    write(config_path, review_cfg)
+    monkeypatch.setattr(zk_worker, "Worker", lambda cfg: pytest.fail("Bundle review must not open an inbox"))
+    assert zk_worker.main(["verify-bundle", *flags, "--require-proof"]) == 0
+    assert calls == [("verify", bundle, True)]
+    assert json.loads(capsys.readouterr().out)["status"] == "ZK_BUNDLE_PROOF_VERIFIED"
+    assert not Path(cfg["directory"]).exists()
+
+
+def test_lagging_payment_observation_waits_without_blocking_other_proofs(tmp_path, monkeypatch):
+    from signer_agent import zk_worker
+    from signer_agent.bitcoin_rpc import BitcoinRPCError
+
+    w = make_worker(tmp_path)
+    simulated(w, monkeypatch, tmp_path)
+    caught_up = False
+    now = 100
+    observations = []
+    next_observation = w.observe_need
+    waiting_request = dict(kind="deposit", consumer="x", txid="11" * 32, vout="0")
+    ready_request = dict(waiting_request, txid="22" * 32)
+    waiting_key = w.inbox.enqueue(waiting_request)
+    ready_key = w.inbox.enqueue(ready_request)
+
+    def observe(request, *args):
+        observations.append(request["txid"])
+        if request == waiting_request and not caught_up:
+            raise BitcoinRPCError("BITCOIN_RPC_REJECTED", rpc_code=-5)
+        return next_observation(request, *args)
+
+    monkeypatch.setattr(zk_worker, "time", NS(time=lambda: now))
+    w.observe_need = observe
+    assert w.tick()["status"] == "PROOF_PREPARED"
+    assert dict((k, s) for k, _, s in w.inbox.needs()) == {
+        waiting_key: "WAITING_BITCOIN_RPC", ready_key: "NEEDS_STATE"}
+    assert w.inbox.get("attempt")["need_ids"] == [ready_key]
+    assert w.inbox.get("job_attempts").keys() == {ready_key}
+
+    w.inbox.close()
+    w.inbox = Inbox(w.c)
+    block, _, adapter, _, core = w.context()
+    caught_up = True
+    assert w.observe_queued_need(waiting_key, waiting_request, block, adapter, core)["status"] == "WAITING_BITCOIN_RPC"
+    assert observations.count(waiting_request["txid"]) == 1
+    now += int(w.c["poll_seconds"])
+    assert w.observe_queued_need(waiting_key, waiting_request, block, adapter, core)["status"] == "NEEDS_STATE"
+    assert w.inbox.get("need-observation-retry:" + waiting_key) is None
+    w.inbox.close()
+
+
 def test_state_change_during_proving_never_broadcasts_old_proof(tmp_path, monkeypatch):
     w = make_worker(tmp_path); m = simulated(w, monkeypatch, tmp_path)
     w.inbox.enqueue(dict(kind="deposit", consumer="x", txid="11"*32, vout="0"))
@@ -173,7 +395,8 @@ def test_worker_lock_excludes_parallel_processes(tmp_path):
     a.inbox.close(); b.inbox.close()
 
 
-def test_consumer_admission_checks_script_actual_tx_inclusion_and_depth(tmp_path, monkeypatch):
+@pytest.mark.parametrize("issuer_kind", ["MiningPoolV1", "ConfederationBitcoinReserve"])
+def test_consumer_admission_checks_script_actual_tx_inclusion_and_depth(tmp_path, monkeypatch, issuer_kind):
     """Actual recorded regtest tx bytes exercise parsing; RPC/graph are unit fakes."""
     from signer_agent.bitcoin_network import header_hash
     from signer_agent import crypto
@@ -183,6 +406,7 @@ def test_consumer_admission_checks_script_actual_tx_inclusion_and_depth(tmp_path
     raw = (root / "block-2017.bin").read_bytes()[:80]
     w = Worker.__new__(Worker); w.c = config(tmp_path)
     pool = next(iter(w.c["allowed_consumers"])); adapter = NS(address="adapter")
+    w.c["allowed_consumers"][pool] = issuer_kind
     values = dict(deposits="deposits", escrow="escrow", spv="adapter", depth=7, consumed=False,
                   payoutScript=bytes.fromhex(decoded["outputs"][row["vout"]]["script"]))
     class Functions:

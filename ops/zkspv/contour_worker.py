@@ -223,7 +223,7 @@ class Pipeline:
         if seal is None: return self.observation('WAITING', 'FRESH_PROOF_REQUIRED')
         from signer_agent.zk_spv_cli import transition_step
         from signer_agent.bootstrap import Bootstrap
-        from web3.exceptions import TransactionNotFound
+        from signer_agent.transaction_wait import observation_pending
         step = transition_step(self.worker.c['chain_id'],self.worker.c['zk_state'],self.worker.c['bitcoin_policy'],
                                (base/'state.journal').read_bytes(),seal)
         record = self.transaction(); signed = record and record['result'].get('raw_transaction')
@@ -232,12 +232,15 @@ class Pipeline:
                 return self.observation('RECOVERY_REQUIRED','STATE_TRANSACTION_ENGINE_HOLD')
             result = self.exact_transaction(record, step)
             checker = Bootstrap.__new__(Bootstrap); checker.w3 = self.worker.w3; checker.profile = self.worker.c
-            try: receipt = checker.verify_receipt(result)
-            except TransactionNotFound: receipt = None
-            if receipt is None and record['status']=='CONFIRMED':
-                return self.observation('RECOVERY_REQUIRED','CONFIRMED_RECEIPT_UNAVAILABLE')
+            receipt = checker.observe_receipt(result)
+            if receipt is None and (record['status']=='CONFIRMED' or result.get('block_hash')):
+                return self.observation('WAITING','EVM_RECEIPT_PENDING')
             if receipt is not None:
-                transaction = self.worker.w3.eth.get_transaction(result['tx_hash'])
+                try:
+                    transaction = self.worker.w3.eth.get_transaction(result['tx_hash'])
+                except Exception as error:
+                    if not observation_pending(error):raise
+                    return self.observation('WAITING','EVM_RECEIPT_PENDING')
                 _, state, _, _, _ = self.current()
                 expected = state.functions.submitTransition((base/'state.journal').read_bytes(),seal)._encode_transaction_data()
                 actual = transaction['input']; actual = bytes.fromhex(actual.removeprefix('0x')) if isinstance(actual,str) else bytes(actual)
@@ -257,7 +260,11 @@ class Pipeline:
             # completion writes after an accepted state. No new nonce or proving work.
             _, _, _, records, _ = self.current()
             self.worker.publication_needs = []
-            result = self.worker.publish('zk-worker-'+self.lease['attempt']['id'],step,records)
+            try:
+                result = self.worker.publish('zk-worker-'+self.lease['attempt']['id'],step,records)
+            except Exception as error:
+                if not observation_pending(error):raise
+                return self.observation('WAITING','EVM_RECEIPT_PENDING')
         else:
             active = self.worker.inbox.get('attempt')
             if not active or active['id'] != self.lease['attempt']['id']:

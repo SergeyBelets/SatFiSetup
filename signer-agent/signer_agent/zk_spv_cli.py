@@ -19,18 +19,33 @@ from .zk_spv import VERIFIER_SELECTOR, inspect_binding, inspect_live, checkpoint
 from .zk_profiles import journal_network
 
 
-def transition_step(chain_id, state_address, policy, journal, seal):
-    if (len(journal) != 1216 or len(seal) != 260
+def _validate_journal_scope(chain_id, state_address, policy, journal):
+    if (len(journal) != 1216
             or journal[:32] != b"SATOSHIFI_TRANSITION_V2".ljust(32, b"\0")
             or journal[32:64] != journal_network(policy)
             or int.from_bytes(journal[64:96], "big") != int(chain_id)
             or journal[96:128] != bytes(12) + bytes.fromhex(state_address[2:])
             or journal[128:160] != checkpoint_descriptor(policy)):
         raise ValueError("ZK_PROOF_DEPLOYMENT_MISMATCH")
-    if seal[:4] != VERIFIER_SELECTOR:
-        raise ValueError("ZK_VERIFIER_3_1_REQUIRED")
+
+
+def _validate_journal_batch(policy, journal):
     if not 1 <= int.from_bytes(journal[640:672], "big") <= int(policy["max_headers_per_sync"]):
         raise ValueError("ZK_BATCH_POLICY_LIMIT")
+
+
+def validate_transition_journal(chain_id, state_address, policy, journal):
+    _validate_journal_scope(chain_id, state_address, policy, journal)
+    _validate_journal_batch(policy, journal)
+
+
+def transition_step(chain_id, state_address, policy, journal, seal):
+    if len(seal) != 260:
+        raise ValueError("ZK_PROOF_DEPLOYMENT_MISMATCH")
+    _validate_journal_scope(chain_id, state_address, policy, journal)
+    if seal[:4] != VERIFIER_SELECTOR:
+        raise ValueError("ZK_VERIFIER_3_1_REQUIRED")
+    _validate_journal_batch(policy, journal)
     return dict(id="transition", kind="call", contract="relay", method="submitTransition",
                 args=["0x" + journal.hex(), "0x" + seal.hex()])
 

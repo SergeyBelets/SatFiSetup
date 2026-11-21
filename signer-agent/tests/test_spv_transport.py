@@ -151,6 +151,33 @@ def test_ack_projection_and_reorg_do_not_authorize_financial_readiness(tmp_path)
     c.close()
 
 
+def test_queued_rpc_lag_keeps_the_existing_wire_status(tmp_path, monkeypatch):
+    from signer_agent.zk_worker_transport import WorkerTransport
+
+    cfg = worker_config(tmp_path)
+    inbox = Inbox(cfg)
+    key = inbox.enqueue(dict(kind="withdrawal", consumer="fixture"))
+    inbox.status(key, "WAITING_BITCOIN_RPC")
+    inbox.put("remote:route", dict(local_need_id=key, request_id="request",
+        operation_id="operation", deadline=200))
+    c, _, _, _, _ = fake_client(tmp_path)
+    replies = []
+
+    def queued(route, kind, sequence, body):
+        assert (route, kind, sequence) == ("route", "STATUS", 1)
+        replies.append(body)
+
+    monkeypatch.setattr(c, "queue_reply", queued)
+    monkeypatch.setattr(c.store, "outgoing", lambda _: (None, dict(body=replies[-1])))
+    transport = WorkerTransport.__new__(WorkerTransport)
+    transport.client = c
+    transport.worker = NS(inbox=inbox, c=dict(cfg, transport=dict(status_interval_seconds="30")))
+    transport.updates(dict(status="WAITING_BITCOIN_RPC"))
+    assert replies[0]["status"] == "OBSERVATION_UNAVAILABLE"
+    assert replies[0]["result"] == "WAITING_BITCOIN_RPC"
+    c.close(); inbox.close()
+
+
 def test_worker_groups_two_ready_needs_into_one_prepared_proof(tmp_path,monkeypatch):
     from test_zk_worker import make_worker,simulated
     w=make_worker(tmp_path);model=simulated(w,monkeypatch,tmp_path)

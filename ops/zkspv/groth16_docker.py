@@ -72,7 +72,6 @@ class Broker:
             config.mkdir(mode=0o700)
             self.docker_work = self.private / "work"
             self.docker_work.mkdir(mode=0o700)
-            self.docker_work.chmod(0o777)
             self.docker = [str(self.binary), "--config", str(config), "--host", "unix://" + str(self.daemon)]
             self.docker_env = {"PATH": "/usr/bin:/bin"}
             try:
@@ -155,7 +154,6 @@ class Broker:
         self.phase = "input"
         for name in ("input.json", "seal.r0"):
             (self.docker_work / name).write_bytes(read_file(self.work_fd, name, INPUT_LIMIT))
-            (self.docker_work / name).chmod(0o644)
         if self.stop.is_set():
             raise ValueError("ZK_GROTH16_DOCKER_COMMAND")
         try:

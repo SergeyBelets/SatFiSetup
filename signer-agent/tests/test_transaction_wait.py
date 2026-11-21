@@ -101,7 +101,8 @@ def test_transport_timeout_returns_pending_with_original_hash(monkeypatch):
     monkeypatch.setattr("signer_agent.transaction_wait.time.sleep", lambda seconds: now.__setitem__(0, now[0] + seconds))
     with pytest.raises(TransactionPending) as caught:
         apply_confirmed(SimpleNamespace(apply=apply), "same-identity", timeout=10, poll_interval=5)
-    assert caught.value.result == dict(status="TRANSACTION_PENDING", step="send", tx_hash=txid, reason="RPC_UNAVAILABLE")
+    assert caught.value.result == dict(status="TRANSACTION_PENDING", step="send", tx_hash=txid,
+        reason="RPC_UNAVAILABLE", message="The RPC endpoint could not confirm the journaled transaction. Retry with the same account and journal.")
     assert now[0] == 10 and len(calls) == 3
 
 

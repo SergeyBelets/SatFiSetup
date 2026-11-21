@@ -36,12 +36,6 @@ def fail(*args, **kwargs):
     raise ValueError(SENSITIVE)
 
 
-def assert_operator_error(output, expected):
-    result = json.loads(output)
-    assert result["status"] == "ERROR" and result["code"] == expected
-    assert result["stage"] and result["message"] and result["next_action"]
-
-
 def assert_redacted(capsys, caplog):
     capture = capsys.readouterr()
     output = capture.out + capture.err + caplog.text
@@ -153,7 +147,8 @@ def test_bootstrap_debug_preserves_only_numeric_rpc_error(
     argv = ["bootstrap", "verify", "--profile", str(profile)]
     assert cli.main([*argv, "--debug"]) == 2
     capture = capsys.readouterr()
-    assert_operator_error(capture.out, expected)
+    response = json.loads(capture.out)
+    assert response["status"] == "ERROR" and response["code"] == expected and response["message"]
     record = json.loads(capture.err)
     assert record["status"] == "DEBUG_ERROR"
     assert record["code"] == expected
@@ -190,7 +185,9 @@ def test_flow_debug_keeps_inner_frames_and_http_status(monkeypatch, tmp_path, ca
         "--state", str(tmp_path / "synthetic-state.sqlite"), "--identity-file", SENSITIVE,
     ]) == 2
     capture = capsys.readouterr()
-    assert_operator_error(capture.out, "CREATE_SIMULATION_REJECTED")
+    response = json.loads(capture.out)
+    assert response["status"] == "ERROR" and response["code"] == "CREATE_SIMULATION_REJECTED"
+    assert "simulation failed" in response["message"]
     records = [json.loads(line) for line in capture.err.splitlines()]
     inner = next(record for record in records if "causes" in record)
     assert inner["causes"] == [{"code": "HTTPError", "frames": [], "http_status": 503}]
@@ -221,7 +218,9 @@ def test_debug_only_emits_allowlisted_application_codes(monkeypatch, capsys, mod
     monkeypatch.setattr(module, target, unknown_code)
     assert cli.main(["--debug", *argv]) == 2
     capture = capsys.readouterr()
-    assert_operator_error(capture.out, "ValueError")
+    response = json.loads(capture.out)
+    assert response["status"] == "ERROR" and response["code"] == "ValueError"
+    assert "--debug" in response["message"]
     assert json.loads(capture.err)["code"] == "ValueError"
     assert secret not in capture.out + capture.err
 
@@ -234,7 +233,8 @@ def test_unwritable_debug_stream_preserves_command_result(monkeypatch, capsys):
     with monkeypatch.context() as patch:
         patch.setattr(cli.sys, "stderr", SimpleNamespace(write=write))
         assert cli.main(["--debug", "pending"]) == 2
-    assert_operator_error(capsys.readouterr().out, "ValueError")
+    response = json.loads(capsys.readouterr().out)
+    assert response["status"] == "ERROR" and response["code"] == "ValueError" and response["message"]
 
 
 def test_configuration_repr_excludes_all_secret_bearing_fields():

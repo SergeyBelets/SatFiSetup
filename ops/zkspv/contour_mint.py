@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from .contour import digest,private_write,sha
+from .contour_calls import ObservationPending
 from .contour_tx import original,exact
 from signer_agent.bootstrap import Bootstrap,artifact
 from signer_agent.onboarding import read_private,password_file
@@ -13,6 +14,7 @@ from signer_agent.spv_automation import Budget,validate_budget
 from signer_agent.zk_worker import Worker,load_config as worker_config
 
 BUDGET=('max_tx_gas','max_transaction_cost_wei','max_total_cost_wei','max_job_cost_wei','max_attempts_per_job')
+PROOF_METHODS = ("mintFromProof", "mintFromProofV2", "mintFromAddressProof")
 
 
 class Required(Exception):pass
@@ -192,9 +194,7 @@ class Pipeline:
     def receipt(self,profile,entry):
         runner=self.runner(profile);step=profile['steps'][0];target=profile['contracts']['target']
         exact(entry,step,self.worker.c['chain_id'],target['address'],target['artifact'],self.c['identity_file'],self.c['budget'])
-        from web3.exceptions import TransactionNotFound
-        try:return runner.verify_receipt(entry['result'])
-        except TransactionNotFound:return None
+        return runner.observe_receipt(entry['result'])
 
     def apply(self,profile,recover):
         runner=self.runner(profile)
@@ -221,6 +221,7 @@ class Pipeline:
         if entry['result'].get('raw_transaction'):
             receipt=self.receipt(profile,entry)
             if receipt is not None and entry['status']=='CONFIRMED':return receipt
+            if entry['status']=='CONFIRMED':raise ObservationPending()
         if self.action=='probe':raise Required()
         if operation not in self.record['operations']:
             self.ready();self.record['operations'][operation]=profile;self.save()
@@ -232,14 +233,26 @@ class Pipeline:
         self.used=True;return self.apply(profile,recover)
 
     def pending(self):
+        confirmed = []
+        reverted_proof = False
         for operation,profile in self.record['operations'].items():
             entry=original(self.runtime.registry.transaction_journal,operation,profile['steps'][0],self.c['identity_file'])
             if not entry['result'].get('raw_transaction'):raise Hold()
-            receipt=self.receipt(profile,entry)
-            if receipt is not None and entry['status']=='CONFIRMED':continue
-            if receipt is None and entry['status']=='CONFIRMED':raise Hold()
+            try:
+                receipt=self.receipt(profile,entry)
+            except ValueError as error:
+                if (str(error) == 'TRANSACTION_REVERTED' and entry['status'] == 'REVERTED'
+                        and profile['steps'][0]['method'] in PROOF_METHODS):
+                    reverted_proof = True
+                    continue
+                raise
+            if receipt is not None and entry['status']=='CONFIRMED':
+                confirmed.append(profile)
+                continue
+            if receipt is None and entry['status'] in ('CONFIRMED','REVERTED'):raise ObservationPending()
             if self.action=='probe':raise Required()
             self.used=True;self.apply(profile,True);raise Progress()
+        return confirmed, reverted_proof
 
     def execute(self,action):
         if action not in ('probe','run','recover'):raise ValueError('CONTOUR_RESPONSE')
@@ -257,18 +270,19 @@ class Pipeline:
                 if action!='probe':self.save()
             self.runtime.registry.transaction_controller=self
             try:
-                self.pending()
+                confirmed, reverted_proof = self.pending()
                 # Each retained operation above has its original signed bytes
                 # and canonical successful receipt checked again. An accepted
                 # mint stays historical completion across a later pool version
                 # change; reinterpreting its old claim as a new profile would
                 # neither improve evidence nor authorize another mint.
-                minted=[p for p in self.record['operations'].values() if p['steps'][0]['method'] in
-                    ('mintFromProof','mintFromProofV2','mintFromAddressProof')]
+                minted=[p for p in confirmed if p['steps'][0]['method'] in PROOF_METHODS]
                 if minted and all(p['steps'][0]['method']=='mintFromProof' for p in minted):
                     for profile in minted:self.historical_v1(profile)
                     return self.result('SATISFIED','EXACT_MINT_CANONICAL_COMPLETION',
                         result=dict(status='BTC_FUNDING_EXECUTED',historical_receipt=True))
+                if self.action=='probe' and reverted_proof and not minted:
+                    raise Required()
                 # Execute first adopts an existing claim/completion. Missing
                 # admission alone permits proposing the original frozen intent.
                 try:result=self.runtime.dispatch('execute')
@@ -276,16 +290,21 @@ class Pipeline:
                     if str(exc)!='BTC_MINT_ADMISSION_CLAIM_REQUIRED':raise
                     result=self.runtime.dispatch('propose')
                 if result['status']=='BTC_FUNDING_EXECUTED':
-                    if not any(p['steps'][0]['method'] in ('mintFromProof','mintFromProofV2','mintFromAddressProof')
-                               for p in self.record['operations'].values()):
+                    confirmed, _ = self.pending()
+                    if not any(p['steps'][0]['method'] in PROOF_METHODS for p in confirmed):
                         return self.result('RECOVERY_REQUIRED','EXACT_MINT_RECEIPT_REQUIRED')
                     return self.result('SATISFIED','EXACT_MINT_CANONICAL_COMPLETION',result=result)
                 return self.result('WAITING',result['status'])
             except Required:return self.result('ABSENT','ORIGINAL_MINT_OPERATION_REQUIRED')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_MINT_RECOVERY_REQUIRED')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Progress:return self.result('ABSENT','ORIGINAL_MINT_OPERATION_PROGRESS')
             except ValueError as exc:
-                if str(exc) in ('BTC_MINT_AUTHORIZATION_NOT_FINALIZED',):return self.result('WAITING',str(exc))
+                if str(exc) in ('BTC_MINT_AUTHORIZATION_NOT_FINALIZED', 'EVM_RPC_BEHIND',
+                        'ZK_PROOF_ROOT_PENDING', 'RECOVERY_REVERT_NOT_FINALIZED', 'ZK_PROOF_ATTEMPT_BUSY'):
+                    return self.result('WAITING',str(exc))
+                if str(exc) == 'ZK_PROOF_ROOT_UNCHANGED':
+                    return self.result('RECOVERY_REQUIRED',str(exc))
                 raise
             finally:self.runtime.registry.transaction_controller=None
         finally:os.close(fd)

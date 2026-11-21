@@ -111,6 +111,29 @@ def test_reorg_retains_old_ingress_and_spend_evidence_and_rebuilds_current_view(
         assert db.execute("SELECT COUNT(*) FROM address_observations WHERE kind='SPEND'").fetchone()[0]==1
 
 
+@pytest.mark.parametrize("keep_overlap", [True, False])
+def test_older_rpc_view_preserves_watched_spend_until_catchup(watched, keep_overlap):
+    e = watched
+    covered = e.store.scan(e.bitcoin, max_blocks=3)
+    key = e.intent.intent_id.hex()
+    original = e.store.outputs(key)
+    original_chain = e.view.chain
+    e.view.chain = original_chain[:-1]
+    if not keep_overlap:
+        # A compacted or sparse journal may have no row at the provider's tip.
+        with e.store.journal.db() as db:
+            db.execute("DELETE FROM address_scans WHERE intent=? AND height=1", (key,))
+    result = e.store.scan(e.bitcoin)
+    assert result["status"] == "WAITING_BITCOIN_RPC"
+    assert e.store.intents()[0][2] == 3
+    assert e.store.outputs(key) == original
+    assert e.store.get("reorg:" + key) is None
+    assert e.store.coverage_at(key, e.first["hash"]) is None
+    e.view.chain = original_chain
+    assert e.store.scan(e.bitcoin) == covered
+    assert e.store.coverage_at(key, e.second["hash"]) == covered
+
+
 def test_repeated_and_same_block_payments_remain_separate_protected_outpoints(watched):
     e=watched;a=tx(bytes.fromhex(e.desc["script_pubkey"]),tag=5)
     point=sha256d(a)[::-1].hex()+":0"
@@ -162,7 +185,7 @@ def test_library_address_encoding_is_network_explicit_and_p2tr_only(watched):
 
 def test_reorg_beyond_configured_bound_retains_all_observations(watched):
     e=watched;e.store.scan(e.bitcoin,max_blocks=3)
-    e.view.chain=[e.genesis]
+    e.view.chain=[e.genesis,block(e.genesis["hash"],[tx(b"\x51",tag=98)],99)]
     with pytest.raises(ValueError,match="ADDRESS_RESCAN_RECOVERY_REQUIRED"):e.store.scan(e.bitcoin,max_reorg=1)
     assert e.store.outputs(e.intent.intent_id.hex())[0]["spent_by"] is not None
     assert e.store.intents()[0][2]==3

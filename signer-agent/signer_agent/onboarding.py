@@ -668,6 +668,7 @@ def main(argv):
     c.add_argument("--identity-file", required=True)
     c.add_argument("--state", required=True)
     c.add_argument('--ulr-config', help='Reviewed ULR pin for post-bootstrap custodian approvals')
+    c.add_argument('--fee-sale-config', help='Independently reviewed fee sale and treasury pin')
     for action in ("join-chain", "assemble-chain", "manifest-chain", "status", "pending"):
         sub.choices[action].add_argument("--board-creation-block", type=int,
             help="untrusted creation block locator from discovery; constructor proof remains required")

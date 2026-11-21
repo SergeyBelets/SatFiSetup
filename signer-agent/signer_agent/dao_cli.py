@@ -19,8 +19,8 @@ from .dao_client import (
 )
 from .onboarding import read_public, write_public
 from .operations import Journal
-from .participant_errors import participant_exception_code
-from .safe_errors import operator_error, DiagnosticArgumentParser, emit_debug
+from .participant_errors import participant_exception_code, participant_message
+from .safe_errors import DiagnosticArgumentParser, emit_debug
 
 
 def parser():
@@ -414,7 +414,7 @@ def main(argv):
         # Never include raw RPC exception text, endpoints, identities or calldata dumps.
         code = error_code(exc)
         emit_debug(exc, code=code)
-        print(json.dumps(operator_error(code, "dao", exc), ensure_ascii=False))
+        print(json.dumps(dict(status="ERROR", code=code, message=participant_message(code))))
         return 2
     print(json.dumps(wire(result), indent=2))
     return (

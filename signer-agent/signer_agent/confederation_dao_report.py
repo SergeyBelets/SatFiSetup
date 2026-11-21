@@ -14,6 +14,7 @@ from .operations import canonical
 
 ARTIFACT = "ConfederationDAOIncome"
 HELPER = "getSettlementOperationHash"
+STAGE_HELPER = "getStageExpensesOperationHash"
 MAX_UINT128 = 2**128 - 1
 
 
@@ -41,21 +42,24 @@ def _targets(w3, income, at):
             or getter(registry, "authorization") != authorization.address):
         raise ValueError("DAO_EXPENSE_GRAPH")
     targets = {
-        income.address: (income, {"sweep", "openDay", "processDay"}),
+        income.address: (income, {"sweep", "openDay", "stageExpenses", "processDay"}),
         escrow.address: (escrow, {"bindUserFunded", "bindUserFundedReplacement", "settle"}),
-        registry.address: (registry, {"cacheValue"}),
         validator.address: (validator, {"registerCustodianSignature"}),
         authorization.address: (authorization, {"authorizeOperation"}),
         coordinator.address: (coordinator, {"submitNonceCommitments", "submitVerifiableSignatureShare", "finalizeSession"}),
         pool.address: (pool, {"processWithdrawal"}),
     }
-    for token_address in getter(pool, "getAllPools"):
-        token = _contract(w3, token_address, "PoolMpToken", at)
-        mining = _contract(w3, getter(token, "poolDAO"), "MiningPoolV1", at)
-        if (getter(mining, "mpToken") != token.address or getter(mining, "deposits") != registry.address
-                or getter(mining, "escrow") != escrow.address):
+    reserve = _contract(w3, getter(pool, "bitcoinReserve"), "ConfederationBitcoinReserve", at)
+    if (getter(reserve, "confederationPool") != pool.address or getter(reserve, "deposits") != registry.address
+            or getter(reserve, "escrow") != escrow.address):
+        raise ValueError("DAO_EXPENSE_GRAPH")
+    targets[reserve.address] = (reserve, {"mintFromProof", "mintFromProofV2", "mintFromAddressProof"})
+    gateway = getter(reserve, "custodyTransfer")
+    if int(gateway, 16):
+        transfer = _contract(w3, gateway, "BitcoinCustodyTransferV2", at)
+        if getter(transfer, "mining") != reserve.address:
             raise ValueError("DAO_EXPENSE_GRAPH")
-        targets[mining.address] = (mining, {"mintFromProof", "mintFromProofV2", "mintFromAddressProof"})
+        targets[gateway] = (transfer, {"finalize"})
     spv = getter(escrow, "spv")
     for kind in ("RegtestHeaderRelay", "MainnetSPVGuard", "ZkSpvAdapter", "ZkTestnet4SpvAdapter"):
         try:
@@ -127,39 +131,68 @@ def _receipt(w3, digest, day, block, targets, coordinator, epoch, anchors):
                 effective_gas_price=str(receipt["effectiveGasPrice"]), wei=str(wei_cost))
 
 
-def prepare(w3, settlement, inputs, block):
+def _position(expense):
+    return (int(expense["block_number"]) << 32) | int(expense["transaction_index"])
+
+
+def prepare(w3, settlement, inputs, block, *, stage=False):
     node = _contract(w3, settlement, ARTIFACT, block.number)
-    if set(inputs) != {"day", "transactions", "units_per_eth"} or not isinstance(inputs["transactions"], list):
+    common = {"day", "transactions"}
+    expected = common if stage else common | {"units_per_eth"}
+    if set(inputs) != expected or not isinstance(inputs["transactions"], list):
         raise ValueError("DAO_REPORT_INPUTS")
     day = integer(inputs["day"], 0, 2**64 - 1)
-    if day != _read(node, block.number, "nextSettlementDay") or day >= block.timestamp // 86400:
+    if (_read(node, block.number, "processing") or day != _read(node, block.number, "nextSettlementDay")
+            or day >= block.timestamp // 86400):
         raise ValueError("DAO_REPORT_DAY")
-    tokens = _read(node, block.number, "rewardTokens")
-    rates = inputs["units_per_eth"]
-    if not isinstance(rates, dict) or set(rates) != set(tokens):
-        raise ValueError("DAO_REPORT_RATES")
-    ordered_rates = [str(integer(rates[token], 1, MAX_UINT128)) for token in tokens]
     transactions = inputs["transactions"]
     if not all(isinstance(digest, str) for digest in transactions):
         raise ValueError("DAO_EXPENSE_HASH")
-    if (len(transactions) > _read(node, block.number, "MAX_EXPENSES")
+    if ((stage and not transactions) or len(transactions) > _read(node, block.number, "MAX_EXPENSES")
             or len({digest.lower() for digest in transactions}) != len(transactions)):
         raise ValueError("DAO_EXPENSE_LIMIT")
+    staged_count = _read(node, block.number, "stagedExpenseCount")
+    if staged_count and transactions and not stage:
+        raise ValueError("DAO_EXPENSES_ALREADY_STAGED")
     targets, coordinator, epoch = _targets(w3, node, block.number) if transactions else ({}, None, None)
     anchors = {block.number: block}
     expenses = [_receipt(w3, tx, day, block, targets, coordinator, epoch, anchors) for tx in transactions]
-    expenses.sort(key=lambda row: (int(row["block_number"]), int(row["transaction_index"])))
-    income = [[str(_read(node, block.number, "dayIncome", day, token, stream)) for stream in range(4)]
-              for token in tokens]
-    evidence = canonical(dict(version="2", chain_id=str(w3.eth.chain_id), settlement=node.address, day=str(day),
-        tokens=tokens, income=income, units_per_eth=ordered_rates, expenses=expenses)).encode()
-    report = [str(day), "0x" + hashlib.sha256(evidence).hexdigest(), tokens, income, ordered_rates,
-              [[row["payer"], row["transaction"], row["wei"]] for row in expenses]]
-    abi = next(entry["inputs"] for entry in node.abi if entry.get("name") == HELPER)
-    op = _read(node, block.number, HELPER, *encode_args(abi, [report]))
+    expenses.sort(key=_position)
+    rows = [[row["payer"], row["transaction"], row["wei"]] for row in expenses]
+    data = dict(version="2", chain_id=str(w3.eth.chain_id), settlement=node.address, day=str(day),
+                expenses=expenses)
+    if stage or staged_count:
+        commitment = Web3.to_hex(_read(node, block.number, "stagedExpenseCommitment"))
+        data.update(staged_expense_count=str(staged_count), staged_expense_commitment=commitment)
+    if stage:
+        first, last = _position(expenses[0]), _position(expenses[-1])
+        previous = _read(node, block.number, "stagedExpensePosition")
+        if staged_count and first <= previous:
+            raise ValueError("DAO_EXPENSE_BATCH_ORDER")
+        if any(_read(node, block.number, "expenseRecorded", bytes.fromhex(row[1][2:])) for row in rows):
+            raise ValueError("DAO_EXPENSE_ALREADY_RECORDED")
+        data.update(type="expense_batch", first_position=str(first), last_position=str(last))
+        evidence = canonical(data).encode()
+        report = [str(day), str(staged_count), commitment, "0x" + hashlib.sha256(evidence).hexdigest(),
+                  str(first), str(last), rows]
+        helper = STAGE_HELPER
+    else:
+        tokens = _read(node, block.number, "rewardTokens")
+        rates = inputs["units_per_eth"]
+        if not isinstance(rates, dict) or set(rates) != set(tokens):
+            raise ValueError("DAO_REPORT_RATES")
+        ordered_rates = [str(integer(rates[token], 1, MAX_UINT128)) for token in tokens]
+        income = [[str(_read(node, block.number, "dayIncome", day, token, stream)) for stream in range(4)]
+                  for token in tokens]
+        data.update(tokens=tokens, income=income, units_per_eth=ordered_rates)
+        evidence = canonical(data).encode()
+        report = [str(day), "0x" + hashlib.sha256(evidence).hexdigest(), tokens, income, ordered_rates, rows]
+        helper = HELPER
+    abi = next(entry["inputs"] for entry in node.abi if entry.get("name") == helper)
+    op = _read(node, block.number, helper, *encode_args(abi, [report]))
     if w3.eth.get_block(block.number).hash != block.hash:
         raise ValueError("REPORT_REORG")
-    return evidence, dict(chain_id=str(w3.eth.chain_id), target=node.address, artifact=ARTIFACT, hash_method=HELPER,
+    return evidence, dict(chain_id=str(w3.eth.chain_id), target=node.address, artifact=ARTIFACT, hash_method=helper,
                           hash_args=[report], operation_hash=Web3.to_hex(op))
 
 
@@ -168,10 +201,11 @@ def review(w3, intent, confirmations, at):
     if block.number > read_block(w3, int(confirmations)).number:
         raise ValueError("DAO_EXPENSE_UNCONFIRMED")
     report, = intent["hash_args"]
-    day, _, tokens, _, rates, expenses = report
-    _, expected = prepare(w3, intent["target"], dict(day=day, units_per_eth=dict(zip(tokens, rates)),
-        transactions=[item[1] for item in expenses]), block)
+    is_stage = intent["hash_method"] == STAGE_HELPER
+    inputs = dict(day=report[0], transactions=[item[1] for item in report[-1]])
+    if not is_stage:
+        inputs["units_per_eth"] = dict(zip(report[2], report[4]))
+    _, expected = prepare(w3, intent["target"], inputs, block, stage=is_stage)
     if expected["hash_args"] != [report] or expected["operation_hash"] != "0x" + intent[
             "operation_hash"].removeprefix("0x"):
         raise ValueError("DAO_REPORT_MISMATCH")
-

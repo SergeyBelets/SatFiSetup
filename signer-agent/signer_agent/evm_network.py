@@ -5,6 +5,8 @@ RPC failure or missing finalized support fails closed; no test flag weakens it.
 """
 import os
 import re
+from hexbytes import HexBytes
+from web3.exceptions import BlockNotFound
 
 MIN_CONFIRMATIONS = 12
 MAX_TRANSACTION_GAS = 2**24
@@ -41,10 +43,22 @@ def read_block(w3, confirmations):
 
 
 def receipt_finalized(w3, number, block_hash, confirmations):
-    canonical = w3.eth.get_block(number)
-    if bytes(canonical.hash) != bytes(block_hash):
+    safe = read_block(w3, confirmations)
+    verify_anchor(w3, number, block_hash)
+    return number <= safe.number
+
+
+def verify_anchor(w3, number, expected_hash, *, safe=None):
+    """A missing or insufficiently deep observation is not evidence of a fork."""
+    if safe is not None and number > safe.number:
+        raise ValueError("EVM_RPC_BEHIND")
+    try:
+        block = w3.eth.get_block(number) if safe is None or number != safe.number else safe
+    except BlockNotFound:
+        raise ValueError("EVM_RPC_BEHIND") from None
+    if HexBytes(block.hash) != HexBytes(expected_hash):
         raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
-    return number <= read_block(w3, confirmations)["number"]
+    return block
 
 
 def _limit(name):
@@ -65,25 +79,13 @@ def transaction_policy(w3):
     return dict(maxFeePerGas=maximum, maxPriorityFeePerGas=priority)
 
 
-class GasLimitExceeded(ValueError):
-    """Unsigned EVM call exceeds the local gas budget; all units are gas."""
-    def __init__(self, required, limit, estimate=None):
-        super().__init__("ETHEREUM_TRANSACTION_GAS_LIMIT")
-        self.required = required
-        self.limit = limit
-        self.estimate = estimate
-
-
-def check_transaction_gas(w3, transaction, *, estimate=None):
+def check_transaction_gas(w3, transaction):
     if not is_mainnet(w3):
         return
     transaction_policy(w3)
-    gas = transaction.get("gas")
-    if type(gas) is not int or gas <= 0:
+    if (type(transaction.get("gas")) is not int
+            or not 0 < transaction["gas"] <= min(_limit("SATOSHIFI_MAX_TX_GAS"), MAX_TRANSACTION_GAS)):
         raise ValueError("ETHEREUM_TRANSACTION_GAS_LIMIT")
-    limit = min(_limit("SATOSHIFI_MAX_TX_GAS"), MAX_TRANSACTION_GAS)
-    if gas > limit:
-        raise GasLimitExceeded(gas, limit, estimate)
 
 
 def transaction_gas_with_margin(w3, transaction):
@@ -98,7 +100,8 @@ def transaction_gas_with_margin(w3, transaction):
     """
     if type(transaction.get("gas")) is not int or transaction["gas"] <= 0:
         raise ValueError("ETHEREUM_TRANSACTION_GAS_LIMIT")
+    check_transaction_gas(w3, transaction)
     padded = dict(transaction, gas=max((transaction["gas"] * 130 + 99) // 100,
                                       transaction["gas"] + 125_000))
-    check_transaction_gas(w3, padded, estimate=transaction["gas"])
+    check_transaction_gas(w3, padded)
     return padded

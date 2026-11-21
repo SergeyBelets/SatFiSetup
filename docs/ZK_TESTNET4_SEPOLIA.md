@@ -54,6 +54,10 @@ python ops/bootstrap_host.py build
 python ops/generate_abis.py --check --zk
 ```
 
+Если `system_modes preflight` сообщает `ZK_VERIFIER_3_1_BUILD_REQUIRED`,
+повторите сборку из текущих исходников. Preflight проверяет артефакты state
+и verifier, чтобы устаревший `out` не запускал тесты с прежней сборкой.
+
 Соберите **testnet4** host в отдельном новом каталоге. `LOCAL`, `CITREA_SOURCE`
 и `CITREA_ARCHIVE` — абсолютные локальные пути. Получение архива и его точный
 SHA256 описаны в [порядке подготовки sources](DISTRIBUTION.md#сборка-на-каждом-хосте).
@@ -89,8 +93,9 @@ python -m ops.system_modes run --mode zk-testnet4 --output "$LOCAL/testnet4-smok
 ```
 
 Этот слой использует исторический Bitcoin fixture и локальный Anvil с chain ID
-Sepolia; он проверяет native preparation и real-verifier rejection, не полный
-публичный денежный цикл. Собственные live proofs проверяются следующими шагами.
+Sepolia. Проверяются подготовка native witness, привязки графа и отказ verifier
+3.1.0 принимать исторический seal. Для приёмки свежего proof и денежного цикла
+предназначены следующие шаги.
 
 ## 2. Core и свежий checkpoint
 
@@ -204,16 +209,17 @@ funding/distribution пауз. Результат `GRAPH_CONFIGURED_FRESHNESS_PE
 
 ```sh
 chmod 600 "$WORKER_CONFIG"
-python -m signer_agent.zk_worker prepare --config "$WORKER_CONFIG"
-python -m signer_agent.zk_worker prove --config "$WORKER_CONFIG"
-# Повтор проверяет только собственный authenticated cache.
-python -m signer_agent.zk_worker prove --config "$WORKER_CONFIG"
-# Только выбранный publisher после своего расчёта:
-python -m signer_agent.zk_worker publish --config "$WORKER_CONFIG"
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary prepare --once
+# На машине с prover. Для нового перехода укажите новый путь ZIP.
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary export --bundle-file "$PUBLIC_BUNDLE"
+# Участник FROST проверяет ZIP через свой Sepolia RPC.
+frost-signer zk-worker verify-bundle --config "$REVIEW_CONFIG" --bundle-file "$PUBLIC_BUNDLE" --require-proof
+# Только выбранный publisher на машине со своим локальным proof.
+frost-signer zk-worker publish --config "$WORKER_CONFIG"
 ```
 
 Для catch-up нужны повторные переходы не более 64 headers. Между checkpoint и
-tip может быть до 2115 блоков: это несколько собственных proofs, не один.
+tip может быть до 2115 блоков: каждый переход рассчитывается отдельно.
 Повторяйте prepare/prove/publish, проверяя статус и Core, пока useful update не
 догонит tip и не станет Fresh. Продолжайте heartbeat/worker во время денежных
 тестов: при истечении age/tip bounds система закрывается. Не увеличивайте лимиты
@@ -236,36 +242,47 @@ state/Core и требует replay при изменении предыдуще
 1. Получите подтверждённые testnet4 UTXO, сформируйте SMP1 deposit для собственного
    федерационного BTC-ключа, дождитесь глубины, вычислите свои ZK-переходы и
    materialize header. FROST-одобрение и SPV inclusion необходимы для mint MP.
-2. Для MP → cBTC сначала выполните настоящий Bitcoin transfer из федерации на
-   custodian-only BTC-ключ конфедерации. Дождитесь зрелости/глубины, SPV header и
-   завершения неизменяемого custody-transfer binding. Только затем допускается
-   выпуск cBTC получателю; одной EVM-записи недостаточно.
-3. Проверьте cBTC на адресе получателя и backed balance в конфедерации.
-   Создайте withdrawal, выполните reserve/bind, независимую проверку intent и
-   Bitcoin FROST-подпись кастодианов; relay/ZK не заменяет эту подпись.
+2. Перенесите BTC федерации на BTC-ключ кастодианов конфедерации. Проведите
+   исходный settlement на нужной глубине и проверьте сжигание MP. Выполните
+   `finalize` с доказательством точного выхода назначения. V3 выпускает
+   S напрямую, прежний профиль выпускает cBTC через локальный MP.
+3. Для V3 сверьте номинал принятого выхода с приростом резерва и суммарным
+   выпуском S получателю и DAO. Создайте заявку погашения S и план v5,
+   выполните reserve/bind, независимую проверку и Bitcoin FROST-подпись
+   кастодианов.
 4. После broadcast и confirmations вычислите свои proofs, materialize header и
-   выполните SPV settlement. Проверьте фактический testBTC output пользователя,
-   отсутствие двойного расхода/settlement, fee reserve и изменения treasury.
+   выполните SPV settlement. Сверьте выплату в testBTC, комиссию майнерам,
+   сдачу и уменьшение резерва. Проверьте перевод комиссии протокола в S
+   в DAO и идемпотентность расчёта. В прежнем профиле проверьте его fee reserve
+   и изменения treasury.
 5. Проверьте закрытие операций на stale state, повтор команд после рестарта,
    отказ cross-network/wrong-image/foreign-origin proof. Публичный reorg нельзя
    детерминированно вызвать: восстановление форка сначала проверяйте локальными
    Core regtest и native testnet4-векторами, затем наблюдайте live canonicality.
 
-Минимумы outputs остаются 294 sats P2WPKH / 330 sats P2TR, 50 адресов на batch.
+План v5 принимает до 16 входов, 32 заявок и 32 выходов со сдачей.
+Минимальные чистые выплаты составляют 294 sats P2WPKH и 330 sats P2TR.
+Числовой пример приведён в [расчёте MP → S → BTC](CONFEDERATION_DAO_IN_KIND.md#обеспечение-комиссий).
 Каждый фиксирует txid и EVM receipts, высоты/подтверждения, pinned image/runtime,
-локальный origin и итоговые балансы. Распространяйте только публичный отчёт:
-keys, cookies, working inputs/journals и готовые receipts в поставку не входят.
+локальный origin и итоговые балансы. Передавайте публичный отчёт и, при
+необходимости, отдельный ZIP перехода. Ключи, RPC cookies, входы prover,
+записи происхождения и готовые receipts остаются на исходном хосте.
 
 ```mermaid
 flowchart TD
+  LOCAL["Локальный smoke<br/>Native witness и проверка verifier 3.1.0"]
+  LOCAL --> GATE["Приёмка ZK<br/>Свой свежий proof в выбранном тестовом графе"]
   POLICY["Sepolia + testnet4 policy V2"] --> RPC["Каждый проверяет Sepolia RPC<br/>и архивный Core testnet4"]
   RPC --> DKG["Свой enrollment / раздельные DKG"]
   DKG --> STATE["Новый testnet4 state и adapter<br/>Verifier 3.1.0"]
-  RPC --> OWN["У каждого свой witness → STARK → Groth16"]
+  RPC --> OWN["Выбранный prover готовит свой witness<br/>STARK → Groth16"]
   STATE --> OWN
+  GATE --> OWN
+  OWN -.-> REVIEW["Публичный ZIP перехода<br/>Участники сверяют через свой Sepolia RPC"]
   OWN --> ACCEPT["Один publisher<br/>Seal 0xe71e6620 → Fresh → materialize"]
-  ACCEPT --> MP["SMP1 deposit → MP"]
-  MP --> TRANSFER["Реальный BTC transfer → кастодианы → cBTC"]
-  TRANSFER --> EXIT["Reserve / bind / FROST → testBTC пользователю"]
+  ACCEPT --> MP["Депозит федерации и выпуск MP"]
+  MP --> TRANSFER["BTC под ключ конфедерации и сжигание MP"]
+  TRANSFER --> ISSUE["SPV точного выхода и выпуск S под принятый резерв"]
+  ISSUE --> EXIT["План v5 и FROST кастодианов<br/>Выплата, miner fee, сдача и скидка NFT"]
   EXIT --> OWN
 ```

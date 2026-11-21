@@ -94,11 +94,14 @@ def main(argv):
     p.add_argument("--rpc", required=True)
     p.add_argument("--settlement", required=True)
     p.add_argument("--in-kind", action="store_true", help="Use a new confederation DAO")
+    p.add_argument("--stage-expenses", action="store_true", help="Prepare one chronological expense batch for a V3 DAO day")
     p.add_argument("--confirmations", type=int, default=12)
     p.add_argument("--inputs", required=True)
     p.add_argument("--evidence", required=True)
     p.add_argument("--intent", required=True)
     a = p.parse_args(argv)
+    if a.stage_expenses and not a.in_kind:
+        p.error("--stage-expenses requires --in-kind")
     w3 = Web3(Web3.HTTPProvider(a.rpc))
     address = Web3.to_checksum_address(a.settlement)
     inputs = json.loads(Path(a.inputs).read_text())
@@ -106,7 +109,8 @@ def main(argv):
         from .confederation_dao_report import prepare as prepare_in_kind
         from .evm_network import read_block
 
-        evidence, intent = prepare_in_kind(w3, address, inputs, read_block(w3, a.confirmations))
+        evidence, intent = prepare_in_kind(w3, address, inputs, read_block(w3, a.confirmations),
+                                           stage=a.stage_expenses)
     else:
         evidence, intent = prepare(w3, address, inputs)
     for path, data in [

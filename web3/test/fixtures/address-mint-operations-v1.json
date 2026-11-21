@@ -1,0 +1,30 @@
+{
+  "chain_id": 31337,
+  "authorization": "0x0000000000000000000000000000000000000111",
+  "pool": "0x0000000000000000000000000000000000000222",
+  "registry": "0x0000000000000000000000000000000000000333",
+  "custody_scope": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "nonce": 7,
+  "claim": [
+    "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    2,
+    "0x0000000000000000000000000000000000000444",
+    1000,
+    3,
+    5,
+    "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  ],
+  "address": {
+    "selector": "0xe42e1f4d",
+    "params_hash": "0x436c2bf189f56eac69bb53610772f2026216a483e97bf8a85c7ee0a6b084277f",
+    "operation_hash": "0x467a997860c7cbce5b9259dbe6160dd0e7416fa2969ad2f01f4e4659d8be7ea9"
+  },
+  "custody": {
+    "selector": "0x4daa1eef",
+    "params_hash": "0xfbc9d68c7e8f33e2c32f9b273b4cbe83ed1b086804142870ee111c09278b377d",
+    "operation_hash": "0xd3aa9046eb998f9ba3ce413a5fb04ab1b3f6cfe0b02500a9ca04c993ab420e4d"
+  },
+  "scope": "Frozen typed-operation interoperability vectors; not verifier/production qualification"
+}

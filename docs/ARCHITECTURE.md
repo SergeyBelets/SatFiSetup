@@ -4,6 +4,14 @@
 
 [Documentation Index](./README.md)
 
+New confederations using ULR policy V3 issue transferable S directly against
+their own proven Bitcoin reserves. The federation burns its MP when it settles
+the Bitcoin transfer into the confederation wallet. The confederation counts
+the accepted output once, then issues S to the recipient and the DAO. S
+redemption spends the confederation reserve. See the
+[V3 custody sequence](BITCOIN_CUSTODY_TRANSFER.md#профиль-v3-с-прямым-btc-резервом)
+and [commission accounting](CONFEDERATION_DAO_IN_KIND.md#обеспечение-комиссий).
+
 The current V6 implementation supports independent Ethereum
 **mainnet / Sepolia / local** and Bitcoin **mainnet / testnet4 / regtest** selection.
 See the [network matrix and automatic continuation](NETWORKS_AND_AUTOMATION.md).
@@ -168,7 +176,7 @@ sequenceDiagram
   O->>B: Fetch and verify all shares
   O->>C: Aggregate, persist and broadcast
   C-->>O: Canonical payment proof at required depth
-  Note over P,R: ZK: each participant computes locally<br/>Publication is explicit
+  Note over P,R: ZK participants compute locally or verify a public ZIP<br/>The publisher submits its own proof explicitly
   O->>R: Explicit relay sync or own ZK submit/materialize
   O->>E: Submit proof through configured SPV consumer
   E->>E: Record change, burn MP/S, accrue fees
@@ -350,8 +358,8 @@ A treasury request has no MP token to burn; it uses the same input reservation,
 Bitcoin signing and proof settlement flow. See [mint and treasury commands](BITCOIN_MINT_AND_TREASURY.md)
 and [the relay keeper](RELAY_KEEPER_AND_GAS.md).
 
-For external MP backed by a different Bitcoin key, the destination does not
-accept that token through ordinary `addPool`/`deposit`. The immutable gateway
+In the earlier local-MP profile, external MP backed by a different Bitcoin key
+uses the immutable `BitcoinCustodyTransfer` gateway. It
 locks source MP, requests a source Bitcoin payment to the destination script,
 waits for source settlement/burn, and verifies the exact destination output at
 the enrolled SPV depth. Only then does it mint internal local MP and deposit it

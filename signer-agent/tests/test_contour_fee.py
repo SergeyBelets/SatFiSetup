@@ -92,9 +92,11 @@ def test_refund_nonce_is_checked_before_signature_and_not_after_receipt(refund):
     assert f.call('recover')[1]['status']=='RECOVERY_REQUIRED'  # Retained unsigned intent.
 
 
-def test_missing_canonical_receipt_holds_without_new_refund_or_token_return(refund):
+def test_missing_canonical_receipt_waits_without_new_refund_or_token_return(refund):
     f=refund;f.call();f.e.receipts.clear()
-    assert f.call('recover')[1]['status']=='RECOVERY_REQUIRED' and len(f.e.raws)==1
+    result=f.call('recover')[1]
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
+    assert len(f.e.raws)==1
 
 
 def test_personal_refund_cannot_relabel_a_different_principal_request(tmp_path,monkeypatch):

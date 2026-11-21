@@ -38,8 +38,16 @@ class Pipeline:
             b,state,adapter,records,core=w.context(allow_halt=True)
             if self.record and self.record.get('cached'):
                 saved=self.record['cached'];n=int(saved['number'])
-                if (n>b.number or w.w3.eth.get_block(n).hash.hex()!=saved['hash']
-                        or not self.cache(adapter,n,self.record['member'],self.record['root'])):
+                from signer_agent.evm_network import verify_anchor
+                from signer_agent.transaction_wait import observation_pending
+                try:
+                    verify_anchor(w.w3,n,saved['hash'],safe=b)
+                    cached=self.cache(adapter,n,self.record['member'],self.record['root'])
+                except Exception as error:
+                    if observation_pending(error):return self.result('WAITING','EVM_RPC_BEHIND')
+                    if not isinstance(error,ValueError) or str(error)!='EVM_REORG_RECOVERY_REQUIRED':raise
+                    cached=False
+                if not cached:
                     return self.result('RECOVERY_REQUIRED','CACHED_MEMBERSHIP_LOST')
                 w.stable(b);return self.result('SATISFIED','CANONICAL_CACHED_MEMBERSHIP',root=self.record['root'])
             if self.record and self.record.get('operation'):
@@ -48,9 +56,7 @@ class Pipeline:
                 if entry['result'].get('raw_transaction'):
                     signed=exact(entry,step,w.c['chain_id'],adapter.address,zk_profile(w.c['bitcoin_policy'])['adapter'],w.c['identity_file'],w.c)
                     checker=Bootstrap.__new__(Bootstrap);checker.w3=w.w3;checker.profile=w.c
-                    from web3.exceptions import TransactionNotFound
-                    try:receipt=checker.verify_receipt(signed)
-                    except TransactionNotFound:receipt=None
+                    receipt=checker.observe_receipt(signed)
                     if receipt is not None and entry['status']=='CONFIRMED':
                         from web3.logs import DISCARD
                         events=adapter.events.HeaderMaterialized().process_receipt(receipt,errors=DISCARD)
@@ -60,10 +66,16 @@ class Pipeline:
                             and bytes(e['args']['canonicalRoot']).hex()==self.record['root'] for e in events):
                             raise ValueError('CONTOUR_MEMBER_RECEIPT')
                         return self.result('SATISFIED','EXACT_MEMBERSHIP_RECEIPT',tx_hash=signed['tx_hash'],root=self.record['root'])
-                    if receipt is None and entry['status']=='CONFIRMED':return self.result('RECOVERY_REQUIRED','MEMBERSHIP_RECEIPT_LOST')
+                    if receipt is None and (entry['status']=='CONFIRMED' or signed.get('block_hash')):
+                        return self.result('WAITING','EVM_RECEIPT_PENDING')
                     if action=='probe':return self.result('ABSENT','SIGNED_MEMBERSHIP_PENDING')
                     w.publication_needs=[]
-                    result=w.publish(name,step,records,recover_only=True)
+                    from signer_agent.transaction_wait import observation_pending
+                    try:
+                        result=w.publish(name,step,records,recover_only=True)
+                    except Exception as error:
+                        if not observation_pending(error):raise
+                        return self.result('WAITING','EVM_RECEIPT_PENDING')
                     return self.result('RECOVERY_REQUIRED' if result['status']=='NOT_SIGNED' else 'ABSENT',result['status'])
                 if self.record.get('started'):return self.result('RECOVERY_REQUIRED','UNSIGNED_MEMBERSHIP_RECOVERY')
             if core is None:return self.result('WAITING','STATE_HALTED')

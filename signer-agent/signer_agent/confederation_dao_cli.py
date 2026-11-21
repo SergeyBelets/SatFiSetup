@@ -16,6 +16,7 @@ from .ulr_treasury import number
 
 METHODS = {
     ("ConfederationDAOIncome", "getSettlementOperationHash"): "openDay",
+    ("ConfederationDAOIncome", "getStageExpensesOperationHash"): "stageExpenses",
     ("ConfederationDAOIncome", "getAddStablecoinOperationHash"): "addStablecoin",
     ("ConfederationNFTPass", "getApproveTariffOperationHash"): "approveTariff",
     ("CustodianDAODecisionBoard", "getCreateOperationHash"): "createDecision",
@@ -25,7 +26,8 @@ METHODS = {
 NODES = dict(staking="ConfederationDAOStake", dao_income="ConfederationDAOIncome",
              conf_pool="ConfederationPoolV2", dao_token="CustodianDAOToken", nft_pass="ConfederationNFTPass",
              conf_shares="ConfederationShareV2", decisions="CustodianDAODecisionBoard",
-             validator="CustodianValidator")
+             validator="CustodianValidator", mining="ConfederationBitcoinReserve",
+             custody_transfer="BitcoinCustodyTransferV2")
 
 
 def _client(a):
@@ -69,13 +71,18 @@ def _client(a):
     staking = load("staking", client.read(income, "staking"))
     decisions = load("decisions", client.read(income, "decisions"))
     sale = load("nft_pass", client.read(income, "passSale"))
+    reserve = load("mining", client.read(pool, "bitcoinReserve"))
+    gateway = load("custody_transfer", client.read(reserve, "custodyTransfer"))
     load("dao_token", client.read(staking, "stakeToken"))
     if (client.read(pool, "confederationId") != conf_id
             or client.read(income, "pool") != pool.address or client.read(income, "authorization") != conf[7]
             or client.read(income, "shareToken") != shares.address or client.read(income, "validator") != validator.address
             or client.read(validator, "candidateStaking") != staking.address
             or client.read(decisions, "staking") != staking.address or client.read(decisions, "authorization") != conf[7]
-            or client.read(sale, "income") != income.address):
+            or client.read(sale, "income") != income.address
+            or client.read(reserve, "confederationPool") != pool.address
+            or client.read(reserve, "shareToken") != shares.address
+            or client.read(gateway, "mining") != reserve.address or client.read(gateway, "pool") != pool.address):
         raise ValueError("CONFEDERATION_DAO_BINDING")
     client.stable()
     return client
@@ -95,6 +102,20 @@ def _transact(client, a, name, method, values, *, suffix=""):
         raise ValueError("INVALID_OPERATION_ID")
     return client.transact(name, method, values, caller, a.identity_file, a.send, a.state,
                            (a.id or "dao-preview") + suffix)
+
+
+def _withdraw(client, a):
+    from .bitcoin_onchain_plan import script
+
+    if a.pool_token:
+        raise ValueError("S_WITHDRAWAL_USES_CONFEDERATION_RESERVE")
+    method = "requestWithdrawal" if a.nft is None else "requestWithdrawalWithNFT"
+    values = [number(a.amount), bytes.fromhex(script(a.script))]
+    if a.nft is not None:
+        values.append(number(a.nft))
+    values.append(number(a.miner_fee_cap_sats))
+    client.stable()
+    return _transact(client, a, "conf_pool", method, values)
 
 
 def _operation(client, a):
@@ -236,7 +257,7 @@ def main(argv):
     p.add_argument("action", choices=("discover", "status", "approve", "stake", "unstake", "sweep", "process",
         "claim", "reimburse", "approve-pass", "buy-pass", "tariff-prepare", "stablecoin-prepare", "price",
         "approve-wrap", "wrap", "withdraw", "cancel", "delegate", "propose", "execute", "vote", "finalize",
-        "decision-prepare", "custodian-add-prepare", "custodian-remove-prepare"))
+        "decision-prepare", "custodian-add-prepare", "custodian-remove-prepare", "wrap-pass", "clear-wrap-pass"))
     p.add_argument("--rpc", required=True)
     graph = p.add_mutually_exclusive_group(required=True)
     graph.add_argument("--manifest")
@@ -248,7 +269,10 @@ def main(argv):
     p.add_argument("--amount")
     p.add_argument("--days", nargs="+")
     p.add_argument("--rows", default="8")
-    p.add_argument("--pool-token")
+    p.add_argument("--pool-token", help="MP token for wrap")
+    p.add_argument("--source", type=int, help="Enrolled federation source index for MP-to-S handover")
+    p.add_argument("--minimum-s", help="Minimum S base units accepted after the BTC handover")
+    p.add_argument("--recipient", help="S recipient after the BTC handover")
     p.add_argument("--script")
     p.add_argument("--miner-fee-cap-sats", default=str(2**64 - 1))
     p.add_argument("--nft")
@@ -286,6 +310,9 @@ def main(argv):
     elif a.action == "status":
         result = dict(status="OK", next_day=str(client.read("dao_income", "nextSettlementDay")),
             processing=client.read("dao_income", "processing"),
+            staged_expenses=str(client.read("dao_income", "stagedExpenseCount")),
+            staged_expense_position=str(client.read("dao_income", "stagedExpensePosition")),
+            staged_expense_commitment=Web3.to_hex(client.read("dao_income", "stagedExpenseCommitment")),
             reward_tokens=client.read("dao_income", "rewardTokens"))
     elif a.action.endswith("-prepare"):
         result = _prepare_intent(client, a)
@@ -300,6 +327,10 @@ def main(argv):
                            [target.address, number(a.amount)])
     elif a.action in ("stake", "unstake"):
         result = _transact(client, a, "staking", a.action, [number(a.amount)])
+    elif a.action == "wrap-pass":
+        result = _transact(client, a, "conf_pool", "setWrapPass", [number(a.nft)])
+    elif a.action == "clear-wrap-pass":
+        result = _transact(client, a, "conf_pool", "clearWrapPass", [])
     elif a.action in ("vote", "finalize"):
         values = [number(a.decision)]
         if a.action == "vote":
@@ -317,31 +348,37 @@ def main(argv):
         abi = next(row["inputs"] for row in node.abi if row.get("name") == "buy")
         result = _transact(client, a, "nft_pass", "buy", encode_args(abi, [doc["quote"], doc["signature"]]))
     elif a.action in ("approve-wrap", "wrap"):
-        token = _contract(client.w3, address(a.pool_token), "PoolMpToken", client.block.number)
-        pool = client.contracts["conf_pool"]
-        if not client.read(pool, "getPoolInfo", token.address)[2]:
-            raise ValueError("CONFEDERATION_DAO_BINDING")
+        gateway = client.contracts["custody_transfer"]
+        source = a.source
+        if source is None and client.read(gateway, "sourceCount") == 1:
+            source = 0
+        if source is None or not 0 <= source < client.read(gateway, "sourceCount"):
+            raise ValueError("BITCOIN_CUSTODY_SOURCE")
+        entry = client.read(gateway, "sourceAt", source)
+        if a.pool_token and address(a.pool_token) != entry[1]:
+            raise ValueError("BITCOIN_CUSTODY_SOURCE")
         if a.action == "approve-wrap":
+            token = _contract(client.w3, entry[1], "PoolMpToken", client.block.number)
             _add(client, "mp", token, "PoolMpToken")
-            result = _transact(client, a, "mp", "approve", [pool.address, number(a.amount)])
+            result = _transact(client, a, "mp", "approve", [gateway.address, number(a.amount)])
         else:
-            method = "deposit" if a.nft is None else "depositWithNFT"
-            values = [token.address, number(a.amount)]
+            recipient = address(a.recipient) if a.recipient else (account_at(a.identity_file).address
+                        if a.identity_file else address(a.sender))
             if a.nft is not None:
-                values.append(number(a.nft))
-            result = _transact(client, a, "conf_pool", method, values)
+                caller = account_at(a.identity_file).address if a.identity_file else address(a.sender)
+                if recipient != caller:
+                    raise ValueError("S_WRAP_PASS_OWNER")
+                configured = _transact(client, a, "conf_pool", "setWrapPass", [number(a.nft)], suffix="-pass")
+                if configured["status"] != "VERIFIED":
+                    print(json.dumps(configured))
+                    return 0
+            result = _transact(client, a, "custody_transfer", "request",
+                [source, number(a.amount), number(a.minimum_s), recipient])
     elif a.action == "delegate":
         result = _transact(client, a, "staking", "setDAOSigner",
                            [address(a.delegate), bytes.fromhex(a.consent.removeprefix("0x"))])
     elif a.action == "withdraw":
-        from .bitcoin_onchain_plan import script
-
-        values = [address(a.pool_token), number(a.amount), bytes.fromhex(script(a.script))]
-        if a.nft is not None:
-            values.append(number(a.nft))
-        values.append(number(a.miner_fee_cap_sats))
-        method = "requestWithdrawal" if a.nft is None else "requestWithdrawalWithNFT"
-        result = _transact(client, a, "conf_pool", method, values)
+        result = _withdraw(client, a)
     else:
         result = _transact(client, a, "conf_pool", "cancelWithdrawal", [number(a.withdrawal)])
     print(json.dumps(result))

@@ -277,7 +277,8 @@ def test_reorg_preserves_recorded_anchor_and_blocks_resume(tmp_path, change):
         else:
             b.w3.eth.get_block = lambda number: AttributeDict(dict(hash=HexBytes(b"x" * 32)))
         b.w3.eth.receipts[tx] = AttributeDict(r)
-    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+    code = "EVM_RPC_BEHIND" if change == "missing" else "EVM_REORG_RECOVERY_REQUIRED"
+    with pytest.raises(ValueError, match=f"^{code}$"):
         b.apply(identity)
     assert len(b.w3.eth.sent) == 2
     assert b.finished == []

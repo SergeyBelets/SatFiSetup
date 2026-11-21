@@ -158,11 +158,17 @@ def apply_group(bootstrap, steps, account, identity, *, dry_run=False, verify=Fa
             raise ValueError("BOOTSTRAP_CREATE_RESERVATION_RECOVERY_REQUIRED")
         if recover_only and not all(signed):
             return dict(status="NOT_SIGNED", step=first["id"], create_group=steps[0]["create_group"])
-        floor = recover_identity(lane, bootstrap, account)
-        if not any(signed):
+        replacements = {}
+        reservations = set()
+        floor = recover_identity(lane, bootstrap, account, replacements=replacements, reservations=reservations)
+        if not any(signed) or replacements:
             nonce = bootstrap.w3.eth.get_transaction_count(account.address, "pending")
-            if nonce < floor:
-                raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+            if nonce < max(floor, max(reservations, default=-1) + 1):
+                waiting = next((row for row in replacements.values() if row["status"] == "BROADCAST"), None)
+                if waiting is not None:
+                    return dict(step=first["id"], create_group=steps[0]["create_group"], **waiting)
+                raise ValueError("EVM_RPC_BEHIND")
+        if not any(signed):
             results = []
             with predicted(bootstrap, steps, account.address, nonce):
                 transactions = prepare_transactions(bootstrap, steps, account, nonce)

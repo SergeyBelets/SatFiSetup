@@ -2,6 +2,7 @@
 
 import json
 import os
+from contextlib import nullcontext
 from pathlib import Path
 from eth_account import Account
 from eth_abi import decode
@@ -11,6 +12,12 @@ from .dkg_transport import Mailbox, sign, recover
 from .secure_state import SecureState
 
 ROOT = Path(__file__).resolve().parents[2]
+
+REVIEWABLE_DKG_FAILURES = frozenset({
+    "ROUND1_HASH_MISMATCH", "PACKAGE_COMMITMENT_MISMATCH", "COMMITMENT_MISMATCH",
+    "SHARE_HASH_MISMATCH", "PUBLIC_SHARE_MISMATCH", "RESULT_MISMATCH",
+    "CRYPTO_VALIDATION_FAILED", "CEREMONY_TIMEOUT",
+})
 
 
 def atomic_private(path, data):
@@ -63,6 +70,17 @@ class Registry:
             return fn.call(block_identifier=read_block(self.w3, depth)["number"])
         return fn.call()
 
+    def dkg_block(self):
+        from .evm_network import read_block
+
+        graph = getattr(self, "bitcoin_graph", {})
+        depth = int(graph.get("evm_confirmations", "12" if self.w3.eth.chain_id == 1 else "1"))
+        return read_block(self.w3, depth)
+
+    def check_dkg_block(self, block):
+        if bytes(self.w3.eth.get_block(block.number).hash) != bytes(block.hash):
+            raise ValueError("DKG_ANCHOR_REORG")
+
     def send(self, method, *args):
         if getattr(self, "identity_file", None):
             from .bootstrap import Bootstrap
@@ -98,7 +116,7 @@ class Registry:
                     )
                 ],
             )
-            b = Bootstrap(profile, self.transaction_journal)
+            b = Bootstrap(profile, self.transaction_journal, evm_rpc_override=self.w3.provider.endpoint_uri)
             result = b.apply_confirmed(self.identity_file)
             if result["status"] != "VERIFIED":
                 raise ValueError("TRANSACTION_UNCONFIRMED")
@@ -153,36 +171,127 @@ class Participant:
         self.index = manifest.index(self.address)
         self.key = manifest.context.hex()
 
-    def run_once(self):
+    def run_once(self, confirm_abort=None):
+        from .transaction_wait import observation_pending
+
+        try:
+            return self._anchored_round(confirm_abort)
+        except Exception as error:
+            if observation_pending(error) or (type(error) is ValueError and str(error) in (
+                    "DKG_ANCHOR_UNAVAILABLE", "EVM_CONFIRMATIONS_PENDING", "ETHEREUM_FINALITY_UNAVAILABLE")):
+                return dict(status="WAITING_DKG_RPC", context=self.key)
+            raise
+
+    def _anchored_round(self, confirm_abort):
         with self.s.exclusive():
-            guard = self.s.get("chain:" + self.key)
-            if guard:
-                try:
-                    block = self.r.w3.eth.get_block(int(guard["number"]))
-                except Exception:
-                    raise ValueError("DKG_ANCHOR_UNAVAILABLE") from None
-                if block.hash.hex() != guard["hash"]:
+            r = self.r
+            anchor_key = "chain:" + self.key
+            guard = self.s.get(anchor_key)
+            block = r.dkg_block()
+            if guard and guard.get("version") == "2":
+                if block.number < int(guard["number"]):
+                    raise ValueError("DKG_ANCHOR_UNAVAILABLE")
+                if r.w3.eth.get_block(int(guard["number"])).hash.hex() != guard["hash"]:
                     raise ValueError("DKG_ANCHOR_REORG")
-            else:
-                block = self.r.w3.eth.get_block("latest")
-                self.s.put(
-                    "chain:" + self.key,
-                    dict(number=str(block.number), hash=block.hash.hex()),
-                )
-            result = self._run_once()
-            block = self.r.w3.eth.get_block("latest")
-            self.s.put(
-                "chain:" + self.key,
-                dict(number=str(block.number), hash=block.hash.hex()),
-            )
+            previous = getattr(r, "read_block_identifier", None)
+            r.read_block_identifier = block.number
+            self._block = block
+            try:
+                mailbox = self.box.at_block(self.m, block) if hasattr(self.box, "at_block") else nullcontext()
+                with mailbox:
+                    if not any(r.read("ceremonies", self.m.session_id)[0]):
+                        raise ValueError("EVM_CONFIRMATIONS_PENDING")
+                    info, ceremony = r.check(self.m)
+                    if guard and guard.get("version") != "2":
+                        self._verify_legacy_progress()
+                    r.check_dkg_block(block)
+                    checkpoint = dict(version="2", number=str(block.number), hash=block.hash.hex())
+                    if checkpoint != guard:
+                        self.s.put(anchor_key, checkpoint)
+                    abort_key = "abort:" + self.key
+                    review = self.s.get(abort_key)
+                    if confirm_abort is not None:
+                        if not review or review["fingerprint"] != confirm_abort or review["phase"] != info[4]:
+                            raise ValueError("DKG_ABORT_CONFIRMATION_MISMATCH")
+                        if r.w3.eth.get_block(int(review["number"])).hash.hex() != review["hash"]:
+                            raise ValueError("DKG_ANCHOR_REORG")
+                        code = review["reason"]
+                        if code == "CEREMONY_TIMEOUT":
+                            if block.timestamp <= info[5]:
+                                raise ValueError("DKG_ABORT_CONFIRMATION_MISMATCH")
+                            self._send("advancePhase", self.m.session_id)
+                        else:
+                            self._send("abortCeremony", self.m.session_id, Web3.keccak(text=code))
+                        return dict(status="DKG_ABORTED", context=self.key, reason=code)
+                    try:
+                        result = self._run_once(info, ceremony)
+                    except (ValueError, RuntimeError) as exc:
+                        code = str(exc)
+                        if code not in REVIEWABLE_DKG_FAILURES:
+                            raise
+                        r.check_dkg_block(block)
+                        if review and review["reason"] == code and review["phase"] == info[4]:
+                            if r.w3.eth.get_block(int(review["number"])).hash.hex() != review["hash"]:
+                                raise ValueError("DKG_ANCHOR_REORG") from None
+                            fingerprint = review["fingerprint"]
+                        else:
+                            fingerprint = Web3.keccak(text=f"{self.key}:{code}:{block.hash.hex()}").hex()
+                            self.s.put(abort_key, dict(fingerprint=fingerprint, reason=code, phase=info[4],
+                                                      number=str(block.number), hash=block.hash.hex()))
+                        return dict(status="DKG_REVIEW_REQUIRED", context=self.key, reason=code,
+                                    confirm_abort=fingerprint)
+                    if review:
+                        self.s.put(abort_key, {})
+            finally:
+                r.read_block_identifier = previous
+            updated = r.dkg_block()
+            if updated.number > block.number:
+                r.check_dkg_block(block)
+                r.check_dkg_block(updated)
+                self.s.put(anchor_key, dict(version="2", number=str(updated.number), hash=updated.hash.hex()))
             return result
 
-    def _run_once(self):
+    def _verify_legacy_progress(self):
+        """Migrate an old tip anchor only when confirmed transcript evidence agrees."""
+        state = self.s.get(self.key)
+        if state is None:
+            return
+        m, r = self.m, self.r
+        package = bytes.fromhex(state["round1"]["package"])
+        own = bytes(r.read("round1Hashes", m.session_id, self.address))
+        if any(own) and own != protocol.round1(m.context, self.address, package):
+            raise ValueError("DKG_ANCHOR_REORG")
+        if "round1_digest" not in state:
+            return
+        round1 = [bytes(r.read("round1Hashes", m.session_id, peer)) for peer in m.participants]
+        if not all(any(item) for item in round1):
+            raise ValueError("DKG_ANCHOR_UNAVAILABLE")
+        if protocol.digest(["bytes32[]"], [round1]).hex() != state["round1_digest"]:
+            raise ValueError("DKG_ANCHOR_REORG")
+        for recipient, envelope in state["envelopes"].items():
+            saved = bytes(r.read("getShareHash", m.session_id, self.address, recipient))
+            if any(saved) and saved.hex() != envelope["hash"]:
+                raise ValueError("DKG_ANCHOR_REORG")
+        if "result_hash" in state:
+            round2 = [bytes(r.read("getShareHash", m.session_id, peer, recipient))
+                      for peer in m.participants for recipient in m.participants if peer != recipient]
+            if not all(any(item) for item in round2):
+                raise ValueError("DKG_ANCHOR_UNAVAILABLE")
+            result = state["result"]
+            points = [bytes.fromhex(result["public_shares"]["%064x" % index])
+                      for index in range(1, len(m.participants) + 1)]
+            if (protocol.result(m, round1, round2, result["normalization_negated"],
+                    bytes.fromhex(result["group"])[1:], points).hex() != state["result_hash"]):
+                raise ValueError("DKG_ANCHOR_REORG")
+
+    def _send(self, method, *args):
+        self.r.check_dkg_block(self._block)
+        return self.r.send(method, *args)
+
+    def _run_once(self, info, c):
         m, r, s = self.m, self.r, self.s
-        info, c = r.check(m)
         state = s.get(self.key)
-        if info[4] != 4 and r.w3.eth.get_block("latest").timestamp > info[5]:
-            r.send("advancePhase", m.session_id)
+        if info[4] != 4 and self._block.timestamp > info[5]:
             raise ValueError("CEREMONY_TIMEOUT")
         if state is None:
             transport = s.get("transport")
@@ -207,6 +316,7 @@ class Participant:
         if info[4] == 4:
             if state.get("result_hash") != bytes(c[3]).hex():
                 raise ValueError("RESULT_MISMATCH")
+            r.check_dkg_block(self._block)
             state["stage"] = "active"
             state["round1"].pop("secret", None)
             s.put(self.key, state)
@@ -224,7 +334,7 @@ class Participant:
         ])
         current = bytes(r.read("round1Hashes", m.session_id, self.address))
         if current == bytes(32):
-            r.send(
+            self._send(
                 "submitRound1",
                 m.session_id,
                 expected,
@@ -236,7 +346,6 @@ class Participant:
             return dict(status="ROUND1_PUBLISHED")
         if current != expected:
             raise ValueError("ROUND1_CONFLICT")
-        info, c = r.check(m)
         if info[4] == 1:
             return dict(status="WAITING_ROUND1")
         public = {}
@@ -263,7 +372,10 @@ class Participant:
             if actual != item["commitments"]:
                 raise ValueError("PACKAGE_COMMITMENT_MISMATCH")
             h = protocol.round1(m.context, p, bytes.fromhex(item["package"]))
-            if h != bytes(r.read("round1Hashes", m.session_id, p)):
+            observed = bytes(r.read("round1Hashes", m.session_id, p))
+            if not any(observed):
+                return dict(status="WAITING_DKG_RPC", context=self.key)
+            if h != observed:
                 raise ValueError("ROUND1_HASH_MISMATCH")
             if [
                 protocol.commitment(m.context, p, j, bytes.fromhex(point))
@@ -277,6 +389,7 @@ class Participant:
         if state.get("round1_digest", broadcast_digest) != broadcast_digest:
             raise ValueError("ROUND1_TRANSCRIPT_MISMATCH")
         if "envelopes" not in state:
+            r.check_dkg_block(self._block)
             state["round1_digest"] = broadcast_digest
             state["round2"] = crypto.call(
                 "part2", secret=state["round1"]["secret"], round1=public
@@ -334,9 +447,8 @@ class Participant:
             elif current.hex() != item["hash"]:
                 raise ValueError("ENVELOPE_CONFLICT")
         if missing_hashes:
-            r.send("submitShareHashes", m.session_id, recipients,
+            self._send("submitShareHashes", m.session_id, recipients,
                    [bytes.fromhex(state["envelopes"][recipient]["hash"]) for recipient in recipients])
-        info, c = r.check(m)
         if info[4] == 2:
             return dict(status="WAITING_ROUND2")
         hashes = [
@@ -345,6 +457,8 @@ class Participant:
             for q in m.participants
             if p != q
         ]
+        if not all(any(item) for item in hashes):
+            return dict(status="WAITING_DKG_RPC", context=self.key)
         if "result" not in state:
             received = {}
             for i, p in enumerate(m.participants, 1):
@@ -355,9 +469,10 @@ class Participant:
                     return dict(status="WAITING_ENVELOPE")
                 wire = bytes.fromhex(item["envelope"])
                 h = protocol.share(m.context, p, self.address, wire)
-                if h.hex() != item["hash"] or h != bytes(
-                    r.read("getShareHash", m.session_id, p, self.address)
-                ):
+                observed = bytes(r.read("getShareHash", m.session_id, p, self.address))
+                if not any(observed):
+                    return dict(status="WAITING_DKG_RPC", context=self.key)
+                if h.hex() != item["hash"] or h != observed:
                     raise ValueError("SHARE_HASH_MISMATCH")
                 if (
                     recover(
@@ -404,6 +519,7 @@ class Participant:
                     info=hpke_info.hex(),
                     aad=aad.hex(),
                 )["plaintext"]
+            r.check_dkg_block(self._block)
             out = crypto.call(
                 "part3",
                 secret=state["round2"]["secret"],
@@ -430,23 +546,22 @@ class Participant:
             s.put(self.key, state)
         if (any(bytes(r.read("receiptHashes", m.session_id, p, self.address)) == bytes(32)
                 for p in recipients) or not r.read("hasSubmittedPKShare", m.session_id, self.address)):
-            r.send("submitReceiptsAndPublicKeyShare", m.session_id, recipients,
+            self._send("submitReceiptsAndPublicKeyShare", m.session_id, recipients,
                    [r.read("getShareHash", m.session_id, p, self.address) for p in recipients],
                    bytes.fromhex(state["result"]["public_share"]))
-        info, c = r.check(m)
         if info[8] != len(m.participants) or c[5] != len(m.participants) * (
             len(m.participants) - 1
         ):
             return dict(status="WAITING_ATTESTATIONS")
         # Compare EVERY published share with the locally verified library result, including odd Y.
         for i, p in enumerate(m.participants, 1):
-            if (
-                bytes(r.read("getPublicKeyShare", m.session_id, p)).hex()
-                != state["result"]["public_shares"]["%064x" % i]
-            ):
+            observed = bytes(r.read("getPublicKeyShare", m.session_id, p))
+            if not observed:
+                return dict(status="WAITING_DKG_RPC", context=self.key)
+            if observed.hex() != state["result"]["public_shares"]["%064x" % i]:
                 raise ValueError("PUBLIC_SHARE_MISMATCH")
         if bytes(r.read("resultApprovals", m.session_id, self.address)) == bytes(32):
-            r.send(
+            self._send(
                 "attestResult",
                 m.session_id,
                 state["result"]["normalization_negated"],

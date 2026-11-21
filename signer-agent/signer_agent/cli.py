@@ -7,7 +7,8 @@ from typing import Iterable, Optional
 
 from .config import Config
 from .service import ActionResult, SigningService
-from .safe_errors import DiagnosticArgumentParser, debug_diagnostics, emit_debug, exception_code, operator_error, pending_notice
+from .safe_errors import DiagnosticArgumentParser, debug_diagnostics, emit_debug
+from .participant_errors import participant_failure
 
 
 LOG = logging.getLogger("signer-agent")
@@ -41,9 +42,11 @@ def _parser() -> argparse.ArgumentParser:
                                  ("dao", "user wallet, staking, rewards and DAO governance"),
                                  ("ulr-treasury", "shared ULR snapshots and daily treasury payouts"),
                                  ("system-profile", "prepare one signed Bitcoin and ULR bootstrap policy"),
+                                 ("zk-worker", "prepare, prove, verify and publish Bitcoin ZK-SPV transitions"),
                                  ("configure", "launch wizard and remote RPC checks"),
                                  ("startup-rewards", "funded introductory APY inspection and daily payout"),
                                  ("nft", "FROST-governed discount collections and mint"),
+                                 ("fee-sale", "approve and settle funded sales of S or MP fees"),
                                  ("custody-transfer", "move Bitcoin backing before issuing confederation shares"),
                                  ("family-root", "inspect/pin original Bitcoin root and prepare new graph enrollment"),
                                  ("dao-report", "prepare funded daily settlement")):
@@ -155,10 +158,11 @@ def run_once(
             if result.status in {"blocked", "unsupported"}:
                 exit_code = 2
         except Exception as exc:
-            code = exception_code(exc)
+            failure = participant_failure(exc)
+            code = failure["code"]
             emit_debug(exc, code=code)
             LOG.error("session %s failed code=%s", session.session_id, code)
-            print("session=%s status=error code=%s" % (session.session_id, code), file=sys.stderr)
+            print("session=%s status=error code=%s %s" % (session.session_id, code, failure["message"]), file=sys.stderr)
             exit_code = 1
     return exit_code
 
@@ -174,15 +178,15 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         try:
             return _main([option for option in options if option != "--debug"] + arguments[end:])
         except Exception as exc:
-            code = exception_code(exc)
-            emit_debug(exc, code=code)
-            print(json.dumps(operator_error(code, "cli"), ensure_ascii=False))
+            failure = participant_failure(exc)
+            emit_debug(exc, code=failure["code"])
+            print(json.dumps(failure))
             return 2
 
 
 def _main(argv: Optional[Iterable[str]] = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
-    if arguments and arguments[0] in ("setup","bootstrap","api","ops","bitcoin","index","dao-report","dao","ulr-treasury","system-profile","configure","startup-rewards","nft","custody-transfer","family-root","flow","relay-keeper"):
+    if arguments and arguments[0] in ("setup","bootstrap","api","ops","bitcoin","index","dao-report","dao","ulr-treasury","system-profile","configure","startup-rewards","nft","fee-sale","custody-transfer","family-root","flow","relay-keeper","zk-worker"):
         if arguments[0] == "relay-keeper":
             from .relay_keeper import main as operational_main
         elif arguments[0] == "flow":
@@ -199,6 +203,10 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
             from .startup_rewards_cli import main as operational_main
         elif arguments[0] == "nft":
             from .nft_cli import main as operational_main
+        elif arguments[0] == "fee-sale":
+            from .fee_sale_cli import main as operational_main
+        elif arguments[0] == "zk-worker":
+            from .zk_worker import main as operational_main
         elif arguments[0] == "configure":
             from .launch_configurator import main as operational_main
         elif arguments[0] == "system-profile":
@@ -221,17 +229,16 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
             return operational_main(arguments[1:])
         except Exception as exc:
             from .transaction_wait import TransactionPending, TransactionRecoveryRequired
-            from .participant_errors import participant_exception_code
             if isinstance(exc, TransactionPending):
-                print(json.dumps(pending_notice(exc.result), sort_keys=True, ensure_ascii=False))
+                print(json.dumps(exc.result, sort_keys=True))
                 return 0
             if isinstance(exc, TransactionRecoveryRequired):
                 emit_debug(exc, code="RECOVERY_REQUIRED")
                 print(json.dumps(exc.result, sort_keys=True))
                 return 2
-            code = participant_exception_code(exc)
-            emit_debug(exc, code=code)
-            print(json.dumps(operator_error(code, arguments[0], exc), ensure_ascii=False))
+            failure = participant_failure(exc)
+            emit_debug(exc, code=failure["code"])
+            print(json.dumps(failure))
             return 2
     if arguments and arguments[0] == "doctor" and "--profile" in arguments:
         from .doctor import main as doctor_main
@@ -247,8 +254,9 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
         config = Config.from_env()
         service = SigningService(config)
     except Exception as exc:
-        emit_debug(exc)
-        print("Signer configuration error: %s" % exception_code(exc), file=sys.stderr)
+        failure = participant_failure(exc)
+        emit_debug(exc, code=failure["code"])
+        print("Signer configuration error (%s). %s" % (failure["code"], failure["message"]), file=sys.stderr)
         return 2
 
     if args.command == "doctor":
@@ -283,8 +291,9 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
         try:
             tx_hash = service.client.relay_authorization(args.session, args.authorization, args.target)
         except Exception as exc:
-            emit_debug(exc)
-            print("Relay failed: %s" % exception_code(exc), file=sys.stderr)
+            failure = participant_failure(exc)
+            emit_debug(exc, code=failure["code"])
+            print("Relay failed (%s). %s" % (failure["code"], failure["message"]), file=sys.stderr)
             return 1
         print("session=%s status=relayed tx=%s" % (args.session, tx_hash))
         return 0
@@ -293,8 +302,9 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
             session = service.client.session(args.session)
             result = service.try_finalize(session)
         except Exception as exc:
-            emit_debug(exc)
-            print("Finalization failed: %s" % exception_code(exc), file=sys.stderr)
+            failure = participant_failure(exc)
+            emit_debug(exc, code=failure["code"])
+            print("Finalization failed (%s). %s" % (failure["code"], failure["message"]), file=sys.stderr)
             return 1
         if result is None:
             print("Session does not have a complete verified share set.", file=sys.stderr)

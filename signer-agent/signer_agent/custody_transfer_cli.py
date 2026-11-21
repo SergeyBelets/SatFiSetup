@@ -33,13 +33,17 @@ def inspect(w3, board_address):
     if bytes(read(board, "custodyPublisherEpoch")).hex() != invite["sessions"]["conf_ceremony"]:
         raise ValueError("BITCOIN_CUSTODY_PUBLISHER_EPOCH")
     candidates = {}
+    native = invite.get("ulr", {}).get("version") == "3"
+    issuer_kind = "ConfederationBitcoinReserve" if native else "MiningPoolV1"
+    gateway_kind = "BitcoinCustodyTransferV2" if native else "BitcoinCustodyTransfer"
+    pool_kind = "ConfederationPoolV2" if native else "ConfederationMultiPool"
     for row in intent_rows(w3, board, block):
         intent = row["intent"]
-        if intent.get("artifact") != "MiningPoolV1" or intent.get("hash_method") != "getSetCustodyTransferOperationHash":
+        if intent.get("artifact") != issuer_kind or intent.get("hash_method") != "getSetCustodyTransferOperationHash":
             continue
         review_intent(w3, intent, bundle, block.number)
-        mining = contract(intent["target"], "MiningPoolV1")
-        gateway = contract(intent["hash_args"][0], "BitcoinCustodyTransfer")
+        mining = contract(intent["target"], issuer_kind)
+        gateway = contract(intent["hash_args"][0], gateway_kind)
         auth = contract(read(mining, "authorization"), "DKGAuthorization")
         op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
         if not read(auth, "executedOperations", op):
@@ -50,7 +54,7 @@ def inspect(w3, board_address):
                 or list(read(auth, "getParticipants")) != invite["participants"][1:]
                 or int(read(auth, "threshold")) != int(invite["bitcoin_custody"]["threshold"])):
             raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
-        pool = contract(read(gateway, "pool"), "ConfederationMultiPool")
+        pool = contract(read(gateway, "pool"), pool_kind)
         if read(pool, "confederationId") != invite["confederation_id"]:
             raise ValueError("BITCOIN_CUSTODY_POOL_BINDING")
         candidates[gateway.address] = dict(gateway=gateway, mining=mining, pool=pool)
@@ -178,7 +182,8 @@ def main(argv):
     if args.accept_fingerprint != context["fingerprint"]:
         raise ValueError("BITCOIN_CUSTODY_FINGERPRINT")
     gateway = context["nodes"]["gateway"]
-    target, kind, method = gateway.address, "BitcoinCustodyTransfer", args.action
+    target, kind, method = gateway.address, ("BitcoinCustodyTransferV2" if context["invite"].get("ulr", {}).get("version") == "3"
+                                          else "BitcoinCustodyTransfer"), args.action
     at = context["block"].number
     if args.action == "status":
         t = gateway.functions.transfers(args.transfer_id).call(block_identifier=at)

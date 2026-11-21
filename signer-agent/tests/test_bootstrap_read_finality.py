@@ -1,4 +1,5 @@
 """External DKG/approval observations obey enrolled depth and durable anchors."""
+import json
 from types import SimpleNamespace
 
 from hexbytes import HexBytes
@@ -6,7 +7,7 @@ from eth_account import Account
 import pytest
 from web3 import Web3
 from web3.datastructures import AttributeDict
-from web3.exceptions import TransactionNotFound
+from web3.exceptions import BlockNotFound, ContractLogicError, TransactionNotFound
 
 from signer_agent.bootstrap import Bootstrap
 from signer_agent.operations import Journal
@@ -21,6 +22,8 @@ class ReadEth:
             number = self.block_number
         elif number == "finalized":
             number = self.finalized
+        if number > self.block_number:
+            raise BlockNotFound(number)
         return AttributeDict(dict(number=number, timestamp=1000 + number,
             hash=HexBytes(self.changed.get(number, int(number).to_bytes(32, "big")))))
 
@@ -129,12 +132,20 @@ def test_saved_read_anchor_reorg_or_depth_regression_blocks_resume(tmp_path, kin
     step = wait_step() if kind == "wait" else read_step()
     install(b, step)
     b.apply()
+    original = b.journal.get(b.prefix + ":" + step["id"])
     if mutation == "hash":
         b.w3.eth.changed[89] = b"x" * 32
     else:
-        b.w3.eth.block_number = 95
-    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+        lagging = ReadEth(b.w3.eth.chain_id)
+        lagging.block_number = 95
+        b.w3.eth = lagging
+    reason = "EVM_REORG_RECOVERY_REQUIRED" if mutation == "hash" else "EVM_RPC_BEHIND"
+    with pytest.raises(ValueError, match=f"^{reason}$"):
         b.apply(verify=True)
+    assert b.journal.get(b.prefix + ":" + step["id"]) == original
+    if mutation == "depth":
+        lagging.block_number = 100
+        assert b.apply(verify=True)["status"] == "VERIFIED"
 
 
 @pytest.mark.parametrize("kind", ["wait", "read"])
@@ -219,7 +230,8 @@ def test_cross_journal_recovery_checks_source_read_anchor_before_any_rebroadcast
         receiver.w3.eth.changed[89] = b"x" * 32
     else:
         receiver.w3.eth.block_number = 95
-    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+    reason = "EVM_REORG_RECOVERY_REQUIRED" if mutation == "hash" else "EVM_RPC_BEHIND"
+    with pytest.raises(ValueError, match=f"^{reason}$"):
         recover_identity(identity_journal, receiver, account)
     assert receiver.sent == []
 
@@ -264,3 +276,110 @@ def test_failed_legacy_wait_migration_blocks_cross_journal_pending_rebroadcast(t
     with pytest.raises(ValueError, match="^PRIOR_TRANSACTION_RECOVERY_REQUIRED$"):
         recover_identity(identity_journal, receiver, account)
     assert receiver.sent == []
+
+
+@pytest.mark.parametrize("lane_status", ["CONFIRMED", "SIGNED"])
+def test_lagging_pending_nonce_cannot_start_another_operation(tmp_path, lane_status):
+    from signer_agent.bootstrap_recovery import identity_lane
+
+    b = fixture(tmp_path)
+    step = dict(id="new-call", kind="call")
+    install(b, step)
+    account = Account.create()
+    identity = tmp_path / "identity.json"
+    identity.write_text(json.dumps(dict(private_key=account.key.hex())))
+    identity.chmod(0o600)
+    _, _, lane = identity_lane(identity)
+    nonce = 23
+    transaction = account.sign_transaction(dict(chainId=11155111, nonce=nonce, gas=21000, gasPrice=1,
+                                                to="0x" + "11" * 20))
+    key = transaction.hash.hex()
+    lane.put(key, dict(chain_id="11155111", tx_hash=key, raw_transaction=transaction.raw_transaction.hex()))
+    if lane_status == "CONFIRMED":
+        block_hash = b.w3.eth.get_block(89).hash.hex()
+        lane.update(key, lane_status, dict(block_number="89", block_hash=block_hash))
+    def no_receipt(tx_hash):
+        raise TransactionNotFound(tx_hash)
+    b.w3.eth.get_transaction_receipt = no_receipt
+    b.w3.eth.get_transaction = lambda _: dict(hash=transaction.hash)
+    b.w3.eth.get_transaction_count = lambda address, tag: nonce if tag == "pending" else nonce + 1
+    b.build_transaction = lambda *args: pytest.fail("Made a transaction with a stale nonce")
+    with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$"):
+        b.apply(identity)
+    assert b.journal.get(b.prefix + ":new-call")["status"] == "PREPARED"
+    assert len(lane.list()) == 1
+    if lane_status == "CONFIRMED":
+        b.w3.eth.changed[89] = b"x" * 32
+        with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+            b.apply(identity)
+
+
+def test_expired_frost_round_with_verified_shares_can_still_finalize(tmp_path):
+    b = fixture(tmp_path)
+    step = dict(id="frost-wait", kind="wait", contract="coordinator", method="getAuthorizationResult",
+                args=["1"], equals=True)
+    install(b, step)
+    calls = []
+    session = [0] * 11
+    session[5], session[7], session[10] = 2, 1088, 1
+    verified = [2]
+
+    def call(method, result):
+        def read(*, block_identifier):
+            calls.append((method, block_identifier))
+            return result
+        return SimpleNamespace(call=read)
+
+    b.contract = lambda _: SimpleNamespace(functions=SimpleNamespace(
+        getSession=lambda _id: call("session", session),
+        getNonceSetStatus=lambda _id: call("shares", (True, b"", 0, 0, verified[0]))))
+    def authorization(method, number):
+        if session[10] != 2:
+            raise ContractLogicError("not finalized")
+        return True
+    b.observe = authorization
+    b.journal.put(b.prefix + ":" + step["id"], step)
+    b.journal.update(b.prefix + ":" + step["id"], "RECOVERY_REQUIRED", dict(reason="SIGNING_DEADLINE_EXPIRED"))
+    assert b.apply()["status"] == "AWAITING_PARTICIPANTS"
+    assert calls == [("session", 89), ("shares", 89)]
+    session[10] = 2
+    assert b.apply()["status"] == "VERIFIED"
+
+
+def test_rpc_override_preserves_request_and_requires_existing_anchors(tmp_path, monkeypatch):
+    from signer_agent import bootstrap as engine
+
+    first, second = ReadEth(11155111), ReadEth(11155111)
+    handlers = {"local-first": first, "local-second": second}
+
+    class Provider:
+        def __init__(self, endpoint, **options):
+            self.endpoint_uri = endpoint
+
+    class LocalWeb3:
+        HTTPProvider = Provider
+        def __init__(self, provider):
+            self.provider, self.eth = provider, handlers[provider.endpoint_uri]
+
+    monkeypatch.setattr(engine, "Web3", LocalWeb3)
+    step = wait_step()
+    profile = dict(deployment_id="same-deployment", evm_rpc="local-first", evm_confirmations="12",
+                   mode="integration", chain_id="11155111", bitcoin_network="regtest", steps=[step])
+    path = tmp_path / "deployment.sqlite"
+    known = Bootstrap(profile, path)
+    original = known.journal.get(known.prefix)
+    known.journal.put(known.prefix + ":gate", step)
+    known.journal.update(known.prefix + ":gate", "CONFIRMED", dict(
+        read_anchor=dict(number="89", hash=first.get_block(89).hash.hex())))
+    second.block_number = 95
+    with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$"):
+        Bootstrap(profile, path, evm_rpc_override="local-second")
+    second.block_number = 101
+    b = Bootstrap(dict(profile, evm_rpc="local-second"), path, evm_rpc_override="local-second")
+    assert b.w3.provider.endpoint_uri == "local-second"
+    assert b.journal.get(b.prefix) == original
+    with pytest.raises(ValueError, match="^IDEMPOTENCY_CONFLICT$"):
+        Bootstrap(dict(profile, steps=[]), path, evm_rpc_override="local-second")
+    second.changed[89] = b"x" * 32
+    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+        Bootstrap(profile, path, evm_rpc_override="local-second")

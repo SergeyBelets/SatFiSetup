@@ -1,5 +1,7 @@
 # Fee System
 
+Новые конфедерации с ULR policy V3 используют [доход в S и стейблкоинах](CONFEDERATION_DAO_IN_KIND.md). Ниже описан существующий профиль.
+
 [Documentation Index](./README.md)
 
 The fee system handles wrap/deposit and unwrap/withdrawal fees for federation and confederation pools.

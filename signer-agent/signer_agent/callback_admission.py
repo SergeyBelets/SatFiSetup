@@ -99,6 +99,8 @@ def validate_callback(escrow, request, block=None):
         if read(validator, "frostMultisig") != authorization:
             raise ValueError("BTC_CALLBACK_CUSTODIAN_MISMATCH")
     share_address = read(pool, "shareToken")
+    if pool_kind == "ConfederationPoolV2" and mp_token != share_address:
+        raise ValueError("BTC_CALLBACK_REQUEST_MISMATCH")
     share = contract(share_address, share_kind)
     if (read(pool, "getFrostMultisig") != authorization or read(pool, "withdrawalEscrow") != escrow.address
             or read(share, reciprocal) != pool_address

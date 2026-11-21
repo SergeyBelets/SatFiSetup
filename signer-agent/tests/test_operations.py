@@ -2,6 +2,7 @@ import hashlib, json, threading
 from contextlib import contextmanager
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
+from urllib.parse import quote
 from http.server import ThreadingHTTPServer
 import pytest
 from signer_agent.operations import Journal, OperationJournal, public_data
@@ -45,7 +46,7 @@ def test_journal_reads_each_view_in_one_connection(tmp_path, monkeypatch):
 def test_api_has_roles_no_export_and_string_amounts(tmp_path):
     tokens = {"read": "reader", "write": "operator"}
     policy = {
-        "deployments": ["local"],
+        "deployments": ["local", "other"],
         "principals": [
             dict(sha256=hashlib.sha256(t.encode()).hexdigest(), role=r)
             for t, r in tokens.items()
@@ -59,6 +60,7 @@ def test_api_has_roles_no_export_and_string_amounts(tmp_path):
             }
         },
     }
+    policy["actions"]["claim-other"] = dict(policy["actions"]["claim"], deployment="other")
     journal = Journal(tmp_path / "ops.sqlite")
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler(policy, journal))
     worker = threading.Thread(target=server.serve_forever, daemon=True)
@@ -112,6 +114,24 @@ def test_api_has_roles_no_export_and_string_amounts(tmp_path):
         status, response = call("/v1/operations", "read")
         assert status == 200
         assert "forbidden" not in json.dumps(response)
+
+        shared = "shared/claim"
+        url = "/v1/operations/" + quote(shared, safe="")
+        other = dict(valid, action="claim-other")
+        assert call("/v1/operations", "write", valid, shared)[0] == 202
+        status, prepared = call("/v1/operations", "write", other, shared)
+        assert status == 202
+        assert call("/v1/operations", "write", other, shared) == (202, prepared)
+        assert call(url + "?deployment=other", "read") == (200, prepared)
+        assert call(url, "read") == (409, {"error": "API_OPERATION_DEPLOYMENT_REQUIRED"})
+        for query in ("deployment=", "deployment=local&deployment=other", "unknown=other"):
+            assert call(url + "?" + query, "read") == (400, {"error": "API_OPERATION_DEPLOYMENT_QUERY"})
+        assert call(url + "?deployment=unlisted", "read")[0] == 404
+        del policy["actions"]["claim-other"]
+        assert call(url, "read")[1]["request"]["action"] == "claim"
+        assert call(url + "?deployment=other", "read")[0] == 404
+        assert call("/metrics", "read")[1]["operations_by_status"] == {"PREPARED": 4}
+        assert {row["request"]["action"] for row in call("/v1/operations", "read")[1]["operations"]} == {"claim"}
     finally:
         server.shutdown()
         server.server_close()
@@ -162,16 +182,29 @@ def test_api_execution_uses_separate_state_and_legacy_retry_keeps_binding(tmp_pa
 
     journal = Journal(tmp_path / "ops.sqlite")
     spec = dict(artifact="ULRStaking", contract="staking", method="claim", deployment="visible")
-    operation = dict(id="key", request=dict(action="claim", args=[["100"]], spec=spec))
-    base = dict(mode="integration")
-    state, profile = execution_profile(journal, operation, base, {})
+    prepared = dict(action="claim", args=[["100"]], spec=spec)
+    journal.put("key", prepared)
+    requests = OperationJournal(journal.path)
+    operation = requests.find("key", ["visible"])
+    base = dict(mode="integration", chain_id="31337")
+    contracts = {"staking": {"artifact": "ULRStaking", "address": "synthetic-staking"}}
+    state, profile = execution_profile(journal, operation, base, contracts)
     assert state != journal.path
     assert profile["deployment_id"] != "operation-key"
     journal.put(profile["deployment_id"], {"profile": {"steps": []}})
-    assert execution_profile(journal, operation, base, {}) == (state, profile)
+    assert execution_profile(journal, operation, base, contracts) == (state, profile)
     legacy = dict(profile, deployment_id="operation-key")
     journal.put("operation-key", dict(profile=legacy, version="1"))
-    assert execution_profile(journal, operation, base, {}) == (journal.path, legacy)
+    assert execution_profile(journal, operation, base, contracts) == (journal.path, legacy)
+    requests.put("key", dict(prepared, spec=dict(spec, deployment="second")))
+    new_operation = requests.find("key", ["second"])
+    new_state, new_profile = execution_profile(journal, new_operation, base, contracts)
+    assert new_state == state
+    assert new_profile["deployment_id"] != legacy["deployment_id"]
+    with pytest.raises(ValueError, match="API_LEGACY_OPERATION_PROFILE_MISMATCH"):
+        execution_profile(journal, operation, dict(base, chain_id="11155111"), contracts)
+    with pytest.raises(ValueError, match="API_OPERATION_ARTIFACT_MISMATCH"):
+        execution_profile(journal, operation, base, {"staking": {"artifact": "Different"}})
 
 
 def test_secret_and_amount_policy():

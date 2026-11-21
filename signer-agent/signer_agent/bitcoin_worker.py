@@ -2,12 +2,12 @@
 
 import hashlib
 import json
+from secrets import token_hex
 from contextlib import contextmanager
 from eth_abi import encode
 from eth_utils import keccak
 from . import crypto
-from .bitcoin_rpc import (BitcoinRPC, BitcoinRPCError, checked_payment_proof, observation_error,
-                          payment_position, retryable_payment_observation, satoshis)
+from .bitcoin_rpc import BitcoinRPC, satoshis
 from .bootstrap import artifact
 
 
@@ -169,11 +169,12 @@ def validate(manifest, key, plan, registry, bitcoin, graph=None):
             or [bytes(x).hex() for x in payment[3]] != plan["withdrawal_refs"]
         ):
             raise ValueError("ESCROW_PAYMENT_MISMATCH")
-        due, burned = {}, 0
+        due, burned, requests = {}, 0, []
         for ref in payment[3]:
             request = escrow.functions.requests(ref).call(block_identifier=block.number)
             if request[-1] != 2 or bytes(request[-2]) != root or request[4] % 10**10:
                 raise ValueError("ESCROW_REQUEST_STATE")
+            requests.append(request)
             from .callback_admission import validate_callback
             validate_callback(escrow, request, block.number)
             script = bytes(request[5]).hex()
@@ -185,6 +186,8 @@ def validate(manifest, key, plan, registry, bitcoin, graph=None):
             due[script] = due.get(script, 0) + request[4] // 10**10
             if int(request[2], 16) != 0:
                 burned += request[4] // 10**10
+        from .bitcoin_onchain_payment import validate_custody_outputs
+        validate_custody_outputs(escrow, requests, block.number, plan["outputs"])
         for script, amount in due.items():
             if (
                 sum(int(o["amount"]) for o in plan["outputs"] if o["script"] == script)
@@ -373,13 +376,7 @@ class BitcoinWorker:
             db.row_factory = None
             yield db
 
-    def broadcast(self, batch_id, signed, replaces=None):
-        try:
-            self.rpc.check_network()
-        except BitcoinRPCError as error:
-            if retryable_payment_observation(error) and error.rpc_code != -5:
-                raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE") from error
-            raise
+    def _retry_payment_observations(self):
         # A transport failure is retryable, but cannot be ignored by sending a
         # different payment. Recheck every unavailable observation first.
         with self.db() as db:
@@ -387,15 +384,59 @@ class BitcoinWorker:
         for (observed_batch,) in pending:
             observed = self.confirmation(observed_batch)
             if observed["status"] == "OBSERVATION_UNAVAILABLE":
-                if observed.get("retryable") is False:
-                    raise ValueError(observed["error_code"])
                 raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+
+    def remember_observed_broadcast(self, batch_id, signed, *, replacement=None):
+        """Record an already visible, escrow-bound payment for later exact RBF."""
+        from .funding_envelope import inspect_funding
+
+        raw, txid, wtxid = (signed[field] for field in ("signed", "txid", "wtxid"))
+        decoded = inspect_funding(raw, txid)
+        if decoded["wtxid"] != wtxid:
+            raise ValueError("TXID_MISMATCH")
+        self._retry_payment_observations()
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
-            if db.execute(
-                "SELECT 1 FROM payments WHERE status='RECOVERY_REQUIRED'"
-            ).fetchone():
-                raise ValueError("PAYMENTS_PAUSED_FOR_RECOVERY")
+            self._check_payment_pauses(db)
+            existing = db.execute(
+                "SELECT id,signed,txid,wtxid FROM payments WHERE id=? OR txid=?", (batch_id, txid),
+            ).fetchall()
+            if existing and existing != [(batch_id, raw, txid, wtxid)]:
+                raise ValueError("BATCH_VERSION_CONFLICT")
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS versions (id TEXT PRIMARY KEY, root TEXT NOT NULL, previous TEXT NOT NULL)"
+            )
+            ancestry = db.execute("SELECT root,previous FROM versions WHERE id=?", (batch_id,)).fetchone()
+            if ancestry and ancestry != replacement:
+                raise ValueError("BATCH_VERSION_CONFLICT")
+            if replacement:
+                # The caller supplies ancestry from the authenticated confirmed batch registry.
+                root, previous = replacement
+                if batch_id in (root, previous):
+                    raise ValueError("BATCH_VERSION_CONFLICT")
+                parent = db.execute(
+                    "SELECT p.signed,p.txid,v.root FROM payments p LEFT JOIN versions v ON v.id=p.id WHERE p.id=?",
+                    (previous,),
+                ).fetchone()
+                if parent:
+                    if (parent[2] or previous) != root:
+                        raise ValueError("BATCH_VERSION_CONFLICT")
+                    parent_inputs = inspect_funding(parent[0], parent[1])["inputs"]
+                    if [item["outpoint"] for item in parent_inputs] != [item["outpoint"] for item in decoded["inputs"]]:
+                        raise ValueError("REPLACEMENT_INPUTS_MISMATCH")
+                if not ancestry:
+                    db.execute("INSERT INTO versions VALUES(?,?,?)", (batch_id, root, previous))
+            if existing:
+                db.execute("UPDATE payments SET status='BROADCAST' WHERE id=? AND status='SIGNED'", (batch_id,))
+            else:
+                db.execute("INSERT INTO payments VALUES(?,?,?,?,'BROADCAST',NULL)", (batch_id, raw, txid, wtxid))
+
+    def broadcast(self, batch_id, signed, replaces=None):
+        self.rpc.check_network()
+        self._retry_payment_observations()
+        with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._check_payment_pauses(db)
             row = db.execute(
                 "SELECT signed FROM payments WHERE id=?", (batch_id,)
             ).fetchone()
@@ -436,74 +477,116 @@ class BitcoinWorker:
                 )
         # Crash after storage or broadcast is resumable using the exact same bytes and txid.
         try:
-            found = self.rpc.call("getrawtransaction", signed["txid"])
-            if found != signed["signed"]:
-                raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-        except BitcoinRPCError as error:
-            if error.rpc_code != -5 or error.http_status in (401, 403):
-                if retryable_payment_observation(error):
-                    raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE") from error
-                raise
+            self.rpc.call("getrawtransaction", signed["txid"])
+        except Exception:
             accepted = self.rpc.call("testmempoolaccept", [signed["signed"]])[0]
             if not accepted.get("allowed"):
                 raise ValueError("MEMPOOL_REJECTED")
-            if self.rpc.call("sendrawtransaction", signed["signed"]) != signed["txid"]:
-                raise ValueError("TXID_MISMATCH")
+            # Order the send and any concurrently recorded pause in one journal.
+            with self.db() as db:
+                db.execute("BEGIN IMMEDIATE")
+                self._check_payment_pauses(db)
+                if self.rpc.call("sendrawtransaction", signed["signed"]) != signed["txid"]:
+                    raise ValueError("TXID_MISMATCH")
         with self.db() as db:
-            db.execute("UPDATE payments SET status='BROADCAST' WHERE id=?", (batch_id,))
+            db.execute("UPDATE payments SET status='BROADCAST' WHERE id=? AND status='SIGNED'", (batch_id,))
         return signed["txid"]
 
-    def _confirming(self, batch_id, expected_status):
+    @staticmethod
+    def _check_payment_pauses(db):
+        if db.execute("SELECT 1 FROM payments WHERE status='RECOVERY_REQUIRED'").fetchone():
+            raise ValueError("PAYMENTS_PAUSED_FOR_RECOVERY")
+        if db.execute("SELECT 1 FROM payment_observations LIMIT 1").fetchone():
+            raise ValueError("BITCOIN_OBSERVATION_UNAVAILABLE")
+
+    @staticmethod
+    def _payment_state(db, batch_id):
+        row = db.execute(
+            "SELECT p.txid,p.status,p.proof,o.detail FROM payments p "
+            "LEFT JOIN payment_observations o ON o.id=p.id WHERE p.id=?", (batch_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("UNKNOWN_BATCH")
+        return row
+
+    @staticmethod
+    def _observation_detail(row):
+        detail = json.loads(row[3]) if row[3] else {"status": row[1]}
+        detail.pop("revision", None)
+        return detail
+
+    def _paused(self, row):
+        return dict(self._observation_detail(row), status="RECOVERY_REQUIRED")
+
+    def _changed(self, db, batch_id, observed):
+        current = self._payment_state(db, batch_id)
+        if current == observed:
+            return None
+        if current[1] == "RECOVERY_REQUIRED":
+            return self._paused(current)
+        return dict(status="OBSERVATION_UNAVAILABLE", error_code="BITCOIN_OBSERVATION_UNAVAILABLE")
+
+    def _confirming(self, batch_id, observed):
         with self.db() as db:
-            changed = db.execute(
-                "UPDATE payments SET status='CONFIRMING' WHERE id=? AND status=? AND proof IS NULL",
-                (batch_id, expected_status))
-            if changed.rowcount != 1:
-                raise ValueError("BTC_RECOVERY_CHANGED")
+            db.execute("BEGIN IMMEDIATE")
+            changed = self._changed(db, batch_id, observed)
+            if changed:
+                return changed
+            db.execute("UPDATE payments SET status='CONFIRMING' WHERE id=?", (batch_id,))
             db.execute("DELETE FROM payment_observations WHERE id=?", (batch_id,))
         return dict(status="CONFIRMING")
 
-    def _observation_failure(self, batch_id, error, *, recovery=False):
+    def _observation_failure(self, batch_id, observed, error, *, recovery=False):
+        from .bitcoin_rpc import observation_error
         detail = dict(status="RECOVERY_REQUIRED" if recovery else "OBSERVATION_UNAVAILABLE",
                       **observation_error(error))
-        if not recovery and not retryable_payment_observation(error):
-            detail["retryable"] = False
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
-            if db.execute("SELECT status FROM payments WHERE id=?", (batch_id,)).fetchone()[0] == "RECOVERY_REQUIRED":
-                recovery = True
-                detail["status"] = "RECOVERY_REQUIRED"
-                detail.pop("retryable", None)
-            db.execute("INSERT OR REPLACE INTO payment_observations VALUES(?,?)", (batch_id, json.dumps(detail)))
+            changed = self._changed(db, batch_id, observed)
+            if changed:
+                return changed
+            # Distinguish two observations with the same public error. A recovery
+            # started before a newer pause must recheck against the newer state.
+            recorded = dict(detail, revision=token_hex(16))
+            db.execute("INSERT OR REPLACE INTO payment_observations VALUES(?,?)", (batch_id, json.dumps(recorded)))
             if recovery:
                 db.execute("UPDATE payments SET status='RECOVERY_REQUIRED' WHERE id=?", (batch_id,))
         return detail
 
     def confirmation(self, batch_id, depth=6, *, recover=False):
+        from .bitcoin_rpc import (BitcoinRPCError, check_known_payment_anchor, check_payment_block,
+                                  observation_error, payment_block, payment_block_height, verify_payment_proof)
+
         if depth < 1:
             raise ValueError("CONFIRMATION_DEPTH")
         with self.db() as db:
-            row = db.execute(
-                "SELECT txid,status,proof,signed FROM payments WHERE id=?", (batch_id,)
-            ).fetchone()
-        if not row:
-            raise ValueError("UNKNOWN_BATCH")
+            row = self._payment_state(db, batch_id)
         if row[1] == "RECOVERY_REQUIRED" and not recover:
-            with self.db() as db:
-                observation = db.execute("SELECT detail FROM payment_observations WHERE id=?", (batch_id,)).fetchone()
-            return dict(json.loads(observation[0]) if observation else {}, status="RECOVERY_REQUIRED")
-        if row[2]:
+            return self._paused(row)
+        saved_proof = json.loads(row[2]) if row[2] else None
+        if saved_proof:
             # Never recover at a shallower depth than the original observation.
-            depth = max(depth, int(json.loads(row[2]).get("depth", 6)))
+            depth = max(depth, int(saved_proof.get("depth", 6)))
         try:
             self.rpc.check_network()
+        except Exception as error:
+            return self._observation_failure(batch_id, row, error, recovery=row[1] == "RECOVERY_REQUIRED")
+        try:
             tx = self.rpc.call("getrawtransaction", row[0], True)
         except Exception as error:
             # Missing transactions may be an RBF version, an unindexed node or
             # an outage. Only Core's structured -5 can trigger family lookup.
-            if (not isinstance(error, BitcoinRPCError) or error.rpc_code != -5
-                    or error.http_status in (401, 403) or row[2] or recover):
-                return self._observation_failure(batch_id, error, recovery=row[1] == "RECOVERY_REQUIRED")
+            missing = isinstance(error, BitcoinRPCError) and error.rpc_code == -5
+            if missing and saved_proof and saved_proof.get("block_hash"):
+                try:
+                    check_known_payment_anchor(self.rpc, saved_proof["block_hash"])
+                except ValueError as block_error:
+                    if str(block_error) == "BITCOIN_PAYMENT_REORG":
+                        return self._observation_failure(batch_id, row, block_error, recovery=True)
+                except BitcoinRPCError:
+                    pass  # The older block could not be checked. Keep the original observation error.
+            if not missing or saved_proof or recover:
+                return self._observation_failure(batch_id, row, error, recovery=row[1] == "RECOVERY_REQUIRED")
             with self.db() as db:
                 db.execute(
                     "CREATE TABLE IF NOT EXISTS versions (id TEXT PRIMARY KEY, root TEXT NOT NULL, previous TEXT NOT NULL)"
@@ -521,36 +604,31 @@ class BitcoinWorker:
                     continue
                 try:
                     visible = self.rpc.call("getrawtransaction", txid, True)
-                except BitcoinRPCError as missing:
-                    if missing.rpc_code == -5 and missing.http_status not in (401, 403):
-                        continue
-                    return self._observation_failure(batch_id, missing)
-                except Exception as unavailable:
-                    return self._observation_failure(batch_id, unavailable)
-                try:
-                    confirmations, _, _ = payment_position(self.rpc, txid, visible)
-                except Exception as unavailable:
-                    return self._observation_failure(batch_id, unavailable)
-                if confirmations >= depth:
+                except Exception:
+                    continue
+                if visible.get("confirmations", 0) >= depth:
                     result = self.confirmation(alternative, depth)
                     return dict(result, confirmed_batch=alternative)
                 return dict(
                     status="REPLACED_PENDING", replacement=alternative, txid=txid
                 )
-            return self._observation_failure(batch_id, error)
+            return self._observation_failure(batch_id, row, error)
         try:
-            if not isinstance(tx, dict) or tx.get("hex") != row[3]:
-                raise ValueError("BITCOIN_RPC_RESPONSE_INVALID")
-            confirmations, block, height = payment_position(self.rpc, row[0], tx)
-            if confirmations < depth:
+            block = payment_block(tx, row[0], depth, bitcoin=self.rpc)
+            original_block = saved_proof.get("block_hash") if saved_proof else None
+            if original_block and (block is None or (block != original_block and not recover)):
+                check_known_payment_anchor(self.rpc, original_block)
+            if block is None:
                 if row[2] or row[1] == "RECOVERY_REQUIRED":
-                    raise ValueError("BITCOIN_PAYMENT_REORG")
-                return self._confirming(batch_id, row[1])
-            proof = checked_payment_proof(self.rpc, row[0], block, height)
+                    raise ValueError("BITCOIN_PAYMENT_DEPTH_PENDING")
+                return self._confirming(batch_id, row)
+            height = payment_block_height(self.rpc, block)
+            proof = verify_payment_proof(self.rpc, row[0], block)
+            check_payment_block(self.rpc, block, height)
         except Exception as error:
             hard = row[1] == "RECOVERY_REQUIRED" or observation_error(error)["error_code"] in (
                 "BITCOIN_PAYMENT_REORG", "INVALID_PAYMENT_PROOF")
-            return self._observation_failure(batch_id, error, recovery=hard)
+            return self._observation_failure(batch_id, row, error, recovery=hard)
         result = dict(
             status="CONFIRMED",
             txid=row[0],
@@ -561,13 +639,12 @@ class BitcoinWorker:
         )
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
-            current = db.execute("SELECT status,proof FROM payments WHERE id=?", (batch_id,)).fetchone()
-            if current != (row[1], row[2]):
-                raise ValueError("BTC_RECOVERY_CHANGED")
-            observation = db.execute("SELECT detail FROM payment_observations WHERE id=?", (batch_id,)).fetchone()
-            if observation or row[1] == "RECOVERY_REQUIRED":
+            changed = self._changed(db, batch_id, row)
+            if changed:
+                return changed
+            if row[3] or row[1] == "RECOVERY_REQUIRED":
                 db.execute("INSERT OR REPLACE INTO payment_recoveries VALUES(?,?)", (batch_id, json.dumps(
-                    dict(previous=json.loads(observation[0]) if observation else {"status": row[1]},
+                    dict(previous=self._observation_detail(row),
                          proof=result, manually_reviewed=bool(recover)))))
             db.execute(
                 "UPDATE payments SET status='CONFIRMED',proof=? WHERE id=?",

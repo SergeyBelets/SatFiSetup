@@ -5,14 +5,17 @@ from .contour import digest
 from .contour_tx import original,exact
 from signer_agent.bootstrap import Bootstrap
 from signer_agent.spv_automation import Budget
+from signer_agent.transaction_wait import observation_pending
 
 
 class Required(Exception):pass
 class Hold(Exception):pass
 class Progress(Exception):pass
+class ObservationPending(Exception):pass
 
 
 def evidence(profile,entry,receipt):
+    if receipt is None and entry['status']=='CONFIRMED':raise ObservationPending()
     if receipt is None or entry['status']!='CONFIRMED':raise Hold()
     return dict(profile=profile,original_transaction=entry,receipt=dict(status=int(receipt['status']),
         block_number=str(receipt['blockNumber']),block_hash=bytes(receipt['blockHash']).hex(),tx_hash=entry['result']['tx_hash']))
@@ -35,16 +38,18 @@ class Calls:
                         profile['deployment_id'],profile['steps'][0],actor.c['identity_file'])
 
     def receipt(self,profile,actor,entry):
-        from web3.exceptions import TransactionNotFound
         target=profile['contracts'][profile['steps'][0]['contract']]
         exact(entry,profile['steps'][0],actor.c['chain_id'],target['address'],target['artifact'],actor.c['identity_file'],actor.c)
         checker=self.runner(profile,actor)
-        try:return checker.verify_receipt(entry['result'])
-        except TransactionNotFound:return None
+        return checker.observe_receipt(entry['result'])
 
     def apply(self,profile,actor,budget=None,key=None,*,recover=False):
         runner=self.runner(profile,actor,budget,key)
-        result=runner.apply(actor.c['identity_file'],before_submit=(lambda steps:True) if recover else None)
+        try:
+            result=runner.apply(actor.c['identity_file'],before_submit=(lambda steps:True) if recover else None)
+        except Exception as error:
+            if not observation_pending(error):raise
+            raise ObservationPending() from None
         if result['status']=='NOT_SIGNED':raise Hold()
         if result['status']!='VERIFIED':raise Progress()
         receipt=self.receipt(profile,actor,self.entry(profile,actor))
@@ -57,7 +62,8 @@ class Calls:
             if not entry['result'].get('raw_transaction'):raise Hold()
             receipt=self.receipt(profile,actor,entry)
             if receipt is not None and entry['status']=='CONFIRMED':continue
-            if receipt is None and entry['status']=='CONFIRMED':raise Hold()
+            if receipt is None and (entry['status']=='CONFIRMED' or entry['result'].get('block_hash')):
+                raise ObservationPending()
             if self.action=='probe':raise Required()
             self.used=True;self.apply(profile,actor,recover=True);raise Progress()
 
@@ -68,6 +74,8 @@ class Calls:
         entry=self.entry(profile,actor)
         if entry['result'].get('raw_transaction'):
             receipt=self.receipt(profile,actor,entry)
+            if receipt is None and (entry['status']=='CONFIRMED' or entry['result'].get('block_hash')):
+                raise ObservationPending()
             if receipt is not None and entry['status']=='CONFIRMED':
                 identifier=digest([actor.c['identity_file'],profile['deployment_id']]);saved=dict(actor=actor_name,profile=profile)
                 old=self.record.setdefault('calls',{}).get(identifier)

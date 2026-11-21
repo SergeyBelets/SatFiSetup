@@ -1,5 +1,0 @@
-#!/private/tmp/satoshifi-zkspv-py311/bin/python
-import sys
-sys.path.insert(0,'/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4')
-from ops.zkspv.groth16_docker import main
-main()

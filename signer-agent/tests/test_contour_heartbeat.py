@@ -88,7 +88,8 @@ def test_receipt_loss_or_freshness_loss_cannot_grant_completion(own):
     historical=e.heartbeat()[1]
     assert historical['status']=='SATISFIED' and historical['observations']['current_fresh'] is False
     e.fresh=True;e.receipts.clear()
-    assert e.heartbeat()[1]['status']=='RECOVERY_REQUIRED'
+    result=e.heartbeat()[1]
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
 
 
 def test_evidence_carries_binary_receipt_inputs_reports_and_exact_signed_envelope(own):

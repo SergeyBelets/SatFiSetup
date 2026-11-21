@@ -320,6 +320,13 @@ def test_broadcast_route_aggregates_with_the_descriptor_of_each_input(signing,mo
     monkeypatch.setattr(transport,"collect",lambda *_:(work["commitments"],share_rows,[],[]))
     monkeypatch.setattr(transport,"bitcoin_for_graph",lambda *_:e.bitcoin)
     e.batch_values["batchState"]=lambda _:2
+    core_call=e.bitcoin.call
+    def before_broadcast(method,*args):
+        if method=="getrawtransaction" and args[0]==m.build(e.plan)["txid"]:
+            from signer_agent.bitcoin_rpc import BitcoinRPCError
+            raise BitcoinRPCError("BITCOIN_RPC_REJECTED",rpc_code=-5)
+        return core_call(method,*args)
+    monkeypatch.setattr(e.bitcoin,"call",before_broadcast)
     observed=[]
     monkeypatch.setattr(worker.BitcoinWorker,"broadcast",lambda self,batch,signed:observed.append(signed) or signed["txid"])
     args=SimpleNamespace(action="btc-broadcast",state=str(e.states[0].path),batch=e.plan["batch_id"],

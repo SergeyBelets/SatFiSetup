@@ -1,0 +1,15 @@
+{
+  "name": "inputs_257",
+  "raw_file": "test/fixtures/funding-stripped-v1/inputs_257.hex",
+  "target_vout": 1,
+  "expected": {
+    "txid": "949d73ae22ecbf573c169e2528dead3ad51796c8e1805514c0cc1252b9d77237",
+    "raw_sha256d": "3772d7b95212ccc0145580e1c89617d53aadde28259e163c57bfec22ae739d94",
+    "stripped_bytes": 10986,
+    "input_count": 257,
+    "output_count": 2,
+    "target_value": 5000000258,
+    "target_script_hex": "51208383838383838383838383838383838383838383838383838383838383838383",
+    "inputs_abi_keccak256": "c7cfd5a6c847f16720ce9b3f0d1e6d64d6a58efd4e4e0418b6175535bb2b073a"
+  }
+}

@@ -7,7 +7,7 @@ import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit, parse_qs
+from urllib.parse import urlsplit, parse_qs, unquote
 from .safe_errors import DiagnosticArgumentParser
 from .operations import Journal, OperationJournal, public_data, prepare_operation
 from .bootstrap import Bootstrap, encode_args, artifact
@@ -190,13 +190,14 @@ def handler(policy, journal):
                     deployments = policy.get("deployments", [])
                     query = parse_qs(url.query, keep_blank_values=True)
                     if query:
-                        if set(query) != {"deployment"} or len(query["deployment"]) != 1:
-                            raise ValueError("API_OPERATION_DEPLOYMENT_REQUIRED")
+                        if set(query) != {"deployment"} or len(query["deployment"]) != 1 or not query["deployment"][0]:
+                            raise ValueError("API_OPERATION_DEPLOYMENT_QUERY")
                         deployments = [name for name in deployments if name == query["deployment"][0]]
-                    return self.reply(
-                        200, public_operation(policy, requests.get(path.split("/")[-1],
-                            deployments=deployments))
+                    entry = requests.get(
+                        unquote(path.rsplit("/", 1)[-1]), deployments=deployments,
+                        visible=lambda row: operation_visible(policy, row),
                     )
+                    return self.reply(200, public_operation(policy, entry))
                 if path == "/v1/deployments":
                     return self.reply(
                         200, {"deployments": policy.get("deployments", [])}
@@ -302,7 +303,11 @@ def handler(policy, journal):
                 return self.reply(404, {"error": "NOT_FOUND"})
             except ValueError as exc:
                 code = str(exc)
+                if code == "API_OPERATION_DEPLOYMENT_REQUIRED":
+                    return self.reply(409, {"error": code})
                 if code in (
+                    "API_OPERATION_DEPLOYMENT_QUERY",
+                    "INVALID_IDEMPOTENCY_KEY",
                     "VIEW_ARGUMENTS_FIXED",
                     "VIEW_ARGUMENTS_SIZE",
                     "INTEGER_ARGUMENT_STRING_REQUIRED",

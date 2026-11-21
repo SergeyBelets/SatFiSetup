@@ -346,13 +346,19 @@ class Store:
             key,immutable,next_height=rows[round_robin%len(rows)]
             self._check_immutable(immutable)
             self.put("scan_cursor",(round_robin+1)%len(rows))
+            if next_height:
+                overlap = min(next_height - 1, tip)
+                with self.journal.db() as db:
+                    prev = db.execute("SELECT hash FROM address_scans WHERE intent=? AND height=?", (key, overlap)).fetchone()
+                if tip < next_height - 1 and (prev is None or prev[0] == best):
+                    if bitcoin.call("getbestblockhash") != best:
+                        raise ValueError("ADDRESS_CORE_CHANGED")
+                    return dict(status="WAITING_BITCOIN_RPC", intent_id=key, next_height=str(next_height),
+                        tip=str(tip), bestblock=best, ready=False)
+                if prev is None or bitcoin.call("getblockhash", overlap) != prev[0]:
+                    next_height=self._rewind(bitcoin,key,next_height,max_reorg,tip,best)
             if next_height>MAX_REORG+1:
                 self._trim_scans(key,next_height)
-            if next_height:
-                with self.journal.db() as db:
-                    prev=db.execute("SELECT hash FROM address_scans WHERE intent=? AND height=?",(key,next_height-1)).fetchone()
-                if next_height-1>tip or not prev or bitcoin.call("getblockhash",next_height-1)!=prev[0]:
-                    next_height=self._rewind(bitcoin,key,next_height,max_reorg,tip,best)
             if next_height<=tip:
                 with self.journal.db() as db:
                     db.execute("DELETE FROM address_meta WHERE id=?", ("coverage:"+key,))

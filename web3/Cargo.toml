@@ -1,0 +1,6 @@
+# Legacy coordinator examples under web3 are not executable protocol implementations.
+# The supported Rust crate and its lockfile are ../frost-crypto/Cargo.toml and Cargo.lock.
+# This deliberately empty workspace prevents the former "Adjust version" dependency being built.
+[workspace]
+members = []
+resolver = "2"

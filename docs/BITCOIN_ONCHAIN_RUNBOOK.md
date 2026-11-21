@@ -8,7 +8,12 @@ mainnet/testnet4/regtest: [матрица и команды flow](NETWORKS_AND_A
 [Bitcoin инструкции](BITCOIN_MAINNET_RUNBOOK.md). Для Ethereum chain 1
 сначала выполните [V6 bootstrap](ETHEREUM_MAINNET_RUNBOOK.md): paid fees,
 finalized Ethereum и локальные gas budgets обязательны при любом выборе Bitcoin.
-Все суммы Bitcoin ниже — целые сатоши, MP — `10^10` единиц на сатоши.
+Все суммы Bitcoin ниже — целые сатоши. У MP федерации и S конфедерации V3
+по `10^10` базовых единиц на сатоши. Для переноса MP команды подготовки и
+расчёта исходного платежа запускаются на board федерации. Для погашения S
+они запускаются на board конфедерации и готовят план v5. Оплата майнерам входит
+в погашаемую сумму S. [Порядок MP → S → BTC](BITCOIN_CUSTODY_TRANSFER.md#профиль-v3-с-прямым-btc-резервом) ·
+[Формула выплаты в V3](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров).
 
 В текущем custody-профиле эту инструкцию выполняют кастодианы денежного ключа,
 а не представитель федерации. В примере Alice/Bob/Carol Bitcoin- и conf-EVM
@@ -111,9 +116,12 @@ registry. Число `4096` — явный лимит публичного па�
 
 Выберите `BATCH` — новый непустой 32-байтовый идентификатор, hex без `0x`.
 `DEADLINE` — согласованный будущий Unix timestamp. `BACKING_INPUT` и `FEE_INPUT`
-имеют вид `txid:vout`, где txid в обычном Bitcoin display-порядке. Непокрытый
-выпуском MP treasury UTXO должен покрывать miner fee: principal нельзя тратить
-на комиссию. `REQUEST_KEY` — bytes32 ключ подготовленного escrow-запроса.
+имеют вид `txid:vout`, где txid в обычном Bitcoin display-порядке.
+`REQUEST_KEY` — bytes32 ключ подготовленного escrow-запроса.
+Пример с `FEE_INPUT` относится к графу MP. Его Bitcoin-казна покрывает
+miner fee отдельным UTXO вне обеспечения MP. Для погашения S в V3 укажите
+только полностью учтённые входы резерва конфедерации. В плане v5 комиссия
+майнеров вычитается из выплат в пределах лимитов заявок.
 
 ```sh
 btc btc-prepare --signing-board "$SIGNING_BOARD" --batch "$BATCH" \
@@ -133,9 +141,11 @@ policy; индексы не копируют из другого приглаш�
 
 Для [передачи внешнего MP](BITCOIN_CUSTODY_TRANSFER.md) здесь используется
 **исходный** граф и его настоящий roster/threshold; `REQUEST_KEY` получен из
-`custody-transfer request`. Выход направлен на скрипт назначения. После
-исходного `btc-settle` другая сторона выполняет `custody-transfer finalize`.
-При последующем выводе cBTC все команды относятся уже к графу назначения.
+`custody-transfer request`. Для V3 выделите один точный выход на полную
+сумму заявок одного gateway. Остальные выплаты на тот же скрипт проведите
+отдельным batch. После исходного `btc-settle` другая сторона выполняет
+`custody-transfer finalize`. При выводе полученных S или cBTC подпись и
+расчёт выполняет граф назначения.
 
 ## 4. Одобрить reserve и опубликовать план
 
@@ -249,9 +259,20 @@ sighashes, точный транскрипт и spent journal. Это тольк
 
 ## 7. Отправить и завершить расчёт
 
-Любой участник с активным BTC state может запустить тот же `flow payment` с
-`--actor operator`: он ждёт подписи, выполняет broadcast и ждёт proof/settlement.
-`--signing-board` и `--batch` остаются явными. Для ручного одного действия:
+Любой участник с активным BTC state может дождаться подписей, отправить
+платёж и завершить settlement одной командой. После перезапуска повторите её
+с теми же `--state`, `--signing-board` и `--batch`.
+
+```sh
+frost-signer flow payment --actor operator --board "$BOARD" --rpc "$RPC" \
+  --identity-file "$IDENTITY" --state "$PARTICIPANT_DIR/btc_ceremony.enc" \
+  --password-file "$PARTICIPANT_DIR/password" \
+  --signing-board "$SIGNING_BOARD" --batch "$BATCH" \
+  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE" \
+  --interval 5 --timeout 86400
+```
+
+Для ручной отправки выполните:
 
 ```sh
 btc btc-broadcast --signing-board "$SIGNING_BOARD" --batch "$BATCH"
@@ -273,31 +294,43 @@ unwrap fees. Повтор settlement возвращает уже оплачен�
 сжигания. Тестовый Core требует явного майнинга блоков; CLI не майнит их скрыто.
 
 После settlement `btc-status` и повторный `btc-settle` с указанным Core снова
-проверяют каноничность и глубину платежа. Недоступность RPC или отсутствие
-транзакции в индексе сохраняют `OBSERVATION_UNAVAILABLE`: дальнейшие подписи
-и broadcast ждут успешной повторной проверки того же txid и его merkle proof.
-Повторите команду после восстановления Core/RPC; `flow payment` продолжает
-ожидание автоматически в пределах своего `--timeout`. Новая подпись и новый
-платёж для обхода этой проверки не создаются. Ответ содержит безопасный
+проверяют каноничность и глубину платежа. При перезапуске `flow payment`
+сначала сверяет точный платёж в escrow, до сбора FROST-подписей и отправки.
+Канонический рассчитанный платёж завершает flow с `PAID`. Если совпадающую
+транзакцию уже видит Core, flow продолжает settlement. Для новой Bitcoin-
+траты перед подписью и отправкой проверяется свежесть relay или ZK-состояния
+согласно профилю.
+Недоступность RPC, неполный ответ провайдера, один код Core `-5` или
+недобор подтверждений при совпадающем якоре дают `OBSERVATION_UNAVAILABLE`.
+При недоборе глубины SDK сообщает `BITCOIN_PAYMENT_DEPTH_PENDING`.
+Следующая команда подписи или broadcast сначала
+повторяет наблюдение исходного txid и сверяет его merkle proof. После
+успешной проверки работа продолжается. `flow payment` повторяет также сбои
+Core во время подготовки broadcast или settlement в пределах своего
+`--timeout`. Ответ содержит безопасный
 `error_code` и, если Core вернул JSON-RPC ошибку, числовой `rpc_error_code`
 (при HTTP-ошибке также `http_status`);
 текст провайдера, cookie и URL с учётными данными не записываются.
 
-Если Core подтверждает потерю глубины или неканоничность блока, сохраняется
-`RECOVERY_REQUIRED`. Даже восстановление цепочки само не снимает эту паузу.
-Каждый остановленный участник сверяет оплаченный txid с escrow, проверяет
-состояние своего Core/relay и запускает для **исходного** batch:
+Если Core показывает другой канонический хеш на высоте блока settlement,
+сохраняется `RECOVERY_REQUIRED`. SDK применяет ту же проверку якоря,
+когда Core не нашёл txid. SDK атомарно сверяет текущую запись при обновлении наблюдения, чтобы
+результат старой проверки сохранил более свежую ручную паузу. Снять её можно
+явной командой восстановления. Каждый остановленный участник сверяет
+оплаченный txid с escrow и запускает для **исходного** batch:
 
 ```sh
 btc btc-recover --signing-board "$SIGNING_BOARD" --batch "$BATCH"
 ```
 
 `PAYMENTS_RESUMED` означает, что тот же оплаченный txid снова каноничен,
-имеет требуемую escrow глубину и проверенный Core merkle proof. Команда сохраняет
-локальный журнал проверки Bitcoin/EVM anchors, не отправляет транзакций и не
-сбрасывает секретные nonces или spent journal. Если proof не подтверждён, пауза
-остаётся. `PAYMENTS_NOT_PAUSED` означает отсутствие локальной паузы. Старые
-паузы без классификации также снимаются этой командой только после проверки.
+имеет требуемую escrow глубину и проверенный Core merkle proof. Для этой
+проверки достаточно канонической EVM-записи escrow и актуального Bitcoin Core,
+даже если relay ещё догоняет сеть. Перед следующей подписью SDK снова проверяет
+готовность relay. Команда сохраняет локальный журнал с Bitcoin/EVM anchors.
+Если proof не подтверждён, пауза остаётся. `PAYMENTS_NOT_PAUSED` означает
+отсутствие локальной паузы. Старые паузы без классификации также снимаются
+этой командой только после проверки.
 Для отдельного операторского `bitcoin confirm` доступна аналогичная команда
 `bitcoin recover` с теми же аргументами Core, сети и `--state`, `--batch`;
 она проверяет операторский журнал и не заменяет `dkg btc-recover` на машинах
@@ -319,7 +352,7 @@ btc btc-recover --signing-board "$SIGNING_BOARD" --batch "$BATCH"
 | `btc-publish-plan` | `PLAN_PUBLISHED` |
 | `btc-commit` / `btc-sign` | `COMMITTED` / `SIGNED` |
 | `btc-broadcast` | `BROADCAST`, `txid` и `wtxid` |
-| Первый `btc-settle` | `BTC_PAYMENT_SETTLED`; `AWAITING_BITCOIN_RELAY` ещё не settlement |
+| Первый `btc-settle` | `BTC_PAYMENT_SETTLED`. При `AWAITING_BITCOIN_RELAY` или `AWAITING_ZK_HEADER_MATERIALIZATION` дождитесь SPV и повторите вызов |
 | Проверка уже оплаченного платежа | `PAID`; `OBSERVATION_UNAVAILABLE` требует повтора, `RECOVERY_REQUIRED` — ручного разбора и `btc-recover` |
 | `btc-recover` | `PAYMENTS_RESUMED` либо `PAYMENTS_NOT_PAUSED` |
 
@@ -331,16 +364,18 @@ btc btc-recover --signing-board "$SIGNING_BOARD" --batch "$BATCH"
 
 ## Отказы и ограничения
 
-- Публичный Bitcoin требует V6 policy, отдельного `MainnetHeaderRelay` или
-  `Testnet4HeaderRelay` и `MainnetSPVGuard`.
-  Halt, неверный checkpoint/work, stale Core или relay блокируют действия;
-  регтест-флаг не является способом продолжить работу с этим wallet.
+- Публичный Bitcoin требует согласованной V6 policy. Relay использует
+  `MainnetHeaderRelay` или `Testnet4HeaderRelay` с `MainnetSPVGuard`. ZK
+  использует собственные state и adapter выбранной сети. Halt, неверный
+  checkpoint или отставание Core/SPV блокируют новые денежные операции.
 - Недостающий commitment/share отображается в `btc-status`; сменить состав после
   подписания нельзя. Отказ участника блокирует текущую попытку.
 - После Signing исчезновение транзакции из mempool, timeout и потеря связи не
   разрешают возврат MP/S. Требуется предусмотренное протоколом восстановление.
-- Новый CLI создаёт первичный платёж. Одобренные RBF replacements остаются отдельным
-  существующим протоколом; автоматической смены версии/fee или signer subset нет.
+- Для V3 подготовьте замену через `btc-prepare --previous BATCH_ID` с теми же
+  упорядоченными входами и заявками. Каждый новый batch проходит отдельные
+  reserve, bind и Bitcoin FROST.
+  [Лимиты и расчёт RBF](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров).
 - Получатель withdrawal не может совпадать с P2TR script самого общего wallet:
   CLI отклоняет такую заявку, чтобы не смешивать выплату principal и change.
 - Новый board имеет расширенный runtime и требует нового deployment; старый

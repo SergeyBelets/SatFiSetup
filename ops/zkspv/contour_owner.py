@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from .contour import digest,private_write,sha
-from .contour_calls import Calls,Required,Progress,Hold
+from .contour_calls import Calls,Required,Progress,Hold,ObservationPending
 from signer_agent.onboarding import read_private
 from signer_agent.btc_fee_reserve import Inspector,load_config as fee_config
 from signer_agent.withdrawal_user import Withdrawal
@@ -71,6 +71,7 @@ class Pipeline:
                 self.r.owner.cancel(self.r.quote['operation_id']);return self.result('WAITING','OWNER_CANCELLATION_CONFIRMING')
             except Required:return self.result('ABSENT','ORIGINAL_OWNER_OPERATION_REQUIRED')
             except Progress:return self.result('ABSENT','ORIGINAL_OWNER_OPERATION_PROGRESS')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_OWNER_RECOVERY_REQUIRED')
         finally:os.close(fd)
 

@@ -1,7 +1,0 @@
-{
-  "anvil_pid": 3457,
-  "bitcoin_pid": 3458,
-  "rpc_url": "http://127.0.0.1:63636",
-  "bitcoin_rpc_url": "http://127.0.0.1:63637",
-  "working_directory": "/private/tmp/satoshifi-regtest-deposit-run-03"
-}

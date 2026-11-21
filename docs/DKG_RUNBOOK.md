@@ -55,10 +55,14 @@ frost-signer dkg run-once --manifest manifest.json --rpc http://127.0.0.1:8545 -
 frost-signer dkg status --manifest manifest.json --rpc http://127.0.0.1:8545
 ```
 
-Run `run-once` on each participant until all report ACTIVE. WAITING states require another
-participant/message; retry does not regenerate a round or ciphertext. A cryptographic
-validation failure or transcript mismatch aborts. A timeout needs a new session ID and
-new randomness. Never publish plaintext round 2, SecretPackage or the encrypted-store password.
+Run `run-once` on each participant until all report `ACTIVE`. A participant
+returning `WAITING_DKG_RPC` can wait for its endpoint or retry with a reviewed
+RPC on the same chain and the same local state. Retrying preserves the round and
+ciphertext. On `DKG_REVIEW_REQUIRED`, review the reason and phase. To terminate
+the ceremony, rerun the same command with `--confirm-abort FINGERPRINT`, using
+the returned `confirm_abort` value. Start a new session ID with fresh randomness
+after a confirmed timeout or abort. Keep plaintext round 2, SecretPackage and the
+encrypted-store password private.
 
 ## Export / import
 

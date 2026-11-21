@@ -70,6 +70,11 @@ def review_intent(w3, intent, bundle, at):
     def read(c, name, *args):
         return getattr(c.functions, name)(*args).call(block_identifier=at)
     def mining(address):
+        if invite.get("ulr", {}).get("version") == "3":
+            reserve = contract(address, "ConfederationBitcoinReserve")
+            pool = contract(read(reserve, "confederationPool"), "ConfederationPoolV2")
+            check(w3, read(pool, "shareToken"), "confederation_share", invite, at)
+            return
         pool = contract(address, "MiningPoolV1")
         mp = contract(read(pool, "mpToken"), "PoolMpToken")
         if read(mp, "poolDAO") != pool.address:
@@ -87,6 +92,8 @@ def review_intent(w3, intent, bundle, at):
         if intent.get("hash_method") == "getAddPoolOperationHash":
             mp = contract(intent["hash_args"][0], "PoolMpToken")
             mining(read(mp, "poolDAO"))
+    elif kind == "ConfederationBitcoinReserve":
+        mining(intent["target"])
     elif kind == "MiningPoolV1":
         mining(intent["target"])
     elif kind == "BitcoinMintAdmission":

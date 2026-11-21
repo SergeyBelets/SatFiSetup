@@ -99,6 +99,37 @@ prover могут быть существенно выше. Успешный pre
 RAM, длительность или вместимость конкретного proof. Локальный regtest не
 синхронизирует mainnet и не подключает пользовательский Bitcoin datadir.
 
+## Отдельный локальный прогон V3
+
+Соберите Solidity-артефакты и native FROST до запуска. Установите
+`frost-signer` в venv из той же копии репозитория, из которой запускаете
+pytest. Для набора V3 используйте отдельные Anvil с chain ID `31337` и
+Core 30.3 regtest с `txindex` и отдельным datadir. Укажите адреса этих узлов
+и путь к cookie.
+
+```sh
+export SATOHSI_TEST_RPC=http://127.0.0.1:18545
+export SATOHSI_BTC_RPC=http://127.0.0.1:18443
+export SATOHSI_BTC_COOKIE=/absolute/private/regtest/.cookie
+python -m pytest -q tests/e2e/test_in_kind_bootstrap.py
+python -m pytest -q tests/e2e/test_custody_transfer.py -k native-s-pass
+```
+
+Набор bootstrap проверяет `create/reuse` с разными участниками и расчёт
+дневного дохода. `test_stakers_claim_net_confirmed_income` подтверждает
+возмещение газа по receipt, перенос дохода на следующие UTC-сутки, claim
+двух стейкеров в пропорции 1:3 и повтор команды без второй выплаты.
+Сценарий `native-s-pass` проверяет погашение MP, приём BTC-резерва, покупку
+NFT за обеспеченные S и вывод со скидкой. Дождитесь окончания теста перед
+пересборкой артефактов, чтобы bootstrap мог завершиться по тем же хешам.
+[Локальные результаты и границы проверки](COLD_START.md#10-схема-холодного-старта-и-границы-проверки).
+
+`zk-testnet4` проверяет native witness и verifier 3.1.0 на локальном Anvil.
+Опциональный `SATOHSI_ZK_ACCEPTANCE_RECEIPT_DIR` для `zk-cached` содержит
+`state.journal` и `groth16/verified/seal.bin` для фиксированного локального
+mainnet-сценария на Anvil `31337`. Раннер сверяет адрес state из journal
+и сам proof. Этот сценарий использует уже вычисленный на своём хосте proof.
+
 ## Новый proof и публичные сети
 
 Сначала заполните приватные worker/service/owner bindings и соберите план по

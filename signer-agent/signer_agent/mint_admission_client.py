@@ -145,8 +145,11 @@ def dispatch_funding(a, manifest, key, registry, state, graph, contracts, target
         record = _execution_record(registry, address, int(claim[6]), role)
         if not _approved_current(record):
             raise ValueError("BTC_MINT_AUTHORIZATION_NOT_APPROVED")
-        send(registry, target.address, "MiningPoolV1", "mintFromProof",
-            [*execute_args, record["operation_hash"]], graph=graph)
+        from .bitcoin_issuer import kind as issuer_kind
+        from .zk_submission import options as proof_submission
+        send(registry, target.address, issuer_kind(target), "mintFromProof",
+            [*execute_args, record["operation_hash"]], graph=graph,
+            **proof_submission(registry, graph, execute_args[2]))
     current = confirmed_block(registry.w3, graph)
     if not _mint_complete(target, arguments, current):
         raise ValueError("BTC_OPERATION_POSTCONDITION")

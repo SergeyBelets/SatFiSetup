@@ -108,14 +108,14 @@ even before the configured EVM confirmation depth.
 
 ## Proof and header operations
 
-Each participant computes working Bitcoin transition proofs independently.
-The [participant archive](DISTRIBUTION.md) contains code/program/pins, without
-ready receipts, working inputs/journals or caches. Each participant prepares
-its own attempt from its Core and archive, then runs `zk_worker prove`.
-Default worker `run` also computes locally without publishing. The designated
-publisher explicitly uses `zk_worker publish` or `run --boundary all` and the
-worker checks local origin plus receipt validity. See the
-[multi-participant sequence](DISTRIBUTION.md#рабочий-переход-у-каждого-участника).
+The [participant source archive](DISTRIBUTION.md) contains code, programs and
+pins. Each proving worker prepares an attempt from its own Core and archive.
+Default worker `run` computes locally. Choose `run --boundary prepare` to stop
+after native preparation, or `run --boundary export` to compute and export a
+public ZIP for independent review. The designated publisher explicitly uses
+`zk_worker publish` or `run --boundary all` and checks its own origin and
+proof. [Worker modes](ZK_SPV_WORKER.md#worker-modes-and-transition-archives) ·
+[Public archive for read-only review](DISTRIBUTION.md#публичный-архив-перехода).
 The supported local runner platforms are macOS arm64 and Linux/WSL2 x86-64.
 Follow the [Linux prover runbook](ZK_PROVER_LINUX.md) before enrollment.
 Unsupported platforms, including Linux ARM64 full proving, remain blocked.
@@ -159,9 +159,41 @@ Every canonical root change, including append, invalidates the adapter's
 cached headers. Re-materialize the deposit/payment header before mint/settle.
 The ordinary transaction proof and all SMP1/allocation/FROST checks are still
 required. Participant settlement reports `AWAITING_ZK_HEADER_MATERIALIZATION`
-when the current root has no valid cached header. A different backend requires
-a separately enrolled deployment; existing immutable consumer bindings cannot
-be switched in place.
+when the current root has no valid cached header. Immutable consumer bindings
+remain tied to the enrolled backend.
+
+If Core reports less chainwork than the processed-observation journal, or a
+different tip with the same work, the worker reports
+`ZK_OBSERVATION_CORE_BEHIND`. Retry with the same journal after Core catches up.
+The saved chainwork and evidence of a verified deep reorg remain available for
+review. When only one queued transaction is temporarily unavailable, its
+`WAITING_BITCOIN_RPC` status delays that job. Other jobs can continue under the
+same gas and attempt limits. The automated SPV observer uses the network in the
+enrolled Bitcoin policy, including testnet4 for the Sepolia profile.
+
+### Retry after a proof call reverts
+
+An ordinary root update can arrive between simulation and EVM inclusion.
+The consumer rechecks current-root membership on chain. If the resulting call
+reverts, let the worker materialize the same Bitcoin header under the current
+root. Review the saved receipt and repeat the original participant command
+with the same identity, journal, and operation arguments. For a withdrawal,
+repeat `dkg btc-settle` with the original batch and Bitcoin payment.
+
+The first EVM attempt retains its existing journal ID. A pending attempt is
+reconciled with its saved transaction and nonce. For an attempt with a
+finalized canonical revert, the SDK checks that the header is usable under the
+current root and simulates the identical call. When the old materialization
+root was recorded, the retry requires a different root. A pre-upgrade journal
+can lack that root. For such a journal the same canonical revert and current
+proof checks are required before retry. Once those checks pass, the SDK
+acknowledges the old nonce and records a separate EVM attempt for the same operation and
+calldata. Missing current materialization or an unchanged recorded root
+returns `ZK_PROOF_ROOT_PENDING` or `ZK_PROOF_ROOT_UNCHANGED`.
+
+Back up the original transaction, nonce and signer journals before installing
+the upgraded SDK. A confirmed Bitcoin reorg follows the separate payment
+recovery procedure. [SDK recovery](RECOVERY.md).
 
 ## Evidence and remaining boundary
 

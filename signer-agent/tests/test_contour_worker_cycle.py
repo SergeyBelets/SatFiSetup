@@ -90,12 +90,13 @@ def test_partial_chunk_does_not_complete_state_update(chunks):
     assert e.cycle('probe')[1]['status']=='ABSENT'
 
 
-def test_missing_historical_receipt_or_changed_input_blocks_further_chunks(chunks):
+def test_missing_historical_receipt_waits_without_starting_further_chunks(chunks):
     e=chunks
     for _ in range(6):e.cycle()
     p,_=e.cycle('probe');assert p.cycle['history']
     original=deepcopy(e.worker.inbox.get(p.key));e.receipts.clear()
-    with pytest.raises(ValueError,match='CYCLE_HISTORY_LOST'):e.cycle()
+    result=e.cycle()[1]
+    assert result['status']=='WAITING' and result['observations']['reason']=='EVM_RECEIPT_PENDING'
     assert e.worker.inbox.get(p.key)==original and len(e.stages)==3
 
 

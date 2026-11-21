@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from .contour import digest,private_write,sha
-from .contour_calls import Calls,Required,Hold,Progress
+from .contour_calls import Calls,Required,Hold,Progress,ObservationPending
 from signer_agent.btc_fee_reserve import Inspector,load_config as fee_config,read
 from signer_agent.withdrawal_fee_funding import Funding
 from signer_agent.withdrawal_fee_client import Owner
@@ -171,6 +171,7 @@ class Pipeline:
                     if self.c['mode']=='FUNDING' else result['status']=='WITHDRAWAL_FEE_OWNER_CONFIRMED')
                 return self.result('SATISFIED' if done else 'WAITING',result['status'])
             except Required:return self.result('ABSENT','ORIGINAL_FEE_OPERATION_REQUIRED')
+            except ObservationPending:return self.result('WAITING','EVM_RECEIPT_PENDING')
             except Hold:return self.result('RECOVERY_REQUIRED','ORIGINAL_FEE_RECOVERY_REQUIRED')
             except Progress:return self.result('ABSENT','ORIGINAL_FEE_OPERATION_PROGRESS')
             finally:self.r.i.transaction_controller=None

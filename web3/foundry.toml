@@ -1,0 +1,29 @@
+[profile.default]
+src = 'contracts/src'
+test = 'test'
+out = 'contracts/out'
+libs = ['lib']
+# Auto-detected scoped remappings embed the absolute checkout path in metadata.
+# Exact runtime verification across participant hosts requires relative mappings.
+auto_detect_remappings = false
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+solc_version = "0.8.30"
+# Pin the target: changing Foundry must not silently change deployed bytecode.
+evm_version = "osaka"
+# Monetary gas bounds model each external test action as a separate transaction.
+isolate = true
+fs_permissions = [
+    { access = "read", path = "./test/fixtures" },
+    { access = "read", path = "./contracts/out" },
+]
+
+remappings = [
+    '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts',
+    '@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts',
+    'forge-std/=lib/openzeppelin-contracts/lib/forge-std/src/',
+]
+
+[profile.test]
+gas_reports = true

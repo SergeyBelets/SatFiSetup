@@ -29,11 +29,14 @@ verifier. Переход с уже используемого графа 3.0.0 �
 
 | Область | Ограничение и проверка перед запуском |
 | --- | --- |
-| Сети и RPC | Relay поддерживает regtest, testnet4 и mainnet. ZK поддерживает отдельные профили testnet4 и mainnet. Для удалённого стенда каждый участник до enrollment проверяет свой Sepolia RPC и архивный Bitcoin Core HTTPS RPC с `txindex`. Участникам нужны подтверждённые тестовые ETH для газа, тестовые BTC для денежных сценариев и согласованные USD-бюджеты. [Холодный старт](COLD_START.md) |
-| Bitcoin | Не более 50 адресов на batch вывода. Минимум получателю 294 sats для P2WPKH и 330 sats для P2TR. Для ZK предел перехода 64 headers, предел reorg 100 блоков. Глубина денежного подтверждения и Fresh проверяются отдельно. [Математика Bitcoin](LAUNCH_MATHEMATICS.md#bitcoin-подтверждения-maturity-и-fresh--разные-проверки) |
+| Сети и RPC | Relay поддерживает regtest, testnet4 и mainnet. ZK поддерживает отдельные профили testnet4 и mainnet. Для удалённого стенда каждый участник до enrollment проверяет свой Sepolia RPC и архивный Bitcoin Core HTTPS RPC с `txindex`. Bitcoin RPC требует действующий сертификат на указанный адрес с публичной цепочкой `certifi`. Участникам нужны подтверждённые тестовые ETH для газа, тестовые BTC для денежных сценариев и согласованные USD-бюджеты. [Инструкция для коллег](PEER_TESTING.md#как-sdk-проверяет-https-для-bitcoin-rpc) |
+| Bitcoin | Платёжный план on-chain поддерживает до 16 входов, 32 заявок и 32 выходов вместе со сдачей. Минимум получателю 294 sats для P2WPKH и 330 sats для P2TR. Для ZK предел перехода 64 headers, предел reorg 100 блоков. Глубина денежного подтверждения и Fresh проверяются отдельно. [Вывод в V3](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров) · [Математика Bitcoin](LAUNCH_MATHEMATICS.md#bitcoin-подтверждения-maturity-и-fresh--разные-проверки) |
 | ZK prover | macOS arm64 или Linux/WSL2 x86-64, Groth16 в pinned контейнере linux/amd64. Свободное место от 8 GiB для preflight. Измерьте время, RAM и пиковое место на свежем proof каждого участника. [Установка и изоляция](ZK_PROVER_LINUX.md) |
-| Дневной снимок ULR | До 4096 адресов в inventory вместе с действующими кастодианами, до 64 казн. Лимит board 32 KiB, полный snapshot intent до 4 MiB при публикации SHA-256. Перед подписанием SDK проверяет нижнюю границу газа. Проверьте полный расчёт и исполнение при целевом составе. [Казначейства](ULR_TREASURIES.md) |
+| Дневной отчёт DAO V3 | Для закрытого UTC-дня сверить подтверждённые поступления S или одобренных стейблкоинов, реальные расходы и чистые выплаты по полному стейку дня. FROST и approvals кастодианов утверждают отчёт. [Учёт V3](CONFEDERATION_DAO_IN_KIND.md#приём-и-распределение) |
+| Дневной снимок ULR прежнего профиля | До 4096 адресов вместе с действующими кастодианами. В pin до 64 казн. Новый реестр допускает до 64 однократных активаций системным FROST после регистрации. Состав проверяется на UTC-срезе. Новый intent до 16 KiB публикуется целиком, до 4 MiB через привязку SHA-256. Остаток неучтённого выпуска должен быть строго меньше порога. SDK проверяет нижнюю границу газа. Проверьте полный gas исполнения при целевом составе. [Казначейства](ULR_TREASURIES.md) |
+| Operational API | HTTP готовит запрос в рамках политики. Локальный исполнитель сверяет deployment и artifact и использует сохранённый журнал. Для повторяющегося ключа укажите deployment. При переносе состояния сохраните также файл `<state>.api-execution.sqlite`. [Operational API](OPERATIONAL_API.md) |
 | Возобновление | Используйте тот же deployment ID и журнал. При зависшем nonce сначала сверяются журнал, on-chain nonce и receipts, а закрытие nonce требует отдельного решения оператора. Для legacy journal сохраните оригинальный комплект артефактов. [Восстановление bootstrap](BOOTSTRAP.md#withdrawal-deployment-and-recovery) |
+| Разная высота RPC | У каждого участника свой RPC. Он ждёт нужной высоты и глубины общего якоря перед продолжением. Для смены EVM RPC на том же журнале используйте локальный override `--rpc` и дождитесь проверки сохранённых якорей. [Восстановление при отставании RPC](RECOVERY.md#5-отставание-rpc-участников) |
 | Допуск средств | `graph_configured` подтверждает конфигурацию. `ready`, `QUALIFIED`, `FEE_QUALIFIED` и `production_ready` требуют отдельных проверок. Для испытаний используйте testnet4 BTC и Sepolia ETH. |
 
 Решение о допуске реальных средств требует отдельной проверки FROST/HPKE
@@ -61,11 +64,11 @@ verifier. Переход с уже используемого графа 3.0.0 �
 команды и границы — в [тестовом runbook](SYSTEM_TEST_MODES.md#проверка-custody-от-4-ноября-2026).
 `graph_configured=true` по-прежнему не означает `ready=true`.
 
-Обновление поставки от 3 ноября: [каждый ZK-участник сам считает рабочие proofs](DISTRIBUTION.md).
-В participant archive нет готовых receipts/seals, inputs/journals и caches.
-Новый SDK разделяет локальный расчёт и публикацию; собственный cache требует
-локальной записи происхождения. Прежние acceptance-отчёты ниже относятся к
-своим исходным snapshots и не подтверждают эти новые изменения.
+[Поставка SDK](DISTRIBUTION.md) исключает готовые receipts и seals, inputs,
+journals и локальные caches. Для рабочих переходов участники могут готовить
+данные и считать proof локально либо сверять публичный ZIP от выделенного
+prover-хоста. [Режимы ZK-воркера](ZK_SPV_WORKER.md).
+Прежние acceptance-отчёты ниже относятся к своим исходным snapshots.
 
 Эта карта относится к новому `--system-policy` Bitcoin + ULR deployment.
 Готовность исходников и шаблонов не означает, что уже выбраны участники, RPC,
@@ -77,7 +80,7 @@ verifier. Переход с уже используемого графа 3.0.0 �
 
 ```mermaid
 flowchart TD
-    S["Одна поставка: source и pins без working proofs"] --> H["Каждый: native build, identity, свой RPC/Core<br/>ZK tools и isolation preflight до enrollment"]
+    S["Одна поставка: source и pins без working proofs"] --> H["Каждый: native build, identity, свой RPC/Core<br/>На prover: pinned tools и isolation preflight"]
     H --> C["Configure wizard, validate и offline build<br/>Сети, имена, H/m, reserve/bps, APY"]
     C --> E["ETH для первых EVM-транзакций<br/>Invitation review, publish и enrollment"]
     E --> F["Optional funding pause перед DKG<br/>Confirmed balances и явное снятие"]
@@ -85,7 +88,8 @@ flowchart TD
     D --> R["Resume того же deployment<br/>Root pin и target-bound FROST review"]
     R --> G{"Текущий барьер плана"}
     G -->|"Relay"| L["Sync Core, canonical work, health и depth"]
-    G -->|"ZK"| Z["State и verifier 3.1.0<br/>Каждый считает свой proof"]
+    G -->|"ZK"| Z["State и verifier 3.1.0<br/>Подготовка данных и расчёт proof"]
+    Z -.-> ZR["Публичный ZIP участникам FROST<br/>Независимая проверка через свой EVM RPC"]
     Z --> ZP["Проверенный seal 0xe71e6620<br/>Один publisher, полезный update и Fresh"]
     G -->|"Governance distribution"| U["Create: выпуск 10 млн одному адресу<br/>Ручная рассылка и свежий fingerprint"]
     G -->|"Подписи"| A["Нужные роли: свои FROST и custodian approvals"]
@@ -104,8 +108,9 @@ flowchart TD
 обычного consumer deployment. Явный структурный этап `--defer-zk-freshness`
 допускает подготовку consumer/heartbeat graph; он не разрешает денежные операции
 и не заменяет окончательный verify без defer. Личный worker и initial heartbeat настраиваются
-после появления адреса state; checkpoint сам по себе не Fresh. Дальнейшие
-рабочие переходы участники также считают самостоятельно.
+после появления адреса state; checkpoint сам по себе не Fresh. Для следующих
+переходов тот же publisher использует свой локальный proof. Участники могут
+сверить переходы по публичным ZIP или своим расчётам.
 
 Linux, macOS и Ubuntu внутри Windows/WSL2 используют один SDK и протокол.
 Локальный ZK prover реализован для macOS arm64 и Linux/WSL2 x86-64. Для relay
@@ -118,6 +123,10 @@ EVM выбирается независимо: 1, 11155111 или 31337. `graph_
 и физический WSL2 прогон остаются отдельной приёмкой.
 
 ## Экономический граф ULR
+
+Схема ниже относится к прежнему профилю с общей казной и стейкингом. V3
+сохраняет общий выпуск ULR и ведёт стейкинг и отчёт каждой конфедерации
+отдельно. [Схема и формулы V3](CONFEDERATION_DAO_IN_KIND.md#приём-и-распределение).
 
 ```mermaid
 flowchart TD
@@ -150,6 +159,10 @@ flowchart TD
 
 ## Повторное использование с другими участниками
 
+V3 импортирует общие ULR и USD из проверенного manifest. У новой группы
+свои DKG, S, резерв и стейкинг. Схема ниже показывает дополнительное
+подключение к общему Bitcoin family root в прежнем полном профиле.
+
 ```mermaid
 sequenceDiagram
     participant New as Новая группа
@@ -178,14 +191,14 @@ snapshot-authority. Она использует свои identity, encrypted sta
 | Вопрос | Принятая конфигурация |
 | --- | --- |
 | Статус от согласованного H | Кандидат по кошельку + собственному stake; включение в действующий состав требует отдельного одобрения |
-| Вес дохода | Все держатели от H и действующие кастодианы с меньшим положительным весом; в числителе — действующий состав конфедерации |
-| Казна и остаток | Свободный баланс одного общего USD; R, не выплаченная по bps и доле часть остаются в казне; отдельный утверждённый operational spend может уменьшить остаток ниже R |
+| Вес дохода | В V3 чистый доход DAO распределяется по полнодневному стейку своей конфедерации. В прежнем профиле доля казны использует веса держателей от H и действующих кастодианов с меньшим положительным весом |
+| Казна и остаток | В V3 расчёт использует фактически полученные S и стейблкоины после возмещения расходов. В прежнем профиле R и невыплаченная часть свободного USD остаются в казне |
 | Выбор SPV | Relay или ZK выбирается при развёртывании в рамках поддерживаемых сетей |
 | Выпуск MP | Проверка Bitcoin-доказательства и отдельное FROST-одобрение сохраняются |
 | Делегирование | Голоса направляются действующему кастодиану; stake и награды принадлежат владельцу |
 | Денежные ключи конфедерации | Отдельные EVM/BTC DKG только кастодианов; кандидат/делегат не получает долю ключа автоматически |
-| MP → cBTC между графами | Реальный Bitcoin-платёж и погашение исходного MP до выпуска cBTC; после приёма исходные участники для вывода не нужны |
-| NFT | Опциональный post-bootstrap FROST create/mint; право issuer у manager, quote не расходует quota, consuming caller — одобренный contract-pool |
+| MP → S между графами | После исходного платежа и погашения MP конфедерация принимает точный выход и выпускает S. BTC при погашении S платит конфедерация. Прежний профиль использует cBTC через локальный MP |
+| NFT | В V3 FROST и кастодианы утверждают тариф, оператор подписывает цену, покупатель платит S и получает проездной. В прежнем профиле используются FROST create/mint и read-only quote |
 
 Эти уточнения заменяют соответствующие первоначальные формулировки об
 автоматическом составе кастодианов, обязательном ZK и оценке любых активов казны
@@ -200,16 +213,17 @@ snapshot-authority. Она использует свои identity, encrypted sta
 | --- | --- | --- |
 | Полный системный профиль | Version 1; `bootstrap_system.bundle`; `system-bootstrap-*.example.json` | Сгенерировать `system-profile` из собственной сборки и согласованных policy |
 | Отдельные ключи конфедерации | `bitcoin_custody`, `conf_ceremony` и `btc_ceremony` только кастодианов | До enrollment выбрать порог, источники и runtime hashes; старые профили не обновляются |
-| Передача BTC под новый ключ | `BitcoinCustodyTransfer`; отдельные source/destination registry и escrow | Исходный расчёт и погашение MP, точный канонический выход назначения, только затем выпуск cBTC; см. runbook передачи |
-| Имена токенов | `token_metadata`: четыре роли с `name` / `symbol`; `token-metadata.example.json` | Задать до enrollment; при reuse сохранить `ulr.token` общего токена |
-| ULR create/reuse | Version 1; `bootstrap_ulr.validate` | Первый create либо `ulr.reuse_policy` реального verified manifest |
+| Передача BTC под новый ключ | `BitcoinCustodyTransferV2` в V3, `BitcoinCustodyTransfer` в прежнем профиле | Исходный расчёт с погашением MP, канонический выход назначения и выпуск S или cBTC. [Порядок передачи](BITCOIN_CUSTODY_TRANSFER.md) |
+| Имена токенов | `token_metadata` с `name` / `symbol`, `token-metadata.example.json` | Задать до enrollment, для reuse закрепить общий токен из verified manifest |
+| ULR create/reuse | ULR policy V3 для `income_model=in-kind` | Первый create либо `manifest.ulr.reuse_policy` реального verified manifest |
 | Bitcoin backend | Relay policy V1 либо ZK policy V2; network validators | Собственный checkpoint/Core; для ZK — реальные state/adapter bindings |
 | Приглашение и три ceremony | V6; `onboarding.validate_invite` и проверенные enrollments | Сети, адреса, порядок, threshold, custodian minimum, сроки и расходы |
-| Bitcoin family root | `create-1` или pin из исходного verified manifest | Исходный board, authority и независимо проверенный fingerprint |
-| ULR treasury pin | Version 1; `ulr_treasury.load_pin` | Реальные staking/snapshots/treasuries, chain ID и confirmations |
-| NFT pin | Version 1; `nft_governance.validate_pin` / `nft init` | Свои chain/confirmations, board/role, factory и fee manager; точные create/mint intents отдельно |
-| Дневной inventory | `ulr-snapshot-inputs.example.json`; `snapshot_arguments` | Предыдущие сутки, последний исторический блок, полный inventory и evidence hash |
-| Snapshot evidence | Version 3; SDK и контрактный ABI | Формирует SDK по архивному RPC; не копировать пример дня или block 1 |
+| Bitcoin family root прежнего профиля | `create-1` или pin из исходного verified manifest | Исходный board, authority и независимо проверенный fingerprint |
+| ULR treasury pin прежнего профиля | Version 1, `ulr_treasury.load_pin` | Реальные staking/snapshots/treasuries, chain ID и confirmations |
+| NFT | В V3 проверенные адреса DAO и продажи проездных из verified manifest либо discovery | Для V3 утвердить тариф и подписать цену. Для прежнего create/mint подготовить свой NFT pin через `nft init` |
+| Дневной отчёт V3 | `dao-report --in-kind`, подтверждённые receipts и согласованные курсы | Закрытые UTC-сутки, активы в base units, хеши расходов и соответствующий evidence |
+| Дневной inventory прежнего профиля | `ulr-snapshot-inputs.example.json`, `snapshot_arguments` | Предыдущие сутки, последний исторический блок, полный inventory и evidence hash |
+| Snapshot evidence | Version 4 для новых снимков; SDK проверяет точный исторический хеш v3 для незавершённых intent | Формирует SDK по архивному RPC с проверкой полноты по выпуску. Используйте фактические сутки и исторический блок |
 | ZK worker и contour | `zkspv-*.example.json`; соответствующие `load_config`/`validate_spec`/plan builders | Личные пути, host hash, actual consumers, лимиты, запросы и согласованные bindings |
 | Старый single-share service | `signer-agent/.env.example` | Это отдельный прежний сервис; новые DKG shares туда не вставляются |
 
@@ -224,8 +238,8 @@ snapshot-authority. Она использует свои identity, encrypted sta
 | --- | --- |
 | Общие | Согласованная версия/fingerprint; две сети и backend; упорядоченный roster и thresholds; deployment ID; получатель выпуска ULR; treasury; финансовые параметры и лимиты |
 | Каждый хост | Свои EVM RPC и gas; identity; каталог 0700; прежний EOA journal; свои Core RPC/cookie для публичного Bitcoin; собственные DKG states и password |
-| Sepolia + testnet4 | Синхронизированный непрореженный Core с txindex через loopback или удалённый HTTPS; общая checkpoint policy; тестовый ETH и BTC; один согласованный USD, runtime hash/decimals и средства оператора для converter |
-| После bootstrap | Реальные verified bindings; pin на каждом хосте; keeper/watch configuration; полный inventory и архивный EVM RPC для снимков; ежедневные snapshot/pay вызовы |
+| Sepolia + testnet4 | Синхронизированный непрореженный Core с txindex через loopback или удалённый HTTPS, общая checkpoint policy, тестовые ETH и BTC, согласованный USD с runtime hash и decimals. Конвертер финансируется в прежнем профиле |
+| После bootstrap | Проверенные адреса, pin на каждом хосте и обслуживающие процессы. В V3 ежедневно подготовить отчёт по поступлениям и расходам. В прежнем профиле подготовить inventory и архивный EVM RPC для snapshot/pay |
 | Новый ZK proof | macOS arm64 или Linux/WSL2 x86-64; isolation preflight; точные tool/container/guest pins; собственный bound contour plan; приватные worker/service inputs; минимум 8 GiB свободного диска и фактический ресурсный бюджет prover |
 
 RPC credentials, ключи, journals и nonce-пакеты не являются общими данными.
@@ -237,14 +251,67 @@ RPC credentials, ключи, journals и nonce-пакеты не являютс�
 
 ## Статус проверки
 
-В локальном прогоне после обновления 12 ноября прошли 4033 SDK-теста, 30 тестов
-ZK state/adapter и 9 Operations E2E. Verifier 3.1.0 принял официальный тестовый
-receipt и отклонил неверные claims. `zk-cached` проверил EVM consumers и отказ
-историческому seal, `zk-testnet4` проверил локальный граф и native witness.
-Отдельный SDK-тест на fixtures проверил формирование board digest для 300
-владельцев и отклонение подменённого файла.
-Свежий рабочий Groth16, публичный create/reuse на Sepolia/testnet4 в обоих
-режимах и прогон на физических Linux/WSL2 остаются пунктами приёмки.
+В предыдущем аудите локально прошли **3 707 тестов SDK и 964 теста Solidity**.
+Один опциональный тест SDK требует установленного `signer-agent[evm-test]`.
+Проверены отставание RPC на общей ветке, продолжение после синхронизации,
+подтверждённое расхождение хешей и возобновление с исходными журналами.
+Локальные сценарии Anvil провели DKG и FROST с порогами 2 из 3 и 3 из 5.
+[Восстановление при отставании RPC](RECOVERY.md#5-отставание-rpc-участников) ·
+[Тесты наблюдения ZK](../signer-agent/tests/test_zk_observations.py) ·
+[Тесты снимков ULR](../web3/test/ULRTreasury.t.sol).
+
+Локальная проверка API на Anvil подтвердила разделение ключей по deployment,
+повтор без нового nonce и восстановление исполнения из старого журнала.
+Проверки старых казначейств ULR покрыли полноту снимка, совместимость с
+ожидающим evidence v3 и привязку большого intent к SHA-256. На локальном
+HTTPS проверены цепочка, срок и имя сертификата Bitcoin RPC до отправки
+cookie. [Схемы проверенных сценариев](DIAGRAMS.md).
+
+Локальный relay-прогон V3 на Anvil прошёл паузы ETH-финансирования и ручной
+рассылки ULR. `create` подтвердил 176 шагов, `reuse` с другим составом 174.
+Оба графа получили `VERIFIED`. Второй использовал те же ULR и USD и получил
+отдельный стейкинг. [Тесты bootstrap V3](../tests/e2e/test_in_kind_bootstrap.py) ·
+[Отчёт холодного старта](../ops/artifacts/cold-start-local-20261121/summary.json).
+
+Сквозной прогон на Anvil и Bitcoin Core regtest перевёл 1 000 000 sats,
+погасил MP и выпустил S. Кастодианы утвердили тариф NFT, оператор подписал
+цену для покупателя, покупатель приобрёл NFT за S в эквиваленте 1 000 sats.
+Проверены повтор покупки и отклонение использования чужого NFT. При скидке
+50% на комиссию протокола владелец получил 995 153 sats. Майнеры получили
+по 1 000 sats за исходную передачу и за погашение. Остаток выпуска S полностью
+обеспечили 3 847 sats сдачи, а повтор `finalize` сохранил выпуск неизменным.
+Вывод подписали кастодианы конфедерации. [Тест перевода и выхода](../tests/e2e/test_custody_transfer.py).
+
+В отдельной репетиции дневного DAO-расчёта поступило 1 000,000001 TUSD.
+Канонический receipt и курс дали 0,157640 TUSD возмещения, а два стейкера
+со стейками 1:3 получили 249,960590 и 749,881770 TUSD. Осталась одна базовая
+единица округления. В день внесения стейка доход перенесён, право на claim
+возникло после следующего полного UTC-дня. Суммы возмещения зависят от газа
+и курса конкретного прогона. [Тест дневного claim](../tests/e2e/test_in_kind_bootstrap.py) ·
+[Расчёт V3](CONFEDERATION_DAO_IN_KIND.md#приём-и-распределение).
+
+В проверке RPC участники видели EVM-высоты 19, 13 и 10. При отставании
+`verify` и `resume` вернули `AWAITING_EVM_RPC`. На Bitcoin regtest высоты
+114, 112 и 109 давали разную глубину выплаты. Отстающие наблюдатели ждали
+подтверждений и высоты watch. После синхронизации проверки продолжились по
+тем же журналам, без повторной отправки проверенных EVM-транзакций.
+[Отчёт холодного старта](../ops/artifacts/cold-start-local-20261121/summary.json).
+
+В предыдущей компонентной проверке прошли 30 тестов ZK state/adapter,
+124 целевых SDK-теста и три интеграции с Anvil. Проверены графы mainnet и
+testnet4, подготовка native witness и отказ активного verifier 3.1.0 принимать
+старый seal. Preflight проверяет версию собранных артефактов и наличие
+локального каталога proof, когда он задан для теста.
+
+Структурная проверка ZK на локальном Anvil с chain ID 11155111 и историческими
+testnet4 заголовками завершила три DKG, развернула 49 контрактов и подготовила
+native witness. Для witness использован ранее собранный бинарник с проверенным
+SHA-256. Обычный resume вернул `AWAITING_ZK_PROOF`. Preflight обнаружил около
+1,93 GiB свободного места при минимуме 8 GiB и отсутствие закреплённых
+инструментов prover. Свежий Groth16 receipt, публичный create/reuse
+на Sepolia/testnet4 и физические Linux/WSL2 остаются в приёмке.
+[Структурный тест](../tests/e2e/test_zk_testnet4_e2e.py) ·
+[Отчёт холодного старта](../ops/artifacts/cold-start-local-20261121/summary.json).
 [Тестовые режимы](SYSTEM_TEST_MODES.md) · [Результаты предыдущей проверки безопасности](SECURITY_LOGIC_REVIEW_2026_11_03.md#повторная-проверка-12-ноября-2026).
 
 Актуализация 5 ноября: [конфигуратор и полная функциональная приёмка](../ops/artifacts/launch-configurator-20261105/README.md)
