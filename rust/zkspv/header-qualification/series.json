@@ -1,0 +1,40 @@
+{
+  "schema": "satoshifi.header-transition-qualification.v1",
+  "production_ready": false,
+  "upstream_commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "parent_series": "../patches/series.json",
+  "arithmetic_input_sha256": "d7dfa614897b43edfcc6a8957baf87a8c94ff0a73620a3613d15b7a7ae222c6f",
+  "patched_sha256": "6032160ce35ea5cd043ad69600bde95fb4d5d921d00d6be3b561d5975832cfdc",
+  "patch": {
+    "file": "0004-checked-chainwork.patch",
+    "sha256": "a8f694ea2fb41ceef906b9aafb4f0e562cc7e36f49f4d716dbf4ea331c61650f"
+  },
+  "fixture_archive": {
+    "sha256": "591197b7a10896859d873a757d53ae39edd541414702b17c15a82d3f4d0b12c6",
+    "member": "citrea-2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da/test_data/testnet4/headers-40310-42346.txt",
+    "source": "Exact upstream archive; fixture copied unchanged"
+  },
+  "source_sha256": {
+    "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/verifier.rs": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+    "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/network_constants.rs": "882e7d37e8ff4aa5090c84ba08aa9921be5d06d4cefcde13a06dff581f8bb5d4",
+    "rust/zkspv/vendor/citrea-2ed54463/crates/sovereign-sdk/rollup-interface/src/state_machine/da.rs": "8d71f71da0c9b9758890b59a82d109ff505f9ece19d3341cf94eace4eb66ffb7",
+    "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/headers-40310-42346.txt": "845c4c282fa8d258276b6ab2d5c4f8c4504c1e4d0d34ecfbb59bb9e8d4cda039",
+    "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/test_data/mainnet/headers-872918-874954.txt": "fa68376444d68b54ef41282cb9a103ebc3a39a9aba455e70342b6ac9526e6fa8",
+    "rust/zkspv/header-qualification/fixtures/testnet4-40310-42346.txt": "1dbf2afb7c5158ef7772436d40625987f868e34891572cbf0ac251ff4fce9734",
+    "rust/zkspv/patches/series.json": "c27865039e25b02e93fa07d398ca52936096fd7e7cdd70032cde05c81b3c7515",
+    "rust/zkspv/patches/apply_patches.py": "1f8d74b1a183541332fda633e14dd369900bd485f5b3219d75b93c9a600a4cb2",
+    "rust/zkspv/tools/prepare_arithmetic_probe.py": "54dd45bd188b4be00703c49aaab6f9d3b1b3d304f4d4e175d1009c23130a510f",
+    "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/arith_uint256.cpp": "33099a41d032d02f49f2d0269f31749c6b9d7cee3fdc8ce0c3cadfe46786d1a8",
+    "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/pow.cpp": "a01f9a36201f1f28de72cf1a82ed67634a47b03bb5d3387eef961f461cbc2002",
+    "rust/zkspv/vendor/bitcoin-core-ee42d59d/COPYING": "7c4a87f43afaf667b4c2187af92ebdd27310a24cec113f973e058e3300a76002"
+  },
+  "chainwork_output_sha256": "667f3e480fc616c41f717e6443189cc9e1b1a0559373b493baead2b92be898b9",
+  "additional_patches": [
+    {
+      "file": "0005-checked-compact-target.patch",
+      "sha256": "2e85b75eedbb982d840fb144b0fdf0ba2a35dccf54ea3a77bd17643258393c92",
+      "input_sha256": "667f3e480fc616c41f717e6443189cc9e1b1a0559373b493baead2b92be898b9",
+      "output_sha256": "6032160ce35ea5cd043ad69600bde95fb4d5d921d00d6be3b561d5975832cfdc"
+    }
+  ]
+}

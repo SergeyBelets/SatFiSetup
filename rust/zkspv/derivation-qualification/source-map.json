@@ -1,0 +1,293 @@
+{
+  "cargo_lock": {
+    "bytes": 28500,
+    "path": "frost-crypto/Cargo.lock",
+    "sha256": "b4cd58c4b367bc27a8aaf157ae308dca3baf6152c73fe9c6292acd5040836bdb"
+  },
+  "packages": [
+    {
+      "cached_archive_bytes": 370633,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "0fda569d741b895131a88ee5589a467e73e9c4718e958ac9308e4f7dc44b6945",
+      "name": "bitcoin",
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 86726,
+          "crate_relative_path": "src/taproot/mod.rs",
+          "matches_pinned_crate": true,
+          "sha256": "bbee8329e9469bc2606884eaa34a5cfa843d5836f75833705c4821b954af4b16"
+        },
+        {
+          "bytes": 14942,
+          "crate_relative_path": "src/blockdata/script/owned.rs",
+          "matches_pinned_crate": true,
+          "sha256": "dfa38a250d4836768232bbd8db1a89c67fd17e05886dab682feeb6ded5dfee28"
+        },
+        {
+          "bytes": 60391,
+          "crate_relative_path": "src/crypto/key.rs",
+          "matches_pinned_crate": true,
+          "sha256": "d4d6fbbc98e0bea0d30de71a446b2f0d28babd630ded962248aa100c242e635d"
+        }
+      ],
+      "version": "0.32.7"
+    },
+    {
+      "cached_archive_bytes": 72331,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "2619366c227233c0f817ae01156bd21b8cf74d2bd96cbe0889f4c2e266724e44",
+      "name": "frost-core",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "3ffc19d8f473d5bc4e07ed41bc884bdb42d6c29f"
+        },
+        "path_in_vcs": "frost-core"
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 34156,
+          "crate_relative_path": "src/keys.rs",
+          "matches_pinned_crate": true,
+          "sha256": "1743db3cec0acf5473a6b53a624b3f1f747ecb7a81d0a1355ee5dc9c043d8671"
+        },
+        {
+          "bytes": 24300,
+          "crate_relative_path": "src/keys/dkg.rs",
+          "matches_pinned_crate": true,
+          "sha256": "30fe1a294e2d997166298b7de382bec0e954d2e81f0ec5d199c496b65ccab028"
+        }
+      ],
+      "version": "2.2.0"
+    },
+    {
+      "cached_archive_bytes": 39748,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "ff8a25b14bfd5d25deba5edce61ec99c3afb752a1d26630a196bba4cb1c4ca5e",
+      "name": "frost-secp256k1-tr",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "3ffc19d8f473d5bc4e07ed41bc884bdb42d6c29f"
+        },
+        "path_in_vcs": "frost-secp256k1-tr"
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 33696,
+          "crate_relative_path": "src/lib.rs",
+          "matches_pinned_crate": true,
+          "sha256": "f2c6bdf10a4a4a4eb835d3579b053981621625fb3c8f88572caf0d62c38354a1"
+        },
+        {
+          "bytes": 4896,
+          "crate_relative_path": "tests/tweaking_tests.rs",
+          "matches_pinned_crate": true,
+          "sha256": "8d3461f752876d36c88ada0e0744ac0b4cc96288d5fc6db1381925dab65d164b"
+        }
+      ],
+      "version": "2.2.0"
+    },
+    {
+      "cached_archive_bytes": 93562,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b",
+      "name": "k256",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "5ac8f5d77f11399ff48d87b0554935f6eddda342"
+        },
+        "path_in_vcs": "k256"
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 4527,
+          "crate_relative_path": "src/lib.rs",
+          "matches_pinned_crate": true,
+          "sha256": "39703b0cfe286f69e06561e4f2e12cc60dd916b87279ee66e25235f9f69ccbd9"
+        }
+      ],
+      "version": "0.13.4"
+    },
+    {
+      "cached_archive_bytes": 83339,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a",
+      "name": "rand",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "5309f25bb5e7d21ac01c5b6f476badd06f9cdc3f"
+        },
+        "path_in_vcs": ""
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 2959,
+          "crate_relative_path": "src/rngs/std.rs",
+          "matches_pinned_crate": true,
+          "sha256": "93d1b1aac522f2ae67913a7990f003850a48a781d6830d5b6e15b92b663fb3f7"
+        }
+      ],
+      "version": "0.8.6"
+    },
+    {
+      "cached_archive_bytes": 124179,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113",
+      "name": "secp256k1",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "1a1fc57fb99a5a42b996d3cdde5c48fda3797709"
+        },
+        "path_in_vcs": ""
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 85092,
+          "crate_relative_path": "src/key.rs",
+          "matches_pinned_crate": true,
+          "sha256": "afc9ffe8f83abc995258197ebc41804c6a109324f28e79857257d06642a98403"
+        },
+        {
+          "bytes": 4634,
+          "crate_relative_path": "src/scalar.rs",
+          "matches_pinned_crate": true,
+          "sha256": "3850bb13c5dd35a5107eed56227c8f2a490c09fd13564cc0bdb198290922987a"
+        }
+      ],
+      "version": "0.29.1"
+    },
+    {
+      "cached_archive_bytes": 2630580,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "d4387882333d3aa8cb20530a17c69a3752e97837832f34f6dccc760e715001d9",
+      "name": "secp256k1-sys",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "ba04d92eeed3339a30d638082ca0175c405ccff0"
+        },
+        "path_in_vcs": "secp256k1-sys"
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 62843,
+          "crate_relative_path": "src/lib.rs",
+          "matches_pinned_crate": true,
+          "sha256": "e5bbfa6ae51e1ffc41c696108d5200bf54decd1ee8d919538ed88eab22c837b7"
+        },
+        {
+          "bytes": 11497,
+          "crate_relative_path": "depend/secp256k1/src/modules/extrakeys/main_impl.h",
+          "matches_pinned_crate": true,
+          "sha256": "d8bb115b9010e0de090e221bba2a428d91f90ed7001816d47dc1b093b2db6881"
+        },
+        {
+          "bytes": 11286,
+          "crate_relative_path": "depend/secp256k1/src/modules/schnorrsig/main_impl.h",
+          "matches_pinned_crate": true,
+          "sha256": "7259e5b767654c8a09b7c0eabb11755a64b55072ef3d38b4d10c25f298017c90"
+        }
+      ],
+      "version": "0.10.1"
+    },
+    {
+      "cached_archive_bytes": 29271,
+      "cached_archive_sha256_matches_lock": true,
+      "cargo_lock_crate_sha256": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283",
+      "name": "sha2",
+      "published_vcs_metadata": {
+        "git": {
+          "sha1": "82c36a428f8d6f05f3bfccdedb243e9d1f85359d"
+        },
+        "path_in_vcs": "sha2"
+      },
+      "registry": "registry+https://github.com/rust-lang/crates.io-index",
+      "source_files": [
+        {
+          "bytes": 3559,
+          "crate_relative_path": "src/lib.rs",
+          "matches_pinned_crate": true,
+          "sha256": "b519427535b1855bbe8c3d0517b2f3d04a607cf0cb4327cc716cd5d90da5dbf1"
+        }
+      ],
+      "version": "0.10.9"
+    }
+  ],
+  "protocol_sources": [
+    "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki",
+    "https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki"
+  ],
+  "schema_version": 1,
+  "scope": "Inspected native derivation primitives, no independent audit claim",
+  "symbols": [
+    {
+      "crate": "frost-secp256k1-tr 2.2.0",
+      "file": "src/lib.rs",
+      "symbols": [
+        "hasher_to_scalar:187 (modular reduction)",
+        "tweak:206",
+        "post_dkg:479",
+        "EvenY/PublicKeyPackage:627",
+        "EvenY/KeyPackage:655",
+        "Tweak/PublicKeyPackage:752",
+        "Tweak/KeyPackage:773",
+        "round1::commit:823",
+        "round2::sign:853",
+        "aggregate:891"
+      ]
+    },
+    {
+      "crate": "frost-core 2.2.0",
+      "file": "src/keys.rs",
+      "symbols": [
+        "From<SigningShare> for VerifyingShare:233",
+        "KeyPackage::new:650",
+        "PublicKeyPackage::new:736"
+      ]
+    },
+    {
+      "crate": "frost-core 2.2.0",
+      "file": "src/keys/dkg.rs",
+      "symbols": [
+        "part3 calls C::post_dkg:661"
+      ]
+    },
+    {
+      "crate": "bitcoin 0.32.7",
+      "file": "src/taproot/mod.rs",
+      "symbols": [
+        "TapTweakHash::from_key_and_tweak:62",
+        "TapTweakHash::to_scalar:78 (panicking conversion avoided)",
+        "TapLeafHash::from_script:86",
+        "TapNodeHash::from_script:130"
+      ]
+    },
+    {
+      "crate": "bitcoin 0.32.7",
+      "file": "src/blockdata/script/owned.rs",
+      "symbols": [
+        "ScriptBuf::new_p2tr_tweaked:128",
+        "ScriptBuf::new_op_return:178"
+      ]
+    },
+    {
+      "crate": "secp256k1 0.29.1",
+      "file": "src/key.rs",
+      "symbols": [
+        "XOnlyPublicKey::add_tweak:1224"
+      ]
+    },
+    {
+      "crate": "secp256k1 0.29.1",
+      "file": "src/scalar.rs",
+      "symbols": [
+        "Scalar::from_be_bytes:68"
+      ]
+    }
+  ]
+}

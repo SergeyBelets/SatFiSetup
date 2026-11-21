@@ -1,0 +1,19 @@
+[profile.default]
+src = "contracts"
+test = "test"
+out = "/private/tmp/satoshifi-deposit-evm-artifacts"
+cache_path = "/private/tmp/satoshifi-deposit-evm-cache"
+libs = ["../../../web3/lib"]
+allow_paths = ["../../.."]
+auto_detect_remappings = false
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+solc_version = "0.8.30"
+evm_version = "osaka"
+remappings = [
+  "zk-state/=../state-adapter/contracts/",
+  "satoshifi-core/=../../../web3/contracts/src/core/",
+  "risc0-verifier/=../vendor/risc0-ethereum-365e7b2/contracts/src/",
+  "openzeppelin/=../../../web3/lib/openzeppelin-contracts/",
+]

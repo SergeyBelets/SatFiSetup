@@ -1,0 +1,16 @@
+{
+  "profile": "local",
+  "chain_id": "31337",
+  "evm_rpc": "http://127.0.0.1:8545",
+  "bitcoin_network": "regtest",
+  "bitcoin_core_version": "30.3",
+  "protocol": "SATOHSI_DKG_FROST_SECP256K1_TR_2_2_0_POSTCARD_HPKE_X25519_CHACHA_V1",
+  "max_participants": 16,
+  "max_inputs": 16,
+  "max_outputs": 32,
+  "contracts": {},
+  "production_enabled": false,
+  "mode": "integration",
+  "evm_confirmations": "1",
+  "deployment_id": "local-v1"
+}

@@ -1,0 +1,18 @@
+   Compiling satoshifi-header-time-policy v0.1.0 (/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/time-policy)
+    Finished `release` profile [optimized] target(s) in 0.97s
+     Running tests/policy.rs (/private/tmp/satoshifi-time-policy-target/release/deps/policy-6562a4270d14577b)
+
+running 10 tests
+test abi_has_exact_domain_word_order_widths_and_zero_padding ... ok
+test chunk_composition_is_associative_but_last_remains_ordered ... ok
+test empty_batch_has_no_state_or_summary ... ok
+test every_chunk_partition_preserves_maximum_count_and_last ... ok
+test composition_rejects_unrepresentable_count ... ok
+test failed_middle_transition_returns_no_prefix_and_stops ... ok
+test failed_last_transition_cannot_return_a_success_summary ... ok
+test maximum_includes_earlier_headers_when_time_decreases ... ok
+test one_header_and_full_uint32_range_are_preserved ... ok
+test deterministic_sequences_match_independent_maximum ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

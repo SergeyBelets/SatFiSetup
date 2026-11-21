@@ -1,0 +1,24 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -691,7 +691,9 @@
+     expected_epoch_timespan: u32,
+ ) -> [u8; 32] {
+     // Step 1: Calculate the actual timespan of the epoch
+-    let mut actual_timespan = last_timestamp - epoch_start_time;
++    // Bitcoin Core uses a signed interval before the quarter/four-times clamp.
++    let expected_epoch_timespan = i64::from(expected_epoch_timespan);
++    let mut actual_timespan = i64::from(last_timestamp) - i64::from(epoch_start_time);
+     if actual_timespan < expected_epoch_timespan / 4 {
+         actual_timespan = expected_epoch_timespan / 4;
+     } else if actual_timespan > expected_epoch_timespan * 4 {
+@@ -700,8 +702,8 @@
+     // Step 2: Calculate the new target
+     let new_target_bytes = bits_to_target(current_target_bits);
+     let mut new_target = U256::from_be_bytes(new_target_bytes)
+-        .wrapping_mul(&U256::from(actual_timespan))
+-        .wrapping_div(&U256::from(expected_epoch_timespan));
++        .wrapping_mul(&U256::from(actual_timespan as u64))
++        .wrapping_div(&U256::from(expected_epoch_timespan as u64));
+     // Step 3: Clamp the new target to the maximum target
+     if new_target > max_target {
+         new_target = max_target;

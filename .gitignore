@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Build output
+**/target/
+.aws-sam/
+node_modules/
+
+# Local state, keys and journals: never commit
+.env
+*.env
+.state/
+*.sqlite
+*.sqlite-*
+*identity*
+samconfig.toml

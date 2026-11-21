@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "as_of": "2026-11-02",
+  "profile": "LOCAL_FENCE_RETAIN_MAINNET_GUEST_V1",
+  "selected_by": "EXPLICIT_USER_DECISION",
+  "decision": "Сохранить mainnet guest: локальная блокировка, восстановление журнала и явно описанное остаточное окно риска",
+  "mainnet_guest_changed": false,
+  "additional_quorum_attestation_required": false,
+  "global_onchain_halt_guaranteed": false,
+  "unpublished_history_completeness_proven": false,
+  "scope": "Configured V7 self-hosted worker, its retained independent original EOA journal and original SDK proving/publication boundaries",
+  "guarantees": [
+    "Detected Core tips are retained before branch retrieval",
+    "Processed linked branch witnesses survive worker restarts and fresh directories with the original EOA lane",
+    "A known >100 fork or incomplete bounded witness blocks new worker proving/publication independently of a competing EVM anchor",
+    "Observation-to-queue outbox preserves original need IDs, scopes and local deadlines",
+    "Bounded own-funded maintenance jobs use original budgets; private paid requests cannot silently renew deadlines or funding"
+  ],
+  "residual_risks": [
+    "Events while every independent observer is unavailable may never have been observed",
+    "A local hash chain is not a proof of completeness of never-published history",
+    "A competing submitter can publish an accepted transition before this worker publishes a halt; an older EVM anchor may hide the observed deep fork",
+    "Independent consumers/submitters do not inherit this local fence on chain; Fresh and a current Bitcoin branch alone do not prove absence of hidden historical reorgs",
+    "Loss of every independent observation backup/checkpoint cannot be detected from the final Bitcoin/EVM branch alone",
+    "Missing witnesses, bounded history gaps or exhausted storage require recovery; no automatic reset/rebase clears the restriction"
+  ],
+  "ready": false,
+  "production_ready": false
+}

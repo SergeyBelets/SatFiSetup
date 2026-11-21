@@ -1,0 +1,33 @@
+{
+  "version": "2",
+  "chain_id": "31337",
+  "evm_rpc": "http://127.0.0.1:8545",
+  "evm_confirmations": "1",
+  "bitcoin_network": "regtest",
+  "bitcoin_policy": null,
+  "bitcoin_rpc": "http://127.0.0.1:18443",
+  "trust_remote_watch_filters": false,
+  "bitcoin_cookie": "/absolute/path/bitcoin/.cookie",
+  "reserve": "0x0000000000000000000000000000000000000001",
+  "watch_databases": [
+    "/absolute/path/service/address.sqlite"
+  ],
+  "identity_file": "/absolute/path/identity.json",
+  "directory": "/absolute/path/fee-service",
+  "max_inventory": "4096",
+  "report_seconds": "300",
+  "low_water_sats": "200000",
+  "target_sats": "1000000",
+  "stress_sat_per_vbyte": "100",
+  "service_vbytes": "5000",
+  "future_services": "2",
+  "max_versions": "16",
+  "max_tx_gas": "15000000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "max_job_cost_wei": "30000000000000000",
+  "max_attempts_per_job": "8",
+  "fee_watch_databases": [
+    "/absolute/path/service/withdrawal-fees.sqlite"
+  ]
+}

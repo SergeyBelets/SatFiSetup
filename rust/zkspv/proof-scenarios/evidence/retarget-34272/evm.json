@@ -1,0 +1,52 @@
+{
+  "schema": "satoshifi.scenario-evm.v1",
+  "status": "LOCAL_SCENARIO_VERIFIER_PASS",
+  "scenario": "retarget-34272",
+  "receipt_sha256": "6990b04ecec13810e06e5b45548014a05ad08fb19dd955f97f94423e7a7f0a55",
+  "image_id": "a4c00c90dcc2600acd756df56ae4915e2180d0ebacc20c157382ec184fe0adea",
+  "journal_sha256": "a658395731ed6bc31409f133bf4ed88d615cf00d7089d3adef213bbbb8ddb405",
+  "ordinary_verifier": {
+    "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "code_hash": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+    "runtime_bytes": 4666,
+    "ordinary_match": true
+  },
+  "deployment": {
+    "status": 1,
+    "gas_used": 1122537,
+    "transaction_hash": "5df860685a95c5adc2e0911dbfe07e3370342c1b9e383dc9f405c7f88c1ae373",
+    "block_number": 1
+  },
+  "checks": {
+    "accepted": {
+      "status": 1,
+      "gas_used": 250644,
+      "transaction_hash": "7e853cb1a3b932a2e40b9f54b713bd96e7fd16a0e10ba069ba999069b4c5e611",
+      "block_number": 2
+    },
+    "wrong_image": {
+      "status": 0,
+      "gas_used": 250646,
+      "transaction_hash": "a270dd3675196a77127b5fe34de0df728bca79c2fe888073312332cf9e6d6d51",
+      "block_number": 3
+    },
+    "wrong_journal": {
+      "status": 0,
+      "gas_used": 250646,
+      "transaction_hash": "055f2fa08ab68a4b175066acd04455279e4cd9763332130a9f76d77696974a81",
+      "block_number": 4
+    },
+    "modified_seal": {
+      "status": 0,
+      "gas_used": 16259001,
+      "transaction_hash": "bc43bebf8cca47c1626df7008c1d324d35da63388f07b89f7dc66cc10968ccc3",
+      "block_number": 5
+    }
+  },
+  "production_ready": false,
+  "public_transactions": 0,
+  "state_transition_acceptance": "NOT_PERFORMED",
+  "starting_state_scope": "Native replay of real mainnet history from checkpoint 32256; conditional transition proof, not a recursive proof of that preceding history or an EVM state update",
+  "preparation_sha256": "ffc31eba0796c0637ca064f92dadc9f068000c2ca43d2ff93333bb8ed5ff12fd",
+  "groth16_report_sha256": "5163145c590685fa37c33d354b6586f3671220c9488fa1b2d1c4182333056ae8"
+}

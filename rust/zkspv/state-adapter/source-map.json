@@ -1,0 +1,28 @@
+{
+  "schema": "satoshifi.state-adapter-source-map.v2",
+  "classification": "NEW_INTEGRATION",
+  "production_ready": false,
+  "independent_review": "UNKNOWN",
+  "prior_source_sha256": {
+    "rust/zkspv/resume-policy/src/resume.rs": "3f8f76542007d7975f202876fce3de03e8a52c220d2c5b4ad96063ce8d7087d2",
+    "rust/zkspv/resume-policy/src/index.rs": "dd00f4716e3a8ef8ea4013f46abd20d26f0f8d563da1fb8f32d46de4063894b1",
+    "rust/zkspv/resume-policy/src/history.rs": "add4104f710939cdaefbc06037d32fecd9fbf865fdf74ef2bf65265e1f9ce754",
+    "rust/zkspv/resume-policy/src/bindings.rs": "0194bb253edd724a6e1764a10dc73950e0d9542d9ae0cf2b0403049c6a05ec52",
+    "web3/contracts/src/core/BitcoinCheckpoint.sol": "d8c006a945b9d2244f1323314ed3666c0979ec72bc647b68f2869736e2c4a0d3",
+    "web3/contracts/src/core/BitcoinTransitionV2.sol": "4abf8a7afd0eeeda1c873767984d876b6080d0429e0ae842a36975e2df9ad94f",
+    "web3/contracts/src/core/BitcoinCanonicalHistory.sol": "66cb848aa75bf2cf513b1bc9bdaaa76103cf423f4d501c6cf535ddf25e56f5d2",
+    "web3/contracts/src/federation/MainnetHeaderRelay.sol": "8e219f67fae910ae8055e10eae0254f0ac95a5ea711316df0e5251e91f656fc1",
+    "web3/contracts/src/federation/MainnetSPVGuard.sol": "bc948ae9f88d924df32929e6150b9044516dbde9a662fa8b5c91a66d68d6c92c",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/IRiscZeroVerifier.sol": "cfd7c80872313134d028c0250ddc86036448fb4df290ce4dba113ea80646e180",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/IRiscZeroSelectable.sol": "54a8a39dd427e8ec21db31815d80a3df6df992d3244a2370ba21517dde7dd11b",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/StructHash.sol": "9fd507fc30726dcecf35a7a1d16b2ffe34561721fa37895bb75b9c3cf07f0131",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/Util.sol": "4711aa3c42754c996278f62091ffd1422132512e0900a9cdea3fe54235fa5896",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/ControlID.sol": "753535e844a84a28b275fe21bd4c30022266b27bcdaa9b189220dece220accfa",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/Groth16Verifier.sol": "14bdf78c8b6168b12a5235395d42b8daabb48ee29d49913bb06d20071f156fd6",
+    "rust/zkspv/vendor/risc0-ethereum-365e7b2/contracts/src/groth16/RiscZeroGroth16Verifier.sol": "f24784fb625b8a82232c79f21db28f759593e29a287a4f9865cc6e78d36eb283"
+  },
+  "reuse": "Unchanged checkpoint/V2 journal/history libraries and pinned real RISC Zero verifier; transaction Merkle order/limit follows MainnetHeaderRelay",
+  "added": "V2 initial commitment construction, immutable proof-only state, two-bound Fresh and root-bound header materialization cache",
+  "positive_test_boundary": "Exact-call Foundry mock; not a proof",
+  "local_real_verifier_scope": "Ordinary bytecode deployment and rejection of fake proofs only"
+}

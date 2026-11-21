@@ -1,0 +1,31 @@
+docker.io/risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc: Pulling from risczero/risc0-groth16-prover
+4f4fb700ef54: Pulling fs layer
+1a63ecd3758f: Pulling fs layer
+d9b636547744: Pulling fs layer
+b86b4da1e9ff: Pulling fs layer
+ec9776ad61f0: Pulling fs layer
+f19e63e54033: Pulling fs layer
+3ababd0fe900: Pulling fs layer
+47eb520883f4: Pulling fs layer
+df6323eacbcd: Pulling fs layer
+4f4fb700ef54: Already exists
+df6323eacbcd: Download complete
+b86b4da1e9ff: Download complete
+47eb520883f4: Download complete
+f19e63e54033: Download complete
+d9b636547744: Download complete
+3ababd0fe900: Download complete
+ec9776ad61f0: Download complete
+d9b636547744: Pull complete
+b86b4da1e9ff: Pull complete
+ec9776ad61f0: Pull complete
+1a63ecd3758f: Download complete
+1a63ecd3758f: Pull complete
+3ababd0fe900: Pull complete
+df6323eacbcd: Pull complete
+47eb520883f4: Pull complete
+f19e63e54033: Pull complete
+4f4fb700ef54: Pull complete
+Digest: sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc
+Status: Downloaded newer image for risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc
+docker.io/risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc

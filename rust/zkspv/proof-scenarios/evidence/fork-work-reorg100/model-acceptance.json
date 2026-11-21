@@ -1,0 +1,45 @@
+{
+  "status": "TEST_ONLY_STATE_PROOF_PASS",
+  "scenario": "fork-work-reorg100",
+  "state": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "checks": {
+    "production_decoder_rejects_model": {
+      "status": 0,
+      "gas_used": 50130,
+      "transaction_hash": "31748e44557f3f2ff2f537a98f2252517aea03caa70c4a5f3d3d40d1f7965cd6",
+      "block_number": 7
+    },
+    "mainnet_image_rejects_model": {
+      "status": 0,
+      "gas_used": 250646,
+      "transaction_hash": "c5e798a2a59f85ebb1e71534f48e44e1c883529e314d99948de5733e04007740",
+      "block_number": 8
+    },
+    "accepted": {
+      "status": 1,
+      "gas_used": 433846,
+      "transaction_hash": "509e8d0becbce3594c5b56f1e0124a205d2df9cf1829074861ab915b56e79c7c",
+      "block_number": 9
+    },
+    "replay_rejected": {
+      "status": 0,
+      "gas_used": 338693,
+      "transaction_hash": "9118792c9f871d2cbbdd3c235235caeeda4db5fbac949b25ec0da11119d054dc",
+      "block_number": 10
+    },
+    "modified_journal_rejected": {
+      "status": 0,
+      "gas_used": 266008,
+      "transaction_hash": "297774681f0dd6331bca3205a15667be2b57decc63a9dc60af8dc1310f4e9a80",
+      "block_number": 11
+    }
+  },
+  "image_id": "91cbdff8eaa0f6e2968e8cdce61d1be57a2aadd75c1f34e0f5f0a518de16a948",
+  "receipt_sha256": "973b27dd615fd2b5de46fd47e7d2f0fb45fb0ec7884c71cf362a680e2ef3bc6c",
+  "journal_sha256": "80cd55fcba66c01c048cb5705cf68adc50240a8282c9960d8363e9a3e1eb7cc3",
+  "state_version": 1,
+  "halted": false,
+  "production_ready": false,
+  "public_transactions": 0,
+  "scope": "Synthetic work/headers and native-constructed starting state; genuine proof of unchanged bounded policy under a TEST_ONLY image, not Bitcoin PoW"
+}

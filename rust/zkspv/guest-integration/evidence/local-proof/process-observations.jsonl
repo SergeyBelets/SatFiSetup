@@ -1,0 +1,1 @@
+{"observed_utc": "2026-10-29T19:09:39.781934+00:00", "ps_exit_code": 0, "process": "89074 54:56 329:48.20 622.2 3910912 /private/tmp/satoshifi-risc0-3.0.3/r0vm", "free_disk_bytes": 8898252800, "scope": "Point-in-time process observation; not peak memory or full resource benchmark"}

@@ -1,0 +1,13 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -659,10 +659,6 @@
+     if target == U256::ZERO {
+         return U256::MAX;
+     }
+-    // We define the inverse of 1 as max.
+-    if target == U256::ONE {
+-        return U256::MAX;
+-    }
+     // We define the inverse of max as 1.
+     if target == U256::MAX {
+         return U256::ONE;

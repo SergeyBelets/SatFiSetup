@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "mode": "SMP1_QUOTE",
+  "deposit_config": "/srv/satoshifi/private/owner/smp1.json",
+  "operation_id": "1111111111111111111111111111111111111111111111111111111111111111",
+  "accepted_quote_hash": "2222222222222222222222222222222222222222222222222222222222222222"
+}

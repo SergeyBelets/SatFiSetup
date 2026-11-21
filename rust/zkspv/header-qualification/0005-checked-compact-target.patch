@@ -1,0 +1,69 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -320,7 +320,7 @@
+     ) -> Result<LatestDaState, ValidationError> {
+         let network_constants = MAINNET_CONSTANTS;
+ 
+-        let target = bits_to_target(latest_da_state.current_target_bits);
++        let target = checked_target(latest_da_state.current_target_bits, network_constants.max_target)?;
+         let work_add = target_to_work(&target);
+ 
+         // Verify common header chain rules
+@@ -377,6 +377,7 @@
+         block_header: &HeaderWrapper,
+     ) -> Result<LatestDaState, ValidationError> {
+         let network_constants = TESTNET4_CONSTANTS;
++        let normal_target = checked_target(latest_da_state.current_target_bits, network_constants.max_target)?;
+ 
+         let epoch_block = block_header.height() % BLOCKS_PER_EPOCH;
+         let latest_block_time =
+@@ -388,8 +389,7 @@
+                 let target = network_constants.max_target.to_be_bytes();
+                 (target, network_constants.max_bits)
+             } else {
+-                let target = bits_to_target(latest_da_state.current_target_bits);
+-                (target, latest_da_state.current_target_bits)
++                (normal_target, latest_da_state.current_target_bits)
+             };
+         let work_add = target_to_work(&target);
+ 
+@@ -444,7 +444,7 @@
+     ) -> Result<LatestDaState, ValidationError> {
+         let network_constants = SIGNET_CONSTANTS;
+ 
+-        let target = bits_to_target(latest_da_state.current_target_bits);
++        let target = checked_target(latest_da_state.current_target_bits, network_constants.max_target)?;
+         let work_add = target_to_work(&target);
+ 
+         // Verify common header chain rules
+@@ -600,6 +600,30 @@
+         }
+     }
+     true
++}
++
++/// Validate Core SetCompact/DeriveTarget range rules before target arithmetic.
++/// Reference: Bitcoin Core ee42d59d4de970769ebabf77b89ff4269498f61e,
++/// arith_uint256::SetCompact and DeriveTarget (MIT; notices retained separately).
++fn checked_target(bits: u32, pow_limit: U256) -> Result<[u8; 32], ValidationError> {
++    let size = bits >> 24;
++    let mut word = bits & 0x007fffff;
++    if size <= 3 {
++        word >>= 8 * (3 - size);
++    }
++    let negative = word != 0 && (bits & 0x00800000) != 0;
++    let overflow = word != 0
++        && (size > 34 || (word > 0xff && size > 33) || (word > 0xffff && size > 32));
++    if negative || word == 0 || overflow {
++        return Err(ValidationError::InvalidBlockBits);
++    }
++    // The existing decoder is now called only with a positive, representable
++    // target. Its shift count cannot reach 256 on this path.
++    let target = bits_to_target(bits);
++    if U256::from_be_bytes(target) > pow_limit {
++        return Err(ValidationError::InvalidBlockBits);
++    }
++    Ok(target)
+ }
+ 
+ /// Converts the little-endian `bits` field of a block header to a big-endian target

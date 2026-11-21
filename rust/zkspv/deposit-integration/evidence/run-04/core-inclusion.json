@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "method": "Bitcoin Core gettxoutproof + verifytxoutproof",
+  "verified_txids": [
+    "3dedbe0adbe7c42542c4a9516b9526e37d27aa61c6fc6a362c0c9f514919f6a0",
+    "d0df537b643e7b68aab4ac84b0b3dc4bed0d33d0940f914a50a8c3223ecb1cba"
+  ],
+  "proof_sha256": "7215c7c536c371e2e3250824885749fe23fd96221afa5b027a4f11364770ebff",
+  "chain": "regtest",
+  "headers": 2022,
+  "consumer_artifact_sha256": {
+    "DKGCoordinator": "a80c84976aa0180217becd7a1a3a7847559d7e12f516f1cd6792d9e9c9ccdb48",
+    "FROSTVerifier": "793f1d6169ad7d9bf021902f9f937742fe6a0dfa3423bf19428ee4d9fb041b36",
+    "FROSTCoordinator": "80f3643335f76d1e303f49f8ffd244f68dfd5352b9893e2c77a6a2f48a13f143",
+    "DKGAuthorization": "d1031f18f1c1b5eaf8abb982d4a3097e9681033de87fd3af6061e455d814358d",
+    "BitcoinBatchRegistry": "f8467d6a054387fcacd8551e471ecf09b3b9296d1f7dee48ec24b96118b8f7d6",
+    "BitcoinWithdrawalEscrow": "4fbcea12eaea15568276809fdc1319226d9d4d8e340ef7601af2ebfbe6e1c547",
+    "BitcoinDepositRegistry": "5951cd84ebd06cb7052f17fb033b16adb225a7bba54180fd8ce85969598bc069",
+    "MiningPoolV1": "dfc9b55a4e5f9675046fc3a59f2fec3de74261135712f5c9df0e68f3129115a8",
+    "PoolMpToken": "f4b8c55269be29b400771663ce601199915b8ddbfe38ad1810d39d2aead341ef"
+  }
+}

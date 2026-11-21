@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "reporter_config": "/srv/satoshifi/private/reporter/incident.json",
+  "operator_config": "/srv/satoshifi/private/operator/incident.json",
+  "auth_bundle_file": "/srv/satoshifi/private/operator/conf-bundle.json",
+  "report_file": "/srv/satoshifi/private/reporter/incident-report.json",
+  "decision_file": "/srv/satoshifi/private/reporter/incident-decision.json",
+  "accepted_decision_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "delivery": "0"
+}

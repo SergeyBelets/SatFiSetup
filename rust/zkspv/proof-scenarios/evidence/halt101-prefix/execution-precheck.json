@@ -1,0 +1,9 @@
+{
+  "status": "EXECUTION_JOURNAL_MATCH",
+  "cryptographic_proof": "PENDING",
+  "test_only_model": true,
+  "journal_bytes": 1216,
+  "journal_sha256": "131ebf63c6740167af50be1ba48bf8a9ba5d1800bd79a558a2779b86cfb08ba8",
+  "segments": 46,
+  "checked_at_unix": 1793361666.691303
+}

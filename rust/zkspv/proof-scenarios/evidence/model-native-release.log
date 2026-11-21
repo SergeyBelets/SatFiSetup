@@ -1,0 +1,6 @@
+   Compiling satoshifi-mainnet-guest-kernel v0.1.0 (/private/tmp/satoshifi-scenario-native/guest-integration)
+   Compiling satoshifi-test-policy-kernel v0.1.0 (/private/tmp/satoshifi-scenario-native/proof-scenarios/model-kernel)
+    Finished `release` profile [optimized] target(s) in 7.70s
+     Running `/private/tmp/satoshifi-scenario-native-target/release/vectors web3/test/fixtures/mainnet/headers-32246-36288.bin web3/test/fixtures/mainnet/expected-32246-36288.bin rust/zkspv/proof-scenarios/evidence/model-release`
+TEST_ONLY fork-work-reorg100: synthetic-work, no PoW; bounded policy and terminal halt checks passed
+TEST_ONLY halt101-prefix: synthetic-work, no PoW; bounded policy and terminal halt checks passed

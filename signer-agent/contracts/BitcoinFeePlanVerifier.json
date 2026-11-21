@@ -1,0 +1,147 @@
+[
+  {
+    "type": "function",
+    "name": "verify",
+    "inputs": [
+      {
+        "name": "reserve_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "p",
+        "type": "tuple",
+        "internalType": "struct BitcoinFeePlanVerifier.Prepared",
+        "components": [
+          {
+            "name": "control",
+            "type": "tuple",
+            "internalType": "struct BitcoinFeePlanVerifier.Control",
+            "components": [
+              {
+                "name": "sequence",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "cg",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "dg",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "deadline",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "allocation",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "batch",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "previous",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "planHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "raw",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "requests",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "v",
+        "type": "tuple",
+        "internalType": "struct BitcoinFeePlanVerifier.Verified",
+        "components": [
+          {
+            "name": "root",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "txid",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "inputHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "requestHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "inputFree",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "burned",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "dg",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "creditKeys",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "InvalidTxLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidVarInt",
+    "inputs": []
+  }
+]

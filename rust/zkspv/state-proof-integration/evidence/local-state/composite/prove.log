@@ -1,0 +1,2 @@
+2026-10-29T20:29:31.205582Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 238.921042ms
+Wrote 6191460 bytes of receipt to /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/state-proof-integration/evidence/local-state/composite/receipt.bin

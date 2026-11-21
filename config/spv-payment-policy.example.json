@@ -1,0 +1,42 @@
+{
+  "enabled": true,
+  "binding": {
+    "schema": "satoshifi.spv-gas-binding.v1",
+    "chain_id": "11155111",
+    "evm_confirmations": "12",
+    "registry": "REPLACE_REGISTRY",
+    "registry_creation_block": "REPLACE_BLOCK",
+    "registry_runtime_hash": "REPLACE_RUNTIME",
+    "factory": "REPLACE_FACTORY",
+    "confederation_id": "REPLACE_CONFEDERATION",
+    "state_view": "REPLACE_STATE_VIEW",
+    "authorization": "REPLACE_AUTHORIZATION",
+    "domain": "REPLACE_DOMAIN",
+    "bitcoin_policy": null
+  },
+  "identity_file": "/REPLACE/private/payer.json",
+  "bitcoin_rpc": "http://127.0.0.1:8332",
+  "bitcoin_cookie": "/REPLACE/bitcoin/.cookie",
+  "budget_scope": "REPLACE_BYTES32",
+  "allowed_federations": [
+    "REPLACE_FEDERATION"
+  ],
+  "allowed_consumers": {
+    "REPLACE_POOL": "MiningPoolV1",
+    "REPLACE_ESCROW": "BitcoinWithdrawalEscrow"
+  },
+  "allowed_service_identities": [
+    "REPLACE_SERVICE_IDENTITY"
+  ],
+  "treasury": "REPLACE_TREASURY",
+  "treasury_epoch": "1",
+  "roster_hash": "REPLACE_ROSTER_HASH",
+  "tariff_version": "1",
+  "tariff_hash": "REPLACE_TARIFF_HASH",
+  "max_service_fee_wei": "REPLACE_EXPLICIT_FEE_CAP",
+  "max_tx_gas": "2000000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "max_job_cost_wei": "20000000000000000",
+  "max_attempts_per_job": "8"
+}

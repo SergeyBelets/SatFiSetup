@@ -1,0 +1,15 @@
+{
+  "schema": "satoshifi.resume-transition-source-map.v2",
+  "classification": "NEW_INTEGRATION",
+  "prior_sources": {
+    "rust/zkspv/transition-policy/src/transition.rs": "039ad32c6b04c8d94548b9eafecc1fca61988f502bf1065ea3d3562ac886df8a",
+    "web3/contracts/src/core/BitcoinTransition.sol": "e3cb6c615b31a37c6d4954da7f02d8e16bb4765d5889c32cb30ea954eb4f5ce8",
+    "rust/zkspv/resume-policy/src/resume.rs": "3f8f76542007d7975f202876fce3de03e8a52c220d2c5b4ad96063ce8d7087d2",
+    "rust/zkspv/resume-policy/src/codec.rs": "b608285ea23a76055edc8d224c8c109333f43f46c4aa6a63a36e45a0477512c6",
+    "rust/zkspv/checkpoint-policy/native_tests.rs": "c8c50a4d700341d2a26733b02ad4a25bd1726ce9445cce0bac0c09cfe5fe3b8e"
+  },
+  "reuse": "V1 encoder/shape rules ported to a distinct V2 domain/length; unchanged V2 resume and codec called as dependencies; unchanged actual pinned native adapter included by qualifier",
+  "added": "38-word journal, two V2 state commitments reconstructed in Solidity, count delta/root/log checks, strict bounded runtime-neutral request codec",
+  "independent_review": "UNKNOWN",
+  "production_ready": false
+}

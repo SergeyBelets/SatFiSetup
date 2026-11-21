@@ -1,0 +1,8 @@
+{
+  "executable": "/Applications/Docker.app/Contents/Resources/bin/docker",
+  "socket": "/Users/dmitrysubbotin/.docker/run/docker.sock",
+  "config": "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/groth16-integration/evidence/groth16-local/docker-config",
+  "image": "risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
+  "name": "satoshifi-groth16-324776577a9846b891780c2bcf2b10bc",
+  "log": "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/groth16-integration/evidence/groth16-local/docker-commands.jsonl"
+}

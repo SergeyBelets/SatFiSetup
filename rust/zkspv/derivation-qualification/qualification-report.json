@@ -1,0 +1,269 @@
+{
+  "artifacts": [
+    {
+      "bytes": 21418,
+      "path": "frost-crypto/src/derivation_qualification.rs",
+      "sha256": "486e9a8507cdd8a3143f99d40bba054fce8caac40c7e7dc727ab91699767157e"
+    },
+    {
+      "bytes": 17081,
+      "path": "frost-crypto/src/main.rs",
+      "sha256": "94463499cedc68ee67fb71b7419bd09ecaa26e34b19f535c6bd7556a81ed4914"
+    },
+    {
+      "bytes": 10404,
+      "path": "frost-crypto/src/bitcoin.rs",
+      "sha256": "d300efa8f9ba405b6f70bbafe39ecac29c9023d927ef406a6d234ef209c57e00"
+    },
+    {
+      "bytes": 582,
+      "path": "frost-crypto/Cargo.toml",
+      "sha256": "311b9a2a7e7212f942896946300f37a2f8fae371ec5bcd0791e93dfd936a0205"
+    },
+    {
+      "bytes": 28500,
+      "path": "frost-crypto/Cargo.lock",
+      "sha256": "b4cd58c4b367bc27a8aaf157ae308dca3baf6152c73fe9c6292acd5040836bdb"
+    },
+    {
+      "bytes": 12628,
+      "path": "rust/zkspv/derivation-qualification/README.md",
+      "sha256": "dccc3d644a7b9ff6663cd075c53a2c9f2c980b816f2fb710c745aea01a1a71ff"
+    },
+    {
+      "bytes": 90,
+      "path": "rust/zkspv/derivation-qualification/evidence/independent-encoding.log",
+      "sha256": "12b0af066c7063d6b035de3821354e5735c72609288b3786a00eff39d8a0b4a8"
+    },
+    {
+      "bytes": 1833,
+      "path": "rust/zkspv/derivation-qualification/evidence/native-tests.log",
+      "sha256": "b89dbab3e2edf683c787c9c80e6d0a0e8010342e79e8a0897ce7e7edb0376cd5"
+    },
+    {
+      "bytes": 2763,
+      "path": "rust/zkspv/derivation-qualification/evidence/production-check.log",
+      "sha256": "7f29d168afd93d7e7bde7ba5aa4f7ae9a7399cc32a19bf969ee83555d5467502"
+    },
+    {
+      "bytes": 2213,
+      "path": "rust/zkspv/derivation-qualification/evidence/vector-generation.log",
+      "sha256": "ec2a922dcd145dcd1fbad3bca5c2a3bfb1f480fd111628f6ac46d23e3bc85ae1"
+    },
+    {
+      "bytes": 1914,
+      "path": "rust/zkspv/derivation-qualification/public-vector.json",
+      "sha256": "944db2b54048a3c3143ae80e18bad65c5af9874f3b1c3ea231ecc0666bdb5cb3"
+    },
+    {
+      "bytes": 9560,
+      "path": "rust/zkspv/derivation-qualification/source-map.json",
+      "sha256": "506926fc9be87e755070e2d92d3df804b4f6dcd50159f2219314d611235ccfc6"
+    },
+    {
+      "bytes": 2123,
+      "path": "rust/zkspv/derivation-qualification/verify_public_vector.py",
+      "sha256": "21f384468d5fc322f3914e265feebed1ef8354609344372ca6cbfeac7394db25"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline"
+      ],
+      "cwd": "frost-crypto",
+      "existing_tests_passed": 9,
+      "exit_code": 0,
+      "failed": 0,
+      "ignored": 1,
+      "ignored_reason": "explicit public fixture generator, not a test requirement",
+      "log": "evidence/native-tests.log",
+      "new_qualification_tests_passed": 6,
+      "passed": 15
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--locked",
+        "--offline"
+      ],
+      "cwd": "frost-crypto",
+      "exit_code": 0,
+      "log": "evidence/production-check.log"
+    },
+    {
+      "argv": [
+        "python3",
+        "rust/zkspv/derivation-qualification/verify_public_vector.py"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "log": "evidence/independent-encoding.log"
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "derivation_qualification::tests::emit_public_vector",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "cwd": "frost-crypto",
+      "exit_code": 0,
+      "log": "evidence/vector-generation.log",
+      "role": "public vector generation only; not counted as qualification"
+    }
+  ],
+  "existing_dkg_or_keys_changed_by_this_probe": false,
+  "generated_at_utc": "2026-10-27T07:24:53.026858+00:00",
+  "git_head": "733831ec48e3df96a2356623edf17771f64ba16d",
+  "internal_review": {
+    "author_executed_tests": true,
+    "findings_resolved": [
+      "All three signer pairs exercised, including participant 3",
+      "Same-group missing verifying share, substituted verifying share and mismatched secret/public share tested",
+      "Nonzero opposite-point x-only alias case tested"
+    ],
+    "reviewer": "/root/upstream_qualification/derivation_review",
+    "reviewer_executed_tests": false,
+    "status": "NO_REMAINING_FUNCTIONAL_FINDINGS_IN_SCOPE",
+    "type": "Internal agent source review, not independent integration audit"
+  },
+  "new_crypto_primitive": false,
+  "operator_keys_used": false,
+  "production_ipc_changed_by_this_probe": false,
+  "production_ready": false,
+  "profile": "BASE_POST_DKG_EVEN_Y__INTENT_TAPLEAF_V1",
+  "results": {
+    "actual_dkg": {
+      "baseline": "library part3 -> library post_dkg no-tree tweak -> EvenY; independent libsecp check of raw DKG group transformation",
+      "participants": 3,
+      "rng": "rand 0.8.6 StdRng deterministic synthetic seed [42;32]",
+      "status": "PASS",
+      "threshold": 2
+    },
+    "fixed_tapleaf": {
+      "bitcoin_core_script_execution_tested": false,
+      "caller_tree_permitted": false,
+      "leaf_version": 192,
+      "script": "0x6a20 || SHA256(intent_bytes)",
+      "script_bytes": 34,
+      "status": "NATIVE_HASH_AND_SOURCE_REVIEW_PASS"
+    },
+    "intent_encoding": {
+      "both_versions_restricted_to_1": true,
+      "bytes": 382,
+      "digest": "SHA256",
+      "fixed_field_mutations": 14,
+      "policy_hash_semantics_not_validated": true,
+      "reject_zero_address_identifier": true,
+      "status": "PASS"
+    },
+    "pinned_sources": {
+      "inspected_files_equal_pinned_archives": 15,
+      "map": "source-map.json",
+      "status": "PASS_FOR_RECORDED_FILES",
+      "verified_crate_archives_against_lock": 8
+    },
+    "public_and_secret_share_transform": {
+      "base_packages_unchanged": true,
+      "existing_primitives": [
+        "frost::keys::Tweak",
+        "frost::keys::EvenY",
+        "secp256k1::Scalar::from_be_bytes",
+        "secp256k1::XOnlyPublicKey::add_tweak"
+      ],
+      "foreign_same_group_missing_wrong_public_and_secret_share_checks": "PASS",
+      "status": "PASS"
+    },
+    "public_vector": {
+      "frozen_rust_comparison": true,
+      "independent_python_hash_encoding_check": true,
+      "path": "public-vector.json",
+      "secret_material_present": false,
+      "status": "PASS"
+    },
+    "signatures": {
+      "count": 8,
+      "fresh_synthetic_nonce_commitments": 16,
+      "frost_verify": true,
+      "independent_libsecp_bip340_verify": true,
+      "message_type": "synthetic 32-byte messages, not Bitcoin transaction sighashes",
+      "output_parities_covered": 2,
+      "participant_pairs_covered": 3,
+      "status": "PASS",
+      "wrong_base_and_recipient_key_rejected": true
+    },
+    "strict_tweak": {
+      "cases": [
+        "n rejected",
+        "2^256-1 rejected",
+        "G+(n-1)G infinity rejected",
+        "zero mathematically valid; base alias rejected by separate profile policy",
+        "G+(n-2)G is -G; base x-only alias rejected by separate profile policy",
+        "invalid x-only encoding rejected"
+      ],
+      "raw_sha256_before_upstream_tweak": true,
+      "status": "PASS"
+    }
+  },
+  "schema_version": 1,
+  "scope": "Separate test-only native derivation compatibility probe for specification 2.16 sections 20.3/20.4/20.20",
+  "status": "NATIVE_COMPATIBILITY_DEMONSTRATED_FULL_QUALIFICATION_UNKNOWN",
+  "toolchain": {
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "host": "aarch64-apple-darwin",
+    "mode": "locked offline debug native; no release or zkVM run claimed",
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)\nbinary: rustc\ncommit-hash: 29483883eed69d5fb4db01964cdf2af4d86e9cb2\ncommit-date: 2025-08-04\nhost: aarch64-apple-darwin\nrelease: 1.89.0\nLLVM version: 20.1.7"
+  },
+  "unavailable_requirements": [
+    {
+      "requirement": "Canonical BTC_SPEND result, graph, roster/threshold, policy and recipient admission",
+      "status": "NOT_IMPLEMENTED_IN_PROBE"
+    },
+    {
+      "requirement": "Qualified immutable on-chain derivation verifier or real qualified derivation proof",
+      "status": "UNKNOWN_NOT_IMPLEMENTED"
+    },
+    {
+      "requirement": "On-chain validated binding, provenance, generation/revocation enforcement and Ready",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "requirement": "Per-input BASE/DERIVED transaction plans and signer/aggregator integration before nonce",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "requirement": "Funding to mint to mixed-derived Bitcoin transaction to settlement/backing",
+      "status": "NOT_RUN"
+    },
+    {
+      "requirement": "Pinned Bitcoin Core transaction acceptance",
+      "status": "NOT_RUN"
+    },
+    {
+      "requirement": "Independent external derivation and integration review",
+      "status": "UNKNOWN"
+    },
+    {
+      "requirement": "Operational participant share availability",
+      "status": "UNKNOWN"
+    },
+    {
+      "requirement": "Real qualified general Bitcoin ZK-SPV proof",
+      "status": "UNKNOWN_SEPARATE_GATE"
+    },
+    {
+      "requirement": "Withdrawal-fee purpose derivation qualification under section 22",
+      "status": "NOT_IMPLEMENTED_DEPOSIT_DOMAIN_ONLY"
+    }
+  ],
+  "workspace_dirty": true
+}

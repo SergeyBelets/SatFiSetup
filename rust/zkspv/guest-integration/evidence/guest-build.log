@@ -1,0 +1,157 @@
+   Compiling cfg-if v1.0.0
+   Compiling zeroize v1.8.1
+   Compiling typenum v1.18.0
+   Compiling generic-array v0.14.7
+   Compiling serde v1.0.218
+   Compiling subtle v2.6.1
+   Compiling getrandom v0.2.15
+   Compiling const-oid v0.9.6
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.6
+   Compiling digest v0.10.7
+   Compiling rand_core v0.6.4
+   Compiling byteorder v1.5.0
+   Compiling zerocopy v0.7.35
+   Compiling arrayvec v0.7.6
+   Compiling once_cell v1.20.3
+   Compiling ppv-lite86 v0.2.20
+   Compiling rand_chacha v0.3.1
+   Compiling rand v0.8.6
+   Compiling bytes v1.11.1
+   Compiling num-traits v0.2.19
+   Compiling borsh v1.5.5
+   Compiling tracing-core v0.1.33
+   Compiling sha2 v0.10.8 (https://github.com/risc0/RustCrypto-hashes?tag=sha2-v0.10.8-risczero.0#244dc3b0)
+   Compiling either v1.15.0
+   Compiling log v0.4.26
+   Compiling pin-project-lite v0.2.16
+   Compiling bytemuck v1.21.0
+   Compiling tracing v0.1.41
+   Compiling blake2 v0.10.6
+   Compiling alloy-rlp v0.3.11
+   Compiling ahash v0.8.11
+   Compiling anyhow v1.0.104
+   Compiling hex v0.4.3
+   Compiling ruint v1.16.0
+   Compiling derive_more v2.0.1
+   Compiling base64ct v1.6.0
+   Compiling itertools v0.13.0
+   Compiling pem-rfc7468 v0.7.0
+   Compiling num-integer v0.1.46
+   Compiling itoa v1.0.14
+   Compiling keccak v0.1.6
+   Compiling bitcoin-io v0.1.3
+   Compiling num-bigint v0.4.6
+   Compiling der v0.7.9
+   Compiling ark-std v0.5.0
+   Compiling crypto-bigint v0.5.5 (https://github.com/risc0/RustCrypto-crypto-bigint?tag=v0.5.5-risczero.0#3ab63a6f)
+   Compiling getrandom v0.3.2
+   Compiling crunchy v0.2.3
+   Compiling libm v0.2.11
+   Compiling bitcoin-internals v0.3.0
+   Compiling ark-serialize v0.5.0
+   Compiling spki v0.7.3
+   Compiling hex-conservative v0.2.1
+   Compiling base16ct v0.2.0
+   Compiling thiserror v2.0.12
+   Compiling serdect v0.2.0
+   Compiling bitcoin_hashes v0.14.0
+   Compiling tiny-keccak v2.0.2 (https://github.com/risc0/tiny-keccak?tag=tiny-keccak%2Fv2.0.2-risczero.0#8fcc866d)
+   Compiling num_enum v0.7.4
+   Compiling ark-ff v0.5.0
+   Compiling secp256k1-sys v0.10.0 (https://github.com/Sovereign-Labs/rust-secp256k1.git?branch=risc0-compatible-0-29-0#3769ab9b)
+   Compiling pkcs8 v0.10.2
+   Compiling ff v0.13.0
+   Compiling include_bytes_aligned v0.1.4
+   Compiling group v0.13.0
+   Compiling hex_lit v0.1.1
+   Compiling risc0-zkvm-platform v2.2.1
+   Compiling sec1 v0.7.3
+   Compiling hmac v0.12.1
+   Compiling const-hex v1.14.0
+   Compiling rand_core v0.9.3
+   Compiling allocator-api2 v0.2.21
+   Compiling bitcoin v0.32.5
+   Compiling hashbrown v0.15.2
+   Compiling serde_json v1.0.139
+   Compiling risc0-zkp v3.0.2
+   Compiling risc0-core v3.0.0
+   Compiling alloy-primitives v0.8.26
+   Compiling rfc6979 v0.4.0
+   Compiling blake3 v1.6.0
+   Compiling secp256k1 v0.29.0 (https://github.com/Sovereign-Labs/rust-secp256k1.git?branch=risc0-compatible-0-29-0#3769ab9b)
+   Compiling elliptic-curve v0.13.8
+   Compiling bitcoin-units v0.1.2
+   Compiling base58ck v0.1.0
+   Compiling signature v2.2.0
+   Compiling memchr v2.7.4
+   Compiling base64 v0.21.7
+   Compiling arrayref v0.3.9
+   Compiling ryu v1.0.19
+   Compiling bech32 v0.11.0
+   Compiling constant_time_eq v0.3.1
+   Compiling hex-literal v0.4.1
+   Compiling informalsystems-pbjson v0.7.0
+   Compiling thiserror v1.0.69
+   Compiling schemars v0.8.22
+   Compiling semver v1.0.25
+   Compiling ecdsa v0.16.9
+   Compiling prost v0.13.5
+   Compiling ark-poly v0.5.0
+   Compiling risc0-bigint2 v1.4.10
+   Compiling sha3 v0.10.8
+   Compiling tracing-subscriber v0.2.25
+   Compiling ripemd v0.1.3
+   Compiling crc-catalog v2.4.0
+   Compiling alloc-no-stdlib v2.0.4
+   Compiling dyn-clone v1.0.18
+   Compiling cobs v0.2.3
+   Compiling spin v0.9.9
+   Compiling lazy_static v1.5.0
+   Compiling postcard v1.1.1
+   Compiling alloc-stdlib v0.2.2
+   Compiling crc v3.2.1
+   Compiling ics23 v0.12.0
+   Compiling derive_more v1.0.0
+   Compiling ark-relations v0.5.1
+   Compiling k256 v0.13.4 (https://github.com/risc0/RustCrypto-elliptic-curves?tag=k256%2Fv0.13.4-risczero.1#7d4a8d64)
+   Compiling ark-ec v0.5.0
+   Compiling hashbrown v0.13.2
+   Compiling itertools v0.10.5
+   Compiling mirai-annotations v1.12.0
+   Compiling elf v0.7.4
+   Compiling jmt v0.11.0 (https://github.com/penumbra-zone/jmt.git?rev=550a2f2#550a2f20)
+   Compiling risc0-binfmt v3.0.2
+   Compiling sov-keys v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/sovereign-sdk/module-system/sov-keys)
+   Compiling ark-snark v0.5.1
+   Compiling alloy-eip2124 v0.1.0
+   Compiling brotli-decompressor v4.0.3
+   Compiling satoshifi-fork-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/fork-policy)
+   Compiling alloy-eip7702 v0.5.1
+   Compiling alloy-eip2930 v0.1.0
+   Compiling merlin v3.0.0
+   Compiling alloy-eips v0.13.0
+   Compiling ark-crypto-primitives v0.5.0
+   Compiling brotli v7.0.0
+   Compiling satoshifi-checkpoint-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/checkpoint-policy)
+   Compiling sov-rollup-interface v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/sovereign-sdk/rollup-interface)
+   Compiling rs_merkle v1.5.0
+   Compiling satoshifi-header-time-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/time-policy)
+   Compiling risc0-circuit-keccak v4.0.2
+   Compiling satoshifi-resume-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/resume-policy)
+   Compiling ark-groth16 v0.5.0
+   Compiling citrea-primitives v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/primitives)
+   Compiling risc0-circuit-recursion v4.0.2
+   Compiling ark-bn254 v0.5.0
+   Compiling downcast-rs v1.2.1
+   Compiling no_std_strings v0.1.3
+   Compiling risc0-zkos-v1compat v2.2.0
+   Compiling rrs-lib v0.1.0
+   Compiling risc0-groth16 v3.0.2
+   Compiling bitcoin-da v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/bitcoin-da)
+   Compiling satoshifi-resume-transition v0.1.0 (/private/tmp/satoshifi-guest-build-final/resume-transition)
+   Compiling risc0-circuit-rv32im v4.0.2
+   Compiling satoshifi-mainnet-guest-kernel v0.1.0 (/private/tmp/satoshifi-guest-build-final/guest-integration)
+   Compiling risc0-zkvm v3.0.3
+   Compiling satoshifi-mainnet-transition-guest v0.1.0 (/private/tmp/satoshifi-guest-build-final/guest-integration/guest)
+    Finished `release` profile [optimized] target(s) in 42.15s

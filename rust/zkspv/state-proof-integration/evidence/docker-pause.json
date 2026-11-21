@@ -1,0 +1,55 @@
+{
+  "paused_at_unix": 1793306390.818439,
+  "authorization": "User explicitly authorized temporarily stopping Docker and restoring it after STARK",
+  "running_before": [
+    {
+      "id": "a68f11a11558",
+      "name": "obod-quickstart-qa-frontend-1"
+    },
+    {
+      "id": "ceab3d9c2330",
+      "name": "obod-quickstart-qa-worker-1"
+    },
+    {
+      "id": "cff886b5f83e",
+      "name": "obod-quickstart-qa-realtime-1"
+    },
+    {
+      "id": "812a8d57e048",
+      "name": "obod-quickstart-qa-beat-1"
+    },
+    {
+      "id": "441bffe15483",
+      "name": "obod-quickstart-qa-backend-1"
+    },
+    {
+      "id": "2c32552bba06",
+      "name": "obod-quickstart-qa-gateway-1"
+    },
+    {
+      "id": "b428fc63e233",
+      "name": "obod-quickstart-qa-postgres-1"
+    },
+    {
+      "id": "db2dbeef3f94",
+      "name": "obod-quickstart-qa-redis-1"
+    },
+    {
+      "id": "f9f11c76a073",
+      "name": "obod-quickstart-qa-minio-1"
+    }
+  ],
+  "restored": true,
+  "running_after": [
+    "obod-quickstart-qa-backend-1",
+    "obod-quickstart-qa-beat-1",
+    "obod-quickstart-qa-frontend-1",
+    "obod-quickstart-qa-gateway-1",
+    "obod-quickstart-qa-minio-1",
+    "obod-quickstart-qa-postgres-1",
+    "obod-quickstart-qa-realtime-1",
+    "obod-quickstart-qa-redis-1",
+    "obod-quickstart-qa-worker-1"
+  ],
+  "restored_at_unix": 1793309182.656524
+}

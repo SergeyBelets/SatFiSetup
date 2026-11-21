@@ -1,0 +1,22 @@
+diff --git a/risc0/r0vm/src/lib.rs b/risc0/r0vm/src/lib.rs
+--- a/risc0/r0vm/src/lib.rs
++++ b/risc0/r0vm/src/lib.rs
+@@ -91,6 +91,7 @@
+     #[arg(long)]
+     storage: Option<PathBuf>,
+
++    /// SatoshiFi CUDA segment limit, in powers of two cycles.
+     #[arg(long)]
+     po2: Option<u32>,
+
+@@ -193,6 +194,10 @@
+
+     let env = {
+         let mut builder = ExecutorEnv::builder();
++        if let Some(po2) = args.po2 {
++            builder.segment_limit_po2(po2);
++            eprintln!("SatoshiFi segment_limit_po2={po2}");
++        }
+
+         for var in args.env.iter() {
+             let (name, value) = var

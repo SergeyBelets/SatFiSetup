@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "mode": "ADDRESS",
+  "bundle_file": "/srv/satoshifi/private/btc-bundle.json",
+  "identity_file": "/srv/satoshifi/private/operator.json",
+  "state_file": "/srv/satoshifi/private/operator.enc",
+  "password_file": "/srv/satoshifi/private/operator.password",
+  "board": "0x1111111111111111111111111111111111111111",
+  "signing_board": null,
+  "mint_admission": "0x3333333333333333333333333333333333333333",
+  "deadline": "4102444800",
+  "budget": {
+    "max_tx_gas": "2000000",
+    "max_transaction_cost_wei": "100000000000000000",
+    "max_total_cost_wei": "1000000000000000000",
+    "max_job_cost_wei": "300000000000000000",
+    "max_attempts_per_job": "8"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "satoshifi.fork-policy-provenance.v1",
+  "selection_reference": "MainnetHeaderRelay._selectHead / _commonAncestor / _ancestor / _skipHeight",
+  "new_critical_code": [
+    "Rust policy port and atomic batch processing",
+    "Persistent canonical-height tree and membership encoding",
+    "Ordered known-history commitment and replay recovery",
+    "Solidity canonical membership component"
+  ],
+  "reference_scope": "Selection differential uses synthetic graphs; public batch tests also use unchanged real headers. No synthetic PoW qualification.",
+  "source_sha256": {
+    "web3/contracts/src/federation/MainnetHeaderRelay.sol": "8e219f67fae910ae8055e10eae0254f0ac95a5ea711316df0e5251e91f656fc1",
+    "web3/contracts/src/libs/TargetsHelper.sol": "9690387a32a2c5f0a5ca097c71099ec4f139f9af769bd316650c5d7bebfaab36",
+    "web3/contracts/src/core/BitcoinTxParser.sol": "71870010fa961e6688908d857ec184e90d4e9c32077b55db48b4fc1fda55c43f",
+    "web3/test/MainnetRelayFixture.sol": "1661cb420ee6133b87ae70bb976d83a67caeaf69f435e6985489dbbc7fda3e6d",
+    "web3/test/fixtures/mainnet/headers-32246-36288.bin": "0f16ff696da6f1d222adbbd4e0a5e416eadf1a5aa4c17c02c2d463af7ad1bbf8",
+    "web3/test/fixtures/mainnet/expected-32246-36288.bin": "a18d8be9a29e930ece703580a306a0650464877c9d3c14039d61f06acbaca21e"
+  }
+}

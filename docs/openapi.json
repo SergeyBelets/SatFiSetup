@@ -1,0 +1,278 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Satohsi Operations",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8787"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Liveness (public)",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        },
+        "security": []
+      }
+    },
+    "/readiness": {
+      "get": {
+        "summary": "Verify deployment receipts, bytecode and configured constructor/role checks",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Visible operation status counts and configured on-chain inventory/fee/day metrics",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        }
+      }
+    },
+    "/v1/deployments": {
+      "get": {
+        "summary": "Configured deployment IDs",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        }
+      }
+    },
+    "/v1/operations": {
+      "get": {
+        "summary": "Public projection of operations matching current actions and allowed deployments",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Prepare an allowlisted operation (operator/admin role); no automatic FROST approval",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "action",
+                  "args"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "args": {
+                    "type": "array",
+                    "description": "ABI arguments. All signed/unsigned integer values must be decimal strings, including tuple and array members.",
+                    "items": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Prepared or identical retry"
+          },
+          "400": {
+            "description": "Invalid types, secret field, or schema"
+          },
+          "403": {
+            "description": "Role/action not allowed"
+          },
+          "409": {
+            "description": "Same idempotency key with changed parameters"
+          }
+        }
+      }
+    },
+    "/v1/operations/{id}": {
+      "get": {
+        "summary": "Operation with public request and transaction receipt",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          },
+          "404": {
+            "description": "Unknown, internal or outside the current policy"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/views/{name}": {
+      "get": {
+        "summary": "Allowlisted on-chain view: DKG, signing, pools, fees, withdrawals, DAO days, proposals and next actions",
+        "responses": {
+          "200": {
+            "description": "Public state; monetary integers are decimal strings"
+          },
+          "401": {
+            "description": "Missing authentication"
+          },
+          "503": {
+            "description": "Not ready or chain unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "description": "URL-encoded JSON ABI array; permitted only for a view with parameters=true. All integer arguments are decimal strings."
+          }
+        ]
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "summary": "Indexed EVM logs scoped to chain/address pairs in allowed deployments",
+        "responses": {
+          "200": {
+            "description": "Latest 200 public log records with canonical flags"
+          }
+        }
+      }
+    },
+    "/v1/actions": {
+      "get": {
+        "summary": "Allowlisted actions, ABI input schemas and named reads",
+        "responses": {
+          "200": {
+            "description": "Public typed result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}": {
+      "get": {
+        "summary": "Public deployment manifest, without profiles or raw signed transactions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public typed result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    }
+  }
+}

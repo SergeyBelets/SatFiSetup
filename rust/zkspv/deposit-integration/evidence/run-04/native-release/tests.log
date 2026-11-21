@@ -1,0 +1,11 @@
+   Compiling satoshifi-regtest-deposit-kernel v0.1.0 (/private/tmp/satoshifi-deposit-build/deposit-integration/kernel)
+    Finished `release` profile [optimized] target(s) in 11.19s
+     Running unittests src/lib.rs (/private/tmp/satoshifi-deposit-native-target/release/deps/satoshifi_regtest_deposit_kernel-d091d4748b9fe17c)
+
+running 3 tests
+test tests::tampered_pow_bits_parent_and_mtp_rejected ... ok
+test tests::deployment_checkpoint_and_format_bound ... ok
+test tests::real_core_headers_and_paths ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

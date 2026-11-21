@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "issuer_identity_file": "/REPLACE/private/issuer.json",
+  "permission_seconds": "3600",
+  "max_tx_gas": "2000000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "max_job_cost_wei": "20000000000000000",
+  "max_attempts_per_job": "8"
+}

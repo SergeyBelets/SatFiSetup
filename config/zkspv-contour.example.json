@@ -1,0 +1,194 @@
+{
+  "version": "1",
+  "run_id": "1111111111111111111111111111111111111111111111111111111111111111",
+  "directory": "/srv/satoshifi/private/combined-contour",
+  "source_paths": [
+    "ops/zkspv/contour.py",
+    "ops/zkspv/contour_driver.py",
+    "signer-agent/signer_agent/continuity_handover.py",
+    "signer-agent/signer_agent/bitcoin_continuity.py",
+    "signer-agent/signer_agent/epoch_service.py",
+    "signer-agent/signer_agent/epoch_retention.py",
+    "ops/zkspv/contour_worker.py",
+    "ops/zkspv/contour_service.py",
+    "ops/zkspv/contour_bootstrap.py",
+    "ops/zkspv/contour_funding.py",
+    "ops/zkspv/contour_member.py",
+    "ops/zkspv/contour_mint.py",
+    "ops/zkspv/contour_tx.py",
+    "signer-agent/signer_agent/custody_mint.py",
+    "ops/zkspv/contour_plan.py",
+    "signer-agent/signer_agent/zk_worker.py",
+    "signer-agent/signer_agent/zk_worker_prover.py",
+    "ops/zkspv/contour_calls.py",
+    "ops/zkspv/contour_withdrawal.py",
+    "ops/zkspv/contour_reconcile.py",
+    "ops/zkspv/contour_incident.py",
+    "signer-agent/signer_agent/incident_transport.py",
+    "signer-agent/signer_agent/address_status_client.py",
+    "signer-agent/signer_agent/incident_observations.py",
+    "ops/zkspv/contour_epoch.py"
+  ],
+  "stages": [
+    {
+      "id": "bootstrap",
+      "capability": "bootstrap",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "bitcoin_funding",
+      "capability": "bitcoin_funding",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "withdrawal_prepare",
+      "capability": "withdrawal_prepare",
+      "timeout_seconds": 600,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "consumer_request",
+      "capability": "consumer_request",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "encrypted_transport",
+      "capability": "encrypted_transport",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "admission_payment",
+      "capability": "admission_payment",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "proof_preparation",
+      "capability": "proof_preparation",
+      "timeout_seconds": 900,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "fresh_proof",
+      "capability": "fresh_proof",
+      "timeout_seconds": 14400,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "state_update",
+      "capability": "state_update",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "membership",
+      "capability": "membership",
+      "timeout_seconds": 900,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "service_status",
+      "capability": "service_status",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "smp1_mint",
+      "capability": "smp1_mint",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "address_mint",
+      "capability": "address_mint",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "withdrawal_btc",
+      "capability": "withdrawal_btc",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "withdrawal_mp",
+      "capability": "withdrawal_mp",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "withdrawal_s",
+      "capability": "withdrawal_s",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "reconciliation",
+      "capability": "reconciliation",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "incident_recovery",
+      "capability": "incident_recovery",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "old_epoch_service",
+      "capability": "old_epoch_service",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    },
+    {
+      "id": "continuity",
+      "capability": "continuity",
+      "timeout_seconds": 300,
+      "probe": null,
+      "run": null,
+      "recover": null
+    }
+  ]
+}

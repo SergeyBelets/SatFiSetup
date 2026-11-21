@@ -1,0 +1,23 @@
+{
+  "own_nodes_stopped": {
+    "anvil": true,
+    "bitcoin": true
+  },
+  "no_task_prover_container": true,
+  "docker_not_stopped": true,
+  "previous_nine_services_running": true,
+  "running_containers": [
+    "obod-quickstart-qa-frontend-1",
+    "obod-quickstart-qa-worker-1",
+    "obod-quickstart-qa-realtime-1",
+    "obod-quickstart-qa-beat-1",
+    "obod-quickstart-qa-backend-1",
+    "obod-quickstart-qa-gateway-1",
+    "obod-quickstart-qa-postgres-1",
+    "obod-quickstart-qa-redis-1",
+    "obod-quickstart-qa-minio-1"
+  ],
+  "temporary_prover_image_removed": true,
+  "image": "risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
+  "free_disk_bytes": 23687520256
+}

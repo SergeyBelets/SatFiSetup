@@ -1,0 +1,489 @@
+{
+  "version": "1",
+  "specification_sha256": "6677a3e8ae27472fb7a3bfdf0e24ca2a5d3327dae2c5c123c4431262a83ec922",
+  "scope": "Explicit local regression bindings. Fixtures and models are declared; these bindings do not qualify complete real-contour requirements.",
+  "modules": {
+    "schedule": [
+      "PYTEST",
+      "MODEL",
+      "tests/zkspv/test_scheduler.py"
+    ],
+    "economics": [
+      "PYTEST",
+      "MODEL",
+      "tests/zkspv/test_economics.py"
+    ],
+    "worker": [
+      "PYTEST",
+      "NATIVE_WITH_RPC_FIXTURES",
+      "signer-agent/tests/test_zk_worker.py"
+    ],
+    "worker_funding": [
+      "PYTEST",
+      "NATIVE_WITH_RPC_FIXTURES",
+      "signer-agent/tests/test_zk_worker_service.py"
+    ],
+    "chunks": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_worker_cycle.py"
+    ],
+    "heartbeat": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_heartbeat.py"
+    ],
+    "observations": [
+      "PYTEST",
+      "MODEL_AND_REAL_SQLITE",
+      "signer-agent/tests/test_zk_observations.py"
+    ],
+    "spv_transport": [
+      "PYTEST",
+      "NATIVE_HPKE_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_spv_transport.py"
+    ],
+    "automation": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_spv_automation.py"
+    ],
+    "service": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_service.py"
+    ],
+    "nonce": [
+      "PYTEST",
+      "NATIVE_CRYPTO_AND_JOURNAL",
+      "signer-agent/tests/test_nonce_recovery.py"
+    ],
+    "frost": [
+      "PYTEST",
+      "NATIVE_CRYPTO",
+      "signer-agent/tests/test_frost_math.py"
+    ],
+    "signing": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_signing_service.py"
+    ],
+    "dkg": [
+      "PYTEST",
+      "NATIVE_CRYPTO_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_dkg_protocol.py"
+    ],
+    "btc_transport": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bitcoin_onchain_transport.py"
+    ],
+    "btc_recovery": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bitcoin_payment_recovery.py"
+    ],
+    "gas": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_gas_treasury.py"
+    ],
+    "bootstrap": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_zk_bootstrap.py"
+    ],
+    "setup": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_setup.py"
+    ],
+    "parallel": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bootstrap_parallel.py"
+    ],
+    "smp1": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_smp1_deposit.py"
+    ],
+    "mint_admission": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_mint_admission.py"
+    ],
+    "origin": [
+      "PYTEST",
+      "RPC_PROVENANCE_FIXTURES",
+      "signer-agent/tests/test_contract_provenance.py"
+    ],
+    "address_mint": [
+      "PYTEST",
+      "NATIVE_CODEC_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_mint.py"
+    ],
+    "address_admission": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_mint_admission.py"
+    ],
+    "registration": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_registration.py"
+    ],
+    "address_transport": [
+      "PYTEST",
+      "NATIVE_HPKE_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_transport.py"
+    ],
+    "watch": [
+      "PYTEST",
+      "NATIVE_CODEC_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_watch.py"
+    ],
+    "address_spv": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_address_spv.py"
+    ],
+    "input_keys": [
+      "PYTEST",
+      "NATIVE_CRYPTO_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bitcoin_input_keys.py"
+    ],
+    "funding": [
+      "PYTEST",
+      "NATIVE_CODEC_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bitcoin_funding.py"
+    ],
+    "reserve": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_btc_fee_reserve.py"
+    ],
+    "recipients": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_recipient_profiles.py"
+    ],
+    "incident": [
+      "PYTEST",
+      "NATIVE_HPKE_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_incident_status.py"
+    ],
+    "epochs": [
+      "PYTEST",
+      "NATIVE_CRYPTO_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_epoch_service.py"
+    ],
+    "family": [
+      "PYTEST",
+      "REAL_LOCAL_EVM_WITH_DKG_APPROVAL_FIXTURES",
+      "signer-agent/tests/test_key_family_evm.py"
+    ],
+    "continuity": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_bitcoin_continuity.py"
+    ],
+    "fee": [
+      "PYTEST",
+      "NATIVE_CRYPTO_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_withdrawal_fee.py"
+    ],
+    "fee_spv": [
+      "PYTEST",
+      "NATIVE_CODEC_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_withdrawal_fee_spv.py"
+    ],
+    "withdrawal": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_withdrawal_user.py"
+    ],
+    "lifecycle": [
+      "PYTEST",
+      "NATIVE_HPKE_CODEC_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_lifecycle_extensions.py"
+    ],
+    "withdrawal_runner": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_withdrawal.py"
+    ],
+    "refund_runner": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_refund.py"
+    ],
+    "fee_runner": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_contour_fee.py"
+    ],
+    "callback": [
+      "PYTEST",
+      "SDK_WITH_CHAIN_FIXTURES",
+      "signer-agent/tests/test_callback_admission.py"
+    ],
+    "safety_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_FIXTURES",
+      "web3/test/MainnetSPVGuardConsumers.t.sol"
+    ],
+    "state_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_FIXTURES",
+      "rust/zkspv/state-adapter/test/StateAdapter.t.sol"
+    ],
+    "address_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_QUALIFICATION_DKG_SPV_FIXTURES",
+      "web3/test/BitcoinAddressRegistry.t.sol"
+    ],
+    "recipient_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_QUALIFICATION_DKG_SPV_FIXTURES",
+      "web3/test/RecipientMatrix.t.sol"
+    ],
+    "reserve_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_QUALIFICATION_DKG_SPV_FIXTURES",
+      "web3/test/BitcoinFeeReserve.t.sol"
+    ],
+    "subsidy_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_QUALIFICATION_DKG_SPV_FIXTURES",
+      "web3/test/WithdrawalFeeSubsidy.t.sol"
+    ],
+    "callback_evm": [
+      "FORGE",
+      "REAL_LOCAL_EVM_TEST_ASSETS_WITH_EXPLICIT_AUTH_SPV_FIXTURES",
+      "web3/test/CallbackPoolAdmission.t.sol"
+    ],
+    "payment_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_STATE_AUTH_FIXTURES",
+      "web3/test/SPVServicePayment.t.sol"
+    ],
+    "allocation_evm": [
+      "FORGE",
+      "CONTRACT_WITH_EXPLICIT_SPV_AUTH_FIXTURES",
+      "web3/test/MiningDepositAllocation.t.sol"
+    ],
+    "parser_evm": [
+      "FORGE",
+      "CONTRACT_CODEC",
+      "web3/test/BitcoinFundingParser.t.sol"
+    ]
+  },
+  "groups": {
+    "11.9": [
+      "schedule,economics",
+      "schedule,chunks",
+      "schedule,observations,worker",
+      "schedule,heartbeat",
+      "schedule,safety_evm",
+      "schedule,heartbeat",
+      "schedule,chunks",
+      "schedule,worker_funding",
+      "schedule,observations,chunks",
+      "schedule,worker,worker_funding",
+      "schedule,state_evm,safety_evm",
+      "schedule,worker,address_mint",
+      "schedule,worker,address_mint",
+      "schedule,address_spv",
+      "worker_funding,automation",
+      "watch,reserve",
+      "watch,btc_recovery",
+      "observations,chunks",
+      "observations",
+      "observations,worker",
+      "safety_evm,state_evm",
+      "schedule,state_evm",
+      "schedule,heartbeat",
+      "watch,automation,worker_funding",
+      "watch,schedule,observations",
+      "chunks,worker",
+      "withdrawal,mint_admission",
+      "withdrawal_runner,btc_recovery",
+      "address_mint,fee_spv,input_keys"
+    ],
+    "11.10": [
+      "spv_transport,service",
+      "worker_funding,automation",
+      "worker,address_spv",
+      "spv_transport,address_transport",
+      "spv_transport,dkg",
+      "worker,chunks",
+      "dkg,frost,nonce",
+      "nonce,frost,signing",
+      "dkg,frost,signing",
+      "nonce,btc_transport",
+      "signing,nonce,spv_transport",
+      "btc_recovery,withdrawal_runner",
+      "observations,epochs,spv_transport",
+      "spv_transport,worker_funding,schedule",
+      "observations",
+      "spv_transport,address_transport",
+      "btc_transport,nonce",
+      "spv_transport,address_transport,incident",
+      "service,spv_transport,worker",
+      "automation,worker_funding,payment_evm",
+      "payment_evm,gas",
+      "payment_evm",
+      "payment_evm",
+      "payment_evm,gas",
+      "payment_evm,worker_funding",
+      "payment_evm",
+      "payment_evm,epochs",
+      "payment_evm,automation",
+      "observations,worker_funding",
+      "automation,gas,nonce",
+      "withdrawal_runner,worker_funding",
+      "economics,payment_evm",
+      "automation,payment_evm",
+      "automation,payment_evm",
+      "automation,payment_evm",
+      "automation,gas",
+      "payment_evm",
+      "payment_evm,callback_evm",
+      "payment_evm,worker_funding",
+      "payment_evm,schedule",
+      "epochs,payment_evm",
+      "chunks,worker_funding",
+      "bootstrap,setup,worker_funding",
+      "parallel,setup,origin"
+    ],
+    "11.11": [
+      "smp1,allocation_evm",
+      "smp1,allocation_evm",
+      "smp1,mint_admission",
+      "address_mint,allocation_evm",
+      "watch,address_mint,btc_recovery",
+      "safety_evm,state_evm",
+      "reserve_evm,subsidy_evm",
+      "observations,worker",
+      "btc_transport,nonce,dkg",
+      "btc_recovery",
+      "origin,bootstrap",
+      "smp1,allocation_evm"
+    ],
+    "ADDR": [
+      "registration,address_transport,lifecycle,address_evm",
+      "registration,address_transport",
+      "registration,input_keys",
+      "registration,address_evm,family",
+      "registration,address_transport",
+      "input_keys",
+      "input_keys,fee",
+      "input_keys,nonce,btc_recovery",
+      "input_keys,dkg,btc_transport",
+      "address_evm,watch",
+      "address_mint,fee_spv,input_keys",
+      "address_evm,allocation_evm",
+      "watch,address_mint",
+      "reserve,address_evm",
+      "input_keys,reserve_evm",
+      "reserve_evm,watch",
+      "watch,address_mint",
+      "registration,address_admission",
+      "address_spv,address_admission",
+      "epochs,watch",
+      "watch,address_transport",
+      "watch,address_transport,worker_funding",
+      "address_admission,address_transport",
+      "address_spv,automation",
+      "address_admission,nonce,lifecycle",
+      "address_transport,btc_transport",
+      "origin,registration,parser_evm",
+      "lifecycle,address_mint",
+      "parser_evm,funding",
+      "parser_evm,funding",
+      "funding,parser_evm",
+      "funding,parser_evm",
+      "address_admission,mint_admission",
+      "registration,address_admission",
+      "address_admission,nonce",
+      "address_mint,reserve",
+      "reserve,btc_recovery",
+      "watch,reserve",
+      "reserve,reserve_evm",
+      "fee_spv,reserve",
+      "epochs,reserve",
+      "reserve_evm,reserve",
+      "reserve_evm,lifecycle",
+      "reserve,watch",
+      "recipient_evm,recipients",
+      "recipient_evm,recipients",
+      "recipient_evm,recipients",
+      "recipients,address_transport",
+      "address_transport,recipients",
+      "recipient_evm,watch",
+      "incident,address_evm",
+      "incident,address_admission",
+      "incident,address_admission",
+      "incident,address_evm",
+      "incident,nonce",
+      "incident,address_evm",
+      "incident,address_evm",
+      "family,continuity,incident",
+      "incident,observations",
+      "family,epochs,nonce",
+      "epochs,watch",
+      "epochs,continuity"
+    ],
+    "SUB": [
+      "subsidy_evm,withdrawal",
+      "subsidy_evm,fee,withdrawal,fee_runner",
+      "withdrawal,subsidy_evm",
+      "fee_spv,fee,subsidy_evm",
+      "fee_spv,subsidy_evm",
+      "fee_spv,watch",
+      "fee,subsidy_evm",
+      "subsidy_evm,fee",
+      "subsidy_evm,withdrawal",
+      "subsidy_evm,lifecycle",
+      "subsidy_evm",
+      "subsidy_evm,withdrawal",
+      "fee,reserve_evm",
+      "subsidy_evm,fee",
+      "subsidy_evm,lifecycle",
+      "fee,subsidy_evm",
+      "subsidy_evm,reserve_evm",
+      "subsidy_evm,reserve",
+      "subsidy_evm,lifecycle",
+      "subsidy_evm,lifecycle",
+      "subsidy_evm,fee",
+      "lifecycle,subsidy_evm",
+      "subsidy_evm,callback_evm",
+      "subsidy_evm,refund_runner",
+      "refund_runner,subsidy_evm",
+      "refund_runner,subsidy_evm",
+      "refund_runner,lifecycle",
+      "withdrawal_runner,btc_recovery",
+      "fee_spv,incident,subsidy_evm",
+      "parser_evm,subsidy_evm",
+      "economics,withdrawal",
+      "withdrawal_runner,subsidy_evm",
+      "callback_evm,callback",
+      "callback_evm,origin",
+      "callback_evm,subsidy_evm",
+      "subsidy_evm,fee",
+      "subsidy_evm,lifecycle",
+      "fee,subsidy_evm",
+      "recipient_evm,recipients,fee",
+      "incident,withdrawal_runner,subsidy_evm",
+      "subsidy_evm,reserve",
+      "subsidy_evm,reserve",
+      "subsidy_evm,fee_spv",
+      "subsidy_evm,withdrawal",
+      "subsidy_evm,fee",
+      "subsidy_evm",
+      "subsidy_evm,refund_runner",
+      "callback_evm,continuity,withdrawal_runner"
+    ]
+  }
+}

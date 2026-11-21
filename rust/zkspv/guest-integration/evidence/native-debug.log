@@ -1,0 +1,43 @@
+   Compiling sov-keys v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/sovereign-sdk/module-system/sov-keys)
+   Compiling satoshifi-fork-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/fork-policy)
+   Compiling satoshifi-checkpoint-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/checkpoint-policy)
+   Compiling satoshifi-header-time-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/time-policy)
+   Compiling satoshifi-resume-policy v0.1.0 (/private/tmp/satoshifi-guest-build-final/resume-policy)
+   Compiling sov-rollup-interface v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/sovereign-sdk/rollup-interface)
+   Compiling satoshifi-resume-transition v0.1.0 (/private/tmp/satoshifi-guest-build-final/resume-transition)
+   Compiling citrea-primitives v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/primitives)
+   Compiling bitcoin-da v2.8.0 (/private/tmp/satoshifi-guest-build-final/vendor-native/crates/bitcoin-da)
+   Compiling satoshifi-mainnet-guest-kernel v0.1.0 (/private/tmp/satoshifi-guest-build-final/guest-integration)
+    Finished `test` profile [unoptimized] target(s) in 2.57s
+     Running unittests src/lib.rs (/private/tmp/satoshifi-guest-qualified-target/native/debug/deps/satoshifi_mainnet_guest_kernel-adb40492cf4dc5b4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/native.rs (/private/tmp/satoshifi-guest-qualified-target/native/debug/deps/native-d8b967795d70b7bd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/mainnet.rs (/private/tmp/satoshifi-guest-qualified-target/native/debug/deps/mainnet-8a8c4c0b1959062e)
+
+running 8 tests
+test transport_rejects_length_before_reading_body ... ok
+test transport_rejects_truncation_and_trailing_bytes ... ok
+test public_adapter_rejects_invalid_pow_parent_height_bits_mtp_and_overflow ... ok
+test kernel_rejects_invalid_pow_even_with_a_structurally_valid_witness ... ok
+test kernel_rejects_forged_context_and_stale_state ... ok
+test overlapping_headers_use_authenticated_context_and_count_unique_work ... ok
+test public_mainnet_dispatch_matches_every_context_field_across_two_retargets ... ok
+test static_kernel_exact_journal_and_bounded_resume_at_both_retargets ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.70s
+
+   Doc-tests satoshifi_mainnet_guest_kernel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

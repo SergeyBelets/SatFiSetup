@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "profile": "BITCOIN_ULR_BOOTSTRAP",
+  "issuance": "qualification_required",
+  "recipient_binding": "immutable_per_request",
+  "minimum_confirmations": "6",
+  "coinbase_confirmations": "100",
+  "min_p2wpkh_sats": "294",
+  "min_p2tr_sats": "330",
+  "miner_fee_payer": "confederation_treasury",
+  "reward_asset": "one_enrolled_usd_token"
+}

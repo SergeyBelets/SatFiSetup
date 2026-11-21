@@ -1,0 +1,39 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -636,15 +636,27 @@
+ 
+ /// Converts the big-endian target value to the little-endian `bits` field of a block header.
+ pub(crate) const fn target_to_bits(target: &[u8; 32]) -> u32 {
+-    let target_u256 = U256::from_be_slice(target);
+-    let target_bits = target_u256.bits();
+-    let size = (263 - target_bits) / 8;
+-    let mut compact_target = [0u8; 4];
+-    compact_target[0] = 33 - size as u8;
+-    compact_target[1] = target[size - 1_usize];
+-    compact_target[2] = target[size];
+-    compact_target[3] = target[size + 1_usize];
+-    u32::from_be_bytes(compact_target)
++    // Bitcoin Core arith_uint256::GetCompact (unsigned target).
++    let mut first = 0;
++    while first < target.len() && target[first] == 0 {
++        first += 1;
++    }
++    let mut size = (target.len() - first) as u32;
++    let mut compact = 0u32;
++    if size <= 3 {
++        while first < target.len() {
++            compact = (compact << 8) | target[first] as u32;
++            first += 1;
++        }
++        compact <<= 8 * (3 - size);
++    } else {
++        compact = u32::from_be_bytes([0, target[first], target[first + 1], target[first + 2]]);
++    }
++    if compact & 0x0080_0000 != 0 {
++        compact >>= 8;
++        size += 1;
++    }
++    compact | (size << 24)
+ }
+ 
+ /// Calculates the work done for a block hash that satisfies a given.

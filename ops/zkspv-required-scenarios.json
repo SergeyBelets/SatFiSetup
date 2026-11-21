@@ -1,0 +1,1176 @@
+{
+  "version": "1",
+  "specification_sha256": "6677a3e8ae27472fb7a3bfdf0e24ca2a5d3327dae2c5c123c4431262a83ec922",
+  "scenarios": [
+    {
+      "id": "11.9/01",
+      "clause": "11.9",
+      "title": "30 дней без операций, запросов и security-событий",
+      "row_sha256": "c7c46733f5237501c4ea762ed6f06d31113388394cacb8bce1d44510b20dc730"
+    },
+    {
+      "id": "11.9/02",
+      "clause": "11.9",
+      "title": "Первый платёж после 30 и 180 дней простоя",
+      "row_sha256": "67c31320576fe1df10ef780427a96274485f9e12f0ce1606bedd1f9d9389475b"
+    },
+    {
+      "id": "11.9/03",
+      "clause": "11.9",
+      "title": "Событие перед heartbeat или во время подготовки, два workers",
+      "row_sha256": "2cdcca35c1325fe7bfdc4c75a1346c6721ae10422099ca843e77e3a22c6e1845"
+    },
+    {
+      "id": "11.9/04",
+      "clause": "11.9",
+      "title": "Подготовка heartbeat закончилась раньше срока без другой причины",
+      "row_sha256": "7ed63fb3e62fb1b4bb12937d9811ec5f45209a13ed1e293cd7fffed0ff6a1e4b"
+    },
+    {
+      "id": "11.9/05",
+      "clause": "11.9",
+      "title": "Fresh истёк между heartbeat в экономичном idle-профиле",
+      "row_sha256": "9a67def0657f10171b2bf7033c94561a2c519c767fd5433763b1b19edc23811c"
+    },
+    {
+      "id": "11.9/06",
+      "clause": "11.9",
+      "title": "Отдельно задано SLA непрерывной денежной готовности",
+      "row_sha256": "48cbd001bcee7be657a9540c38e7c91052c3550f92a225368ec10512fa7cc61e"
+    },
+    {
+      "id": "11.9/07",
+      "clause": "11.9",
+      "title": "Частичный catch-up увеличил work, но вершина ещё не удовлетворяет Fresh/цели",
+      "row_sha256": "350dc1992a90f114fe0cb255bdbd3fa7f4d3ad979260f13c5f54b05ba1539226"
+    },
+    {
+      "id": "11.9/08",
+      "clause": "11.9",
+      "title": "Нет нового Bitcoin progress либо наблюдатель не может проверить его наличие",
+      "row_sha256": "a5bae5486d62021775e9546acc04786e66ca9d57dad9f96410efa7283107d64c"
+    },
+    {
+      "id": "11.9/09",
+      "clause": "11.9",
+      "title": "Restart, EVM reorg, длительный outage, несколько пропущенных слотов",
+      "row_sha256": "d9779f08cde4ee96febbed693226b1e53f043966368e85c049427ebbfb1115f3"
+    },
+    {
+      "id": "11.9/10",
+      "clause": "11.9",
+      "title": "Prover/quorum/fee outage, затем восстановление; отдельно EVM outage",
+      "row_sha256": "8d6064c20a5a0d4f73a02f592523c1c23a3f2f6274115059e323d35121b78762"
+    },
+    {
+      "id": "11.9/11",
+      "clause": "11.9",
+      "title": "Границы FreshDeadline, старые timestamps и permanent halt",
+      "row_sha256": "0005ca0cb94e1c72d6627e615fbaeb4ec61eea45c41c93f4cab3a0589520c555"
+    },
+    {
+      "id": "11.9/12",
+      "clause": "11.9",
+      "title": "Один платёж, затем только пустые для нас блоки",
+      "row_sha256": "ec2cd0252b1b7aff7e64ae478920a86e451066b8656268fb2d582145f128f888"
+    },
+    {
+      "id": "11.9/13",
+      "clause": "11.9",
+      "title": "Разные deposit.depth и escrow.depth выше 6, несколько потребностей",
+      "row_sha256": "8377f35b2786a9ee587e1682e7fdfe72843c8a288c4b2543860c85b439957029"
+    },
+    {
+      "id": "11.9/14",
+      "clause": "11.9",
+      "title": "Поздний запрос на существующий допустимый депозит",
+      "row_sha256": "45b0da010ebc4ee6eae1a3a095ebd6d161c602eb8b75b9a2b6a4ae81569590d5"
+    },
+    {
+      "id": "11.9/15",
+      "clause": "11.9",
+      "title": "Несколько федераций и уже достаточное чужое обновление",
+      "row_sha256": "8c79b355ed44ed6b85d286e769ff81fe27c209721a41d6c8023bf1d3f8445338"
+    },
+    {
+      "id": "11.9/16",
+      "clause": "11.9",
+      "title": "Ротация script и исходящий tx без нашей сдачи",
+      "row_sha256": "90e1e08cf69eeb76a87bd2e79207825783fd926aa9178b1dc19a4368c38a1227"
+    },
+    {
+      "id": "11.9/17",
+      "clause": "11.9",
+      "title": "RBF/replacement и reorg до зрелости",
+      "row_sha256": "49743bc8e782f996cea15d391009a2ee6ce835e597f506f2a2ed8dec8567ea43"
+    },
+    {
+      "id": "11.9/18",
+      "clause": "11.9",
+      "title": "Длинный append и короткий/глубокий fork внутри catch-up",
+      "row_sha256": "d48827660191a0321d47c0434198b0c9fb69169d0ab37f18e636ee1fc4d7dba3"
+    },
+    {
+      "id": "11.9/19",
+      "clause": "11.9",
+      "title": "Непубликовавшаяся история A → B и конкурирующий submitter",
+      "row_sha256": "14a68aaa32100633a19e1310b6b520b8f00812cf3556219c18852de10b41cbfc"
+    },
+    {
+      "id": "11.9/20",
+      "clause": "11.9",
+      "title": "Reorg/halt при отсутствии платежей",
+      "row_sha256": "c44ead057aba7d9d852d85eca0a2411475a7c07a6157b601091c95863708454f"
+    },
+    {
+      "id": "11.9/21",
+      "clause": "11.9",
+      "title": "Прямой mint/settle с просроченным state",
+      "row_sha256": "04d01904315a4fee8e50e6f133812d5c5656219debc2d1bc5fe33373cb29ed43"
+    },
+    {
+      "id": "11.9/22",
+      "clause": "11.9",
+      "title": "Повтор root и старый advance1",
+      "row_sha256": "bf8de30588ae8ca80f1ce367e7775a11c47379a9127659bdf38467f799470bd6"
+    },
+    {
+      "id": "11.9/23",
+      "clause": "11.9",
+      "title": "Допустимые старые timestamps, медленные BTC-блоки и долгий proving",
+      "row_sha256": "de52e63e9eb607920d744d901768d7966540d710f01ff22f4b44c9f3cd4d30e2"
+    },
+    {
+      "id": "11.9/24",
+      "clause": "11.9",
+      "title": "Пыль и повторные запросы",
+      "row_sha256": "3a3e8b7886b477d7f09488280baf58e17e77281c225c36f46f2b48c48fc5e986"
+    },
+    {
+      "id": "11.9/25",
+      "clause": "11.9",
+      "title": "Restart, потеря подписки, разрыв сканирования и pruning",
+      "row_sha256": "418d447eaed8e90c1dcd142a90b91f70f458d8688466118958d5dff30b4d7d17"
+    },
+    {
+      "id": "11.9/26",
+      "clause": "11.9",
+      "title": "Прерывание многопакетного catch-up",
+      "row_sha256": "d5b851e3037b907e898448870ae8c296100c488ede5218b17cf47f6bb60d9aa0"
+    },
+    {
+      "id": "11.9/27",
+      "clause": "11.9",
+      "title": "Срок операции EVM без нового BTC-платежа",
+      "row_sha256": "1640c7c00d4383c88e8cdb8c7144bca5cdc624462bd1e307ebc9961084db70b3"
+    },
+    {
+      "id": "11.9/28",
+      "clause": "11.9",
+      "title": "Просроченный незавершённый Signing и уже подписанная выплата",
+      "row_sha256": "c9172f58f65374e528f3f8b302849bb9be36c40f46a57b6aee41ff3da5927f8b"
+    },
+    {
+      "id": "11.9/29",
+      "clause": "11.9",
+      "title": "Coinbase deposit и расход coinbase-входа",
+      "row_sha256": "106c809e68389bc35fdedc9d715e188b2111307e9257a098693b5e78b0e11e66"
+    },
+    {
+      "id": "11.10/01",
+      "clause": "11.10",
+      "title": "Две федерации, несколько совместимых готовых операций",
+      "row_sha256": "789ee6e9733273b334a503637ec15bfd0720552b11a3c4c24d213c6f1f3c540a"
+    },
+    {
+      "id": "11.10/02",
+      "clause": "11.10",
+      "title": "Уже достаточное Fresh состояние",
+      "row_sha256": "28319fc5420bed77a9778db9bf2fa4edf40e5e6d1701b7af8406a9290594c4b6"
+    },
+    {
+      "id": "11.10/03",
+      "clause": "11.10",
+      "title": "Платёж незрелый, новых переводов нет",
+      "row_sha256": "8a539569538d4b7749a9a05b5dc2d16f6bf24cd611621a621620f9e54b14fe3d"
+    },
+    {
+      "id": "11.10/04",
+      "clause": "11.10",
+      "title": "Потерянное событие/ACK, повтор ID в новом ciphertext, restart, несколько EVM readers/relayers",
+      "row_sha256": "c7692e3ad8a250ee1e6a0256b202afdcdd56aede6cee63910174862c82e9434c"
+    },
+    {
+      "id": "11.10/05",
+      "clause": "11.10",
+      "title": "Неверная федерация, confederation scope, сеть или request-полномочие",
+      "row_sha256": "3ab5b7c01ca1924307f989e7e9b1b60744f83b1edfea12ffbacc4d8eafbfd3ef"
+    },
+    {
+      "id": "11.10/06",
+      "clause": "11.10",
+      "title": "Два prover/relayer jobs, конкурентный полезный update",
+      "row_sha256": "5525045dd2b9ba5ba1eb36628909f64a97e3d717cd7ccd0a30e9c091aaa930b1"
+    },
+    {
+      "id": "11.10/07",
+      "clause": "11.10",
+      "title": "FROST: неверные proof, statement, key, epoch, domain, nonce или expiry",
+      "row_sha256": "0f9b3011d913df199f5f4e6cca9c1174777f8885466d165112c372d069574e0f"
+    },
+    {
+      "id": "11.10/08",
+      "clause": "11.10",
+      "title": "FROST: q−1 signers, неверная share, abort, restart nonce journal",
+      "row_sha256": "61a21711dfa16414a6d7ebae286ba6eeae06f76d8a9f293bd60bc735830327f4"
+    },
+    {
+      "id": "11.10/09",
+      "clause": "11.10",
+      "title": "Завершённая relay DKG → export → пороговая подпись statement → Solidity authorizer",
+      "row_sha256": "e4da33424197835e1dce62029e43165b49b83350dc697d8e09daffb17ef9b427"
+    },
+    {
+      "id": "11.10/10",
+      "clause": "11.10",
+      "title": "Новая relay-роль: stale backup, missing/substituted journal, concurrent signer, crash перед publish, restore/failover на другом хосте",
+      "row_sha256": "aa946a6994b44ff56b85fe4705ad72ed44e81f08ba071923775fcf21ae51e600"
+    },
+    {
+      "id": "11.10/11",
+      "clause": "11.10",
+      "title": "FROST: отказ transport после готового certificate; отказ quorum до certificate",
+      "row_sha256": "e73be965411d585d2aded8503c138c2d327fe957db01d8fc54b71c3acb332086"
+    },
+    {
+      "id": "11.10/12",
+      "clause": "11.10",
+      "title": "BTC уже выплачен, quorum offline, затем восстановлен",
+      "row_sha256": "4ca9f60782cef01503eb97d555fac6446bc3eafc6861c1356001048531760cdc"
+    },
+    {
+      "id": "11.10/13",
+      "clause": "11.10",
+      "title": "EVM reorg, Bitcoin reorg, rotation/membership change",
+      "row_sha256": "531b733e3b6c58a0e418bcce5f0b7fdf9278f174e6ab406f7596705c2fc59661"
+    },
+    {
+      "id": "11.10/14",
+      "clause": "11.10",
+      "title": "Пустой месяц, spam/дубликаты, очередь одной федерации под нагрузкой",
+      "row_sha256": "414d1a1b4fa6654e3b3c5078a18fae499914f1a6afbcee6cfd3520518c694592"
+    },
+    {
+      "id": "11.10/15",
+      "clause": "11.10",
+      "title": "Deep reorg без запросов и неопубликованная история п.15.11",
+      "row_sha256": "fb6955e0405b437c6f7e16874596f7b9cabcf68bb6f074ce892e0d253b877b3a"
+    },
+    {
+      "id": "11.10/16",
+      "clause": "11.10",
+      "title": "Повреждённый ciphertext, неверные AAD/recipient/key epoch, превышение размера, неполные фрагменты",
+      "row_sha256": "899894d4c83ee470636cc55e7e5ab06eb208f7b759c528d3ec88b017256f2fa2"
+    },
+    {
+      "id": "11.10/17",
+      "clause": "11.10",
+      "title": "Повтор и перестановка relay round messages, conflicting retry, EVM reorg после share",
+      "row_sha256": "38f42a94558b02a893c3e8a5e744ec40fdccfbfeb52c3d507ff8131366a91972"
+    },
+    {
+      "id": "11.10/18",
+      "clause": "11.10",
+      "title": "Публичные calldata/events, локальные логи и выдаваемые отчёты",
+      "row_sha256": "84b50bf38c39ba0d7e76eeafbd6b25bb376fa0cbf2a0a0769a878f3b19d18be9"
+    },
+    {
+      "id": "11.10/19",
+      "clause": "11.10",
+      "title": "Полный request→certificate→state путь",
+      "row_sha256": "362648c26cfbd386fff3064a1ec9e151d06bbbd2f3aa1d2d761bb1ae93bd4cb3"
+    },
+    {
+      "id": "11.10/20",
+      "clause": "11.10",
+      "title": "Готовый root/обеспеченный job и дубликаты с новыми request ID/ciphertext",
+      "row_sha256": "2532a3625bdadc3ad5668381cf475c348646256d4e33b18ed3fe3e12e59ad3b0"
+    },
+    {
+      "id": "11.10/21",
+      "clause": "11.10",
+      "title": "Принятое внеплановое задание, неверный тариф/epoch/payer, чужое занятие payment ID",
+      "row_sha256": "bfa7e2e5b0c700d5fb5089f33ee374ea6d62bfccba5115f0232250733d9097af"
+    },
+    {
+      "id": "11.10/22",
+      "clause": "11.10",
+      "title": "Разные очередность и частота claims, много мелких поступлений",
+      "row_sha256": "969fc95a915df47a9d8dde9fae749ec90d2ec735fa0b5fa5093c61d82db3ff7f"
+    },
+    {
+      "id": "11.10/23",
+      "clause": "11.10",
+      "title": "Forced native transfer без receive/event, округлённая пыль",
+      "row_sha256": "c27ab287f5adf0db695ac4d964dcd6b5ec6f45828cb731f5270d402b816a1345"
+    },
+    {
+      "id": "11.10/24",
+      "clause": "11.10",
+      "title": "Нулевой gas участника и funded caller",
+      "row_sha256": "5103d43a14cdc053ffcfda704fad529447a5bd57bb89b213f35b56341e2a6ce6"
+    },
+    {
+      "id": "11.10/25",
+      "clause": "11.10",
+      "title": "Пустая доля или недостаточный баланс после claim, нет газа у всех callers",
+      "row_sha256": "16d322b74e7b738b9dba6256215542627767488f8cc6b13b3bb156d477b0989d"
+    },
+    {
+      "id": "11.10/26",
+      "clause": "11.10",
+      "title": "Повторный claim, reentrancy, reverting recipient",
+      "row_sha256": "eae1074a158e7f5772d75cfbfaac61940dfbd261e06882ab049a81dfddd670c2"
+    },
+    {
+      "id": "11.10/27",
+      "clause": "11.10",
+      "title": "Изменение состава/долей/payout-адресов и гонка оплаты при ротации",
+      "row_sha256": "7650aa6c1411cbdd36841884dc5f8cf9dfa8e4ac4796d9f1dac99b132677a81a"
+    },
+    {
+      "id": "11.10/28",
+      "clause": "11.10",
+      "title": "Отмена/слияние после зачисления операционного взноса",
+      "row_sha256": "11689d1a9b1f8f68991690b044dec30353cc2a2c1bd58048de1943c58e5c7d41"
+    },
+    {
+      "id": "11.10/29",
+      "clause": "11.10",
+      "title": "Общий heartbeat/security резерв и массовые частные запросы",
+      "row_sha256": "db4723e5a9d7c5703db6607dc0916a053b5c1a745327704b6faeed92b236c8ae"
+    },
+    {
+      "id": "11.10/30",
+      "clause": "11.10",
+      "title": "EVM reorg оплаты/claim и restart",
+      "row_sha256": "1e82b385e2589feb458e938c11d8ccba31b6101117bf509940c8a7d80065cdaf"
+    },
+    {
+      "id": "11.10/31",
+      "clause": "11.10",
+      "title": "BTC уже подписан/исполнен, финансирования завершения недостаточно",
+      "row_sha256": "db9b80296de4c916eb6c5d6631ccedd5c3a7fd86a3f6f70b51a0f5db0366a7ca"
+    },
+    {
+      "id": "11.10/32",
+      "clause": "11.10",
+      "title": "Тарифные взносы, долевые выплаты и фактический TCO",
+      "row_sha256": "51017370e2200dd8e218ad3e1d141f98e0c48adbee0dc85af5329780acdcc145"
+    },
+    {
+      "id": "11.10/33",
+      "clause": "11.10",
+      "title": "Поддельный quote, подмена domain/chain/contract/treasury/payer/amount/tariff, expiry/revocation/nonce replay",
+      "row_sha256": "c5caec563d1ab5c56aa7eeba8e12ca61d88b23f70e7e61bd17bb11b99b565c0a"
+    },
+    {
+      "id": "11.10/34",
+      "clause": "11.10",
+      "title": "Достаточный root включён после quote, но до fundRequest; неудачный перевод из funding входа в кассу",
+      "row_sha256": "3883d5615441f1b314173660eeb8bb106a41389300b2fdbf16501f48588a4b74"
+    },
+    {
+      "id": "11.10/35",
+      "clause": "11.10",
+      "title": "Конкурентный admission одинаковой работы с разными ID, рестарт/смена coordinator, новый общий обеспеченный job",
+      "row_sha256": "d93e252542c4333e8abc751b9373c025ea556bdd1579fa258a174a189b61aa79"
+    },
+    {
+      "id": "11.10/36",
+      "clause": "11.10",
+      "title": "Делегат превышает один/совокупный лимит, отозван, меняет кассу/тариф; несколько клиентов и ротация",
+      "row_sha256": "bc5474fdd6a09d8a70f040b29570d77ec01f11ec0c87886cc36d2865b4eb689a"
+    },
+    {
+      "id": "11.10/37",
+      "clause": "11.10",
+      "title": "Self-payee, неверные массивы/веса, uint256-границы; неизвестный payee/нулевой claim",
+      "row_sha256": "ed813e100ab36fc3dc8b142de731fd73f2597aed942579b9e7cec29d42481377"
+    },
+    {
+      "id": "11.10/38",
+      "clause": "11.10",
+      "title": "Callback/reentrancy через claim/claimFor/funding и gas-burning recipient",
+      "row_sha256": "e99837c09faa598d23af81889071f718415c88663349143db76d642077667925"
+    },
+    {
+      "id": "11.10/39",
+      "clause": "11.10",
+      "title": "Пылевые пожертвования, многократный revert и чужой claimFor раньше штатного",
+      "row_sha256": "8771a855e0dfaff09d26da20c5642dfa45dbc59d548e88d25cb557f1b9937816"
+    },
+    {
+      "id": "11.10/40",
+      "clause": "11.10",
+      "title": "Получатель большой доли создаёт бесполезные jobs; quorum/prover исчезает после оплаты",
+      "row_sha256": "62ccf642017c34575cf1b7eef4f63b5582f89d53fb6f39a9fd254702fad82448"
+    },
+    {
+      "id": "11.10/41",
+      "clause": "11.10",
+      "title": "Ротация с уже оплаченным незавершённым job и недостаточным газом нового состава",
+      "row_sha256": "058a009f848a03fdd13b04f78e2345208efbdf39f554d5bef5c95a536256354d"
+    },
+    {
+      "id": "11.10/42",
+      "clause": "11.10",
+      "title": "Оплаченный service job: чужой недостаточный update, rebase, FROST abort/expiry, restart и несколько chunks",
+      "row_sha256": "0f4439f3fc6935bcfb8e2b638e1879aeaa338e216b5682c5939e20baf6a11252"
+    },
+    {
+      "id": "11.10/43",
+      "clause": "11.10",
+      "title": "Чистый bootstrap с пустой кассой/нулевыми операционными балансами и независимым стартовым бюджетом; Fresh=false",
+      "row_sha256": "de180774ca9350f645ea3ce6ece7dff00fc408336605a19ce0edf35ce2747b15"
+    },
+    {
+      "id": "11.10/44",
+      "clause": "11.10",
+      "title": "Остановка bootstrap между deployment и activation, restart/EVM reorg, неверный runtime/authority",
+      "row_sha256": "113c495863bd79ef7b64f0c789ba1b9d259fd18b13614fd610a3cae7fe8e3224"
+    },
+    {
+      "id": "11.11/01",
+      "clause": "11.11",
+      "title": "Обычный SMP1-депозит; изменены chain ID, mining pool, wallet vout, явный recipient, allocationHash или сумма",
+      "row_sha256": "b75eb48ae4612125bad5e3c7ab018ca0ba461dbdd97733a84c93adbc62870a08"
+    },
+    {
+      "id": "11.11/02",
+      "clause": "11.11",
+      "title": "Coinbase без SMP1; с корректным SMP1; только с несовпадающим/malformed/nonminimal SMP1",
+      "row_sha256": "2b8238e3d1da02b3d271823f7239c7657eb0a79b09404c9f8a0a9ba6266aefa2"
+    },
+    {
+      "id": "11.11/03",
+      "clause": "11.11",
+      "title": "Потерян receipt mint, повтор exact allocation, иной recipient/amount, EVM reorg",
+      "row_sha256": "e3713fa418e011775bc5cad64b1e2e0514f8f4c5e21d0ed8f2fecbe3f19567aa"
+    },
+    {
+      "id": "11.11/04",
+      "clause": "11.11",
+      "title": "Consumer depth 6, 100 и 120; coinbase 99/100/101 confirmations; обычный депозит ниже/на своём пороге",
+      "row_sha256": "d65bf95eebedd909399b402b036ad0295de613b6e37be844b71428ee4f76e55b"
+    },
+    {
+      "id": "11.11/05",
+      "clause": "11.11",
+      "title": "Reorg до mint; mature блок выбыл; shorter/heavier уменьшает confirmations; reorg после mint",
+      "row_sha256": "27509b923522fda51ad9fb21f8471221874f4dee2d748f71d6e4d3e13a4b85ec"
+    },
+    {
+      "id": "11.11/06",
+      "clause": "11.11",
+      "title": "Public relay/guard → новый ZK adapter; прямой вызов consumer при stale/halt; no-op/materialize/replay",
+      "row_sha256": "c88ff0b9deed98d3f6b1a31f96298eecb57a7ab5a5eb1d124f32e0a3ca999cf4"
+    },
+    {
+      "id": "11.11/07",
+      "clause": "11.11",
+      "title": "Treasury request token=0; смешанный treasury+MP batch; miner fee и невыпущенный SMP1 input",
+      "row_sha256": "fc8b0821f6698b0d7371e0321659e3731ac4547ce58df6691c65606c24949ace"
+    },
+    {
+      "id": "11.11/08",
+      "clause": "11.11",
+      "title": "Текущие header batches с overlap, известными hashes, pending chunk и конкурентным keeper; глубокий reorg",
+      "row_sha256": "69cd24273d231d9281ff2a4f33637a446b889c44307672c2e0e3bc4227dd2982"
+    },
+    {
+      "id": "11.11/09",
+      "clause": "11.11",
+      "title": "DKG/BTC batched transport, restart, cached transcript, отсутствующий/конфликтующий spent record",
+      "row_sha256": "bcf7b071499e63b1ad68970ac320fa084e84f08e231b598e5aa149ce4466d9ca"
+    },
+    {
+      "id": "11.11/10",
+      "clause": "11.11",
+      "title": "RPC unavailable после payment против доказанного reorg; btc-recover",
+      "row_sha256": "297c9eb4ede6e729adb4d4a7657cac1aeaee1cd41ce13d6683741479f411f5bc"
+    },
+    {
+      "id": "11.11/11",
+      "clause": "11.11",
+      "title": "Сохранённые network profiles, новая ZK-связка, чужие runtime/constructor/creation anchor, EVM reorg/finality и gas cap",
+      "row_sha256": "7795516a9433e4d03c33223d6abbd61a3f88965a6f0cef3fab770e9e4f287b0b"
+    },
+    {
+      "id": "11.11/12",
+      "clause": "11.11",
+      "title": "Новое развёртывание с уже отправленным SMP1 к старому pool либо legacy unmarked deposit",
+      "row_sha256": "0e2e9bdac07cd3fc81a4c9bca2510d803a2de492711747795a950f485c06cb96"
+    },
+    {
+      "id": "ADDR-01",
+      "clause": "11.12",
+      "title": "Полный пользовательский путь: запрос, проверенная регистрация, показ адреса/сети/получателя, обычный BTC-перевод без OP_RETURN, зрелость, proof и MP mint",
+      "row_sha256": "e03d2f7b1b14884c3adb0a617dbc3b831ad3dc363e228cbbbca86aa68d196215"
+    },
+    {
+      "id": "ADDR-02",
+      "clause": "11.12",
+      "title": "Подпись пользовательской заявки: изменены recipient, chain, registry/pool, wallet scope, nonce, срок или разрешённый плательщик; replay и front-running",
+      "row_sha256": "48b0b7ff98e6555ac14ebcea36820294963df4ee8b38d42df15e6ab85057c1b2"
+    },
+    {
+      "id": "ADDR-03",
+      "clause": "11.12",
+      "title": "Подмена derivation descriptor: чужой parent key/result/epoch, network, pool, intent, salt/version; некорректные точки/скаляры, parity и ошибочное повторное применение TapTweak",
+      "row_sha256": "d02c2947756ebc00129a7b21652881bd52eb89c6af3035a06016d13b5bd8bd31"
+    },
+    {
+      "id": "ADDR-04",
+      "clause": "11.12",
+      "title": "Регистрация произвольного внешнего BTC-ключа; подпись координатора без проверяемой принадлежности; копирование script в другой pool/MP issuer",
+      "row_sha256": "f6f1d4db0b30c5a7902b79746fafeb1f1ea0a3aad9ee615d0f981b141e92596d"
+    },
+    {
+      "id": "ADDR-05",
+      "clause": "11.12",
+      "title": "Выдача серии разных адресов и повтор того же запроса в одной завершённой BTC_SPEND-эпохе",
+      "row_sha256": "c32b8e67242c0aea06ebe6e6c84ede5f9f60f87b8d1cdfee356eef1ff14d360a"
+    },
+    {
+      "id": "ADDR-06",
+      "clause": "11.12",
+      "title": "Реальное расходование нескольких производных UTXO одной BTC_SPEND-эпохи, в том числе вместе с разрешённым базовым UTXO",
+      "row_sha256": "92d6a59956f15631559a618cf82aa0ab40b820778a409a7442d83f60c968b9ac"
+    },
+    {
+      "id": "ADDR-07",
+      "clause": "11.12",
+      "title": "В подписываемом плане изменены input index, outpoint, amount, script, derivation descriptor, child key, outputs или fee после резервирования",
+      "row_sha256": "e27074c41be4193664dfb110098eb92a5c7e21c0c181ca411a4403c6bad1e52a"
+    },
+    {
+      "id": "ADDR-08",
+      "clause": "11.12",
+      "title": "Повтор/смена попытки, subset или производного ключа; restart, EVM reorg, старый backup, отсутствующий/конфликтующий spent journal",
+      "row_sha256": "f1298ce600dec3b1dd0727fe05a3078c21c938cdb0cb1c1014ee94a823e1cb08"
+    },
+    {
+      "id": "ADDR-09",
+      "clause": "11.12",
+      "title": "Перепутаны EVM_AUTH, BTC_SPEND и relay-role; чужой walletResult/roster; mixed-epoch inputs в неподдерживаемом batch; старый/новый формат board plan",
+      "row_sha256": "fc3ae04ad5479c48efcaa7031fab9afef6b3d9f783ad654b2d5c62983e33a334"
+    },
+    {
+      "id": "ADDR-10",
+      "clause": "11.12",
+      "title": "Депозит остаётся на производном адресе; обязательного sweep на общий wallet нет",
+      "row_sha256": "62addacef1656624e4f0f99a32f9f30bcf28d2e8330bf2b0434e7c0aaa4b9932"
+    },
+    {
+      "id": "ADDR-11",
+      "clause": "11.12",
+      "title": "Consumer depth=6, 100, 120; обычный депозит ниже/на своём пороге; coinbase на 99/100/101; попытка расходования coinbase при 100/101",
+      "row_sha256": "e83c71d7ad9ec57cda1a3034ef3e04cd91f5b8531e084024953fb878d9a3ae85"
+    },
+    {
+      "id": "ADDR-12",
+      "clause": "11.12",
+      "title": "Один outpoint подаётся через SMP1 и адресный путь, другой pool/registry-entry/intent/epoch; подмена данных адресной привязки и сторонние SMP1 markers в той же raw-транзакции",
+      "row_sha256": "cef639453ea269cbe7fa206713c7ebc4aaf82668064b3b0c598c24111c12d4d5"
+    },
+    {
+      "id": "ADDR-13",
+      "clause": "11.12",
+      "title": "Частичный, повторный и превышающий ожидаемую сумму платёж; несколько outputs одной BTC-транзакции или несколько транзакций на один выданный адрес",
+      "row_sha256": "7e58b836320b00e9bb1a7f0c09e87b905d7d096bba6bbec013b615321ac49647"
+    },
+    {
+      "id": "ADDR-14",
+      "clause": "11.12",
+      "title": "Зарегистрированный адресный депозит без SMP1 ещё не minted; попытка использовать его для treasury, miner fee, withdrawal или неразрешённого sweep",
+      "row_sha256": "0a67b202150486de810b30285d5d49b0d7f7e93e513e954e9f3aa24b18cc5952"
+    },
+    {
+      "id": "ADDR-15",
+      "clause": "11.12",
+      "title": "Смешанный batch: MP redemption, token=0 treasury, базовые и производные UTXO, разрешённая сдача",
+      "row_sha256": "745ebec2eca75b3e0b24c20c69de0aba03b61bd7b1554a3bd470b9c848a8f21a"
+    },
+    {
+      "id": "ADDR-16",
+      "clause": "11.12",
+      "title": "Разрешённая консолидация после mint; вариант sweep до mint, если такой путь вообще поддерживается; повтор proof исходного/собственного change output",
+      "row_sha256": "fe569b4c8fdf7c92e1f21ad58ac9810ba3a2b783ba7c89b8335d7fc750cae017"
+    },
+    {
+      "id": "ADDR-17",
+      "clause": "11.12",
+      "title": "Bitcoin reorg до mint, orphan inclusion, shorter/heavier уменьшает глубину, reorg после mint, halt",
+      "row_sha256": "18ff115f92b78aa6c0a51c0a5f97096a936a5a09da90be3ae98f13669532a996"
+    },
+    {
+      "id": "ADDR-18",
+      "clause": "11.12",
+      "title": "EVM reorg регистрации/ответа/mint; потерян receipt; receipt другого распределения; противоречие ранее принятой finality",
+      "row_sha256": "718394d80e150f4faf970cf3e060fd1a16b240ba52c9aabf9cb8a2d18d59a9b1"
+    },
+    {
+      "id": "ADDR-19",
+      "clause": "11.12",
+      "title": "Достаточный Fresh root; stale root; новый адрес без BTC-платежа; зрелый депозит между heartbeat; halt",
+      "row_sha256": "0a3af09bd372dd01691d37741036dd7a128f63c32ffa55abdabc022ced4a4428"
+    },
+    {
+      "id": "ADDR-20",
+      "clause": "11.12",
+      "title": "Поздний платёж после срока заявки/выключения UI, новая derivation version или custody epoch, выход федерации, старый адрес после первого mint",
+      "row_sha256": "31d65a240ae299f3ac77fbbe0634112fb134069fb03ab90e36e4747778b8f1ad"
+    },
+    {
+      "id": "ADDR-21",
+      "clause": "11.12",
+      "title": "Платёж сразу после выдачи, пропуск события регистрации/Bitcoin-уведомления, restart, pruning, добавление множества scripts и rescan",
+      "row_sha256": "bbabef803af1d8ed60b96c5f825ed21454a1a17aa0c1b126fccf3c48f1ce628b"
+    },
+    {
+      "id": "ADDR-22",
+      "clause": "11.12",
+      "title": "Пыль, спам адресных заявок/повторов, множество мелких outpoints, недоступность свободного бюджета",
+      "row_sha256": "be33182a586ed873dc16dcf7d95b010e74d4b10962e5c9f97f58570a6462d37c"
+    },
+    {
+      "id": "ADDR-23",
+      "clause": "11.12",
+      "title": "Пользователь без native EVM gas; спонсируемая доставка заявки/mint; неверный relayer, изменённый fee/payer, исчерпание бюджета",
+      "row_sha256": "0ae9022853e7a76f7c66ea0cce7149c3a468b587e1c4dbe988deb69e8ebf54b5"
+    },
+    {
+      "id": "ADDR-24",
+      "clause": "11.12",
+      "title": "Несколько адресных депозитов используют один root/SPV job; повтор запроса, rebase/attempt/epoch; отдельная стоимость регистрации/сообщений",
+      "row_sha256": "8dc4cf60dc0ce7e03e82a22eef0489ef43b2d816e949bb489de31593c0684079"
+    },
+    {
+      "id": "ADDR-25",
+      "clause": "11.12",
+      "title": "Конкурентные relayers и mint, RBF исходного BTC-платежа, pending EVM tx, остановка после подписи до публикации",
+      "row_sha256": "0ee555fb179e62bddc4d0b5fd419cefa99504d2a1f0a6db8513295ef4f494ee9"
+    },
+    {
+      "id": "ADDR-26",
+      "clause": "11.12",
+      "title": "Неверные/избыточные message types, размер payload, sender/recipient/domain/epoch, повтор/перестановка packets; чтение публичных calldata/events/logs",
+      "row_sha256": "e0142b20d745a81d54ccbeaf0f000548b96db2eaba1dafd452a04a09473ddeb6"
+    },
+    {
+      "id": "ADDR-27",
+      "clause": "11.12",
+      "title": "Чужой registry/pool/mpToken/parent graph, похожий runtime, ложный factory event/creation hint, изменённый constructor/immutable/cache anchor; gas/size limits",
+      "row_sha256": "38fbc17f0afe3d35299e46fa60848808b4496d5742ee399d5e450d67f60f60fe"
+    },
+    {
+      "id": "ADDR-28",
+      "clause": "11.12",
+      "title": "Сквозная интеграция с настоящим ZK proof по п.11.2; сбой RPC/наблюдателя/подписанта/prover между стадиями; отсутствующая поддержка derivation",
+      "row_sha256": "870ed310627595974e0c4d4d40f72ae26ee61aaba9a9c7dec3c1de0236b6d52f"
+    },
+    {
+      "id": "ADDR-29",
+      "clause": "11.13",
+      "title": "33/256/257 выходов; целевой выход в разных позициях",
+      "row_sha256": "b7a7f304653897eaad306be8931ba20062192b1ccd7e3d35d98e9fdc3d61f42e"
+    },
+    {
+      "id": "ADDR-30",
+      "clause": "11.13",
+      "title": "256/257 входов и полный контроль собственных inputs",
+      "row_sha256": "83a3cc91037daf319f7ae139ff64f3c2865b25840e92da78fce9755352a4a7ae"
+    },
+    {
+      "id": "ADDR-31",
+      "clause": "11.13",
+      "title": "Full/stripped txid, большой witness и некорректная сериализация",
+      "row_sha256": "a752c9fa45cc1802a29b2e0477f707dd9d79983e02a1827a26b930b7e58926e8"
+    },
+    {
+      "id": "ADDR-32",
+      "clause": "11.13",
+      "title": "Предельный funding envelope, gas и recovery исключений",
+      "row_sha256": "00f6ed6eadcdbefb4fd1f3c914250c4d6c3a09bbaa44edaadb8cc22e6745a258"
+    },
+    {
+      "id": "ADDR-33",
+      "clause": "11.13",
+      "title": "Одновременные разные депозиты и конкурирующий SMP1 mint",
+      "row_sha256": "ff73469ecd3e0dc04fd4e1eff176ef37dc9275c4b757728d6d6f28be8edc5259"
+    },
+    {
+      "id": "ADDR-34",
+      "clause": "11.13",
+      "title": "Устаревшая cached-сессия и перезапуск",
+      "row_sha256": "ab7366f78d3b93eeea4c623a757c748582ba635bcec2aacc6b6419f5d6cfc7ee"
+    },
+    {
+      "id": "ADDR-35",
+      "clause": "11.13",
+      "title": "Failover admission, pending transaction и reorg",
+      "row_sha256": "1b64a91b316a2b8baad8c2a98cd04cd4f2ab5750a937cd791ef96992773c2ea7"
+    },
+    {
+      "id": "ADDR-36",
+      "clause": "11.13",
+      "title": "Spent/mempool/unavailable UTXO и exact completion",
+      "row_sha256": "b11d9264c96217c29204f8558b83ab7e761b2fa65824aa1e7e6b149dee3e793c"
+    },
+    {
+      "id": "ADDR-37",
+      "clause": "11.13",
+      "title": "Внепротокольный расход и штатный pending settlement",
+      "row_sha256": "562bcd9460df8e637be00318d19cceff1f6fb75207f1117bbab5ffacb5dc922e"
+    },
+    {
+      "id": "ADDR-38",
+      "clause": "11.13",
+      "title": "Rescan и согласованные Bitcoin/EVM anchors",
+      "row_sha256": "4447dc9141fb5c39d5c5a5124dd0cfa1b884358b7168dd2e27fc99e7788e8a6c"
+    },
+    {
+      "id": "ADDR-39",
+      "clause": "11.13",
+      "title": "100% backing, нулевой свободный BTC и полная ETH-касса",
+      "row_sha256": "be13af21624a51493d4e91afa956379f4bebcda8e8fbe13028f0004ee9bc8d24"
+    },
+    {
+      "id": "ADDR-40",
+      "clause": "11.13",
+      "title": "Недопустимые fee inputs и неизвестный funding context",
+      "row_sha256": "de600c8ec78e5115736a17c2efb4a3c336c0dbe8bc4c8c09553e27bcdd4ac8c2"
+    },
+    {
+      "id": "ADDR-41",
+      "clause": "11.13",
+      "title": "Резерв новой эпохи и обязательства старого graph",
+      "row_sha256": "fad3bb031e64da5bf3d45957c87eb700f6c9400022284bd9d1bea394b78931fc"
+    },
+    {
+      "id": "ADDR-42",
+      "clause": "11.13",
+      "title": "Конкурентный fee allocation и treasury spend",
+      "row_sha256": "fdc80c302f37e3e490aa0633d1d4c045a4bcb08214c06d0321e61fee69b08d87"
+    },
+    {
+      "id": "ADDR-43",
+      "clause": "11.13",
+      "title": "Рост комиссии, cap, replacement и разрешённая сдача",
+      "row_sha256": "c09df654f98eb477049a56ffad508aa94733fde0cf8af5d357fe71b179c0b072"
+    },
+    {
+      "id": "ADDR-44",
+      "clause": "11.13",
+      "title": "Low-water, dust, late deposits и пополнение",
+      "row_sha256": "8820ba7d2f90657bdb02f3b2b473435c0b64655e781780d5eea60be6a1df5116"
+    },
+    {
+      "id": "ADDR-45",
+      "clause": "11.13",
+      "title": "Нулевой recipient и системные адреса без пути распоряжения MP",
+      "row_sha256": "a8e5418948655f077ce8799d9ae64673ae17eebb0e1a2f44e77740e99723876a"
+    },
+    {
+      "id": "ADDR-46",
+      "clause": "11.13",
+      "title": "Третье лицо, иной payer и поддержанный smart wallet",
+      "row_sha256": "7d72d8b610fb0178b08f7a30b5301f8d4b86ee94eefa43dba0b717cb29b83495"
+    },
+    {
+      "id": "ADDR-47",
+      "clause": "11.13",
+      "title": "Неизвестный контракт и специальные wallet profiles",
+      "row_sha256": "28be972f27b2d73e4d6377c13da2f3741481de7268d370131dc87966543ae98e"
+    },
+    {
+      "id": "ADDR-48",
+      "clause": "11.13",
+      "title": "Private recipient, encrypted intent и проверка раскрытия",
+      "row_sha256": "a8b4f845599313cdf7303b5f9f865c2ee0306b31acd5da8201e64784712dc1d0"
+    },
+    {
+      "id": "ADDR-49",
+      "clause": "11.13",
+      "title": "Ошибка UI, подмена relayer и потерянный ACK",
+      "row_sha256": "81b0060b2539f69fb7d36dd97acc23eff3f9b4f9af2df5c516adec9728d1f812"
+    },
+    {
+      "id": "ADDR-50",
+      "clause": "11.13",
+      "title": "Утрата ключа/upgrade recipient после Ready",
+      "row_sha256": "3134d286f59c19df3563bb475c058f2ab1e809ea28b03bb0dfd42b4f8972b58a"
+    },
+    {
+      "id": "ADDR-51",
+      "clause": "11.13",
+      "title": "Полномочия, scope и неизменность authorizer/threshold",
+      "row_sha256": "c609cd5dfd358ebbd90396acc4e5e335262091622c9a7371ba9955f79c582f68"
+    },
+    {
+      "id": "ADDR-52",
+      "clause": "11.13",
+      "title": "Mint approval до incident и исполнение после него",
+      "row_sha256": "9341b6b4f5d819514624d13aab79f36361894ff3bd115d0d2161248f9c87efff"
+    },
+    {
+      "id": "ADDR-53",
+      "clause": "11.13",
+      "title": "Возобновление с новой generation без оживления старых approvals",
+      "row_sha256": "5581fc7ed5b783f2941f79dfa3993b1e0aeb838fbed905e4151fe34e73d8dbdf"
+    },
+    {
+      "id": "ADDR-54",
+      "clause": "11.13",
+      "title": "Порядок mint/status, конкуренция, replay и overflow",
+      "row_sha256": "adba216ae71da6ebda71e3c90b08b05b2bbd83fb73ba0d4655573229b7f9be17"
+    },
+    {
+      "id": "ADDR-55",
+      "clause": "11.13",
+      "title": "Статусная операция при зависшем mint nonce/отправителе",
+      "row_sha256": "85f89516d0dfa74a8b7859648e3759846680a5f860c64cd56f972e0634ed2a42"
+    },
+    {
+      "id": "ADDR-56",
+      "clause": "11.13",
+      "title": "Custody scope для SMP1/address и отдельный derivation scope",
+      "row_sha256": "0e0e639777979ef1faea01050a3c06a79339691e6bf58b71e16e675ae1d05d8f"
+    },
+    {
+      "id": "ADDR-57",
+      "clause": "11.13",
+      "title": "Отозванная проверка и прежний validation cache",
+      "row_sha256": "08f4f76aeb5cc1f041e3cf720e9577e6cfa2300609e55880e4774093ded2ea28"
+    },
+    {
+      "id": "ADDR-58",
+      "clause": "11.13",
+      "title": "Immutable verifier и непрерывность при повторной квалификации",
+      "row_sha256": "4aceb3bb885612b4b48e93dea2f3f6b3cfccdcc8c276aedccf888192c79348fe"
+    },
+    {
+      "id": "ADDR-59",
+      "clause": "11.13",
+      "title": "Недоступное наблюдение и orphaned status receipt",
+      "row_sha256": "a8f70fd09b30593265c86a1e3f33789b135189880fa23fbdb06d96f305551c70"
+    },
+    {
+      "id": "ADDR-60",
+      "clause": "11.13",
+      "title": "Сохранённый старый threshold при refresh того же public key",
+      "row_sha256": "945b2052b601b0cbbce371f1539e5ad2eaa41068a626d4486bed84cce48cdd3c"
+    },
+    {
+      "id": "ADDR-61",
+      "clause": "11.13",
+      "title": "Поздний перевод после DRAINING/нулевого баланса",
+      "row_sha256": "9d2a62cb0dcd85bc33b82a87df4ebbb1c47dd066a196c0dd1a37c48b45eb448d"
+    },
+    {
+      "id": "ADDR-62",
+      "clause": "11.13",
+      "title": "Плановый уход участников и восстановление старой эпохи",
+      "row_sha256": "ffb9636f3d1ad2f1086ddb5d64f1743b33599a213a8614c6a69ab55649ecae65"
+    },
+    {
+      "id": "SUB-01",
+      "clause": "11.14",
+      "title": "Subsidy=0: direct MP, S и существующий CS-вывод, service fees, metadata/NFT/rounding, treasury и callbacks сохраняют прежнюю семантику; старое approval не разрешает новый fee debit",
+      "row_sha256": "b854c544d72f1e2d700126ca8dff0a03484d04d208b55afbbd6003ec57b6019c"
+    },
+    {
+      "id": "SUB-02",
+      "clause": "11.14",
+      "title": "Чужой owner/relayer/BTC recipient, allowance без consent, replay между chain/escrow/request/token/pool/epoch/revision, истёкший intent и неподдержанный smart-wallet format не дают списания; third-party BTC destination сохраняется, доплату разрешает requester",
+      "row_sha256": "1ad21d22de60f437ee15e117be6146269dad405d2faee1097b624f32a18764e0"
+    },
+    {
+      "id": "SUB-03",
+      "clause": "11.14",
+      "title": "«Получить P» и «из общего MP/S бюджета»: показываются и фиксируются net payout/cap/прежняя service fee; minimum проверен на net, sub-sat остаток не пропадает, после consent payout не уменьшается",
+      "row_sha256": "6c984b682f7312044e9f3044d7095f3165273fb4c79dc741c545e3c99c1f3de0"
+    },
+    {
+      "id": "SUB-04",
+      "clause": "11.14",
+      "title": "BTC fee-purpose address: проверенная derivation/регистрация до оплаты, обычный перевод без OP_RETURN в том числе из биржевого batch, корректная maturity/SPV/Core availability, credit точному owner; DKG/контракт на каждый fee address не создаётся",
+      "row_sha256": "1002b2a749a0b9088e452ef5f14b4fa906473581aeb841ff78c1d2eb7b54897c"
+    },
+    {
+      "id": "SUB-05",
+      "clause": "11.14",
+      "title": "Front-running публичного funding txid, повтор outpoint, mint обычного deposit через fee mode и fee funding через SMP1/address mint, donation/treasury reuse и совпавшие purposes/scripts отвергаются без присвоения чужого поступления",
+      "row_sha256": "23dd2fb4ecf75e849414e85ae8bf3a2043459e0ad9f6f45ab0639722f28d099d"
+    },
+    {
+      "id": "SUB-06",
+      "clause": "11.14",
+      "title": "Funding unconfirmed/immature/spent, coinbase100 против101, consumer.depth>порога, funding reorg, outage и EVM reorg различаются; восстановление/повторный rescan не удваивает credit и не стирает подписи",
+      "row_sha256": "c24c13851697fb7ff68478746ca7e0a312903bfca79e3678dfcae102a1d0d503"
+    },
+    {
+      "id": "SUB-07",
+      "clause": "11.14",
+      "title": "Repeated/late/oversized fee funding после Paid/Cancelled, dust и старой epoch остаётся защищённым обязательством с bounded recovery; нет нового principal payout, mint или скрытой donation",
+      "row_sha256": "6a56b14cd747a2577080740f302f7d7c122cd8144ac88131f9eda2c311eee376"
+    },
+    {
+      "id": "SUB-08",
+      "clause": "11.14",
+      "title": "MP fee: C=0, 0<C<B и C=B; точный lock, burn только C*Q, возврат (B-C)*Q; fake token, fee-on-transfer, другой MP/graph, overflow и некратность не проходят",
+      "row_sha256": "059181243b090b53eddfcb7af779b5b78a089bc209bbf7f30257c09cdb88ad88"
+    },
+    {
+      "id": "SUB-09",
+      "clause": "11.14",
+      "title": "Основной S withdrawal с S fee: все формулы п.22.9 включая escrowedMP/totalDeposited, обычную service fee/rounding/NFT snapshot, exact refunds и отсутствие новой wrap/unwrap fee; fee report retry не начисляет fee tranche второй раз",
+      "row_sha256": "f742c4775a13b56e212fdb81f84ece7cc24441cd27243e3dd0c06058dbfcae36"
+    },
+    {
+      "id": "SUB-10",
+      "clause": "11.14",
+      "title": "Прямой MP withdrawal с S fee: fee-only callback закрывает exact budget, не вызывает несуществующий основной S withdrawal; подмена численно совпавшим id чужой S-заявки не изменяет её shares/status",
+      "row_sha256": "8d41f07df2e2302afba046e1957fdf7e56ce0c766de6fbd3de4ec51178d98918"
+    },
+    {
+      "id": "SUB-11",
+      "clause": "11.14",
+      "title": "Общий S balance без нужного per-MP claim, concurrent main withdrawal/fee locks, чужая позиция и ранее pending shares отвергаются; claimFees до/после частичного refund не выводит чужой fee backing и не удваивает возвращённый MP",
+      "row_sha256": "11559e5487639b1fd6dc0208557cf95ccfc9b94f2e13d16a377ddd8cf62a6e4f"
+    },
+    {
+      "id": "SUB-12",
+      "clause": "11.14",
+      "title": "S остаётся непереводимым; fee refund возвращает S и его права, не свободные MP/BTC; deactivated pool с законными claims сохраняет exit rules; CS не выдаётся за S, а заявленная CS-поддержка требует своих custodians",
+      "row_sha256": "8a34b06d7374c0c06ece79a21873d127893411d8e69c9f56537a95103c81f3f3"
+    },
+    {
+      "id": "SUB-13",
+      "clause": "11.14",
+      "title": "Verified prevout ledger: подставленные input values, backing вместо полного nominal value, txid/wtxid/byte-order конфликт, неверный vout/script, cache conflict, неизвестное значение и forged witness padding не увеличивают допустимое списание; funding/recorded-change cache и bounded seeding старого surplus дают правильный результат",
+      "row_sha256": "6a47b8a0d4aa480d1760d203c4fcb4777ec425e096bc24eecc6c54cc4bae3869"
+    },
+    {
+      "id": "SUB-14",
+      "clause": "11.14",
+      "title": "Подтверждённая actualFee точно равна inputs−все outputs; sat caps/total cap/rate policy соблюдены; cap или estimate не списывается как расход; запрещён произвольный FROST-approved vector без контрактной allocation policy либо exact согласия payer",
+      "row_sha256": "c760201f7b33f3fdd105381079dddceda0910efa2957b95e6f7b6f022e74e1ed"
+    },
+    {
+      "id": "SUB-15",
+      "clause": "11.14",
+      "title": "Batch нескольких пользователей и treasury: сумма T+sum(C_i)=F, deterministic weights/rounding/остаток, уже обещанное покрытие казны сохранено; один F не начисляется каждому и дефицит соседа не переносится на чужой cap",
+      "row_sha256": "66fb9fdba5b6fbaf78a91c82b98900a13927278ce8d80f55b32083a81909fcda"
+    },
+    {
+      "id": "SUB-16",
+      "clause": "11.14",
+      "title": "Изменение состава batch/weights/source/fee allocation вне согласованной policy требует нового разрешения; authenticated algorithm либо exact version/txid consent исполняется контрактом, а не только честным CLI",
+      "row_sha256": "8ff51ee35baf5abbbbb288508d6e6bdaa9a152fc4f1be162c4560bf4bae18481"
+    },
+    {
+      "id": "SUB-17",
+      "clause": "11.14",
+      "title": "Mixed backing/external BTC credits/change/treasury: recordSpend уменьшает backing только на доказанный principal+фактический MP fee burn; остальные MP и BTC credits сохранены, один sat не назначен двум обязательствам и не признан свободным surplus",
+      "row_sha256": "29fbb95bd8cccbcacea4931243e17dcbf75225f28d7765b3b1e9a5284375b3d2"
+    },
+    {
+      "id": "SUB-18",
+      "clause": "11.14",
+      "title": "Общий BTC fee reserve пуст, но matching user budget/inputs достаточны: конкретная выплата возможна; MP/S в другом graph либо без достаточных UTXO не дают FUNDED. ETH gas/SPV service fee и miner fee не подменяются",
+      "row_sha256": "361094061181ccbfd73415484280ff7b45419d0edef5c76a1463cb8e8df1cddd"
+    },
+    {
+      "id": "SUB-19",
+      "clause": "11.14",
+      "title": "Старый replacement выигрывает после повышения cap: обслуживается сохранённый consent/source snapshot старой версии, новая revision не блокирует settlement; списан только её actual C, остаток всех последующих locks возвращён один раз",
+      "row_sha256": "f3abe5adf236d91eab678255d6894012ec5d68a937050edd35f8431e595838e9"
+    },
+    {
+      "id": "SUB-20",
+      "clause": "11.14",
+      "title": "Новый replacement выигрывает: same input set, immutable payout/source, новое согласие/caps и новые crypto nonces; старый tx не может дать второй burn, fee debit или refund той же семьи",
+      "row_sha256": "31894da56d812e6f29102db23ed1c28526ec1327db5b1a3b8b9367e5428f7ba9"
+    },
+    {
+      "id": "SUB-21",
+      "clause": "11.14",
+      "title": "Late BTC UTXO после Signing не включается в существующий exact-input replacement; нельзя переключить BTC↔MP↔S для подписанной семьи. Недостаток input capacity и неподдержанный CPFP не маскируются успешным ускорением",
+      "row_sha256": "f777cd92ac822540c416269b69a6bf62871af3a701eacf11d7ea1dc041bf6081"
+    },
+    {
+      "id": "SUB-22",
+      "clause": "11.14",
+      "title": "Safe Pending cancel/смена источника до подписи возвращают реальные locks, инвалидируют применимые старые планы; Signing/timeout/quote expiry/abort/RPC outage не открывают refund или отзыв executable budget",
+      "row_sha256": "063f51d51c42db9beb2571c56833b8820e5c4a1485593240e06a3e51b7870d88"
+    },
+    {
+      "id": "SUB-23",
+      "clause": "11.14",
+      "title": "Settlement/refund/top-up/два workers одновременно: только один допустимый terminal outcome/credit allocation; reentrancy, неверный обязательный callback и inexact balance delta дают атомарный rollback без partial burn. Прежний best-effort protocol fee report сохраняет собственную retry-семантику",
+      "row_sha256": "5e6b59a10ffdecdd80d88f4f9be1beca2c929b50083901793f70f20498d78c90"
+    },
+    {
+      "id": "SUB-24",
+      "clause": "11.14",
+      "title": "Совместный BTC refund в основной payment: разные scripts оплачены отдельно, одинаковые payout/refund/соседние scripts агрегируются; один output не зачтён дважды. Custody/deposit/fee/change refund script не получает funding Ready; поздний конфликт оставляет protected claim/RECOVERY_REQUIRED",
+      "row_sha256": "1f9c2daace6439200048e8bb36658e468abf50a9d1f7e94ffc6762c093ee2fb4"
+    },
+    {
+      "id": "SUB-25",
+      "clause": "11.14",
+      "title": "Отдельный typed credit-refund после main Paid и после безопасного cancel: credit IDs/owner/script/cap/family проверены, R_before=R_paid_external+F_refund_user+R_after; простой token=0 treasury request не погашает credit",
+      "row_sha256": "fc8f4acd3fca20e47124719917d8f53309a23d55a213acaf08610109ef318ecb"
+    },
+    {
+      "id": "SUB-26",
+      "clause": "11.14",
+      "title": "BTC refund dust/частичный остаток/дорогая сеть: нет скрытого списания/TTL-donation; отдельная комиссия только по consent/cap, безопасное refund batching сохраняет ownership и protected change",
+      "row_sha256": "df8bb9c7e3291f940c190cccf2ce713e9411296acd97f985f8d26a8782d08e15"
+    },
+    {
+      "id": "SUB-27",
+      "clause": "11.14",
+      "title": "Refund RBF old/new winner, гонка с ещё возможной основной версией и двойное резервирование credit в двух семьях: сохранены все executable obligations, один фактический расход/возврат и исходный immutable script",
+      "row_sha256": "594e16ba907401593c88c33d68949d58bb5d2e0808d9f1782dd485dc89dd74e3"
+    },
+    {
+      "id": "SUB-28",
+      "clause": "11.14",
+      "title": "Bitcoin-paid/EVM-unsettled, lost receipt, EVM reorg и более поздний Bitcoin reorg: точный recovery, нет повторного вывода/burn/credit/remint и фиктивного cross-chain rollback; journals сохраняются",
+      "row_sha256": "82d3df6a86be7865fe31014d802c045924acfcab4c419b51f1eadcb4ae339160"
+    },
+    {
+      "id": "SUB-29",
+      "clause": "11.14",
+      "title": "Fresh=false, halt, immature proof, неверная authority/derived key/epoch, compromised/revoked fee-purpose READY, неправомерная новая issuance при DRAINING, spent input и обход через старый treasury selector не разрешаются subsidy; спонсирование не снижает security checks и не создаёт новое произвольное ограничение законного выхода",
+      "row_sha256": "f271851685aa5da183b7dbed851d223b43e543aaa6935be04f69b222002aec34"
+    },
+    {
+      "id": "SUB-30",
+      "clause": "11.14",
+      "title": "Worst-case parser/value-cache/settle/refund gas, calldata/runtime/initcode/plan size и ABI/provenance; передача новых типов по существующему on-chain transport, reopen/rescan и старые key epochs подтверждены на фактической связке",
+      "row_sha256": "88c3d757af208dc779beac3250c933afc45a80400d3ec979a0a0e73e4b308598"
+    },
+    {
+      "id": "SUB-31",
+      "clause": "11.14",
+      "title": "Full cost/latency: BTC funding/refund, MP/S lock/burn/return, одиночный/batch/replacement, source treasury/user различаются; F посчитана один раз, cap/refund не expense, общий serviceJobId не оплачивается повторно",
+      "row_sha256": "05820ff12de9d415b42ce83e70836ff734f2c38aa3c3e58c7b5577232095c1ca"
+    },
+    {
+      "id": "SUB-32",
+      "clause": "11.14",
+      "title": "Сквозной BTC, MP и S сценарий со зрелым реальным Bitcoin-платежом в изолированной сети, библиотечными подписями и окончательным EVM settlement/refund; integration evidence отделено от синтетических атак и старых архивных отчётов",
+      "row_sha256": "84a480f2b0cfcd31d14804b8070f8dd21d9c1e119044288a50c38ead7b000794"
+    },
+    {
+      "id": "SUB-33",
+      "clause": "11.15",
+      "title": "FakePool возвращает правильные публичные auth/escrow, withdrawalPrepared=true и вносит настоящие MP, но его обязательный callback делает revert: новый lock/bind/admission отвергает его до Signing; исходное поведение отдельно воспроизведено и помечено baseline finding",
+      "row_sha256": "4b7decd55cbe910eff30b91ef335139845b6a3ca9fc6e93443339b9517e499f8"
+    },
+    {
+      "id": "SUB-34",
+      "clause": "11.15",
+      "title": "Контракт с похожим ABI/событиями, неверным factory/constructor/share-token binding, заменяемой implementation либо callback, переключаемым после успешного eth_call, не проходит как разрешённый MultiPool; runtime/getters в отрыве от происхождения недостаточны",
+      "row_sha256": "aca5a96bb3d0c6e4b3098e6032276caefa3f167916919a4bc2985b70808e7ec9"
+    },
+    {
+      "id": "SUB-35",
+      "clause": "11.15",
+      "title": "Mixed legitimate direct MP/S/CS и fake-pool/подменённый fee-only callback: недопущенная заявка не попадает в подписанный batch, законные пути продолжают работать. Ошибка действительного обязательного callback сохраняет атомарность; подавление ошибки/фиктивный Paid не считается исправлением",
+      "row_sha256": "d17964d5b26c9905459ea5f892f5710e149dad800521effef220f6c51ca473fe"
+    },
+    {
+      "id": "SUB-36",
+      "clause": "11.15",
+      "title": "Пользователь многократно создаёт/повышает/безопасно отменяет свой независимый fee budget A во время quorum bind/reserve/RBF B: общий privileged nonce и hash B не меняются, чужая сессия не сбрасывается; затронутое незакреплённое разрешение A пересчитывается",
+      "row_sha256": "1b80cd05686c57979d85e9e7c0c3036860e7ded323dbb0857585d734c19cc1d9"
+    },
+    {
+      "id": "SUB-37",
+      "clause": "11.15",
+      "title": "После canonical bind общего batch изменение свободного остатка A не переписывает locked snapshot A и не освобождает его покрытие; old winner обслуживается. Гонка cancel/markSigning и реальное изменение до bind следуют каноническим state/finality, без подписи по уже отменённому бюджету",
+      "row_sha256": "ca35e9101a585aba025902bdf7ad6f202ef3c4bdf10737b151decc65efe86967"
+    },
+    {
+      "id": "SUB-38",
+      "clause": "11.15",
+      "title": "Отсутствующий/нефинальный consent receipt, source lock либо allocation admission блокирует первый BTC nonce/share; после Signing обычной семьи NONE нельзя добавить subsidy задним числом. Более новая revision не отвергает lawful old-winner settlement",
+      "row_sha256": "662fe1be09984b86bf0491dc906a78fe725b4f9eaf813f693d43bff977eb4c46"
+    },
+    {
+      "id": "SUB-39",
+      "clause": "11.15",
+      "title": "Для заявленного relayed ERC-1271 профиля owner wallet меняет signer/validity после финального admission и Bitcoin-подписи: уже разрешённый exact winner не требует повторной внешней подписи и не позволяет повторный debit; неподдержанный профиль явно исключён до использования",
+      "row_sha256": "96507b7d8382d44562070b3fc4bab10b6508c89884d81d3cf3f148925a529b07"
+    },
+    {
+      "id": "SUB-40",
+      "clause": "11.15",
+      "title": "После разрешённой Bitcoin-выплаты меняются issuance generation/derivation status: это не аннулирует её receipt/обязательство; settlement сохраняет все текущие inclusion/depth/Fresh/halt/accounting gates. Новая refund подпись не обходит incident/recovery requirements",
+      "row_sha256": "6ea82908f78d6d0d907309319831d798dec482be1871e16e3217194b2c65a52e"
+    },
+    {
+      "id": "SUB-41",
+      "clause": "11.15",
+      "title": "Исходный surplus input с нулевыми consumed/walletOutput, подтверждённая внутренняя сдача и задержанный EVM recordSpend: observe-credit→recordSpend и обратный порядок дают одинаковый ledger; free treasury/change не превращается в новый fee credit владельца адреса",
+      "row_sha256": "c548e64240a34d03ae871583c7f5b71237f4a22d63f8d4050342a5bc4307afd1"
+    },
+    {
+      "id": "SUB-42",
+      "clause": "11.15",
+      "title": "Новая change/consolidation на WITHDRAWAL_FEE отклоняется; остаток credit переносится на разрешённую базовую сдачу с прежними rights. Историческая подписанная версия, mixed backing/credit change, repeated rescan и EVM reorg не удваивают credit и не уничтожают законные claims",
+      "row_sha256": "5da5a4b16b138a87517b76e990ffb810a964e64c9cdbe429d9728c61e98748e0"
+    },
+    {
+      "id": "SUB-43",
+      "clause": "11.15",
+      "title": "Настоящий внешний/биржевой fee funding с корректной maturity создаёт один credit; посторонняя невалидная reservation не присваивает и не блокирует его. Действительный конфликт релевантного custody provenance даёт protected/unclassified до recovery без нового proof владения всеми BTC inputs",
+      "row_sha256": "7b6608906731bb5e2c30fce24cadb67fe4dd058d81e42c74d348d9ce2d1d82df"
+    },
+    {
+      "id": "SUB-44",
+      "clause": "11.15",
+      "title": "Чрезмерный user cap либо exact payer consent при малой основной S-выплате не расширяет protocol fee/size/allocation profile; неверная/stale policy и отсутствующие production bounds не получают PASS, при этом прежняя fee-neutral tranche в разрешённых пределах работает",
+      "row_sha256": "34a560f59cd493d4935ddf5fe6a599f2b9027de69c781f18a6a44a4ae690359b"
+    },
+    {
+      "id": "SUB-45",
+      "clause": "11.15",
+      "title": "Coordinator добавляет несвязанную консолидацию/treasury inputs/посторонние obligations: корректная сумма actual fee и deterministic weights не позволяют автоматически переложить эти расходы на пользователя. Допустимые shared costs и связанные inputs распределяются по закреплённой policy",
+      "row_sha256": "f7874217cba5916f9391c046e23e66f164bb1a78623e8992296e1533d60c564c"
+    },
+    {
+      "id": "SUB-46",
+      "clause": "11.15",
+      "title": "Old-winner settlement после большой истории cap updates и множества несвязанных late BTC credits укладывается в установленный gas envelope, не обходит всю историю, точно возвращает затронутые locks и оставляет поздние credits отдельными",
+      "row_sha256": "d95a3c9bc19b2a59220c7bc49980f7910fb73b43607b6017c2e1230c48c6ec46"
+    },
+    {
+      "id": "SUB-47",
+      "clause": "11.15",
+      "title": "Worst-case сочетание разрешённых inputs/requests/versions и claims на общей change UTXO; bounded claim/refund processing не требует глобального списка, не теряет ownership/dust и не вводит частичный commit. Flood новых поступлений не запускает безлимитные оплаченные проектом jobs",
+      "row_sha256": "edffef98f3880b027c5ce60d9c5cfc23801752d2e5667d6e7e55304298ae727b"
+    },
+    {
+      "id": "SUB-48",
+      "clause": "11.15",
+      "title": "Старые неподлинные callback requests/подписанные версии при новом admission, restart и migration: нет ретроактивного удаления obligation, ложного исправления immutable escrow, автоматического refund после Signing или обхода pool accounting; неразрешимый конкретный случай честно BLOCKED, остальные независимые пути проверены",
+      "row_sha256": "bf67734b6dc2611954174310f110ce3e414b9f9f104e8b9714142f6a75b2cb68"
+    }
+  ]
+}

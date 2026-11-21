@@ -1,0 +1,32 @@
+{
+  "version": "2",
+  "chain_id": "31337",
+  "evm_confirmations": "1",
+  "evm_rpc": "http://127.0.0.1:8545",
+  "bitcoin_network": "regtest",
+  "bitcoin_policy": null,
+  "registry": "0x1111111111111111111111111111111111111111",
+  "pool": "0x2222222222222222222222222222222222222222",
+  "board": "0x3333333333333333333333333333333333333333",
+  "identity_file": "/srv/satoshifi/private/address/identity.json",
+  "key_files": [
+    "/srv/satoshifi/private/address/transport-1.json"
+  ],
+  "directory": "/srv/satoshifi/private/address/service",
+  "bitcoin_rpc": "http://127.0.0.1:18443",
+  "trust_remote_watch_filters": false,
+  "bitcoin_cookie": "/srv/bitcoin/regtest/.cookie",
+  "max_messages": "2048",
+  "max_messages_per_poll": "16",
+  "max_intents": "256",
+  "max_outputs": "4096",
+  "max_archive_bytes": "1073741824",
+  "max_blocks_per_poll": "16",
+  "max_reorg": "100",
+  "ttl_seconds": "3600",
+  "max_publish_attempts": "8",
+  "max_tx_gas": "1500000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "fee_reserve_config": "/absolute/path/btc-fee-reserve.json"
+}

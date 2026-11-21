@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "fleet_config": "/srv/satoshifi/private/operator/bitcoin-epochs.json",
+  "challenge_file": "/srv/satoshifi/private/operator/retention-challenge.json",
+  "attestation_files": [
+    "/srv/satoshifi/private/participant-one/epoch-one-attestation.json",
+    "/srv/satoshifi/private/participant-two/epoch-one-attestation.json"
+  ]
+}

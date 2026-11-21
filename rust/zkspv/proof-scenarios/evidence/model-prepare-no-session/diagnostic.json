@@ -1,0 +1,5 @@
+{
+  "status": "PREPARATION_RETRY_REQUIRED",
+  "reason": "Model Anvil exited after preparation because its process session was not detached",
+  "proof_started": false
+}

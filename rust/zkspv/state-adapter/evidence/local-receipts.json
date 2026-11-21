@@ -1,0 +1,147 @@
+{
+  "schema": "satoshifi.state-adapter-local-receipts.v2",
+  "status": "PASS_LOCAL_EVM",
+  "production_ready": false,
+  "evm": "disposable loopback Anvil, Osaka, chain 31337, 16777216 gas cap",
+  "fixture_image_id": "0x000000000000000000000000000000000000000000000000000000000000007b",
+  "script_sha256": "b45a89d1721c3612e9c3b229b25179c3a12de5b0e9ffeb5894911831c68e1392",
+  "fixture_sha256": "b4c81cd0c2d392aab7d322d17565c058b38ce26b87d42ea2adb4d0e3a700b15f",
+  "deployments": [
+    {
+      "checkpoint_height": 32256,
+      "state": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "initcode_bytes_with_arguments": 32199,
+      "creation_receipt": {
+        "status": 1,
+        "gas_used": 8185955,
+        "transaction_hash": "f453301e2bdfea308971667cdf350e87081e3c928ed810d3e2ce414f10243080"
+      },
+      "fake_seal_receipt": {
+        "status": 0,
+        "gas_used": 262976,
+        "transaction_hash": "4219df363f66953030e91587957b603a1d4ca0335d0da07af9010c4c85985b80"
+      },
+      "contracts": {
+        "ZkBitcoinStateV2": {
+          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+          "runtime_bytes": 9476,
+          "runtime_keccak256": "4d30f1c6bba31cabd1abd8d648024537ce345619ec9dad84d1d06ea22f3c227f",
+          "runtime_sha256": "d21b98dec249f7ce8606c58bfe06314dd685106810e53fc2d7464bd9a412ba97",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "1818326f6ce85b24b42fff5041dc94c60118d6b3a5c3bfa91429098f5c738a7f",
+          "runtime_template_sha256": "77837fb5b44533ad21e73ebd0b61637f41d7b58c6afeded1814e8d30abcf557c"
+        },
+        "ZkSpvAdapter": {
+          "address": "0xB7A5bd0345EF1Cc5E66bf61BdeC17D2461fBd968",
+          "runtime_bytes": 4978,
+          "runtime_keccak256": "4e1260b8349906e3bc14e23fcbf847b94380f1a6d727bbc6cd9ba15d9eab0c3c",
+          "runtime_sha256": "c472ed0fc653eea1df4dc6b4f156f0a8d7154f0e68c322ec4c9d768c6b651664",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "5119c7717a3ae6041f80b7c60c557bf75dcf8dfd8609d9c51cbfd4e484e9c2a3",
+          "runtime_template_sha256": "6edf4afba84b4faa97fc770e994ee80acd1ad6bf6cb08e0291c62cbb5730ddfe"
+        },
+        "RiscZeroGroth16Verifier": {
+          "address": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be",
+          "runtime_bytes": 4666,
+          "runtime_keccak256": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+          "runtime_sha256": "2f7e787d9f228af01beed9e312be5fcf0e8c61711c69bc06c970b1b28fc46816",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "28952e536b82400133d8a61018f8af2301e0e9bd46eef5fac312238587934a0c",
+          "runtime_template_sha256": "8c39c1e19a4b45a8f547cb79955b417e310b30db2eccd9fc12ce769a111fcd55"
+        }
+      }
+    },
+    {
+      "checkpoint_height": 34272,
+      "state": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "initcode_bytes_with_arguments": 32199,
+      "creation_receipt": {
+        "status": 1,
+        "gas_used": 8185457,
+        "transaction_hash": "22c1df11d8afb96a6f9eb4e750f1b55c4abe8c9cadf19b5105b3820693b60a4a"
+      },
+      "fake_seal_receipt": {
+        "status": 0,
+        "gas_used": 262976,
+        "transaction_hash": "4b08cc823fd3fe5da211bf9daf8f00d26bb95ec4a9dc6cd63f9bde248faff803"
+      },
+      "contracts": {
+        "ZkBitcoinStateV2": {
+          "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+          "runtime_bytes": 9476,
+          "runtime_keccak256": "fa359f2229de7d3b31270e73376f8422bd35242e593b7d83cf894b7bad45ee73",
+          "runtime_sha256": "4efe1600685724b24bfa04610682be33a75bad9b4810391fe4c4d68a0a574518",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "1818326f6ce85b24b42fff5041dc94c60118d6b3a5c3bfa91429098f5c738a7f",
+          "runtime_template_sha256": "77837fb5b44533ad21e73ebd0b61637f41d7b58c6afeded1814e8d30abcf557c"
+        },
+        "ZkSpvAdapter": {
+          "address": "0xE451980132E65465d0a498c53f0b5227326Dd73F",
+          "runtime_bytes": 4978,
+          "runtime_keccak256": "15d87e1d9bed75ad53162289c8f9617904efc0bfec9caf2cbe53d7b907f3585b",
+          "runtime_sha256": "b1fa3b0912cd205b29ab679b0666098f907b9d7b48b2e76d7c0900af81340a17",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "5119c7717a3ae6041f80b7c60c557bf75dcf8dfd8609d9c51cbfd4e484e9c2a3",
+          "runtime_template_sha256": "6edf4afba84b4faa97fc770e994ee80acd1ad6bf6cb08e0291c62cbb5730ddfe"
+        },
+        "RiscZeroGroth16Verifier": {
+          "address": "0x75537828f2ce51be7289709686A69CbFDbB714F1",
+          "runtime_bytes": 4666,
+          "runtime_keccak256": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+          "runtime_sha256": "2f7e787d9f228af01beed9e312be5fcf0e8c61711c69bc06c970b1b28fc46816",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "28952e536b82400133d8a61018f8af2301e0e9bd46eef5fac312238587934a0c",
+          "runtime_template_sha256": "8c39c1e19a4b45a8f547cb79955b417e310b30db2eccd9fc12ce769a111fcd55"
+        }
+      }
+    },
+    {
+      "checkpoint_height": 36288,
+      "state": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "initcode_bytes_with_arguments": 32199,
+      "creation_receipt": {
+        "status": 1,
+        "gas_used": 8185909,
+        "transaction_hash": "b300f2725fe58aeff0cfcb1c91fc3c763c15043d34c8cf2e36ef2b8951ddfef0"
+      },
+      "fake_seal_receipt": {
+        "status": 0,
+        "gas_used": 262964,
+        "transaction_hash": "252eebba7a42b05bff1173d2986f6b393f4c258c4acc14aa0667956ef33f1c52"
+      },
+      "contracts": {
+        "ZkBitcoinStateV2": {
+          "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+          "runtime_bytes": 9476,
+          "runtime_keccak256": "60df3ed3502a5c93ccd3de3bd34d93b1f757389bcf4bd5e2bee1f2ac58637c3b",
+          "runtime_sha256": "160d15f62938a3d522f257ca40061f326a6ed1d0d751c8d622a8dbc1383391e3",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "1818326f6ce85b24b42fff5041dc94c60118d6b3a5c3bfa91429098f5c738a7f",
+          "runtime_template_sha256": "77837fb5b44533ad21e73ebd0b61637f41d7b58c6afeded1814e8d30abcf557c"
+        },
+        "ZkSpvAdapter": {
+          "address": "0xb0279Db6a2F1E01fbC8483FCCef0Be2bC6299cC3",
+          "runtime_bytes": 4978,
+          "runtime_keccak256": "92e1a070286be2b126a38bd76fc7a986a903ffe54a3da097467b3fd021a56904",
+          "runtime_sha256": "7138085ca4d871b52056abb59f22221cec147f2bc68295dd4680fda9c5c6b89f",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "5119c7717a3ae6041f80b7c60c557bf75dcf8dfd8609d9c51cbfd4e484e9c2a3",
+          "runtime_template_sha256": "6edf4afba84b4faa97fc770e994ee80acd1ad6bf6cb08e0291c62cbb5730ddfe"
+        },
+        "RiscZeroGroth16Verifier": {
+          "address": "0x856e4424f806D16E8CBC702B3c0F2ede5468eae5",
+          "runtime_bytes": 4666,
+          "runtime_keccak256": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+          "runtime_sha256": "2f7e787d9f228af01beed9e312be5fcf0e8c61711c69bc06c970b1b28fc46816",
+          "ordinary_artifact_match_except_immutables": true,
+          "creation_bytecode_sha256": "28952e536b82400133d8a61018f8af2301e0e9bd46eef5fac312238587934a0c",
+          "runtime_template_sha256": "8c39c1e19a4b45a8f547cb79955b417e310b30db2eccd9fc12ce769a111fcd55"
+        }
+      }
+    }
+  ],
+  "actual_proof_acceptance": "NOT_PERFORMED",
+  "remote_requests": 0,
+  "public_transactions": 0,
+  "scope": "Ordinary bytecode deployment and real-verifier rejection only; synthetic positive tests are separately identified"
+}

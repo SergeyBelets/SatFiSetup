@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "fee_config": "/srv/satoshifi/private/operator/withdrawal-fees.json",
+  "bundle_file": "/srv/satoshifi/private/operator/btc-bundle.json",
+  "state_file": "/srv/satoshifi/private/operator/participant.enc",
+  "password_file": "/srv/satoshifi/private/operator/participant.password",
+  "deadline": "4102444800",
+  "report_id": "4444444444444444444444444444444444444444444444444444444444444444"
+}

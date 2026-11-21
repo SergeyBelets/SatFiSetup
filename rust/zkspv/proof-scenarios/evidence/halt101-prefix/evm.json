@@ -1,0 +1,52 @@
+{
+  "schema": "satoshifi.scenario-evm.v1",
+  "status": "LOCAL_SCENARIO_VERIFIER_PASS",
+  "scenario": "halt101-prefix",
+  "receipt_sha256": "781be0b2719eb03e2f17d8a8dd0f52e22e66aaaa4f7e469f60fdd19191f01dbe",
+  "image_id": "91cbdff8eaa0f6e2968e8cdce61d1be57a2aadd75c1f34e0f5f0a518de16a948",
+  "journal_sha256": "131ebf63c6740167af50be1ba48bf8a9ba5d1800bd79a558a2779b86cfb08ba8",
+  "ordinary_verifier": {
+    "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "code_hash": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+    "runtime_bytes": 4666,
+    "ordinary_match": true
+  },
+  "deployment": {
+    "status": 1,
+    "gas_used": 1122537,
+    "transaction_hash": "5df860685a95c5adc2e0911dbfe07e3370342c1b9e383dc9f405c7f88c1ae373",
+    "block_number": 1
+  },
+  "checks": {
+    "accepted": {
+      "status": 1,
+      "gas_used": 250644,
+      "transaction_hash": "2bb56eb4fef3f2a7fffe76dcb7b191f48398e867925915f4eb375f399f3f3764",
+      "block_number": 2
+    },
+    "wrong_image": {
+      "status": 0,
+      "gas_used": 250646,
+      "transaction_hash": "501f1fe04b9bc4713b991dcaa1db13c599a09a5e9257d1af43f386e5433175b8",
+      "block_number": 3
+    },
+    "wrong_journal": {
+      "status": 0,
+      "gas_used": 250646,
+      "transaction_hash": "ed3bfa4757193f88325bb65ab6925f7ba04f2f84f4c0cd1eecaa9dc6c149595e",
+      "block_number": 4
+    },
+    "modified_seal": {
+      "status": 0,
+      "gas_used": 16259001,
+      "transaction_hash": "f55db8ced560eea12409bb22b7c95588c8793c38c325363e865eb6842bc05088",
+      "block_number": 5
+    }
+  },
+  "production_ready": false,
+  "public_transactions": 0,
+  "state_transition_acceptance": "NOT_PERFORMED",
+  "starting_state_scope": "Synthetic work/headers and native-constructed starting state; genuine proof of unchanged bounded policy under a TEST_ONLY image, not Bitcoin PoW",
+  "preparation_sha256": "f17bd7650a9c78141d8db474903d8e17cb899b224a654bbcf884d2c590fa6d98",
+  "groth16_report_sha256": "fcb5c3d2d489d8b029f8ae2ba50cc229d0602a5e323f02e767390fb8d587c770"
+}

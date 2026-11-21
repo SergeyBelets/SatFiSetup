@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "chain_id": "31337",
+  "evm_rpc": "http://127.0.0.1:8545",
+  "evm_confirmations": "1",
+  "bitcoin_network": "regtest",
+  "bitcoin_policy": null,
+  "bitcoin_rpc": "http://127.0.0.1:18443/wallet/funding",
+  "bitcoin_cookie": "/absolute/path/bitcoin/.cookie",
+  "wallet_name": "funding",
+  "mining_pool": "0x0000000000000000000000000000000000000000",
+  "directory": "/absolute/path/owner/smp1",
+  "max_fee_sats": "100000",
+  "max_inputs": "256"
+}

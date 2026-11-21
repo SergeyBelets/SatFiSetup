@@ -1,0 +1,15 @@
+{
+  "started_unix": 1793303952.227388,
+  "timeout_seconds": 7200,
+  "command": [
+    "/private/tmp/satoshifi-groth16-bridge-target/debug/satoshifi-receipt-bridge",
+    "compress",
+    "succinct",
+    "/private/tmp/satoshifi-risc0-3.0.3/r0vm",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/guest-integration/evidence/mainnet-transition.r0bf",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/guest-integration/evidence/mainnet-32257.journal",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/guest-integration/evidence/local-proof/mainnet.receipt",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/groth16-integration/evidence/succinct-local/result"
+  ],
+  "input_receipt_sha256": "a3bbd411cb7d24b3d90358278015fae43a85853bbdaa383d73cf3248216cdf66"
+}

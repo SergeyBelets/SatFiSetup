@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/risc0/risc0-ethereum/tree/v3.1.0",
+  "archive_sha256": "98d3b0f17cb2cf6a08feee6b5a6dad8ec14061d54b02856e46ff95546216429b",
+  "selector": "0xe71e6620",
+  "files": {
+    "LICENSE": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+    "contracts/src/IRiscZeroVerifier.sol": "cfd7c80872313134d028c0250ddc86036448fb4df290ce4dba113ea80646e180",
+    "contracts/src/IRiscZeroSelectable.sol": "54a8a39dd427e8ec21db31815d80a3df6df992d3244a2370ba21517dde7dd11b",
+    "contracts/src/StructHash.sol": "9fd507fc30726dcecf35a7a1d16b2ffe34561721fa37895bb75b9c3cf07f0131",
+    "contracts/src/Util.sol": "4711aa3c42754c996278f62091ffd1422132512e0900a9cdea3fe54235fa5896",
+    "contracts/src/groth16/ControlID.sol": "d95af60e9cfa2b002b33eef957ba3676625ffdcef343eca68652fed2d5d45f93",
+    "contracts/src/groth16/Groth16Verifier.sol": "e11414d4edbfb9b2f5952ed90dea0ab578305de8f3fb6b97468e70942a021f76",
+    "contracts/src/groth16/RiscZeroGroth16Verifier.sol": "94396a7989abae664abab1c2f313b94a042f1b3ec52a843ddf5d4de3f9543fcd"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "profile_file": "/srv/satoshifi/private/enrolled-bootstrap.json",
+  "state_file": "/srv/satoshifi/private/deployments.sqlite",
+  "identity_file": "/srv/satoshifi/private/operator.json",
+  "bitcoin_rpc": "http://127.0.0.1:8332",
+  "bitcoin_cookie": "/srv/bitcoin/.cookie",
+  "max_tx_gas": "15000000",
+  "max_transaction_cost_wei": "100000000000000000",
+  "max_total_cost_wei": "1000000000000000000"
+}

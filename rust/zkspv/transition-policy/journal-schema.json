@@ -1,0 +1,30 @@
+{
+  "schema": "satoshifi.transition-journal.v1",
+  "encoding": "32 fixed Solidity ABI words, exactly 1024 bytes, no offsets or trailing data",
+  "integer_byte_order": "big-endian, zero left padding",
+  "bitcoin_hash_byte_order": "raw SHA256d bytes, not reversed display hex",
+  "program_binding": "The real proof verifier must pin the program/image ID and authenticate SHA256 of these exact journal bytes; this format is not proof authentication",
+  "words": [
+    ["domain", "bytes32"], ["bitcoin_network", "bytes32"],
+    ["evm_chain_id", "uint256"], ["state_address", "address"],
+    ["checkpoint_descriptor", "bytes32"], ["anchor_hash", "bytes32"], ["anchor_height", "uint64"],
+    ["previous_state_commitment", "bytes32"], ["next_state_commitment", "bytes32"],
+    ["previous_canonical_root", "bytes32"], ["next_canonical_root", "bytes32"],
+    ["previous_head", "bytes32"], ["previous_height", "uint64"], ["previous_work", "uint256"], ["previous_tip_time", "uint32"],
+    ["next_head", "bytes32"], ["next_height", "uint64"], ["next_work", "uint256"], ["next_tip_time", "uint32"],
+    ["submitted_batch_commitment", "bytes32"], ["submitted_count", "uint64"], ["processed_count", "uint64"],
+    ["time_domain", "bytes32"], ["new_header_count", "uint64"], ["maximum_timestamp", "uint32"], ["last_new_timestamp", "uint32"],
+    ["halted", "bool"], ["halt_position_one_based", "uint64"], ["halt_old_head", "bytes32"],
+    ["halt_candidate", "bytes32"], ["halt_lca", "bytes32"], ["halt_depth", "uint64"]
+  ],
+  "domain": "SATOSHIFI_TRANSITION_V1",
+  "bitcoin_network": "bitcoin-mainnet",
+  "time_domain": "SATOSHIFI_HEADER_TIME_V1",
+  "max_batch": 64,
+  "max_reorg_depth": 100,
+  "batch_commitment": "fork-policy framed SHA256, domain submitted-batch-v1, one length-framed part per complete submitted item in order, including ignored suffix bytes",
+  "halt_semantics": "zero position and zero halt fields when running; otherwise position equals processed_count and depth exceeds 100, with safe-prefix head retained",
+  "time_semantics": "unique newly verified headers only, including losing branches and halt candidate, excluding snapshots, duplicates and ignored suffix",
+  "no_change": "a batch containing only exact known headers produces no journal and cannot refresh freshness",
+  "status": "NEW_INTEGRATION; component-qualified only, no real guest/proof or production activation"
+}

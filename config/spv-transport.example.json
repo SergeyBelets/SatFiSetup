@@ -1,0 +1,29 @@
+{
+  "version": "2",
+  "chain_id": "11155111",
+  "evm_confirmations": "12",
+  "evm_rpc": "REPLACE_EVM_RPC",
+  "bitcoin_policy": null,
+  "zk_state": "REPLACE_WITH_CHECKSUM_STATE_ADDRESS",
+  "factory": "REPLACE_WITH_CHECKSUM_CONFEDERATION_FACTORY",
+  "confederation_id": "REPLACE_CONFEDERATION_ID",
+  "board": "REPLACE_WITH_CHECKSUM_SPV_BOARD",
+  "identity_file": "/REPLACE/private/transport-identity.json",
+  "key_files": [
+    "/REPLACE/private/spv-key-1.json"
+  ],
+  "directory": "/REPLACE/private/spv-transport",
+  "max_messages_per_poll": "16",
+  "max_pending_messages": "4096",
+  "max_publish_attempts": "8",
+  "retry_backoff_seconds": "60",
+  "max_tx_gas": "2000000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "request_ttl_seconds": "3600",
+  "reply_ttl_seconds": "3600",
+  "service_sla_seconds": "14400",
+  "payment": {
+    "enabled": false
+  }
+}

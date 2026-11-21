@@ -1,0 +1,17 @@
+{
+  "schema": "satoshifi.zk-prover-platform.v1",
+  "platform": "linux-x86_64",
+  "sdk": "3.0.3",
+  "builder_image": "rust@sha256:a6cab604fa016ac022e78c24038497eb7617ab59150ca4c3dd2ede0fbd514d4b",
+  "runtime_archive_url": "https://github.com/risc0/risc0/releases/download/v3.0.3/cargo-risczero-x86_64-unknown-linux-gnu.tgz",
+  "runtime_archive_sha256": "71a0adaa64235be13e9b8471bea5c4ded64bf97c6bd1eb9c2285b966c0b62fee",
+  "tools": {
+    "r0vm": "2acdf550f9aca4d05b74072463e4ed307c3824309c754a5cb5f93aa84f3390e6",
+    "satoshifi-receipt-bridge": "47c7193e5ba3b744797bdc1c4d291202bc772e3171621450b3fea3a57860c76f",
+    "wrap_groth16": "dae5c1afc6299db4981431275b830d5f250995a6d7476159b5e1de4f298c5174"
+  },
+  "container_image": "risczero/risc0-groth16-prover@sha256:7f173963196570b7a71816ed70565a4579264c5d2e3e0ecb028102538ad0e331",
+  "docker_arch": "amd64",
+  "qualified": false,
+  "production_ready": false
+}

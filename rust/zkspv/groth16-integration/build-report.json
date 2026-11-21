@@ -1,0 +1,17 @@
+{
+  "schema": "satoshifi.receipt-bridge-build.v1",
+  "status": "BUILD_PASS",
+  "production_ready": false,
+  "architecture": "aarch64-apple-darwin",
+  "source_sha256": {
+    "rust/zkspv/groth16-integration/Cargo.toml": "54a59377aaa3ed5c18f477e970b35f69a5743348a518290be44e1013635b8058",
+    "rust/zkspv/groth16-integration/Cargo.lock": "73170da5294ceee92b6ee9f5782843b2b21eac655b0c553de4364b20a6bbbddf",
+    "rust/zkspv/groth16-integration/src/main.rs": "ee9d81ae82e75216d6093040b121447da990b7c13c4aa5d74964c070d0f7a93a"
+  },
+  "bridge_sha256": "767cc24c13247e3a5fe55369fb0e770de724fd74822c954a41cd7d9996e97b98",
+  "dependencies_matching_upstream": 238,
+  "build_log_sha256": "11814fc6b1f6302392fca74734767b08cc764f807e48607c37b190118dddd2ff",
+  "rust": "1.88.0",
+  "sdk": "3.0.3",
+  "groth16_execution": "NOT_PERFORMED"
+}
