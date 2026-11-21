@@ -3,6 +3,7 @@
 
 import logging
 
+from satoshifi.api import monitoring
 from satoshifi.common.http import ApiError, error
 
 log = logging.getLogger()
@@ -10,6 +11,7 @@ log.setLevel(logging.INFO)
 
 # routeKey -> callable(event) -> response. Filled in layer by layer.
 ROUTES = {}
+ROUTES.update(monitoring.ROUTES)
 
 
 def handler(event, context):
