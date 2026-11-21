@@ -1,0 +1,22 @@
+[package]
+name = "satoshifi-resume-policy"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "Experimental V2 authenticated context index and bounded resume witnesses"
+
+[workspace]
+
+[dependencies]
+satoshifi-checkpoint-policy = { path = "../checkpoint-policy" }
+satoshifi-fork-policy = { path = "../fork-policy" }
+satoshifi-header-time-policy = { path = "../time-policy" }
+bitcoin = { version = "=0.32.5", default-features = false, features = ["std"] }
+
+[profile.dev]
+debug = 0
+incremental = false
+[profile.release]
+debug = 0
+incremental = false

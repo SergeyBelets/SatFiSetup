@@ -1,0 +1,1249 @@
+{
+  "status": "PASS",
+  "web3_version": "7.16.0",
+  "total_sdk_abi_files": 74,
+  "checked_contracts": 11,
+  "methods": 54,
+  "calldata_and_returndata_vectors": 108,
+  "sdk_abi_sha256": {
+    "BitcoinAddressMessageBoard.json": "2eadf7d1a9be55044960d0b82137b80c6e59bc0c33d238d26580faec3f84211d",
+    "BitcoinAddressRegistry.json": "17a2c54334bffac8e2280979fe3625c73ea868e803c092a37780d1b19e645c3b",
+    "BitcoinBatchRegistry.json": "0847b25d5c53067456b24e225d4499b503564e68219f5c04403576b744e9729b",
+    "BitcoinCustodyTransfer.json": "9a329920628d39dc126a00c663c61f192d831dabd42b7cdeafbeb7d3228864f2",
+    "BitcoinDepositDerivation.json": "d626e61e9ea26655157d02a3bc971da316dcf6cf8cb0d0a6715243eb4ff3615d",
+    "BitcoinDepositRegistry.json": "e2659f24afe7b5d7dd6b725b6d8b957667231aad9a8651a98ec0d68d4e44a51b",
+    "BitcoinFeeFundingVerifier.json": "3bba0cf5a0e9a557a68b11792ba63432dd0de348991af48b3631ac24226b2fa7",
+    "BitcoinFeePlanVerifier.json": "11ae83f69c7c2d2456edc0841d15974da36659bcae3207b9c9e60f32ea0051ca",
+    "BitcoinFeeReserve.json": "7d21649a2ed650cf2231ace9f5a603bf1e7d8dc6b3c207ceed9dd64afb920a34",
+    "BitcoinFeeReserveUser.json": "65e6fdf51341f69956863fc674697853e8c43eba014e8cc631576d5719de748a",
+    "BitcoinIncidentMessageBoard.json": "7f9d2824d5ba352a5ed1a7521e5c638f50ab72ae9b408795d2e2912546fdeab7",
+    "BitcoinKeyFamilyRegistry.json": "2df636265cb64da0c37e4324276ea827f33dbf33c1c30db552731c824a1e1150",
+    "BitcoinMintAdmission.json": "aa2a473da389ec7d136fd86c82744cb2783dba0f8775937ff063930674e1092f",
+    "BitcoinSigningBoard.json": "54f6a6c1497fd4eb3b8906c0ef18b3317e25cbc88678e039b226683d49551948",
+    "BitcoinWithdrawalEscrow.json": "65d4e8fa5ee3d754ffa3165faca28da4d5ec4cb44341ee5642adaf4484d2b918",
+    "BitcoinWithdrawalFeeDerivation.json": "37ce0117ab057f8fbc53bebcc70c7af622a7ec070de6c0e6d4657d8f72ba8b85",
+    "CallbackPoolRegistry.json": "d8225b47c86f7d04b813ae2a30e36b39bbab42cd75e63380d16f2cdee6d71f1c",
+    "ConfederationFactory.json": "f787a9de6c784224c044ae262d4fcbe5a9f9970ae4a26dbd41646175fafd3fa8",
+    "ConfederationGasTreasury.json": "b7be000243c81ff1d2e91c4eb2ea326c9b289e86eb87613e7bc576531b7309fd",
+    "ConfederationMultiPool.json": "0d32da18229917fc6cbf9e265a8c68e2814064f24ab76ac1944a634e918f7019",
+    "ConfederationToken.json": "bc6171343effa1420066d51b8709ba939df0ea92932cbd3635afc1114fcfb26a",
+    "ConfederationTokenDeployer.json": "616d200dd20e492191cdc284326c12a72fc85952caa6a8975603c76bdf60f15b",
+    "CustodianDAODailySettlement.json": "000882d7f745a0971c690a8cec7ec3e76ef3eab8335c0b7fee3515a9e4a9aca6",
+    "CustodianDAODecisionBoard.json": "c13124446371a1c1b08475eddeac45e7ef07036a5196fc6a074d986fbca697d2",
+    "CustodianDAOFeeRouter.json": "e6d7e0d08106084b9463390ba21153aea59c642c50bb834456e90bb506a0c3a2",
+    "CustodianDAOIncomeVault.json": "0e2c6ed029cbb8a332f23833f3a188fb51edf14bb93c52aea9bdb13a88bdb708",
+    "CustodianDAORateController.json": "08b1641c6f46e8e73baec2b971406ffdcf867d5dc2598ab083162ec9b2cfc6cf",
+    "CustodianDAOStaking.json": "bc14c787d8f1fea9e50c86106e5be912aa1c0efd76f115246b0615d19857b9ce",
+    "CustodianValidator.json": "52afe2eb64f4d3142699e9aa3fbfff4b65b16ba02b6aecfcb056df305b760978",
+    "DAOMockFeed.json": "8f982ed9f9991da32f69245d6824409c2bd526e2c3a6441b4e230aaeceff7fb5",
+    "DAOTestUSD.json": "251c2cbdec5249fc89e8bd7f4f5202feeb0271ce801b2d2886a7aab11db74bbf",
+    "DKGAuthorization.json": "7558b83b6a4137741d5739f91e14eece11e6cfeee83ed018655f9ebfde82047f",
+    "DKGCoordinator.json": "e62addeab22c5e31fe663f1a2cace9908cb181224ce6775521b77f45bbaf853e",
+    "DKGOnchainBoard.json": "dfdd8ab02e702294b1c0240ed7f7490a01f7b323c5e9114bb435a7bf1e0db400",
+    "FROSTCoordinator.json": "7f37c342b626560cf75d2cb9b8cc783e46fbf5cb8d5c81c3ea6d0169d7d87bdd",
+    "FederationFactory.json": "0b7ca8fa4b088e3e0ec9c16902956459f6426765e54931250e7d28be2d18e032",
+    "FederationFeeManager.json": "de9aee0c56eef03176e87e8174a25565d1e9abafe6befb8537ed84d5518c7f14",
+    "FederationGovernance.json": "e2cc95e093d0e4d014339c6ec23f67390b437b840e4be2c0ae0714b4861891e3",
+    "FederationNFTModifier.json": "2969973283823a6bb6e423bd4ee3192209c2461bc87380c0529164e3515178c0",
+    "FundedFeeConverter.json": "0f8e5735ec226e6ed102d75b7633e2b56a0c7f4ee49928d4035c08eb3542f4f1",
+    "GovernanceRegistry.json": "61595495f51d5468e3fc8429acf1e65cffaa88cdc11266877cf378ddf7f51337",
+    "MainnetHeaderRelay.json": "65fb7c37d1f830be20fd5bcc0cead9c6f70d316a75cde1e33a3ebe8e63da8bfc",
+    "MainnetSPVGuard.json": "ab886b0942aaad1fe5bffdba3f367d7e13374f83612f189dd13edcda188b110a",
+    "MiningPoolV1.json": "4ac1bc393ddd29cd6096d76aca287b601830969b8432327808eb77c97349dd9e",
+    "MultiPoolDeployer.json": "cb373ec283b68fc2d2822a3c845997f2590a9fb424b6442c58a92080ba840c13",
+    "MultiPoolShareToken.json": "89802147f462bdd6d60d8c07bf52d006a6a3c940ef5ba303c97566342fd91f3b",
+    "MultiPoolShareTokenDeployer.json": "c12207e2a252a87dc3ab204423d69d7acbbaea94032e68559ec56d2747c9936a",
+    "PoolFeePipeline.json": "4bb9c5402757e19e83e57fc1fe0b03830cc70d9028d8799fc3c9608eb5217523",
+    "PoolMpToken.json": "25d3e7678941aaba08b600da49150e0fb454ed06a7f7fefe15a93a551e99e73f",
+    "RecipientPolicy.json": "310a96f22629a63df9a594dd2ded56a9f50cad5f5eabb7d9b438dfdedc42bcfc",
+    "RecipientWalletV1.json": "63c410e9a18f03c17bb2e1cf9b6da839195874f4b03fc6f46b7cef92bd7b4d14",
+    "RegtestHeaderRelay.json": "7ab5b1c986b002d1d237317e3d6e3792a69a6c395f55ee57482d95c017f86de5",
+    "RiscZeroGroth16Verifier.json": "c5a236c0f4080d7cabc52fc0f7751a32d8a6146dcc8a38ed291d8d6cad2914d9",
+    "SPVMessageBoard.json": "5753778d7ae421177fae5f77fc16ac7e2b2c7a34872b4c8bce7ff296c7b4e44b",
+    "SPVServicePaymentRegistry.json": "2ffb0efc905bf30e174eb38ef9c5086d250a82d348fdbfda544265b7c0a1a5d9",
+    "SimpleMultiPool.json": "4bc84e63f5912c1218b04e0fdd8e53676e7213088663b94954074568c2c6ae02",
+    "SimpleMultiPoolDeployer.json": "b8d5332b505d548feb5925f1f317deb5d141ad76f017afaadfd5e815d5d9b95f",
+    "Testnet4HeaderRelay.json": "d2905c1151995bfcb09c3150f0a05065e9ca969e7a13b9eb2b893f9467468938",
+    "ULRConfederationTreasury.json": "7d28eb544d255d460e27843c99af12235cd1836ef8ca7eb150419d5472a64150",
+    "ULRConfederationTreasuryLegacy.json": "e6b5e5ff330c34f01178817dd724ecdceafdf656f3fc96827a20ccbd3419328c",
+    "ULRConfederationVoting.json": "57b85dd2677123f07428f9cc5fe1980f237fa505eb57f5f0a49e72c1eefa8f17",
+    "ULRCustodianSnapshots.json": "c46235023e6f9290f2c940dc5966a86c34e71af1b63462431362fc969f90e051",
+    "ULRStaking.json": "e6a828b8d8be082bfdcf6769f8e734abe8ee67877b3deee6024b6bb9eccd9e5f",
+    "ULRStartupRewards.json": "df15c72272a608979e2d2fab3d6778282967ab25faac89100ed5359813c4428e",
+    "WithdrawalFeeCredits.json": "8f7a72e22f440589b7d9956ad74d1be8be447d5915120cd2752b2b87fe7c7430",
+    "WithdrawalFeeFunding.json": "ea6c63cbef3295937caf41210259cb39acd649e2a814136dab8663b7f1350ab5",
+    "WithdrawalFeePayments.json": "2feae008cf08bb837accf07636a5b29ae95ed9f27e6dfcefb6ee946caf878e27",
+    "WithdrawalFeePlanVerifier.json": "9ecce4c236b467ab0548d2df53b87f83511eabd632204aab6792f4a8de8a6a58",
+    "ZkBitcoinStateV2.json": "f268765bddea4feedd2c2ab073104fe7810204433ad1e83a43f0266fff76a5e4",
+    "ZkBitcoinTestnet4StateV2.json": "a079c94d9140cb3181d4da28b66037210f8fa3e3792d24c0b698c83505578324",
+    "ZkSPVServiceStateView.json": "a4ea7bfed79ac637f97d150e15b2ccec486da0db3944643e5ce5629eaee47a46",
+    "ZkSpvAdapter.json": "82f534d562b3c2a6a10451b3aa27b64734bd2a45ca8513fbe24d677e6c76d881",
+    "ZkTestnet4SPVServiceStateView.json": "37d371a9891b68b19e715182846bb2265aa12d53d8a9fce894242e8baee0bb21",
+    "ZkTestnet4SpvAdapter.json": "06db26671ceaf2e46255cc2cdc8f350d56d5394ffa0c205ca4b8e421777c82f9"
+  },
+  "missing_used_names_in_sdk": [
+    "ConfederationNFTPass",
+    "ConfederationPoolV2"
+  ],
+  "calls": {
+    "FROSTCoordinator": [
+      {
+        "signature": "finalizeSession(uint256,bytes,bytes32)",
+        "selector": "0xe0ca204c",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "05073ac43288d7cf6495b66d33fd5deccb67a6974d51471b2883df3a563bbcaf",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "abcd10f934abd7f7077a3f1b9688a7c4682e125f09e9b78aca03f52e59a8d2df",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "getAuthorizationResult(uint256)",
+        "selector": "0x74b09d35",
+        "output_types": [
+          "bytes",
+          "bytes32",
+          "bool",
+          "address",
+          "address",
+          "uint256",
+          "uint256",
+          "bytes"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "170e12a49220f9ea47f9a1ddde1adee96fb19b9e8ba28727841e34f7188d0550",
+            "returndata_sha256": "2991b9c57fd6580daa1eefe3ea627f7fdc5344ab65ab005c0170579c7d580dca"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "03493d5da0414f669580784de8041cea13a5ef8dfab20a4fb452613317eb8a7a",
+            "returndata_sha256": "9404ee7c9889527da2b325dd16febffadd7f2fed8e75af9caec8da59772deb80"
+          }
+        ]
+      },
+      {
+        "signature": "getSession(uint256)",
+        "selector": "0x402ff0db",
+        "output_types": [
+          "uint256",
+          "address",
+          "bytes",
+          "bytes32",
+          "bool",
+          "uint256",
+          "uint256",
+          "uint64",
+          "bool",
+          "address",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "address",
+          "uint256",
+          "uint16",
+          "bytes32",
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "7667939eb7e2bc312a9bcf00f5a20ab41b60e80671fd86c5915a0b5ddeb02c0b",
+            "returndata_sha256": "3910c08d85e0e8a4d19cf52cac48f81d82f0813728d942c983b422659a5be636"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "925be72c089544136e7240e092dcdd62c136951b57b9afa76a2412c3333a4afa",
+            "returndata_sha256": "a6d7b5c83275812141db12fc2950c68958ae213004efff2a6cac152bf95d9c83"
+          }
+        ]
+      },
+      {
+        "signature": "getResult(uint256)",
+        "selector": "0x995e4339",
+        "output_types": [
+          "bytes",
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "c111373bf51c4e8992382ba67824148be08c76bed6c1767ec088ebeaef59e634",
+            "returndata_sha256": "f152a789e8de0608da4600761079be8b3b4c9d23737d1691dcf2f49b95576113"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "608a9dd8677539fc17b195a02109c990dcc314bbdcb7b740fdcd9030eeb1bc2c",
+            "returndata_sha256": "b53b7cb5c6902b46ec1a52e20a9327ad042367e5514130b6d5b330174ea61b7c"
+          }
+        ]
+      },
+      {
+        "signature": "isFinalized(uint256)",
+        "selector": "0x33727c4d",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4eb3f07434b29ae0220064857fbfe53e018f3515a64da4a78793be43b5593870",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "dd88be7ab64312c1f688472d15fed0222c41a07f8997ba6eba9d4d6a482fe34f",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "sessionDKGId(uint256)",
+        "selector": "0x72846406",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "525cb8b69d2239e5b66818c3f3044905b3c6d749635f2e49261b71aecc1d32eb",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "4e61ef8d85d8be2cba195bdd80ba1ed93b9cbf93197423cb010bb70dae92b0fd",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "sessionDKGResult(uint256)",
+        "selector": "0x81ea9c7e",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "a58f2394d57df8cd8f57c254d87df93a95be21d2ea0dc4262f08b332f201cdc3",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "185955928d78f617fbc8c13804f611870b68762afd986c30aa07c62a17b1e85f",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "defaultVerifier()",
+        "selector": "0xbe25eda5",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "5c65861ea034251c30b40e45ad4cb602185a66426027a040b78ede48f4308875",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "5c65861ea034251c30b40e45ad4cb602185a66426027a040b78ede48f4308875",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      },
+      {
+        "signature": "dkgRegistry()",
+        "selector": "0x56114c63",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "8b61d8db5fa26b6fedc41079f89ef69c31a0257ca2429533e407790776719db9",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "8b61d8db5fa26b6fedc41079f89ef69c31a0257ca2429533e407790776719db9",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      }
+    ],
+    "BitcoinWithdrawalEscrow": [
+      {
+        "signature": "depth()",
+        "selector": "0x631c56ef",
+        "output_types": [
+          "uint32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "823c7110391fdd2928142157825c0f53039b04acde3ef6fd52de75020dd77fad",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "823c7110391fdd2928142157825c0f53039b04acde3ef6fd52de75020dd77fad",
+            "returndata_sha256": "d3eb3f5bbdf557ab0e70d70308d74263075074cc3975c09dbaeea9ad51914b77"
+          }
+        ]
+      },
+      {
+        "signature": "payment(bytes32)",
+        "selector": "0x73f7aef9",
+        "output_types": [
+          "(bytes32,bytes32,bool,bytes32[])"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "d7729cab509728d9569996975aa52224fc96ec542b46e577f3e8ccacb703dc2a",
+            "returndata_sha256": "e34a1dd2ce96a29071603453e96e3ce43d63e587a89404ba6c0e645547138a68"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "4e94ccac2e8c9b0680e25f5deebd10657fc3c8c42a1cba6a4e8a6de7016501cc",
+            "returndata_sha256": "e6b838ec21d28f578d06ffd08d2732a21cd5b2e953092f48dd6b52f08fafc280"
+          }
+        ]
+      },
+      {
+        "signature": "settle(bytes32,bytes,bytes32,bytes32[],uint256)",
+        "selector": "0x9d15e4d3",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "928209d7df2532b124481945679f9e57b6b42b599166c0ef70fdaa8c99e30d3b",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "3fba8717f981e6862d39390897ee559996a734b4c765065c75c6a5f0ffb34103",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "nonce()",
+        "selector": "0xaffed0e0",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "ca4d5f4a3881e45041a2a8eacd1777abd79732d8ec1105e8fd567f3eb4543f05",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "ca4d5f4a3881e45041a2a8eacd1777abd79732d8ec1105e8fd567f3eb4543f05",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      }
+    ],
+    "BitcoinBatchRegistry": [
+      {
+        "signature": "batchState(bytes32)",
+        "selector": "0xb7caa589",
+        "output_types": [
+          "uint8"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "f68088c22eab8ee23e697dfe97047fc72fc456489d733d4826df6a050b421b8e",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "2b7f048eaf6cfbae429a3086066182650d7d31d5e4f430efcefc7304927bf2b0",
+            "returndata_sha256": "83c0164501f0a7d86d9c6e1994d70934d8ec9ef6c909ce77d6e354961c0d1229"
+          }
+        ]
+      },
+      {
+        "signature": "withdrawalEscrow()",
+        "selector": "0x978b09e4",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "753a9da77089adc40dba08d5271e07cb6de99963dbf5176c655d0728bcc7190c",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "753a9da77089adc40dba08d5271e07cb6de99963dbf5176c655d0728bcc7190c",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      },
+      {
+        "signature": "replacementOf(bytes32)",
+        "selector": "0x7e609cea",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "c4fb4ae5f04b0d75e39a7929a30f47b06ada16c695d6b950ce7bf323bfd754e0",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "cccb49d86257c5a500af2f2805ebe27b321bc3ed82aa3530b8c1586a0849a285",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "versionCount(bytes32)",
+        "selector": "0xc39e4d22",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4a29eee182a0df37169aa887701cfdf015aa27d8aed9ba9ba239f0ffc721497d",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "59ae29a48d62beb7579b768f9b24e0705f62ce8faea17e1fbd42045e10eebf36",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      }
+    ],
+    "BitcoinSigningBoard": [
+      {
+        "signature": "getPlanHash(bytes32,bytes)",
+        "selector": "0x043441e8",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4e607d7ab2636f997b0737e788b7c8716f1ae03b2b9f1d9700ff526f9778aee1",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "b1dac3247d003f1fa69e0b4cfa8e7053386951278582aed1b79c7540e8da4cb1",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "plan(bytes32)",
+        "selector": "0xa5fe4926",
+        "output_types": [
+          "bytes"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4406dac8881975007e8009854f299d05d9f387a3ca06627a8dc888aad2fd557a",
+            "returndata_sha256": "1cca23f135d6a051c5bceab95d8bbc3983a92021783ffe3540c209f682c5c93b"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "d6b3d1a220fde3b7b8bce1768b60f816130139f73e70d80d5d7603662a1169dd",
+            "returndata_sha256": "7375be9900d5bdbea5f6be727c3c4c932c4b1606e086b5b07a6424756b7dff5a"
+          }
+        ]
+      },
+      {
+        "signature": "publishPlan(bytes32,bytes)",
+        "selector": "0x9b769d86",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "213999923267db8ed1ec9b0bfa4e90a8d33af32f4f035c6cd4164b7e41cf10a6",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "5522d4a4a09897ccb7224f6c86c737b71f9f0e6309c529b9481c796d2870e375",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      }
+    ],
+    "BitcoinAddressRegistry": [
+      {
+        "signature": "registrationReceipts(bytes32)",
+        "selector": "0xbb415ee6",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "d1b33f7559b1e56ee474784825ec3bf23997d70f9c129d45a94cd2cdbafeadb2",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "214c31201b2f748cd74c392adac1e829760dc49f960c02a51d597792feb7a6a8",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "statusReceipts(bytes32)",
+        "selector": "0xe6b223c1",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "9340624a53569ba558b15703c3fe35b89ba0156e7a9937214cd86793d97e9a76",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "610d88eee62cc71acf960448b7e8d64e3685409e0b181c4c62addfa614f2c185",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      },
+      {
+        "signature": "getStatusOperationHash((uint8,uint8,uint256,uint256,uint8,bool,uint64,(bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)))",
+        "selector": "0xe0603532",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "b2cb0c5403ca6aec1c42c52073e682a9571971d7bafbe1c1dfa7210179ad1271",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "7067cd2c91bcfc4bbb71c462abb8c29fef092e9d87fffd3964f7bfaa21f891f0",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      }
+    ],
+    "BitcoinFeeReserve": [
+      {
+        "signature": "receipts(bytes32)",
+        "selector": "0xef6cf04d",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "b778b356e568878ca5973b56a78d9713c10009948dc767499d1f8a9ff92f2395",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "aa915017936ee590a33f8fb4ee728b7732ae711ca9d74df7cf79e739fd775e75",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "getOperationHash(bytes4,bytes,uint256)",
+        "selector": "0x5fe8afe6",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "f8c9cfc6a2072b0311a54aa5545950e7ecbe395a73c989974590a7bb93d38617",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "e595394591006ab925090e645db75c1ec824830f5b2bbf52fada815d1adc2855",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      }
+    ],
+    "WithdrawalFeePayments": [
+      {
+        "signature": "prepare(((uint256,uint256,uint256,uint64),bytes32,bytes32,bytes32,bytes,bytes32[],(bytes32,uint256,uint64)[],(bytes32,bytes32,uint64,uint64,uint32)[],bytes32),bytes32)",
+        "selector": "0x15106b61",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "030411d005299c244d3e645370ddda9a0bd83158d626ff023bd114519721ef41",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "fe3ec83ac5bda056c2803895f2c3f25ae1e54c16695e4581343900d6d22e6e51",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      }
+    ],
+    "DKGAuthorization": [
+      {
+        "signature": "hashOperation(address,bytes4,bytes32,uint256)",
+        "selector": "0x1368f95e",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "d7762e409c84d802023cf4533fd05e40ce1f253f046c7a71d8494f18580f101d",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "815a0a6ebae9256dc907fddd2c49606a0235b9c3c6f4183729e9670c0177e9e2",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "isOperationApproved(bytes32,address)",
+        "selector": "0x84a77a21",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "5330fb112379b33af530970215d2ef178255f4a79d3ea80243caa25a4c64e046",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "3300ae7fdd051a5b5e5b81246bf82c88946b58908f7078d89876200af306a999",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "approvedOperations(bytes32)",
+        "selector": "0x1a5b4526",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "52b46b0770c936bd5ddf50fe6ad52a8286de3d83cbee96811bbfdd2db361a1f6",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "20a65b2d3f4b4190b9c2d37d9906edcfb05923f36bce47d673cfd12f7d155978",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "executedOperations(bytes32)",
+        "selector": "0xa7c504a8",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "1ef9fc6c3989b60d79b1837138986f592b9e513b5de8b30cf121beef6e2b34b5",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "e0cf7d0ddf38b47462ca482caa1fba83716169cb04f144cc51b7c9162d257973",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "operationTargets(bytes32)",
+        "selector": "0x88384e8b",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "342a1e600910bfee8da31dc40d5daa3fab69c0396fefbc2e24005b87d3285550",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "bc5bdf4fcd347e2609e00a3605646b3c2e1986e111d9c43875be3f2d93a1a603",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      },
+      {
+        "signature": "consumeOperation(bytes32)",
+        "selector": "0x8bae850f",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "910dad5774f9de0b9a2faa898687947afdce4da9bf75be01eebd023fe8a60fc3",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "92bc648f34bfce893b71bf4d1b018a7d2d0b0c096a7834c5833db29a30427002",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "consumedSessions(uint256)",
+        "selector": "0xd1f60c7f",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "eab54d7d23be865e01ce76ed81052e77912c5242ba2e64d7f8f0f04263b85e64",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "641e00b5a5ae55cef8daa4841fe9b97aaa0acb68921cef20ec6e8b0a12ada5ff",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "registry()",
+        "selector": "0x7b103999",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "69e16cb7685c9123910fc473675341ba54b4458f62a98b854ffc31cf4415b6bb",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "69e16cb7685c9123910fc473675341ba54b4458f62a98b854ffc31cf4415b6bb",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      },
+      {
+        "signature": "coordinator()",
+        "selector": "0x0a009097",
+        "output_types": [
+          "address"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "8d08734dcff4712133ab9ae685dfac41d48d07f73abcb5dbe098692e7c949d4f",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "8d08734dcff4712133ab9ae685dfac41d48d07f73abcb5dbe098692e7c949d4f",
+            "returndata_sha256": "194d9be1d6b08b527e506daab0c78c144d67442bcaf28cdac093bd7ae8585fbf"
+          }
+        ]
+      },
+      {
+        "signature": "dkgId()",
+        "selector": "0xdd151f1b",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "6a3ee423221762d079508272a547af3b367b13d68f9515a997943d464c5843c6",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "6a3ee423221762d079508272a547af3b367b13d68f9515a997943d464c5843c6",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "resultHash()",
+        "selector": "0x881a3354",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "0268a51b25a074794139880e23ba0e8469dec014326bc1363a6f584c6a1484dd",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "0268a51b25a074794139880e23ba0e8469dec014326bc1363a6f584c6a1484dd",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      }
+    ],
+    "CustodianValidator": [
+      {
+        "signature": "getSetMinCustodiansOperationHash(uint256)",
+        "selector": "0xf3786665",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "85341d5796b2c320b94674df23b32c24be89f3e3fa70cb966656a482698bbe0a",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "9d5b74a07d16bdd4a1c59f0586e30827fa201d16ad8228de27425d74ff07ea6d",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "operationNonce()",
+        "selector": "0x4e3f1002",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "b36827151e76631eff9a47cc738ca649d4921280c273286f7d11dad6b64fda94",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "b36827151e76631eff9a47cc738ca649d4921280c273286f7d11dad6b64fda94",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      },
+      {
+        "signature": "operationReceipts(bytes32)",
+        "selector": "0xff99c497",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "ce803231b6e418ef5f4fb117208e2ec759a9b5acea83c0db67e3facceae4ce68",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "ad4879d5137ace2edc17abb3a646dedd57f44625099f3dfcdfd0fb6808140446",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "isExecuted(bytes32)",
+        "selector": "0xe52cb36a",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "85c4c5090025e6fa0a3d9a75d78f40b35927ba4c48e5f1c20855b2f35d687450",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "728a2ebb39997353c5c3f6978694a211d09ae50fbf19fc989e878acf0f3b4b18",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "validateCustodianThreshold(bytes32)",
+        "selector": "0xff9cee69",
+        "output_types": [
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "e86ae79502ff4f5c2db47fb5a53e999080b829e8c7bf3b1f8686e6dfd071b117",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "4908b1b12a5cb2ac530f7ef8d2a8691daf8c13a86ddb7ea4bf73a188275e12b2",
+            "returndata_sha256": "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"
+          }
+        ]
+      },
+      {
+        "signature": "setMinCustodians(uint256,bytes32)",
+        "selector": "0x1238c573",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "eaa9a4f3dd94e76edf64e410130543adbde416ca7398ee97204d4ad7d62ee97c",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "8ff7c31f45f488b40e4a56f443889e1add094f3bb479dec6ae7a01f3d1cc9800",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "addCustodian(address,bytes32)",
+        "selector": "0x35e50a00",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "3aa7b1fc5bd2cb71e5ddf21fff29c85820e524ba0c6acdc3e656c14f62d332eb",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "b1007dd292cbf3e164c67a8b307fe2cd5eb769a1e6403144391d0105cf309a8e",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "removeCustodian(address,bytes32)",
+        "selector": "0x1b2eb6cb",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "592c0657700c9accd9ae27cf6ea77b51ff0ff9f368624b956c91bbc014195715",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "de3b382d1fc76c63edf82d3f9786a5383a1509731b69030477df8415d0fc3881",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "getAddCustodianOperationHash(address)",
+        "selector": "0x2ccf2bee",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "67e480ef1b0a623880392e1f0f85aaf5a8fdb85013afbba839c68a359451aad5",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "00e077823adcb31a5e85c516a3c5c0e1acbfb97c5d8b00d0ec2f1d50b693c2de",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "getRemoveCustodianOperationHash(address)",
+        "selector": "0x9657fdd6",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "d5b03877772eed10f609b5e93a7ad0797f0734d39885906cd8c2f1fb5526d32a",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "f6d15727879c55c5647ba8e418da8b0868140b7c906d94000a8561d9e37e22f8",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      }
+    ],
+    "CustodianDAODecisionBoard": [
+      {
+        "signature": "getCreateOperationHash(string,bytes32,uint256,uint16)",
+        "selector": "0x867b4299",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "79257d78e1ea8e981a8f769334265893681546351c04d9f09097b672c1683871",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "7f1501f747a9439cf3fda9bf0150bef30efee64d82c93eb76b16a7aa556127c0",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "createDecision(string,bytes32,uint256,uint16,bytes32)",
+        "selector": "0x7f516812",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "e2d376f8c90588347a6c01c4a3567d8dfb0a8c42e0f61379cb47b83b112bdbf0",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "c9bc52c8284f4fccac463f8eeca4af4cd78d00fb46b153cc5c69c8b77863a635",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      },
+      {
+        "signature": "creationReceipts(bytes32)",
+        "selector": "0x50d9ecb5",
+        "output_types": [
+          "bytes32"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "8d0ba16a6328e187c36e748890c4c72862e729f6b3d1e8a2ffa73714a7710f10",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "e5b0f553e59e64fed4cb57cd58cc3b799afce43fea5f410040d70aede8f1142b",
+            "returndata_sha256": "b6acca81a0939a856c35e4c4188e95b91731aab1d4629a4cee79dd09ded4fc94"
+          }
+        ]
+      },
+      {
+        "signature": "decisions(uint256)",
+        "selector": "0xb829df82",
+        "output_types": [
+          "string",
+          "bytes32",
+          "uint64",
+          "uint64",
+          "uint16",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "bool",
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4bb96bbe74ef171de420ee5faaa891a5655494ac106b9d8637cc9de724939319",
+            "returndata_sha256": "9eeeb45202acc45f8d088462bbc00cc6860c1ea275e24f480c5983300406ad6d"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "3389ac901e05dc0c563d34443ed433874a16dbb3d13e36a66ab0eb50356fb8e6",
+            "returndata_sha256": "f9debfc7d17c3282186dca9b10b4fb66eac38ada448ab4774eb42e340a34cf6b"
+          }
+        ]
+      },
+      {
+        "signature": "operationNonce()",
+        "selector": "0x4e3f1002",
+        "output_types": [
+          "uint256"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "b36827151e76631eff9a47cc738ca649d4921280c273286f7d11dad6b64fda94",
+            "returndata_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "b36827151e76631eff9a47cc738ca649d4921280c273286f7d11dad6b64fda94",
+            "returndata_sha256": "69961e9c9b340ac36f71bf702843562dc79fb53ce5b84a32d2be6cf760e7b2e5"
+          }
+        ]
+      }
+    ],
+    "CustodianDAORateController": [
+      {
+        "signature": "execute(uint256)",
+        "selector": "0xfe0d94c1",
+        "output_types": [],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "8464f3d1498bee5f8a35f00fd7124bcf1a2245f535d1825bbb6179e2624aba96",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "5437ccdfdcd065e8ac3603908396908a7726e0c385d49af4c5f2e6d0b375cd40",
+            "returndata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "signature": "proposals(uint256)",
+        "selector": "0x013cf08b",
+        "output_types": [
+          "uint8",
+          "uint256",
+          "uint64",
+          "uint32",
+          "uint32",
+          "uint32",
+          "bool"
+        ],
+        "vectors": [
+          {
+            "case": "zero_empty",
+            "calldata_sha256": "4e911a8ec777003c0232b2f842575008dd1362987643ba09fd0c89e367d24f4f",
+            "returndata_sha256": "6eb69e26de2a26eda48af77d4cec893aa0cf4748a64cbefcfe11a22c1e680ad9"
+          },
+          {
+            "case": "populated",
+            "calldata_sha256": "13d5a725e93618a404b86db0c3c2884f99970bba3dd4557ea0ee17f9a4b8b67d",
+            "returndata_sha256": "bf4c25c1d09708e88aab40c0038c9b9c9103dcacda1020b1bd6d6fc7c48a7fac"
+          }
+        ]
+      }
+    ]
+  },
+  "isolated_historical_artifacts": {
+    "FROSTCoordinator": {
+      "found": true,
+      "path": "rust/zkspv/deposit-integration/evidence/run-04/consumer-artifacts/FROSTCoordinator.json",
+      "historical_abi_equals_sdk": true,
+      "runtime_template_bytes": 23433,
+      "matching_tested_abi_entries": [
+        "finalizeSession(uint256,bytes,bytes32)",
+        "getAuthorizationResult(uint256)",
+        "getSession(uint256)",
+        "getResult(uint256)",
+        "isFinalized(uint256)",
+        "sessionDKGId(uint256)",
+        "sessionDKGResult(uint256)",
+        "defaultVerifier()",
+        "dkgRegistry()"
+      ]
+    },
+    "BitcoinWithdrawalEscrow": {
+      "found": true,
+      "path": "rust/zkspv/deposit-integration/evidence/run-04/consumer-artifacts/BitcoinWithdrawalEscrow.json",
+      "historical_abi_equals_sdk": false,
+      "runtime_template_bytes": 18951,
+      "matching_tested_abi_entries": [
+        "depth()",
+        "payment(bytes32)",
+        "settle(bytes32,bytes,bytes32,bytes32[],uint256)",
+        "nonce()"
+      ]
+    },
+    "BitcoinBatchRegistry": {
+      "found": true,
+      "path": "rust/zkspv/deposit-integration/evidence/run-04/consumer-artifacts/BitcoinBatchRegistry.json",
+      "historical_abi_equals_sdk": false,
+      "runtime_template_bytes": 5990,
+      "matching_tested_abi_entries": [
+        "batchState(bytes32)",
+        "withdrawalEscrow()",
+        "replacementOf(bytes32)",
+        "versionCount(bytes32)"
+      ]
+    },
+    "BitcoinSigningBoard": {
+      "found": false
+    },
+    "BitcoinAddressRegistry": {
+      "found": false
+    },
+    "BitcoinFeeReserve": {
+      "found": false
+    },
+    "WithdrawalFeePayments": {
+      "found": false
+    },
+    "DKGAuthorization": {
+      "found": true,
+      "path": "rust/zkspv/deposit-integration/evidence/run-04/consumer-artifacts/DKGAuthorization.json",
+      "historical_abi_equals_sdk": true,
+      "runtime_template_bytes": 3976,
+      "matching_tested_abi_entries": [
+        "hashOperation(address,bytes4,bytes32,uint256)",
+        "isOperationApproved(bytes32,address)",
+        "approvedOperations(bytes32)",
+        "executedOperations(bytes32)",
+        "operationTargets(bytes32)",
+        "consumeOperation(bytes32)",
+        "consumedSessions(uint256)",
+        "registry()",
+        "coordinator()",
+        "dkgId()",
+        "resultHash()"
+      ]
+    },
+    "CustodianValidator": {
+      "found": false
+    },
+    "CustodianDAODecisionBoard": {
+      "found": false
+    },
+    "CustodianDAORateController": {
+      "found": false
+    }
+  },
+  "limits": "Synthetic ABI vectors, including empty returndata. No eth_call, bytecode execution, state transition, public RPC, deployed runtime or historical network log was used. SDK contracts/*.json contains ABI arrays without creation or deployed bytecode."
+}

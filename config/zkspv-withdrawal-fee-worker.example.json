@@ -1,0 +1,77 @@
+{
+  "version": "6",
+  "chain_id": "11155111",
+  "evm_rpc": "REPLACE_WITH_EVM_RPC",
+  "evm_confirmations": "12",
+  "bitcoin_rpc": "http://127.0.0.1:8332",
+  "bitcoin_cookie": "/REPLACE/bitcoin/.cookie",
+  "bitcoin_policy": null,
+  "zk_state": "REPLACE_WITH_CHECKSUM_STATE_ADDRESS",
+  "identity_file": "/REPLACE/private/identity.json",
+  "directory": "/REPLACE/private/zk-worker",
+  "allowed_consumers": {
+    "REPLACE_WITH_CHECKSUM_POOL_ADDRESS": "MiningPoolV1",
+    "REPLACE_WITH_CHECKSUM_ESCROW_ADDRESS": "BitcoinWithdrawalEscrow"
+  },
+  "host_binary": "/REPLACE/bin/satoshifi-zk-worker-host",
+  "host_sha256": "REPLACE_WITH_VERIFIED_BINARY_SHA256",
+  "stage_timeout_seconds": "7200",
+  "max_stage_retries": "2",
+  "max_pending": "256",
+  "max_attempts": "32",
+  "minimum_free_bytes": "8589934592",
+  "max_tx_gas": "2000000",
+  "max_transaction_cost_wei": "10000000000000000",
+  "max_total_cost_wei": "100000000000000000",
+  "poll_seconds": "30",
+  "service": {
+    "mode": "confederation",
+    "binding": null,
+    "max_self_funded_cost_wei": "100000000000000000",
+    "max_self_funded_job_cost_wei": "10000000000000000"
+  },
+  "heartbeat": {
+    "enabled": true,
+    "interval_seconds": "302400",
+    "lead_seconds": "3600",
+    "grace_seconds": "1800",
+    "safety_margin_seconds": "300",
+    "finality_budget_seconds": "600",
+    "continuous_fresh": false,
+    "max_status_attempts": "3",
+    "status_backoff_seconds": "60"
+  },
+  "batching": {
+    "local_service_seconds": "14400"
+  },
+  "transport": {
+    "config_file": "/REPLACE/private/spv-transport.json",
+    "federation_consumers": {
+      "REPLACE_FEDERATION_ID": [
+        "REPLACE_WITH_CHECKSUM_POOL_ADDRESS",
+        "REPLACE_WITH_CHECKSUM_ESCROW_ADDRESS"
+      ]
+    },
+    "status_interval_seconds": "60"
+  },
+  "archive": {
+    "directory": "/REPLACE/private/spv-archive",
+    "max_headers": "200000",
+    "max_bytes": "1073741824"
+  },
+  "automation": {
+    "enabled": false
+  },
+  "address_deposits": {
+    "version": "1",
+    "registries": {
+      "REPLACE_WITH_CHECKSUM_POOL_ADDRESS": "REPLACE_WITH_CHECKSUM_ADDRESS_REGISTRY"
+    }
+  },
+  "withdrawal_fees": {
+    "version": "1",
+    "registries": {
+      "REPLACE_WITH_CHECKSUM_POOL_ADDRESS": "0x0000000000000000000000000000000000000009"
+    }
+  }
+}

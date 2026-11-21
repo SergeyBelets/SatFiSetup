@@ -1,0 +1,700 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "config",
+        "type": "tuple",
+        "internalType": "struct ZkBitcoinTestnet4StateV2.Config",
+        "components": [
+          {
+            "name": "confederationId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "programImageId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "relayProfile",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "maxStateAge",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "maxTipLag",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "baselineMaxTipAge",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "raw",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "height",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "work",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "prior",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "GROTH16_SEAL_BYTES",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "JOURNAL_SCHEMA",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "RELAY_PROFILE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "adapter",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ZkTestnet4SpvAdapter"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "baselineMaxTipAge",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "checkpointDescriptor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "confederationId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "freshness",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "fresh",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "evmNow",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "usefulAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "canonicalTipTime",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "stateAgeLimit",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "tipLagLimit",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "hasProgress",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "isHalted",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMainchainHead",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMainchainHeight",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getState",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct BitcoinTestnet4TransitionV2.State",
+        "components": [
+          {
+            "name": "anchor",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "anchorHeight",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "head",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "height",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "work",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "canonicalRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "commitment",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "halted",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "knownRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "knownLog",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "knownCount",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "haltRecord",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "oldHead",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "candidate",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "lca",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "depth",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "position",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "halted",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hasUsefulUpdate",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isFresh",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lastUsefulAcceptedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxStateAge",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxTipLag",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "programImageId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "stateVersion",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "submitTransition",
+    "inputs": [
+      {
+        "name": "journal",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "seal",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "verifier",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract RiscZeroGroth16Verifier"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verifierCodeHash",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "PermanentHalt",
+    "inputs": [
+      {
+        "name": "safeHead",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "candidate",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "lca",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "depth",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "position",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "StateAccepted",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "commitment",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "journalDigest",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "head",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "height",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "work",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "useful",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "halted",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AlreadyHalted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EmptyHeaderBatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HeaderTooFarInFuture",
+    "inputs": [
+      {
+        "name": "maximumTimestamp",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "acceptanceTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InsufficientChainwork",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAncestorCount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAncestorLink",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCompactTarget",
+    "inputs": [
+      {
+        "name": "bits",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidConfiguration",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidEncoding",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidHeaderLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidHeight",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidProofEncoding",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidProofOfWork",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTimeEncoding",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTimeSummary",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTransition",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoChange",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StaleState",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TargetAboveMainnetLimit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "VerifierCodeChanged",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WrongDeployment",
+    "inputs": []
+  }
+]

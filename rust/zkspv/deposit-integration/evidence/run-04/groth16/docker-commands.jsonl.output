@@ -1,0 +1,14 @@
+Docker version 28.1.1, build 4eba377
+[90m16:03:11[0m DBG constraint system loaded [36mtook=[0m5808.528086
+[90m16:03:33[0m DBG proving key loaded [36mtook=[0m22028.308635
+[90m16:03:34[0m DBG WTNS header [36mnInputs=[0m5635930 [36mnWitnesses=[0m5635930
+[90m16:03:35[0m DBG witness data loaded [36mtook=[0m1489.635168
+[90m16:03:35[0m DBG constraint system solver done [36mnbConstraints=[0m5676573 [36mtook=[0m911.414375
+[90m16:03:55[0m DBG prover done [36macceleration=[0mnone [36mbackend=[0mgroth16 [36mcurve=[0mbn254 [36mnbConstraints=[0m5676573 [36mtook=[0m19300.348801
++ WITNESS_FILE=/tmp/output.wtns
++ ulimit -s 16384
++ mkfifo /tmp/output.wtns
++ prover stark_verify.cs stark_verify_final.pk.dmp /tmp/output.wtns /mnt/proof.json
++ stark_verify /mnt/input.json /tmp/output.wtns
++ wait
++ rm /tmp/output.wtns

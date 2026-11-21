@@ -1,0 +1,19 @@
+{
+  "profile": "sepolia",
+  "chain_id": "11155111",
+  "evm_rpc": null,
+  "bitcoin_network": "regtest",
+  "bitcoin_core_version": "30.3",
+  "protocol": "SATOHSI_DKG_FROST_SECP256K1_TR_2_2_0_POSTCARD_HPKE_X25519_CHACHA_V1",
+  "max_participants": 16,
+  "max_inputs": 16,
+  "max_outputs": 32,
+  "contracts": {},
+  "dao_reward_token": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "btc_usd_feed": "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
+  "production_enabled": false,
+  "address_validation": "NOT_CHECKED_AGAINST_RPC",
+  "mode": "integration",
+  "evm_confirmations": "12",
+  "deployment_id": "sepolia-v1"
+}

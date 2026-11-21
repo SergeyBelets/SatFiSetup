@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "EXPERIMENTAL_REFERENCE_CORRECTIONS",
+  "production_ready": false,
+  "upstream_commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "source_path": "crates/bitcoin-da/src/verifier.rs",
+  "original_sha256": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+  "patched_sha256": "d7dfa614897b43edfcc6a8957baf87a8c94ff0a73620a3613d15b7a7ae222c6f",
+  "series": [
+    {
+      "file": "0001-target-one-work.patch",
+      "symbol": "target_to_work",
+      "sha256": "96e395473b944ee02b61c29dcc57feff155ceecb46948cc779a7b11b48ba8669",
+      "input_sha256": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+      "output_sha256": "2471a4c711da6212a5ba2f8dd3a028336cec5798011cbff5a308d5c7ee820ca1"
+    },
+    {
+      "file": "0002-compact-encoder-boundaries.patch",
+      "symbol": "target_to_bits",
+      "sha256": "f56664f4e3730a15b34afd092518d0d9bbde79efeeb22111ee8fd6bfbe21e1a8",
+      "input_sha256": "2471a4c711da6212a5ba2f8dd3a028336cec5798011cbff5a308d5c7ee820ca1",
+      "output_sha256": "b225ac0449f88ad9564882fbbd5e5c9cb520df1d821d8935594ef1b24241da08"
+    },
+    {
+      "file": "0003-signed-retarget-timespan.patch",
+      "symbol": "calculate_new_difficulty",
+      "sha256": "67ccb707e947f4b3cbf9887a4e287aa6b3261e078949c5557305a7b9712ebda5",
+      "input_sha256": "b225ac0449f88ad9564882fbbd5e5c9cb520df1d821d8935594ef1b24241da08",
+      "output_sha256": "d7dfa614897b43edfcc6a8957baf87a8c94ff0a73620a3613d15b7a7ae222c6f"
+    }
+  ]
+}

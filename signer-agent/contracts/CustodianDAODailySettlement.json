@@ -1,0 +1,753 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "rewardToken_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "staking_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "controller_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "authorization_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "twap_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "incomeVault_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "treasury_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "DEPLOY_FEE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "WRAP_FEE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "authorization",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract FROSTAuthorization"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claimLiquidityIncome",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "controller",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract CustodianDAORateController"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "fundReserve",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getSettlement",
+    "inputs": [
+      {
+        "name": "day",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct CustodianDAODailySettlement.Settlement",
+        "components": [
+          {
+            "name": "btcPrice8",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tvl",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "baseTarget",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "actualIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "basePaid",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "excess",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lpIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "reserveTarget",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "reserveBalanceAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerWrapFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerDeployFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "evidenceHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "treasuryIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSettlementOperationHash",
+    "inputs": [
+      {
+        "name": "report",
+        "type": "tuple",
+        "internalType": "struct CustodianDAODailySettlement.DayReport",
+        "components": [
+          {
+            "name": "day",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "averageBtcSats",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stablecoinTvl",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "openingLiquidityReserveSats",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerWrapFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerDeployFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "evidenceHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "income",
+            "type": "tuple[]",
+            "internalType": "struct CustodianDAODailySettlement.IncomeLine[]",
+            "components": [
+              {
+                "name": "sourceId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "providers",
+            "type": "tuple[]",
+            "internalType": "struct CustodianDAODailySettlement.LiquidityProvider[]",
+            "components": [
+              {
+                "name": "account",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "liquidityWeight",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "roundIds",
+        "type": "uint80[]",
+        "internalType": "uint80[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "incomeVault",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract CustodianDAOIncomeVault"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lpClaimable",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextSettlementDay",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "reserveBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardScale",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardToken",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "settleDay",
+    "inputs": [
+      {
+        "name": "report",
+        "type": "tuple",
+        "internalType": "struct CustodianDAODailySettlement.DayReport",
+        "components": [
+          {
+            "name": "day",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "averageBtcSats",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stablecoinTvl",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "openingLiquidityReserveSats",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerWrapFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "stakerDeployFeeIncome",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "evidenceHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "income",
+            "type": "tuple[]",
+            "internalType": "struct CustodianDAODailySettlement.IncomeLine[]",
+            "components": [
+              {
+                "name": "sourceId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "providers",
+            "type": "tuple[]",
+            "internalType": "struct CustodianDAODailySettlement.LiquidityProvider[]",
+            "components": [
+              {
+                "name": "account",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "liquidityWeight",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "roundIds",
+        "type": "uint80[]",
+        "internalType": "uint80[]"
+      },
+      {
+        "name": "operationHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settlements",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "btcPrice8",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "tvl",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "baseTarget",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "basePaid",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "excess",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "stakerIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lpIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reserveTarget",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reserveBalanceAfter",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "stakerWrapFeeIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "stakerDeployFeeIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "evidenceHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "treasuryIncome",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "staking",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract CustodianDAOStaking"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "treasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "twap",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ChainlinkBTCDailyTWAP"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "DaySettled",
+    "inputs": [
+      {
+        "name": "day",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualIncome",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "stakerIncome",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "lpIncome",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reserveBalance",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LiquidityIncomeClaimed",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReserveFunded",
+    "inputs": [
+      {
+        "name": "funder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TreasuryIncomeTransferred",
+    "inputs": [
+      {
+        "name": "day",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "DuplicateProvider",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DuplicateSource",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDay",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidReport",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRewardDecimals",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTransfer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  }
+]

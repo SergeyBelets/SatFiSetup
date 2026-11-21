@@ -1,0 +1,28 @@
+   Compiling satoshifi-resume-policy v0.1.0 (/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/resume-policy)
+    Finished `test` profile [unoptimized] target(s) in 1.37s
+     Running tests/policy.rs (/private/tmp/satoshifi-resume-policy-target/debug/deps/policy-076d0842d056c089)
+
+running 20 tests
+test invalid_batch_rolls_back_archive_and_returns_no_bounded_prefix ... ok
+test inclusion_cannot_be_used_as_absence_or_duplicate_work ... ok
+test bounded_append_matches_full_reference_and_checks_only_new_headers ... ok
+test bounded_wire_roundtrip_preserves_context_paths_and_transition ... ok
+test every_native_context_field_is_authenticated_before_verifier_use ... ok
+test map_paths_and_empty_history_paths_are_exact_and_root_bound ... ok
+test losing_and_equal_work_branches_keep_head_and_can_resume_later ... ok
+test resource_limits_missing_extra_witnesses_and_noops_fail_closed ... ok
+test stale_and_changed_state_metadata_are_rejected ... ok
+test v2_checkpoint_keeps_canonical_root_but_never_reuses_v1_state_commitment ... ok
+test proofs_for_different_step_order_or_old_index_root_fail ... ok
+test wire_bit_change_cannot_authenticate_context ... ok
+test wire_rejects_truncation_trailing_data_unknown_flags_and_excess_counts ... ok
+test state_binds_admission_order_even_when_map_and_head_are_identical ... ok
+test snapshot_rebuild_preserves_v2_index_context_and_membership ... ok
+test halted_v2_state_is_terminal_even_with_a_well_formed_next_witness ... ok
+test lower_but_non_last_common_ancestor_cannot_create_false_halt ... ok
+test exact_100_switch_and_101_safe_prefix_halt_match_reference ... ok
+test generated_fork_graph_matches_reference_at_every_transition ... ok
+test witness_bound_does_not_grow_with_archive_history ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.50s
+

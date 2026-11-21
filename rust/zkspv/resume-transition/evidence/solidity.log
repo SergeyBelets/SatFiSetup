@@ -1,0 +1,53 @@
+Compiling 21 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.25s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/BitcoinTransitionV2.t.sol:60:13:
+   |
+60 |             bytes memory journal=fixture(0); writeWord(journal,indices[i],bytes32(type(uint256).max));
+   |             ^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/BitcoinTransitionV2.t.sol:63:9:
+   |
+63 |         bytes memory journal=fixture(0); writeWord(journal,31,bytes32(type(uint256).max));
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/BitcoinTransitionV2.t.sol:115:13:
+    |
+115 |             bytes memory journal=fixture(0);
+    |             ^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/BitcoinTransitionV2.t.sol:119:9:
+    |
+119 |         bytes memory journal=fixture(0); writeWord(journal,20,bytes32(uint256(65))); vm.expectRevert(); harness.decode(journal);
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/BitcoinTransitionV2.t.sol:135:13:
+    |
+135 |             bytes memory j=fixture(0);bytes32 original;uint256 index=indices[i];
+    |             ^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/BitcoinTransitionV2.t.sol:140:9:
+    |
+140 |         bytes memory j=fixture(0);writeWord(j,34,bytes32(type(uint256).max));vm.expectRevert();harness.decode(j);
+    |         ^^^^^^^^^^^^^^
+
+
+Ran 12 tests for test/BitcoinTransitionV2.t.sol:BitcoinTransitionV2Test
+[PASS] testAllRootLogAndCounterWordsAreBoundIntoBothStateCommitments() (gas: 778221)
+[PASS] testChainAddressAndCheckpointAreRequired() (gas: 277058)
+[PASS] testEveryAcceptedStateFieldAndReplayAreChecked() (gas: 1442023)
+[PASS] testEveryPublicStateFieldMustMatchItsCommitment() (gas: 1218154)
+[PASS] testExactLengthDomainAndNarrowIntegerEncoding() (gas: 1477928)
+[PASS] testHaltPersistsSafePrefixPositionAndCandidateTime() (gas: 229307)
+[PASS] testKnownCountDeltaEqualsUniqueNewHeaders() (gas: 530858)
+[PASS] testMaximumOfLosingBranchControlsFutureTimeNotTip() (gas: 375016)
+[PASS] testSharedRustJournalWordsAndAllSixTransitions() (gas: 1103272)
+[PASS] testSideBranchDoesNotBecomeUsefulAndShorterHeavierDoes() (gas: 279966)
+[PASS] testV1DomainAndLengthCannotBeUsedForV2() (gas: 48797)
+[PASS] testZeroNewHeadersAndInconsistentProgressAreRejected() (gas: 576818)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 18.27ms (71.86ms CPU time)
+
+Ran 1 test suite in 25.78ms (18.27ms CPU time): 12 tests passed, 0 failed, 0 skipped (12 total tests)

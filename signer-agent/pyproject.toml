@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "satohsi-frost-signer-agent"
+version = "0.3.0"
+description = "Leaderless FROST signing agent using the on-chain FROSTCoordinator registry"
+requires-python = ">=3.11"
+dependencies = [
+  "coincurve>=21.0.0",
+  "cryptography>=50.0.2",
+  "eth-account>=0.13.7",
+  "eth-utils>=5.3.1",
+  "python-dotenv>=1.2.2",
+  "web3>=7.16.0",
+  # Security floors also apply to installs that do not use requirements.lock.
+  "aiohttp>=3.14.5",
+  "certifi>=2026.10.18",
+  "multidict>=6.9.1",
+  "requests>=2.33.0",
+  "urllib3>=2.8.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=9.0.3"]
+evm-test = ["pytest>=9.0.3", "eth-tester[py-evm]==0.13.0b1", "py-evm==0.12.1b1", "trie==3.1.0"]
+
+[project.scripts]
+frost-signer = "signer_agent.platform_support:entrypoint"
+frost-relay-keeper = "signer_agent.relay_keeper:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["signer_agent*"]

@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "requester_config": "/srv/satoshifi/private/requester/spv-transport.json",
+  "federation": "REPLACE_WITH_ENROLLED_FEDERATION_ID",
+  "service_identity": "0x1111111111111111111111111111111111111111",
+  "revision": "0",
+  "funding_mode": "CONFEDERATION"
+}

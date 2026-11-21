@@ -1,0 +1,17 @@
+[package]
+name = "satoshifi-test-policy-kernel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+[workspace]
+[dependencies]
+satoshifi-mainnet-guest-kernel = { path = "../../guest-integration" }
+bitcoin = { version = "=0.32.5", default-features = false, features = ["std"] }
+[profile.dev]
+debug = 0
+incremental = false
+[profile.release]
+debug = 0
+lto = true
+codegen-units = 1

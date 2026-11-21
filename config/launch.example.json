@@ -1,0 +1,69 @@
+{
+  "version": "1",
+  "ethereum_network": "sepolia",
+  "bitcoin_network": "testnet4",
+  "bitcoin_backend": "relay",
+  "rpc_profile": "manual",
+  "deployment_mode": "create",
+  "deployment_id": "project-v1",
+  "bitcoin_confirmations": "6",
+  "evm_confirmations": "1",
+  "phase_duration": null,
+  "evm_discovery_from_block": null,
+  "bitcoin_watch_start_height": "0",
+  "token_metadata": {
+    "governance": {
+      "name": "Project Governance",
+      "symbol": "PGOV"
+    },
+    "mining": {
+      "name": "Project Mining",
+      "symbol": "PMIN"
+    },
+    "federation_share": {
+      "name": "Project Federation Shares",
+      "symbol": "PFS"
+    },
+    "confederation_share": {
+      "name": "Project Confederation Shares",
+      "symbol": "PCS"
+    }
+  },
+  "economics": {
+    "candidate_threshold": "200000",
+    "minimum_stake": "0.000000000000000001",
+    "treasury_reserve_usd": "1000",
+    "treasury_payout_bps": "9000",
+    "startup": {
+      "enabled": false,
+      "apy_bps": "0",
+      "unit_price_usd": "0",
+      "duration_days": "0",
+      "start_day": "0",
+      "budget_usd": "0"
+    }
+  },
+  "wrap_fee_bps": "100",
+  "unwrap_fee_bps": "100",
+  "participants": [],
+  "threshold": "3",
+  "custody_threshold": "2",
+  "min_custodians": "2",
+  "treasury": null,
+  "token_recipient": null,
+  "reward_token": null,
+  "bitcoin_policy_file": null,
+  "reuse_policy_file": null,
+  "family_root_policy_file": null,
+  "approval_deadline": null,
+  "converter_numerator": "1",
+  "converter_denominator": "10000000000",
+  "converter_funding_usd": "1000",
+  "deployment_fee": null,
+  "protocol_fee_cap_sats": "100000",
+  "max_vbytes": "10000",
+  "max_packet_bytes": "1024",
+  "qualification_report": "rust/zkspv/derivation-qualification/qualification-report.json",
+  "service_policy_file": "config/bitcoin-bootstrap-service-policy.example.json",
+  "custody_sources": []
+}

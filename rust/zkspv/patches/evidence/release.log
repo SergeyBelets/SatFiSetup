@@ -1,0 +1,45 @@
+Command: ['cargo', 'test', '--locked', '--offline', '--release', '--manifest-path', 'rust/zkspv/patches/probe/Cargo.toml']
+CARGO_HOME=/private/tmp/satoshifi-arithmetic-cargo
+CARGO_TARGET_DIR=/private/tmp/satoshifi-arithmetic-target
+   Compiling find-msvc-tools v0.1.14
+   Compiling shlex v2.0.1
+   Compiling bitcoin-io v0.1.101
+   Compiling arrayvec v0.7.8
+   Compiling bitcoin-internals v0.3.0
+   Compiling hex_lit v0.1.1
+   Compiling bitcoin v0.32.7
+   Compiling bitcoin-units v0.1.101
+   Compiling cc v1.8.0
+   Compiling hex-conservative v0.2.3
+   Compiling subtle v2.6.1
+   Compiling bech32 v0.11.1
+   Compiling crypto-bigint v0.5.5
+   Compiling secp256k1-sys v0.10.1
+   Compiling bitcoin_hashes v0.14.101
+   Compiling base58ck v0.1.101
+   Compiling secp256k1 v0.29.1
+   Compiling satoshifi-arithmetic-patch-probe v0.1.0 (/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/patches/probe)
+    Finished `release` profile [optimized] target(s) in 10.26s
+     Running unittests src/lib.rs (/private/tmp/satoshifi-arithmetic-target/release/deps/satoshifi_arithmetic_patch_probe-20758c986ff05968)
+
+running 8 tests
+test regression_tests::compact_stays_const_for_zero_one_and_high_bit_targets ... ok
+test regression_tests::ordinary_mainnet_vectors_retain_original_behavior ... ok
+test regression_tests::target_one_uses_core_expected_value_even_though_pinned_rust_bitcoin_differs ... ok
+test regression_tests::zero_target_validation_is_explicitly_outside_this_patch ... ok
+test regression_tests::corrected_compact_matches_core_equation_and_pinned_rust_bitcoin ... ok
+test regression_tests::retarget_signed_clamps_and_pow_limit_match_core_equation ... ok
+test regression_tests::original_defects_remain_reproducible_in_the_unmodified_functions ... ok
+test regression_tests::corrected_work_matches_core_formula_for_nonzero_targets ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests satoshifi_arithmetic_patch_probe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+Exit: 0
+Elapsed seconds: 10.639

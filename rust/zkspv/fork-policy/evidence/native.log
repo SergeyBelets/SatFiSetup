@@ -1,0 +1,75 @@
+   Compiling bitcoin-da v2.8.0 (/private/tmp/satoshifi-header-upstream-native/crates/bitcoin-da)
+warning: crate-level attribute should be in the root module
+ --> /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/time-policy/src/lib.rs:9:1
+  |
+9 | #![no_std]
+  | ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_attributes)]` on by default
+
+warning: variable does not need to be mutable
+    --> crates/bitcoin-da/src/verifier.rs:1117:13
+     |
+1117 |         let mut da_state = LatestDaState {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+    --> crates/bitcoin-da/src/verifier.rs:1142:13
+     |
+1142 |         let mut da_state = LatestDaState {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> crates/bitcoin-da/src/verifier.rs:1270:13
+     |
+1270 |         let mut da_state = LatestDaState {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> crates/bitcoin-da/src/verifier.rs:1295:13
+     |
+1295 |         let mut da_state = LatestDaState {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+
+warning: `bitcoin-da` (lib test) generated 5 warnings (run `cargo fix --lib -p bitcoin-da --tests` to apply 4 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 8.37s
+     Running unittests src/lib.rs (/private/tmp/satoshifi-header-native-target/debug/deps/bitcoin_da-732bc24b91dcbb89)
+
+running 19 tests
+test verifier::satoshifi_reviewed_compact_tests::pow_limit_is_inclusive_and_context_bound ... ok
+test verifier::satoshifi_reviewed_work_tests::checked_cumulative_work_preserves_representable_sum ... ok
+test verifier::satoshifi_reviewed_compact_tests::range_guard_retains_core_permitted_encoding_aliases ... ok
+Executed Core target comparisons: 45064
+test verifier::satoshifi_reviewed_compact_tests::checked_targets_match_executed_core_arithmetic ... ok
+test verifier::satoshifi_fork_policy_tests::actual_verifier_batch_unknown_parent_rolls_back_all_history ... ok
+test verifier::satoshifi_time_policy_tests::real_nonmonotonic_header_times_preserve_an_earlier_maximum ... ok
+test verifier::tests::test_calculate_work ... ok
+test verifier::satoshifi_fork_policy_tests::snapshot_requires_authenticated_commitment_and_exact_checkpoint_context ... ok
+test verifier::satoshifi_time_policy_tests::upstream_mtp_check_is_required_before_summary_accumulation ... ok
+test verifier::satoshifi_time_policy_tests::rejected_transition_returns_no_state_summary_or_prefix ... ok
+test verifier::tests::test_mainnet_chainworks ... ok
+test verifier::tests::test_verify_header_chain_common_sad_paths ... ok
+test verifier::tests::test_header_chain_mainnet_old_blocks ... ok
+test verifier::tests::test_header_chain_testnet4 ... ok
+test verifier::tests::test_header_chain_mainnet_newer_blocks ... ok
+time policy native headers=2037 maximum=1267007311 last=1267007311 abi=5341544f53484946495f4845414445525f54494d455f5631000000000000000000000000000000000000000000000000000000000000000000000000000007f5000000000000000000000000000000000000000000000000000000004b84ff4f000000000000000000000000000000000000000000000000000000004b84ff4f
+test verifier::satoshifi_time_policy_tests::historical_mainnet_old_summary_and_chunks ... ok
+time policy native headers=2037 maximum=1734323382 last=1734323382 abi=5341544f53484946495f4845414445525f54494d455f5631000000000000000000000000000000000000000000000000000000000000000000000000000007f500000000000000000000000000000000000000000000000000000000675facb600000000000000000000000000000000000000000000000000000000675facb6
+test verifier::satoshifi_time_policy_tests::historical_mainnet_recent_summary_and_chunks ... ok
+native fork policy anchor=40320 verified descendants=2026 history_nodes=131756 root=eac7adfb033c72d8ea39ac0f1c35d8f30b982b9c363abbd300bcb284e3615d5e
+test verifier::satoshifi_fork_policy_tests::historical_old_mainnet_history_and_restore ... ok
+native fork policy anchor=872928 verified descendants=2026 history_nodes=131756 root=21c047e897e2a1c080ace4d3edd09032519dcb2e2f7ff3a3a1d208599c3e8f69
+test verifier::satoshifi_fork_policy_tests::historical_recent_mainnet_history_and_restore ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 39 filtered out; finished in 1.64s
+

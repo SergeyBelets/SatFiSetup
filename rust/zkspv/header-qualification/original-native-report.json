@@ -1,0 +1,58 @@
+{
+  "schema": "satoshifi.original-native-header-evidence.v1",
+  "status": "PASS",
+  "production_ready": false,
+  "upstream_commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "source_archive_sha256": "591197b7a10896859d873a757d53ae39edd541414702b17c15a82d3f4d0b12c6",
+  "original_source_files": 887,
+  "source_modified": false,
+  "archive_tree_verified_before_and_after": true,
+  "source_tree_sha256": "91361c0c5b3e96a7b9206057e205737c8333c1fc965e97d0aef7bf441bce8489",
+  "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: aarch64-apple-darwin\nrelease: 1.88.0\nLLVM version: 20.1.5\n",
+  "cargo": "cargo 1.88.0 (873a06493 2025-05-10)",
+  "compiler_sha256": "6efc19b5cef1e23df77a75d94ce8b75ed9e8929f0dee0618154c88fd6d82c3e1",
+  "cargo_sha256": "1e871156aaf10cf58364b6fd4c824859d5d178f227b963a81a58ade2442ac744",
+  "command": [
+    "/Users/dmitrysubbotin/.rustup/toolchains/1.88-aarch64-apple-darwin/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "bitcoin-da",
+    "--features",
+    "native",
+    "--lib",
+    "verifier::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 2.861,
+  "tests_passed": 6,
+  "log": "evidence/original-native.log",
+  "log_sha256": "5ff18b7de996fdf3cd0d84acc14343da06c4ed3902e72507760373a0e448e89e",
+  "environment": {
+    "CARGO_HOME": "/private/tmp/satoshifi-header-cargo",
+    "CARGO_TARGET_DIR": "/private/tmp/satoshifi-header-native-target",
+    "RUSTC": "/private/tmp/satoshifi-header-rust188/bin/rustc",
+    "RUSTDOC": "/private/tmp/satoshifi-header-rust188/bin/rustdoc",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_BUILD_JOBS": "2"
+  },
+  "source_sha256": {
+    "rust/zkspv/header-qualification/qualify_native.py": "83a5c39054bfa39fc7d579758fc78b3076e1d0b28d14e8544dd5eeb25d2059f5",
+    "rust/zkspv/vendor/citrea-2ed54463/crates/bitcoin-da/src/verifier.rs": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+    "rust/zkspv/vendor/citrea-2ed54463/Cargo.lock": "34afe1d5794f6189857d239d2b03309b175d7c58d74004578e6861201a33d9ca"
+  },
+  "scope": "Original bitcoin-da native verifier::tests only, with unchanged source and lockfile",
+  "limitations": [
+    "Six original tests passing does not resolve known consensus/policy incompatibilities",
+    "Original work test retains upstream's target-one expectation; this is baseline evidence, not Core compatibility",
+    "DA parser/service tests outside verifier::tests were compiled but not executed",
+    "Not the corrected source, a guest build, ZK proof, EVM verification or production activation",
+    "Dependency retrieval/build preparation was networked; this test command uses Cargo offline",
+    "Debug information disabled and incremental compilation disabled to bound disk use"
+  ]
+}

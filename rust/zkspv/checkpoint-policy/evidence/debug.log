@@ -1,0 +1,21 @@
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running tests/policy.rs (/private/tmp/satoshifi-checkpoint-policy-target/debug/deps/policy-9033d09f5755e2f7)
+
+running 14 tests
+test exact_checkpoint_length ... ok
+test invalid_compact_and_mainnet_pow_limit_are_rejected ... ok
+test epoch_boundary_and_minimum_height ... ok
+test exactly_ten_predecessors ... ok
+test binding_rejects_changes_to_every_context_field ... ok
+test all_links_and_checkpoint_connection_are_required ... ok
+test every_predecessor_has_exact_length ... ok
+test predecessors_never_become_members_or_confirmations ... ok
+test returned_context_cannot_change_validated_anchor ... ok
+test work_includes_anchor_once_but_earlier_work_is_trusted ... ok
+test valid_target_still_requires_real_pow ... ok
+test descriptor_and_state_bind_height_and_trusted_work ... ok
+test ring_uses_absolute_heights_for_all_eleven_positions ... ok
+test real_mainnet_epoch_checkpoints_and_exact_work ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

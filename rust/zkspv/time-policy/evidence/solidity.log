@@ -1,0 +1,17 @@
+Compiling 20 files with Solc 0.8.30
+Solc 0.8.30 finished in 1.32s
+Compiler run successful!
+
+Ran 9 tests for test/BitcoinHeaderTime.t.sol:BitcoinHeaderTimeTest
+[PASS] testDomainAndNonCanonicalIntegerWidthsRejected() (gas: 41235)
+[PASS] testEarlierMaximumCannotBeReplacedByLastTimestamp() (gas: 25519)
+[PASS] testEmptyBatchAndInconsistentSummaryRejected() (gas: 20564)
+[PASS] testEveryTruncationAndTrailingByteRejected() (gas: 1296818)
+[PASS] testFuzzAbiRoundTrip(uint64,uint32,uint32) (runs: 256, μ: 15104, ~: 15105)
+[PASS] testFuzzFutureBoundUsesEvmClock(uint32,uint32,uint256) (runs: 256, μ: 11356, ~: 11213)
+[PASS] testSharedRustAbiAndAcceptanceFixtures() (gas: 375243)
+[PASS] testTimeFailureLeavesFixtureStateUnchangedAndCanRetry() (gas: 135749)
+[PASS] testUint256ClockDoesNotOverflow() (gas: 14112)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 20.28ms (45.76ms CPU time)
+
+Ran 1 test suite in 28.13ms (20.28ms CPU time): 9 tests passed, 0 failed, 0 skipped (9 total tests)

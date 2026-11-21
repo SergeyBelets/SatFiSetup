@@ -1,0 +1,26 @@
+{
+  "version": "1",
+  "purpose": "PREPARATION_ONLY",
+  "ethereum_network": null,
+  "bitcoin_network": null,
+  "bitcoin_backend": null,
+  "deployment_intent": "NEW_EMPTY",
+  "operator_inputs": {
+    "public_bootstrap_manifest": null,
+    "bitcoin_checkpoint_policy": null,
+    "canonical_family_root_sdk_pin": null,
+    "authority_roster_and_threshold": null,
+    "evm_confirmations": null,
+    "evm_finality_policy": null,
+    "consumer_confirmation_policy": null,
+    "external_token_and_feed_provenance": null,
+    "deployment_fee_and_gas_caps": null,
+    "transport_public_bindings_and_key_epochs": null,
+    "freshness_and_heartbeat_windows": null,
+    "self_hosted_tool_and_image_pins": null,
+    "storage_retention_and_observer_plan": null,
+    "treasury_and_own_funding_caps": null,
+    "empty_inventory_evidence": null,
+    "measured_latency_capacity_and_cost": null
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "satoshifi.spv-gas-caller.v1",
+  "chain_id": "31337",
+  "evm_confirmations": "1",
+  "budget": {
+    "period_seconds": "86400",
+    "max_period_cost_wei": "1000000000000000",
+    "max_transactions_per_period": "4",
+    "max_attempts_per_payee_epoch": "3",
+    "retry_backoff_seconds": "600",
+    "gas_limit": "150000",
+    "max_fee_per_gas_wei": "1000000000",
+    "max_priority_fee_per_gas_wei": "1000000",
+    "min_caller_balance_wei": "1000000000000000",
+    "min_claim_to_fee_ratio": "1"
+  },
+  "routes": [
+    {
+      "binding": {
+        "schema": "satoshifi.spv-gas-binding.v1",
+        "chain_id": "31337",
+        "evm_confirmations": "1",
+        "registry": "<reviewed registry address>",
+        "registry_creation_block": "<decimal creation block>",
+        "registry_runtime_hash": "<keccak runtime>",
+        "factory": "<confederation factory address>",
+        "confederation_id": "<confederation id>",
+        "state_view": "<state view address>",
+        "authorization": "<DKG authorization address>",
+        "domain": "<registry.domain()>"
+      },
+      "treasury": "<canonical treasury address>",
+      "epoch": "1",
+      "roster_hash": "<treasury.rosterHash()>",
+      "payees": [
+        {
+          "address": "<approved payee address>",
+          "balance_floor_wei": "1000000000000000",
+          "min_claim_wei": "100000000000000"
+        }
+      ]
+    }
+  ]
+}

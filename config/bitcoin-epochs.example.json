@@ -1,0 +1,28 @@
+{
+  "version": "1",
+  "fleet_id": "1111111111111111111111111111111111111111111111111111111111111111",
+  "identity_file": "/srv/satoshifi/private/operator/identity.json",
+  "directory": "/srv/satoshifi/private/epochs",
+  "max_epochs_per_poll": "2",
+  "max_bindings_per_poll": "8",
+  "max_archive_records": "65536",
+  "attestation_ttl_seconds": "900",
+  "epochs": [
+    {
+      "wallet_context": "2222222222222222222222222222222222222222222222222222222222222222",
+      "mode": "SERVICING",
+      "address_config": "/srv/satoshifi/private/epoch-1/address.json",
+      "signing_board": "0x1111111111111111111111111111111111111111",
+      "spv_route": null,
+      "minimum_evm_balance_wei": "10000000000000000"
+    },
+    {
+      "wallet_context": "3333333333333333333333333333333333333333333333333333333333333333",
+      "mode": "ISSUING",
+      "address_config": "/srv/satoshifi/private/epoch-2/address.json",
+      "signing_board": "0x2222222222222222222222222222222222222222",
+      "spv_route": null,
+      "minimum_evm_balance_wei": "10000000000000000"
+    }
+  ]
+}

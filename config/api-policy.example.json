@@ -1,0 +1,291 @@
+{
+  "principals": [],
+  "deployments": [
+    "local-v1"
+  ],
+  "actions": {
+    "open_signature": {
+      "deployment": "local-v1",
+      "contract": "coordinator",
+      "artifact": "FROSTCoordinator",
+      "method": "createSessionFromDKG"
+    },
+    "authorize": {
+      "deployment": "local-v1",
+      "contract": "conf_auth",
+      "artifact": "DKGAuthorization",
+      "method": "authorizeOperation"
+    },
+    "mint_proven_deposit": {
+      "deployment": "local-v1",
+      "contract": "mining",
+      "artifact": "MiningPoolV1",
+      "method": "mintFromProof"
+    },
+    "deposit_mp": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "deposit"
+    },
+    "request_withdrawal": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "requestWithdrawal"
+    },
+    "prepare_withdrawal": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "processWithdrawal"
+    },
+    "cancel_withdrawal": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "cancelWithdrawal"
+    },
+    "sync_fees": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "syncFeeReports"
+    },
+    "claim_fees": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "artifact": "ConfederationMultiPool",
+      "method": "claimFees"
+    },
+    "route_fees": {
+      "deployment": "local-v1",
+      "contract": "fee_pipeline",
+      "artifact": "PoolFeePipeline",
+      "method": "route"
+    },
+    "reserve_batch": {
+      "deployment": "local-v1",
+      "contract": "batches",
+      "artifact": "BitcoinBatchRegistry",
+      "method": "reserve"
+    },
+    "bind_payment": {
+      "deployment": "local-v1",
+      "contract": "escrow",
+      "artifact": "BitcoinWithdrawalEscrow",
+      "method": "bind"
+    },
+    "settle_payment": {
+      "deployment": "local-v1",
+      "contract": "escrow",
+      "artifact": "BitcoinWithdrawalEscrow",
+      "method": "settle"
+    },
+    "settle_dao_day": {
+      "deployment": "local-v1",
+      "contract": "settlement",
+      "artifact": "CustodianDAODailySettlement",
+      "method": "settleDay"
+    },
+    "claim_dao": {
+      "deployment": "local-v1",
+      "contract": "staking",
+      "artifact": "CustodianDAOStaking",
+      "method": "claim"
+    },
+    "propose_pool": {
+      "deployment": "local-v1",
+      "contract": "governance",
+      "artifact": "FederationGovernance",
+      "method": "proposeAddPool"
+    },
+    "execute_proposal": {
+      "deployment": "local-v1",
+      "contract": "governance",
+      "artifact": "FederationGovernance",
+      "method": "executeProposal"
+    },
+    "reserve-replacement": {
+      "deployment": "local-v1",
+      "contract": "batches",
+      "artifact": "BitcoinBatchRegistry",
+      "method": "reserveReplacement"
+    },
+    "bind-replacement": {
+      "deployment": "local-v1",
+      "contract": "escrow",
+      "artifact": "BitcoinWithdrawalEscrow",
+      "method": "bindReplacement"
+    }
+  },
+  "views": {
+    "dkg_result": {
+      "deployment": "local-v1",
+      "contract": "dkg",
+      "method": "getCompletedResult",
+      "args": [],
+      "parameters": true
+    },
+    "signature": {
+      "deployment": "local-v1",
+      "contract": "coordinator",
+      "method": "getAuthorizationResult",
+      "args": [],
+      "parameters": true
+    },
+    "pools": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "getAllPools",
+      "args": [],
+      "parameters": false
+    },
+    "pool": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "getPoolInfo",
+      "args": [],
+      "parameters": true,
+      "units": {
+        "token": "$mp",
+        "decimals": "18",
+        "satoshis_per_token": "100000000"
+      }
+    },
+    "withdrawal": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "getWithdrawal",
+      "args": [],
+      "parameters": true,
+      "units": {
+        "token": "$mp",
+        "decimals": "18",
+        "satoshis_per_token": "100000000"
+      }
+    },
+    "withdrawal_intent": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "getProcessWithdrawalOperationHash",
+      "args": [],
+      "parameters": true
+    },
+    "fees": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "accruedFees",
+      "args": [],
+      "parameters": true,
+      "units": {
+        "token": "$mp",
+        "decimals": "18",
+        "satoshis_per_token": "100000000"
+      }
+    },
+    "pending_fees": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "pendingUnreportedFees",
+      "args": [],
+      "parameters": true,
+      "units": {
+        "token": "$mp",
+        "decimals": "18",
+        "satoshis_per_token": "100000000"
+      }
+    },
+    "fee_claim_intent": {
+      "deployment": "local-v1",
+      "contract": "conf_pool",
+      "method": "getClaimFeesOperationHash",
+      "args": [],
+      "parameters": true
+    },
+    "fee_route_intent": {
+      "deployment": "local-v1",
+      "contract": "fee_pipeline",
+      "method": "operationHash",
+      "args": [],
+      "parameters": true
+    },
+    "batch": {
+      "deployment": "local-v1",
+      "contract": "batches",
+      "method": "batches",
+      "args": [],
+      "parameters": true
+    },
+    "payment": {
+      "deployment": "local-v1",
+      "contract": "escrow",
+      "method": "payment",
+      "args": [],
+      "parameters": true
+    },
+    "dao_day": {
+      "deployment": "local-v1",
+      "contract": "settlement",
+      "method": "getSettlement",
+      "args": [],
+      "parameters": true
+    },
+    "dao_next_day": {
+      "deployment": "local-v1",
+      "contract": "settlement",
+      "method": "nextSettlementDay",
+      "args": [],
+      "parameters": false
+    },
+    "dao_day_intent": {
+      "deployment": "local-v1",
+      "contract": "settlement",
+      "method": "getSettlementOperationHash",
+      "args": [],
+      "parameters": true
+    },
+    "proposal": {
+      "deployment": "local-v1",
+      "contract": "governance",
+      "method": "getProposal",
+      "args": [],
+      "parameters": true
+    },
+    "converter_liquidity": {
+      "deployment": "local-v1",
+      "contract": "usd",
+      "method": "balanceOf",
+      "args": [
+        "$converter"
+      ],
+      "parameters": false,
+      "units": {
+        "token": "$usd",
+        "decimals": "6"
+      }
+    }
+  },
+  "metrics": {
+    "converter_liquidity": {
+      "view": "converter_liquidity"
+    },
+    "next_dao_day": {
+      "view": "dao_next_day"
+    },
+    "pending_wrap_fees": {
+      "view": "pending_fees",
+      "args": [
+        "$mp",
+        true
+      ]
+    },
+    "pending_unwrap_fees": {
+      "view": "pending_fees",
+      "args": [
+        "$mp",
+        false
+      ]
+    }
+  }
+}

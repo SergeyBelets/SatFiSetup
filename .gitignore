@@ -1,13 +1,20 @@
-# SAM build output
-.aws-sam/
-samconfig.toml
-
 # Python
 __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+*.egg-info/
 
-# Local environment and secrets
+# Build output
+**/target/
+.aws-sam/
+node_modules/
+samconfig.toml
+
+# Local state, keys and journals: never commit
 .env
 *.env
+.state/
+*.sqlite
+*.sqlite-*
+*identity*

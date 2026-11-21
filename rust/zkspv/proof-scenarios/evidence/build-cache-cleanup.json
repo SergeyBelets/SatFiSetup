@@ -1,0 +1,14 @@
+{
+  "removed": [
+    "/private/tmp/satoshifi-model-guest-target",
+    "/private/tmp/satoshifi-scenario-native-target",
+    "/private/tmp/satoshifi-scenario-guest-toolchain",
+    "/private/tmp/satoshifi-scenario-guest-toolchain.tar.gz"
+  ],
+  "scope": "Task-created build targets and downloaded/extracted guest compiler only; source, receipts, program, vector binaries and logs retained",
+  "compiler_sha256": "c30744c50da1a5cb824010f49125f800edb69cfe2fa214881d9b46dfafdcdf9b",
+  "archive_sha256": "f3d6a3dbe09536f7166cff53fd5ded632a0b5409b7cfaa5202423f6c3323c04c",
+  "before_free": 4355063808,
+  "after_free": 7175393280,
+  "finished_at_unix": 1793341015.134557
+}

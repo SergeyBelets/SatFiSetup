@@ -1,0 +1,18 @@
+{
+  "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+  "archive_url": "https://codeload.github.com/bitcoin/bitcoin/tar.gz/ee42d59d4de970769ebabf77b89ff4269498f61e",
+  "archive_sha256": "ead34eadb7304d63c2df238963559d8f969a0f38eaa970e71fbfe3be0da9a15f",
+  "files_sha256": {
+    "COPYING": "7c4a87f43afaf667b4c2187af92ebdd27310a24cec113f973e058e3300a76002",
+    "src/arith_uint256.cpp": "33099a41d032d02f49f2d0269f31749c6b9d7cee3fdc8ce0c3cadfe46786d1a8",
+    "src/crypto/common.h": "9f0c0cf25f809ed3a1bc765a1b5b58c21e04c108cd6a82511f3a108abfc3ec74",
+    "src/compat/endian.h": "f610dc82ef3d28c8b01826a17fdeaff860de3e34581e5e9b806b9f0e55b51df1",
+    "src/compat/byteswap.h": "023602a03ae3683d5c9e8f69a6ec0e9fbacb806bcd4668d88458b9ad9d5c8634",
+    "src/uint256.h": "e994f85a596ef0f297e0dccf4957230d78c535238beafc78b1a4c682656029ef",
+    "src/util/string.h": "91878fc758e6850d937c18a5006ddc8adec43f1224dede833dd37fd82a806ab7",
+    "src/span.h": "485dc37ba8ed9b0e8d8212061122a5c1cd4e71e6ecc5380ac1a2277de395b0e3",
+    "src/util/strencodings.h": "6b58f65c58fd1cf2959b27c3d2d9815596be502f51bf789eb03b83e100fad3c5",
+    "src/crypto/hex_base.h": "2757962ed2af437e1e873a417dff70fcee5203bf4c4fcee683355ea04a163953",
+    "src/arith_uint256.h": "ed925caf619fd793c124efed3b8a8685104375d36662581abe96f32fe0c3fbc6"
+  }
+}

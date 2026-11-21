@@ -1,0 +1,96 @@
+2026-10-29T20:28:33.341146Z  INFO node::user: web3_clientVersion
+2026-10-29T20:28:33.354384Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.357089Z  INFO node::user: eth_getBlockByNumber
+2026-10-29T20:28:33.359710Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.362759Z  INFO node::user: eth_sendTransaction
+2026-10-29T20:28:33.363766Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.373107Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.374678Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.391232Z  INFO node::user: 
+2026-10-29T20:28:33.391258Z  INFO node::user:     Transaction: 0xe94effb7b270b61dbecda9df84e650b21a4d8f56653769fb284a621f892efc29
+2026-10-29T20:28:33.391262Z  INFO node::user:     Contract created: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+2026-10-29T20:28:33.391267Z  INFO node::user:     Gas used: 8186327
+2026-10-29T20:28:33.391270Z  INFO node::user: 
+2026-10-29T20:28:33.391275Z  INFO node::user:     Block Number: 1
+2026-10-29T20:28:33.391278Z  INFO node::user:     Block Hash: 0x468094e448f91dfa3a4e6e3aa4e9b552979b7f7af50b764b1a93ce0af5318796
+2026-10-29T20:28:33.391314Z  INFO node::user:     Block Time: "Wed, 30 Dec 2009 06:09:12 +0000"
+
+2026-10-29T20:28:33.485804Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.487920Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.491607Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.493189Z  INFO node::user: eth_call
+2026-10-29T20:28:33.495590Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.497586Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.498367Z  INFO node::user: eth_call
+2026-10-29T20:28:33.499030Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.500208Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.500895Z  INFO node::user: eth_call
+2026-10-29T20:28:33.501598Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.503113Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.503862Z  INFO node::user: eth_call
+2026-10-29T20:28:33.504512Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.505855Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.506736Z  INFO node::user: eth_call
+2026-10-29T20:28:33.507640Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.510232Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.512556Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.514122Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.515481Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.516581Z  INFO node::user: eth_getBlockByNumber
+2026-10-29T20:28:33.517389Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.518351Z  INFO node::user: eth_sendTransaction
+2026-10-29T20:28:33.518366Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.520879Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.521649Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.531922Z  INFO node::user: 
+2026-10-29T20:28:33.531936Z  INFO node::user:     Transaction: 0xdd81256d3a55f0285de34bbe82be6db9627cb996d1ec18b3c8d4c83b2862ab21
+2026-10-29T20:28:33.531940Z  INFO node::user:     Contract created: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+2026-10-29T20:28:33.531943Z  INFO node::user:     Gas used: 8186327
+2026-10-29T20:28:33.531947Z  INFO node::user: 
+2026-10-29T20:28:33.531951Z  INFO node::user:     Block Number: 2
+2026-10-29T20:28:33.531954Z  INFO node::user:     Block Hash: 0x92e6a78f69f2ab539aeb1379f2cbad178fc280941ae23dffc9e166da846f2b4b
+2026-10-29T20:28:33.531957Z  INFO node::user:     Block Time: "Wed, 30 Dec 2009 06:09:12 +0000"
+
+2026-10-29T20:28:33.628716Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.630041Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.632833Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.633824Z  INFO node::user: eth_call
+2026-10-29T20:28:33.634662Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.636275Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.637207Z  INFO node::user: eth_call
+2026-10-29T20:28:33.638419Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.639998Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.640770Z  INFO node::user: eth_call
+2026-10-29T20:28:33.641552Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.643083Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.644007Z  INFO node::user: eth_call
+2026-10-29T20:28:33.644843Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.646311Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.647455Z  INFO node::user: eth_call
+2026-10-29T20:28:33.648406Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.650777Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.652965Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.654595Z  INFO node::user: eth_getCode
+2026-10-29T20:28:33.657164Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.658716Z  INFO node::user: eth_getBlockByNumber
+2026-10-29T20:28:33.659665Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.660533Z  INFO node::user: eth_sendTransaction
+2026-10-29T20:28:33.660552Z  INFO node::user: eth_accounts
+2026-10-29T20:28:33.662052Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.662930Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.672793Z  INFO node::user: 
+2026-10-29T20:28:33.674195Z  INFO node::user:     Transaction: 0xcfce6432dfa7ab82b0f9d29c6c39a21653b9a28c4326eb0f4a3a505e63a1bc3a
+2026-10-29T20:28:33.674204Z  INFO node::user:     Gas used: 337126
+2026-10-29T20:28:33.674211Z  INFO node::user:     Error: reverted with: custom error 0x94d6e7b9
+2026-10-29T20:28:33.674214Z  INFO node::user: 
+2026-10-29T20:28:33.674219Z  INFO node::user:     Block Number: 3
+2026-10-29T20:28:33.674222Z  INFO node::user:     Block Hash: 0x6d90719d62d25300c9fd96e7cb750b8c03e9a4cf3ce2ff2a02bd3b0f26f1c087
+2026-10-29T20:28:33.674226Z  INFO node::user:     Block Time: "Wed, 30 Dec 2009 06:09:12 +0000"
+
+2026-10-29T20:28:33.770502Z  INFO node::user: eth_getTransactionReceipt
+2026-10-29T20:28:33.772701Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.773682Z  INFO node::user: eth_call
+2026-10-29T20:28:33.774546Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.776340Z  INFO node::user: eth_chainId
+2026-10-29T20:28:33.777159Z  INFO node::user: eth_call
+2026-10-29T20:28:33.778110Z  INFO node::user: eth_chainId

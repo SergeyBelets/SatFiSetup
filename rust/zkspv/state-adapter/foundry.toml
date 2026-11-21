@@ -1,0 +1,19 @@
+[profile.default]
+src = "contracts"
+test = "test"
+out = "out"
+libs = ["../../../web3/lib"]
+allow_paths = ["../../.."]
+auto_detect_remappings = false
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+solc_version = "0.8.30"
+evm_version = "osaka"
+fs_permissions = [{access="read",path="./fixtures"}]
+remappings = [
+  "satoshifi-core/=../../../web3/contracts/src/core/",
+  "risc0-verifier/=../vendor/risc0-ethereum-3.1.0/contracts/src/",
+  "forge-std/=../../../web3/lib/openzeppelin-contracts/lib/forge-std/src/",
+  "openzeppelin/=../../../web3/lib/openzeppelin-contracts/",
+]

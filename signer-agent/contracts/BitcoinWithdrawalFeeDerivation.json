@@ -1,0 +1,248 @@
+[
+  {
+    "type": "function",
+    "name": "FEE_DOMAIN",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "FEE_PROFILE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "FEE_QUALIFIED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PROFILE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "QUALIFIED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "derive",
+    "inputs": [
+      {
+        "name": "intent",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "baseGroup",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "d",
+        "type": "tuple",
+        "internalType": "struct BitcoinDepositDerivation.Descriptor",
+        "components": [
+          {
+            "name": "intentId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "merkleRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "tweak",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "outputKey",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "outputParityOdd",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "bindingCommitment",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "walletContext",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deriveFee",
+    "inputs": [
+      {
+        "name": "raw",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "group",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "d",
+        "type": "tuple",
+        "internalType": "struct BitcoinDepositDerivation.Descriptor",
+        "components": [
+          {
+            "name": "intentId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "merkleRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "tweak",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "outputKey",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "outputParityOdd",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "bindingCommitment",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "walletContext",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verify",
+    "inputs": [
+      {
+        "name": "intent",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "baseGroup",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "outputKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "outputParityOdd",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "bindingCommitment",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "InvalidBase",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDerivedKey",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidIntent",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTweak",
+    "inputs": []
+  }
+]

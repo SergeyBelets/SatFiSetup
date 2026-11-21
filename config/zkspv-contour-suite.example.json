@@ -1,0 +1,4945 @@
+{
+  "version": "1",
+  "run_id": "2dfe07d46fc9b05ce35967dbc85191010799ad4f210067b854175b8a6694c9d0",
+  "directory": "/srv/satoshifi/private/combined-suite",
+  "jobs": [
+    {
+      "id": "bootstrap",
+      "depends_on": [],
+      "spec": {
+        "role": "bootstrap",
+        "worker_config": "/srv/satoshifi/private/scenarios/bootstrap/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/bootstrap/need.json",
+        "bootstrap_config": "/srv/satoshifi/private/scenarios/bootstrap/bootstrap.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "initial_fresh",
+      "depends_on": [
+        "bootstrap"
+      ],
+      "spec": {
+        "role": "fresh",
+        "worker_config": "/srv/satoshifi/private/scenarios/initial_fresh/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/initial_fresh/need.json",
+        "require_proof": false
+      },
+      "defer": true
+    },
+    {
+      "id": "fresh_groth16",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fresh",
+        "worker_config": "/srv/satoshifi/private/scenarios/fresh_groth16/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fresh_groth16/need.json",
+        "require_proof": true
+      },
+      "defer": true
+    },
+    {
+      "id": "service_paid",
+      "depends_on": [
+        "fresh_groth16"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/service_paid/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/service_paid/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/service_paid/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "service_confederation",
+      "depends_on": [
+        "fresh_groth16"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/service_confederation/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/service_confederation/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/service_confederation/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v1_fund",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v1/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/smp1_v1/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v1_proof",
+      "depends_on": [
+        "smp1_v1_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v1/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/smp1_v1/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v1_mint",
+      "depends_on": [
+        "smp1_v1_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v1/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/smp1_v1/mint.json",
+        "mint_profile": "SMP1_V1"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v2_fund",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v2/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v2/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/smp1_v2/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v2_proof",
+      "depends_on": [
+        "smp1_v2_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v2/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v2/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/smp1_v2/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "smp1_v2_mint",
+      "depends_on": [
+        "smp1_v2_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/smp1_v2/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/smp1_v2/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/smp1_v2/mint.json",
+        "mint_profile": "SMP1_V2"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_mint_fund",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_mint/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_mint/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/address_mint/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_mint_proof",
+      "depends_on": [
+        "address_mint_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_mint/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_mint/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/address_mint/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_mint_mint",
+      "depends_on": [
+        "address_mint_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_mint/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_mint/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/address_mint/mint.json",
+        "mint_profile": "ADDRESS"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_payout_prepare",
+      "depends_on": [
+        "address_mint_mint"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_payout_proof",
+      "depends_on": [
+        "withdrawal_btc_payout_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_payout_settle",
+      "depends_on": [
+        "withdrawal_btc_payout_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_payout_reconcile",
+      "depends_on": [
+        "withdrawal_btc_payout_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_payout/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_total_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_total_proof",
+      "depends_on": [
+        "withdrawal_btc_total_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_total_settle",
+      "depends_on": [
+        "withdrawal_btc_total_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_total_reconcile",
+      "depends_on": [
+        "withdrawal_btc_total_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_total/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_old_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_old_winner_replacement",
+      "depends_on": [
+        "withdrawal_btc_rbf_old_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_old_winner_proof",
+      "depends_on": [
+        "withdrawal_btc_rbf_old_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/old-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_old_winner_settle",
+      "depends_on": [
+        "withdrawal_btc_rbf_old_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_old_winner_reconcile",
+      "depends_on": [
+        "withdrawal_btc_rbf_old_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_old_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_new_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_new_winner_replacement",
+      "depends_on": [
+        "withdrawal_btc_rbf_new_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_new_winner_proof",
+      "depends_on": [
+        "withdrawal_btc_rbf_new_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/new-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_new_winner_settle",
+      "depends_on": [
+        "withdrawal_btc_rbf_new_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_btc_rbf_new_winner_reconcile",
+      "depends_on": [
+        "withdrawal_btc_rbf_new_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_btc_rbf_new_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_cancel_btc",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_cancel",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_btc/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_cancel_btc/need.json",
+        "owner_operation_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_btc/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_consent_btc",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/fee_consent_btc/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_payout_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_payout_proof",
+      "depends_on": [
+        "withdrawal_mp_payout_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_payout_settle",
+      "depends_on": [
+        "withdrawal_mp_payout_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_payout_reconcile",
+      "depends_on": [
+        "withdrawal_mp_payout_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_payout/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_total_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_total_proof",
+      "depends_on": [
+        "withdrawal_mp_total_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_total_settle",
+      "depends_on": [
+        "withdrawal_mp_total_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_total_reconcile",
+      "depends_on": [
+        "withdrawal_mp_total_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_total/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_old_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_old_winner_replacement",
+      "depends_on": [
+        "withdrawal_mp_rbf_old_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_old_winner_proof",
+      "depends_on": [
+        "withdrawal_mp_rbf_old_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/old-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_old_winner_settle",
+      "depends_on": [
+        "withdrawal_mp_rbf_old_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_old_winner_reconcile",
+      "depends_on": [
+        "withdrawal_mp_rbf_old_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_old_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_new_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_new_winner_replacement",
+      "depends_on": [
+        "withdrawal_mp_rbf_new_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_new_winner_proof",
+      "depends_on": [
+        "withdrawal_mp_rbf_new_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/new-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_new_winner_settle",
+      "depends_on": [
+        "withdrawal_mp_rbf_new_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_mp_rbf_new_winner_reconcile",
+      "depends_on": [
+        "withdrawal_mp_rbf_new_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_mp_rbf_new_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_cancel_mp",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_cancel",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_mp/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_cancel_mp/need.json",
+        "owner_operation_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_mp/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_consent_mp",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/fee_consent_mp/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_payout_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_payout_proof",
+      "depends_on": [
+        "withdrawal_s_payout_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_payout_settle",
+      "depends_on": [
+        "withdrawal_s_payout_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_payout_reconcile",
+      "depends_on": [
+        "withdrawal_s_payout_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_s_payout/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_total_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_total_proof",
+      "depends_on": [
+        "withdrawal_s_total_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_total/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_total_settle",
+      "depends_on": [
+        "withdrawal_s_total_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_total/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_total_reconcile",
+      "depends_on": [
+        "withdrawal_s_total_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_total/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_s_total/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_old_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_old_winner_replacement",
+      "depends_on": [
+        "withdrawal_s_rbf_old_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_old_winner_proof",
+      "depends_on": [
+        "withdrawal_s_rbf_old_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/old-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_old_winner_settle",
+      "depends_on": [
+        "withdrawal_s_rbf_old_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_old_winner_reconcile",
+      "depends_on": [
+        "withdrawal_s_rbf_old_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_old_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_new_winner_initial",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_new_winner_replacement",
+      "depends_on": [
+        "withdrawal_s_rbf_new_winner_initial"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_new_winner_proof",
+      "depends_on": [
+        "withdrawal_s_rbf_new_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/new-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_new_winner_settle",
+      "depends_on": [
+        "withdrawal_s_rbf_new_winner_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_s_rbf_new_winner_reconcile",
+      "depends_on": [
+        "withdrawal_s_rbf_new_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_s_rbf_new_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_cancel_s",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_cancel",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_s/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_cancel_s/need.json",
+        "owner_operation_config": "/srv/satoshifi/private/scenarios/withdrawal_cancel_s/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_consent_s",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/fee_consent_s/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_address_request",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "address_request",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_ordinary/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_address_registration",
+      "depends_on": [
+        "address_ordinary_address_request"
+      ],
+      "spec": {
+        "role": "address_registration",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_ordinary/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_address_ready",
+      "depends_on": [
+        "address_ordinary_address_registration"
+      ],
+      "spec": {
+        "role": "address_ready",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_ordinary/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_fund",
+      "depends_on": [
+        "address_ordinary_address_ready"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/address_ordinary/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_proof",
+      "depends_on": [
+        "address_ordinary_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/address_ordinary/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_ordinary_mint",
+      "depends_on": [
+        "address_ordinary_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_ordinary/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_ordinary/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/address_ordinary/mint.json",
+        "mint_profile": "ADDRESS"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_address_request",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "address_request",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_address_registration",
+      "depends_on": [
+        "address_wallet_v1_address_request"
+      ],
+      "spec": {
+        "role": "address_registration",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_address_ready",
+      "depends_on": [
+        "address_wallet_v1_address_registration"
+      ],
+      "spec": {
+        "role": "address_ready",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_fund",
+      "depends_on": [
+        "address_wallet_v1_address_ready"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_proof",
+      "depends_on": [
+        "address_wallet_v1_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_wallet_v1_mint",
+      "depends_on": [
+        "address_wallet_v1_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_wallet-v1/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/address_wallet-v1/mint.json",
+        "mint_profile": "ADDRESS"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_address_request",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "address_request",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_address_registration",
+      "depends_on": [
+        "address_advanced_contract_address_request"
+      ],
+      "spec": {
+        "role": "address_registration",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_address_ready",
+      "depends_on": [
+        "address_advanced_contract_address_registration"
+      ],
+      "spec": {
+        "role": "address_ready",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "address_operation_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/address.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_fund",
+      "depends_on": [
+        "address_advanced_contract_address_ready"
+      ],
+      "spec": {
+        "role": "funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "funding_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_proof",
+      "depends_on": [
+        "address_advanced_contract_fund"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "address_advanced_contract_mint",
+      "depends_on": [
+        "address_advanced_contract_proof"
+      ],
+      "spec": {
+        "role": "mint",
+        "worker_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/address_advanced-contract/need.json",
+        "mint_config": "/srv/satoshifi/private/scenarios/address_advanced-contract/mint.json",
+        "mint_profile": "ADDRESS"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_batch_mixed_prepare",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "withdrawal_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_batch_mixed_proof",
+      "depends_on": [
+        "withdrawal_batch_mixed_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_batch_mixed_settle",
+      "depends_on": [
+        "withdrawal_batch_mixed_proof"
+      ],
+      "spec": {
+        "role": "withdrawal_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "withdrawal_batch_mixed_reconcile",
+      "depends_on": [
+        "withdrawal_batch_mixed_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/withdrawal_batch_mixed/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_ingress",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_ingress",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/fee/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_proof",
+      "depends_on": [
+        "fee_ingress"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/fee/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "fee_funding",
+      "depends_on": [
+        "fee_proof"
+      ],
+      "spec": {
+        "role": "fee_funding",
+        "worker_config": "/srv/satoshifi/private/scenarios/fee/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/fee/funding.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_mp",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_mp/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_mp/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/refund_mp/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_s",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_s/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_s/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/refund_s/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_owner",
+      "depends_on": [
+        "fee_funding"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/refund_btc/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_prepare",
+      "depends_on": [
+        "refund_btc_owner"
+      ],
+      "spec": {
+        "role": "refund_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_btc/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_proof",
+      "depends_on": [
+        "refund_btc_prepare"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc/need.json",
+        "service_config": null,
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_settle",
+      "depends_on": [
+        "refund_btc_proof"
+      ],
+      "spec": {
+        "role": "refund_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc/need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_btc/withdrawal.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_cap_raise",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc_cap_raise/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc_cap_raise/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/refund_btc_cap_raise/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_btc_cancel",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "fee_owner",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_btc_cancel/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_btc_cancel/need.json",
+        "fee_operation_config": "/srv/satoshifi/private/scenarios/refund_btc_cancel/owner.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_old_winner_initial",
+      "depends_on": [
+        "refund_btc_owner"
+      ],
+      "spec": {
+        "role": "refund_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_old_winner_replacement",
+      "depends_on": [
+        "refund_rbf_old_winner_initial"
+      ],
+      "spec": {
+        "role": "refund_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_old_winner_proof",
+      "depends_on": [
+        "refund_rbf_old_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/old-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_old_winner_settle",
+      "depends_on": [
+        "refund_rbf_old_winner_proof"
+      ],
+      "spec": {
+        "role": "refund_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_old_winner_reconcile",
+      "depends_on": [
+        "refund_rbf_old_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/refund_rbf_old_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_new_winner_initial",
+      "depends_on": [
+        "refund_btc_owner"
+      ],
+      "spec": {
+        "role": "refund_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/old-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/initial.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_new_winner_replacement",
+      "depends_on": [
+        "refund_rbf_new_winner_initial"
+      ],
+      "spec": {
+        "role": "refund_prepare",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_new_winner_proof",
+      "depends_on": [
+        "refund_rbf_new_winner_replacement"
+      ],
+      "spec": {
+        "role": "proof",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/new-need.json",
+        "service_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/service.json",
+        "proof_policy": "FRESH"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_new_winner_settle",
+      "depends_on": [
+        "refund_rbf_new_winner_proof"
+      ],
+      "spec": {
+        "role": "refund_settle",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/new-need.json",
+        "withdrawal_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/replacement.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "refund_rbf_new_winner_reconcile",
+      "depends_on": [
+        "refund_rbf_new_winner_settle"
+      ],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/refund_rbf_new_winner/reconciliation.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "incident_suspend",
+      "depends_on": [],
+      "spec": {
+        "role": "incident",
+        "worker_config": "/srv/satoshifi/private/scenarios/incident_suspend/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/incident_suspend/need.json",
+        "incident_config": "/srv/satoshifi/private/scenarios/incident_suspend/incident.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "incident_resume",
+      "depends_on": [
+        "incident_suspend"
+      ],
+      "spec": {
+        "role": "incident",
+        "worker_config": "/srv/satoshifi/private/scenarios/incident_resume/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/incident_resume/need.json",
+        "incident_config": "/srv/satoshifi/private/scenarios/incident_resume/incident.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "reconciliation",
+      "depends_on": [],
+      "spec": {
+        "role": "reconcile",
+        "worker_config": "/srv/satoshifi/private/scenarios/reconciliation/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/reconciliation/need.json",
+        "reconciliation_config": "/srv/satoshifi/private/scenarios/reconciliation/config.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "old_epoch",
+      "depends_on": [],
+      "spec": {
+        "role": "epoch",
+        "worker_config": "/srv/satoshifi/private/scenarios/old_epoch/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/old_epoch/need.json",
+        "epoch_config": "/srv/satoshifi/private/scenarios/old_epoch/epoch.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "continuity",
+      "depends_on": [],
+      "spec": {
+        "role": "continuity",
+        "worker_config": "/srv/satoshifi/private/scenarios/continuity/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/continuity/need.json",
+        "continuity_config": "/srv/satoshifi/private/scenarios/continuity/handover.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_01",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_01/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_01/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_01/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_02",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_02/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_02/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_02/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_03",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_03/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_03/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_03/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_04",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_04/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_04/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_04/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_05",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_05/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_05/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_05/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_06",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_06/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_06/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_06/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_07",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_07/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_07/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_07/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_08",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_08/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_08/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_08/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_09",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_09/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_09/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_09/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_10",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_10/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_10/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_10/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_11",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_11/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_11/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_11/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_12",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_12/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_12/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_12/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_13",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_13/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_13/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_13/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_14",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_14/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_14/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_14/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_15",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_15/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_15/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_15/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_16",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_16/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_16/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_16/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_17",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_17/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_17/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_17/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_18",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_18/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_18/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_18/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_19",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_19/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_19/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_19/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_20",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_20/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_20/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_20/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_21",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_21/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_21/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_21/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_22",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_22/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_22/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_22/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_23",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_23/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_23/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_23/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_24",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_24/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_24/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_24/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_25",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_25/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_25/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_25/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_26",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_26/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_26/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_26/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_27",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_27/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_27/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_27/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_28",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_28/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_28/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_28/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_9_29",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_9_29/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_9_29/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_9_29/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_01",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_01/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_01/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_01/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_02",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_02/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_02/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_02/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_03",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_03/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_03/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_03/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_04",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_04/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_04/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_04/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_05",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_05/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_05/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_05/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_06",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_06/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_06/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_06/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_07",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_07/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_07/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_07/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_08",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_08/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_08/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_08/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_09",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_09/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_09/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_09/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_10",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_10/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_10/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_10/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_11",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_11/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_11/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_11/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_12",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_12/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_12/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_12/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_13",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_13/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_13/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_13/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_14",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_14/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_14/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_14/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_15",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_15/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_15/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_15/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_16",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_16/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_16/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_16/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_17",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_17/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_17/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_17/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_18",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_18/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_18/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_18/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_19",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_19/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_19/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_19/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_20",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_20/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_20/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_20/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_21",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_21/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_21/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_21/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_22",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_22/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_22/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_22/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_23",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_23/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_23/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_23/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_24",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_24/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_24/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_24/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_25",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_25/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_25/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_25/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_26",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_26/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_26/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_26/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_27",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_27/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_27/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_27/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_28",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_28/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_28/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_28/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_29",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_29/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_29/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_29/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_30",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_30/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_30/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_30/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_31",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_31/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_31/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_31/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_32",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_32/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_32/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_32/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_33",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_33/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_33/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_33/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_34",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_34/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_34/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_34/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_35",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_35/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_35/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_35/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_36",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_36/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_36/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_36/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_37",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_37/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_37/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_37/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_38",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_38/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_38/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_38/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_39",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_39/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_39/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_39/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_40",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_40/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_40/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_40/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_41",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_41/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_41/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_41/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_42",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_42/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_42/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_42/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_43",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_43/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_43/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_43/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_10_44",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_10_44/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_10_44/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_10_44/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_01",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_01/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_01/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_01/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_02",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_02/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_02/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_02/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_03",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_03/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_03/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_03/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_04",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_04/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_04/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_04/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_05",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_05/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_05/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_05/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_06",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_06/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_06/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_06/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_07",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_07/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_07/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_07/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_08",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_08/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_08/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_08/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_09",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_09/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_09/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_09/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_10",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_10/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_10/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_10/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_11",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_11/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_11/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_11/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_11_11_12",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_11_11_12/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_11_11_12/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_11_11_12/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_01",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_01/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_01/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_01/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_02",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_02/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_02/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_02/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_03",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_03/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_03/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_03/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_04",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_04/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_04/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_04/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_05",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_05/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_05/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_05/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_06",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_06/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_06/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_06/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_07",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_07/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_07/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_07/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_08",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_08/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_08/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_08/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_09",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_09/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_09/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_09/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_10",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_10/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_10/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_10/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_11",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_11/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_11/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_11/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_12",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_12/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_12/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_12/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_13",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_13/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_13/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_13/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_14",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_14/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_14/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_14/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_15",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_15/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_15/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_15/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_16",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_16/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_16/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_16/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_17",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_17/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_17/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_17/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_18",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_18/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_18/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_18/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_19",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_19/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_19/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_19/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_20",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_20/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_20/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_20/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_21",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_21/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_21/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_21/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_22",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_22/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_22/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_22/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_23",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_23/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_23/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_23/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_24",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_24/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_24/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_24/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_25",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_25/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_25/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_25/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_26",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_26/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_26/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_26/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_27",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_27/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_27/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_27/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_28",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_28/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_28/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_28/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_29",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_29/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_29/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_29/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_30",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_30/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_30/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_30/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_31",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_31/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_31/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_31/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_32",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_32/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_32/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_32/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_33",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_33/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_33/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_33/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_34",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_34/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_34/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_34/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_35",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_35/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_35/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_35/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_36",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_36/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_36/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_36/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_37",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_37/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_37/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_37/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_38",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_38/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_38/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_38/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_39",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_39/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_39/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_39/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_40",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_40/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_40/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_40/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_41",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_41/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_41/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_41/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_42",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_42/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_42/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_42/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_43",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_43/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_43/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_43/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_44",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_44/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_44/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_44/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_45",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_45/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_45/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_45/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_46",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_46/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_46/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_46/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_47",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_47/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_47/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_47/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_48",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_48/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_48/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_48/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_49",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_49/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_49/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_49/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_50",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_50/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_50/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_50/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_51",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_51/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_51/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_51/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_52",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_52/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_52/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_52/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_53",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_53/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_53/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_53/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_54",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_54/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_54/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_54/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_55",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_55/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_55/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_55/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_56",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_56/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_56/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_56/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_57",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_57/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_57/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_57/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_58",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_58/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_58/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_58/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_59",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_59/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_59/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_59/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_60",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_60/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_60/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_60/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_61",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_61/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_61/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_61/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_addr_62",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_addr_62/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_addr_62/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_addr_62/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_01",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_01/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_01/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_01/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_02",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_02/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_02/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_02/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_03",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_03/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_03/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_03/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_04",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_04/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_04/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_04/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_05",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_05/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_05/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_05/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_06",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_06/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_06/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_06/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_07",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_07/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_07/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_07/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_08",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_08/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_08/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_08/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_09",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_09/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_09/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_09/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_10",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_10/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_10/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_10/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_11",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_11/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_11/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_11/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_12",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_12/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_12/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_12/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_13",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_13/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_13/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_13/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_14",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_14/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_14/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_14/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_15",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_15/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_15/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_15/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_16",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_16/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_16/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_16/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_17",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_17/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_17/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_17/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_18",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_18/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_18/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_18/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_19",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_19/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_19/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_19/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_20",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_20/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_20/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_20/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_21",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_21/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_21/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_21/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_22",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_22/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_22/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_22/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_23",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_23/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_23/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_23/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_24",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_24/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_24/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_24/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_25",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_25/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_25/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_25/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_26",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_26/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_26/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_26/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_27",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_27/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_27/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_27/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_28",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_28/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_28/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_28/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_29",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_29/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_29/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_29/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_30",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_30/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_30/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_30/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_31",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_31/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_31/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_31/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_32",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_32/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_32/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_32/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_33",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_33/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_33/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_33/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_34",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_34/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_34/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_34/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_35",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_35/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_35/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_35/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_36",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_36/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_36/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_36/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_37",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_37/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_37/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_37/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_38",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_38/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_38/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_38/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_39",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_39/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_39/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_39/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_40",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_40/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_40/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_40/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_41",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_41/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_41/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_41/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_42",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_42/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_42/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_42/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_43",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_43/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_43/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_43/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_44",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_44/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_44/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_44/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_45",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_45/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_45/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_45/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_46",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_46/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_46/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_46/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_47",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_47/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_47/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_47/checks.json"
+      },
+      "defer": true
+    },
+    {
+      "id": "spec_sub_48",
+      "depends_on": [
+        "initial_fresh"
+      ],
+      "spec": {
+        "role": "scenario_check",
+        "worker_config": "/srv/satoshifi/private/scenarios/spec_sub_48/worker.json",
+        "request_file": "/srv/satoshifi/private/scenarios/spec_sub_48/need.json",
+        "scenario_config": "/srv/satoshifi/private/scenarios/spec_sub_48/checks.json"
+      },
+      "defer": true
+    }
+  ],
+  "cases": {
+    "bootstrap": [
+      "bootstrap"
+    ],
+    "initial_fresh": [
+      "initial_fresh"
+    ],
+    "fresh_groth16": [
+      "fresh_groth16"
+    ],
+    "service_paid": [
+      "service_paid"
+    ],
+    "service_confederation": [
+      "service_confederation"
+    ],
+    "smp1_v1": [
+      "smp1_v1_fund",
+      "smp1_v1_proof",
+      "smp1_v1_mint"
+    ],
+    "smp1_v2": [
+      "smp1_v2_fund",
+      "smp1_v2_proof",
+      "smp1_v2_mint"
+    ],
+    "address_mint": [
+      "address_mint_fund",
+      "address_mint_proof",
+      "address_mint_mint"
+    ],
+    "withdrawal_btc_payout": [
+      "withdrawal_btc_payout_prepare",
+      "withdrawal_btc_payout_proof",
+      "withdrawal_btc_payout_settle",
+      "withdrawal_btc_payout_reconcile"
+    ],
+    "withdrawal_btc_total": [
+      "withdrawal_btc_total_prepare",
+      "withdrawal_btc_total_proof",
+      "withdrawal_btc_total_settle",
+      "withdrawal_btc_total_reconcile"
+    ],
+    "withdrawal_btc_rbf_old_winner": [
+      "withdrawal_btc_rbf_old_winner_initial",
+      "withdrawal_btc_rbf_old_winner_replacement",
+      "withdrawal_btc_rbf_old_winner_proof",
+      "withdrawal_btc_rbf_old_winner_settle",
+      "withdrawal_btc_rbf_old_winner_reconcile"
+    ],
+    "withdrawal_btc_rbf_new_winner": [
+      "withdrawal_btc_rbf_new_winner_initial",
+      "withdrawal_btc_rbf_new_winner_replacement",
+      "withdrawal_btc_rbf_new_winner_proof",
+      "withdrawal_btc_rbf_new_winner_settle",
+      "withdrawal_btc_rbf_new_winner_reconcile"
+    ],
+    "withdrawal_cancel_btc": [
+      "withdrawal_cancel_btc"
+    ],
+    "fee_consent_btc": [
+      "fee_consent_btc"
+    ],
+    "withdrawal_mp_payout": [
+      "withdrawal_mp_payout_prepare",
+      "withdrawal_mp_payout_proof",
+      "withdrawal_mp_payout_settle",
+      "withdrawal_mp_payout_reconcile"
+    ],
+    "withdrawal_mp_total": [
+      "withdrawal_mp_total_prepare",
+      "withdrawal_mp_total_proof",
+      "withdrawal_mp_total_settle",
+      "withdrawal_mp_total_reconcile"
+    ],
+    "withdrawal_mp_rbf_old_winner": [
+      "withdrawal_mp_rbf_old_winner_initial",
+      "withdrawal_mp_rbf_old_winner_replacement",
+      "withdrawal_mp_rbf_old_winner_proof",
+      "withdrawal_mp_rbf_old_winner_settle",
+      "withdrawal_mp_rbf_old_winner_reconcile"
+    ],
+    "withdrawal_mp_rbf_new_winner": [
+      "withdrawal_mp_rbf_new_winner_initial",
+      "withdrawal_mp_rbf_new_winner_replacement",
+      "withdrawal_mp_rbf_new_winner_proof",
+      "withdrawal_mp_rbf_new_winner_settle",
+      "withdrawal_mp_rbf_new_winner_reconcile"
+    ],
+    "withdrawal_cancel_mp": [
+      "withdrawal_cancel_mp"
+    ],
+    "fee_consent_mp": [
+      "fee_consent_mp"
+    ],
+    "withdrawal_s_payout": [
+      "withdrawal_s_payout_prepare",
+      "withdrawal_s_payout_proof",
+      "withdrawal_s_payout_settle",
+      "withdrawal_s_payout_reconcile"
+    ],
+    "withdrawal_s_total": [
+      "withdrawal_s_total_prepare",
+      "withdrawal_s_total_proof",
+      "withdrawal_s_total_settle",
+      "withdrawal_s_total_reconcile"
+    ],
+    "withdrawal_s_rbf_old_winner": [
+      "withdrawal_s_rbf_old_winner_initial",
+      "withdrawal_s_rbf_old_winner_replacement",
+      "withdrawal_s_rbf_old_winner_proof",
+      "withdrawal_s_rbf_old_winner_settle",
+      "withdrawal_s_rbf_old_winner_reconcile"
+    ],
+    "withdrawal_s_rbf_new_winner": [
+      "withdrawal_s_rbf_new_winner_initial",
+      "withdrawal_s_rbf_new_winner_replacement",
+      "withdrawal_s_rbf_new_winner_proof",
+      "withdrawal_s_rbf_new_winner_settle",
+      "withdrawal_s_rbf_new_winner_reconcile"
+    ],
+    "withdrawal_cancel_s": [
+      "withdrawal_cancel_s"
+    ],
+    "fee_consent_s": [
+      "fee_consent_s"
+    ],
+    "address_ordinary": [
+      "address_ordinary_address_request",
+      "address_ordinary_address_registration",
+      "address_ordinary_address_ready",
+      "address_ordinary_fund",
+      "address_ordinary_proof",
+      "address_ordinary_mint"
+    ],
+    "address_wallet-v1": [
+      "address_wallet_v1_address_request",
+      "address_wallet_v1_address_registration",
+      "address_wallet_v1_address_ready",
+      "address_wallet_v1_fund",
+      "address_wallet_v1_proof",
+      "address_wallet_v1_mint"
+    ],
+    "address_advanced-contract": [
+      "address_advanced_contract_address_request",
+      "address_advanced_contract_address_registration",
+      "address_advanced_contract_address_ready",
+      "address_advanced_contract_fund",
+      "address_advanced_contract_proof",
+      "address_advanced_contract_mint"
+    ],
+    "withdrawal_batch_mixed": [
+      "withdrawal_batch_mixed_prepare",
+      "withdrawal_batch_mixed_proof",
+      "withdrawal_batch_mixed_settle",
+      "withdrawal_batch_mixed_reconcile"
+    ],
+    "fee_funding": [
+      "fee_ingress",
+      "fee_proof",
+      "fee_funding"
+    ],
+    "refund_mp": [
+      "refund_mp"
+    ],
+    "refund_s": [
+      "refund_s"
+    ],
+    "refund_btc": [
+      "refund_btc_owner",
+      "refund_btc_prepare",
+      "refund_btc_proof",
+      "refund_btc_settle"
+    ],
+    "refund_btc_cap_raise": [
+      "refund_btc_cap_raise"
+    ],
+    "refund_btc_cancel": [
+      "refund_btc_cancel"
+    ],
+    "refund_rbf_old_winner": [
+      "refund_rbf_old_winner_initial",
+      "refund_rbf_old_winner_replacement",
+      "refund_rbf_old_winner_proof",
+      "refund_rbf_old_winner_settle",
+      "refund_rbf_old_winner_reconcile"
+    ],
+    "refund_rbf_new_winner": [
+      "refund_rbf_new_winner_initial",
+      "refund_rbf_new_winner_replacement",
+      "refund_rbf_new_winner_proof",
+      "refund_rbf_new_winner_settle",
+      "refund_rbf_new_winner_reconcile"
+    ],
+    "incident_suspend": [
+      "incident_suspend"
+    ],
+    "incident_resume": [
+      "incident_suspend",
+      "incident_resume"
+    ],
+    "reconciliation": [
+      "reconciliation"
+    ],
+    "old_epoch": [
+      "old_epoch"
+    ],
+    "continuity": [
+      "continuity"
+    ],
+    "spec/11.9/01": [
+      "spec_11_9_01"
+    ],
+    "spec/11.9/02": [
+      "spec_11_9_02"
+    ],
+    "spec/11.9/03": [
+      "spec_11_9_03"
+    ],
+    "spec/11.9/04": [
+      "spec_11_9_04"
+    ],
+    "spec/11.9/05": [
+      "spec_11_9_05"
+    ],
+    "spec/11.9/06": [
+      "spec_11_9_06"
+    ],
+    "spec/11.9/07": [
+      "spec_11_9_07"
+    ],
+    "spec/11.9/08": [
+      "spec_11_9_08"
+    ],
+    "spec/11.9/09": [
+      "spec_11_9_09"
+    ],
+    "spec/11.9/10": [
+      "spec_11_9_10"
+    ],
+    "spec/11.9/11": [
+      "spec_11_9_11"
+    ],
+    "spec/11.9/12": [
+      "spec_11_9_12"
+    ],
+    "spec/11.9/13": [
+      "spec_11_9_13"
+    ],
+    "spec/11.9/14": [
+      "spec_11_9_14"
+    ],
+    "spec/11.9/15": [
+      "spec_11_9_15"
+    ],
+    "spec/11.9/16": [
+      "spec_11_9_16"
+    ],
+    "spec/11.9/17": [
+      "spec_11_9_17"
+    ],
+    "spec/11.9/18": [
+      "spec_11_9_18"
+    ],
+    "spec/11.9/19": [
+      "spec_11_9_19"
+    ],
+    "spec/11.9/20": [
+      "spec_11_9_20"
+    ],
+    "spec/11.9/21": [
+      "spec_11_9_21"
+    ],
+    "spec/11.9/22": [
+      "spec_11_9_22"
+    ],
+    "spec/11.9/23": [
+      "spec_11_9_23"
+    ],
+    "spec/11.9/24": [
+      "spec_11_9_24"
+    ],
+    "spec/11.9/25": [
+      "spec_11_9_25"
+    ],
+    "spec/11.9/26": [
+      "spec_11_9_26"
+    ],
+    "spec/11.9/27": [
+      "spec_11_9_27"
+    ],
+    "spec/11.9/28": [
+      "spec_11_9_28"
+    ],
+    "spec/11.9/29": [
+      "spec_11_9_29"
+    ],
+    "spec/11.10/01": [
+      "spec_11_10_01"
+    ],
+    "spec/11.10/02": [
+      "spec_11_10_02"
+    ],
+    "spec/11.10/03": [
+      "spec_11_10_03"
+    ],
+    "spec/11.10/04": [
+      "spec_11_10_04"
+    ],
+    "spec/11.10/05": [
+      "spec_11_10_05"
+    ],
+    "spec/11.10/06": [
+      "spec_11_10_06"
+    ],
+    "spec/11.10/07": [
+      "spec_11_10_07"
+    ],
+    "spec/11.10/08": [
+      "spec_11_10_08"
+    ],
+    "spec/11.10/09": [
+      "spec_11_10_09"
+    ],
+    "spec/11.10/10": [
+      "spec_11_10_10"
+    ],
+    "spec/11.10/11": [
+      "spec_11_10_11"
+    ],
+    "spec/11.10/12": [
+      "spec_11_10_12"
+    ],
+    "spec/11.10/13": [
+      "spec_11_10_13"
+    ],
+    "spec/11.10/14": [
+      "spec_11_10_14"
+    ],
+    "spec/11.10/15": [
+      "spec_11_10_15"
+    ],
+    "spec/11.10/16": [
+      "spec_11_10_16"
+    ],
+    "spec/11.10/17": [
+      "spec_11_10_17"
+    ],
+    "spec/11.10/18": [
+      "spec_11_10_18"
+    ],
+    "spec/11.10/19": [
+      "spec_11_10_19"
+    ],
+    "spec/11.10/20": [
+      "spec_11_10_20"
+    ],
+    "spec/11.10/21": [
+      "spec_11_10_21"
+    ],
+    "spec/11.10/22": [
+      "spec_11_10_22"
+    ],
+    "spec/11.10/23": [
+      "spec_11_10_23"
+    ],
+    "spec/11.10/24": [
+      "spec_11_10_24"
+    ],
+    "spec/11.10/25": [
+      "spec_11_10_25"
+    ],
+    "spec/11.10/26": [
+      "spec_11_10_26"
+    ],
+    "spec/11.10/27": [
+      "spec_11_10_27"
+    ],
+    "spec/11.10/28": [
+      "spec_11_10_28"
+    ],
+    "spec/11.10/29": [
+      "spec_11_10_29"
+    ],
+    "spec/11.10/30": [
+      "spec_11_10_30"
+    ],
+    "spec/11.10/31": [
+      "spec_11_10_31"
+    ],
+    "spec/11.10/32": [
+      "spec_11_10_32"
+    ],
+    "spec/11.10/33": [
+      "spec_11_10_33"
+    ],
+    "spec/11.10/34": [
+      "spec_11_10_34"
+    ],
+    "spec/11.10/35": [
+      "spec_11_10_35"
+    ],
+    "spec/11.10/36": [
+      "spec_11_10_36"
+    ],
+    "spec/11.10/37": [
+      "spec_11_10_37"
+    ],
+    "spec/11.10/38": [
+      "spec_11_10_38"
+    ],
+    "spec/11.10/39": [
+      "spec_11_10_39"
+    ],
+    "spec/11.10/40": [
+      "spec_11_10_40"
+    ],
+    "spec/11.10/41": [
+      "spec_11_10_41"
+    ],
+    "spec/11.10/42": [
+      "spec_11_10_42"
+    ],
+    "spec/11.10/43": [
+      "spec_11_10_43"
+    ],
+    "spec/11.10/44": [
+      "spec_11_10_44"
+    ],
+    "spec/11.11/01": [
+      "spec_11_11_01"
+    ],
+    "spec/11.11/02": [
+      "spec_11_11_02"
+    ],
+    "spec/11.11/03": [
+      "spec_11_11_03"
+    ],
+    "spec/11.11/04": [
+      "spec_11_11_04"
+    ],
+    "spec/11.11/05": [
+      "spec_11_11_05"
+    ],
+    "spec/11.11/06": [
+      "spec_11_11_06"
+    ],
+    "spec/11.11/07": [
+      "spec_11_11_07"
+    ],
+    "spec/11.11/08": [
+      "spec_11_11_08"
+    ],
+    "spec/11.11/09": [
+      "spec_11_11_09"
+    ],
+    "spec/11.11/10": [
+      "spec_11_11_10"
+    ],
+    "spec/11.11/11": [
+      "spec_11_11_11"
+    ],
+    "spec/11.11/12": [
+      "spec_11_11_12"
+    ],
+    "spec/ADDR-01": [
+      "spec_addr_01"
+    ],
+    "spec/ADDR-02": [
+      "spec_addr_02"
+    ],
+    "spec/ADDR-03": [
+      "spec_addr_03"
+    ],
+    "spec/ADDR-04": [
+      "spec_addr_04"
+    ],
+    "spec/ADDR-05": [
+      "spec_addr_05"
+    ],
+    "spec/ADDR-06": [
+      "spec_addr_06"
+    ],
+    "spec/ADDR-07": [
+      "spec_addr_07"
+    ],
+    "spec/ADDR-08": [
+      "spec_addr_08"
+    ],
+    "spec/ADDR-09": [
+      "spec_addr_09"
+    ],
+    "spec/ADDR-10": [
+      "spec_addr_10"
+    ],
+    "spec/ADDR-11": [
+      "spec_addr_11"
+    ],
+    "spec/ADDR-12": [
+      "spec_addr_12"
+    ],
+    "spec/ADDR-13": [
+      "spec_addr_13"
+    ],
+    "spec/ADDR-14": [
+      "spec_addr_14"
+    ],
+    "spec/ADDR-15": [
+      "spec_addr_15"
+    ],
+    "spec/ADDR-16": [
+      "spec_addr_16"
+    ],
+    "spec/ADDR-17": [
+      "spec_addr_17"
+    ],
+    "spec/ADDR-18": [
+      "spec_addr_18"
+    ],
+    "spec/ADDR-19": [
+      "spec_addr_19"
+    ],
+    "spec/ADDR-20": [
+      "spec_addr_20"
+    ],
+    "spec/ADDR-21": [
+      "spec_addr_21"
+    ],
+    "spec/ADDR-22": [
+      "spec_addr_22"
+    ],
+    "spec/ADDR-23": [
+      "spec_addr_23"
+    ],
+    "spec/ADDR-24": [
+      "spec_addr_24"
+    ],
+    "spec/ADDR-25": [
+      "spec_addr_25"
+    ],
+    "spec/ADDR-26": [
+      "spec_addr_26"
+    ],
+    "spec/ADDR-27": [
+      "spec_addr_27"
+    ],
+    "spec/ADDR-28": [
+      "spec_addr_28"
+    ],
+    "spec/ADDR-29": [
+      "spec_addr_29"
+    ],
+    "spec/ADDR-30": [
+      "spec_addr_30"
+    ],
+    "spec/ADDR-31": [
+      "spec_addr_31"
+    ],
+    "spec/ADDR-32": [
+      "spec_addr_32"
+    ],
+    "spec/ADDR-33": [
+      "spec_addr_33"
+    ],
+    "spec/ADDR-34": [
+      "spec_addr_34"
+    ],
+    "spec/ADDR-35": [
+      "spec_addr_35"
+    ],
+    "spec/ADDR-36": [
+      "spec_addr_36"
+    ],
+    "spec/ADDR-37": [
+      "spec_addr_37"
+    ],
+    "spec/ADDR-38": [
+      "spec_addr_38"
+    ],
+    "spec/ADDR-39": [
+      "spec_addr_39"
+    ],
+    "spec/ADDR-40": [
+      "spec_addr_40"
+    ],
+    "spec/ADDR-41": [
+      "spec_addr_41"
+    ],
+    "spec/ADDR-42": [
+      "spec_addr_42"
+    ],
+    "spec/ADDR-43": [
+      "spec_addr_43"
+    ],
+    "spec/ADDR-44": [
+      "spec_addr_44"
+    ],
+    "spec/ADDR-45": [
+      "spec_addr_45"
+    ],
+    "spec/ADDR-46": [
+      "spec_addr_46"
+    ],
+    "spec/ADDR-47": [
+      "spec_addr_47"
+    ],
+    "spec/ADDR-48": [
+      "spec_addr_48"
+    ],
+    "spec/ADDR-49": [
+      "spec_addr_49"
+    ],
+    "spec/ADDR-50": [
+      "spec_addr_50"
+    ],
+    "spec/ADDR-51": [
+      "spec_addr_51"
+    ],
+    "spec/ADDR-52": [
+      "spec_addr_52"
+    ],
+    "spec/ADDR-53": [
+      "spec_addr_53"
+    ],
+    "spec/ADDR-54": [
+      "spec_addr_54"
+    ],
+    "spec/ADDR-55": [
+      "spec_addr_55"
+    ],
+    "spec/ADDR-56": [
+      "spec_addr_56"
+    ],
+    "spec/ADDR-57": [
+      "spec_addr_57"
+    ],
+    "spec/ADDR-58": [
+      "spec_addr_58"
+    ],
+    "spec/ADDR-59": [
+      "spec_addr_59"
+    ],
+    "spec/ADDR-60": [
+      "spec_addr_60"
+    ],
+    "spec/ADDR-61": [
+      "spec_addr_61"
+    ],
+    "spec/ADDR-62": [
+      "spec_addr_62"
+    ],
+    "spec/SUB-01": [
+      "spec_sub_01"
+    ],
+    "spec/SUB-02": [
+      "spec_sub_02"
+    ],
+    "spec/SUB-03": [
+      "spec_sub_03"
+    ],
+    "spec/SUB-04": [
+      "spec_sub_04"
+    ],
+    "spec/SUB-05": [
+      "spec_sub_05"
+    ],
+    "spec/SUB-06": [
+      "spec_sub_06"
+    ],
+    "spec/SUB-07": [
+      "spec_sub_07"
+    ],
+    "spec/SUB-08": [
+      "spec_sub_08"
+    ],
+    "spec/SUB-09": [
+      "spec_sub_09"
+    ],
+    "spec/SUB-10": [
+      "spec_sub_10"
+    ],
+    "spec/SUB-11": [
+      "spec_sub_11"
+    ],
+    "spec/SUB-12": [
+      "spec_sub_12"
+    ],
+    "spec/SUB-13": [
+      "spec_sub_13"
+    ],
+    "spec/SUB-14": [
+      "spec_sub_14"
+    ],
+    "spec/SUB-15": [
+      "spec_sub_15"
+    ],
+    "spec/SUB-16": [
+      "spec_sub_16"
+    ],
+    "spec/SUB-17": [
+      "spec_sub_17"
+    ],
+    "spec/SUB-18": [
+      "spec_sub_18"
+    ],
+    "spec/SUB-19": [
+      "spec_sub_19"
+    ],
+    "spec/SUB-20": [
+      "spec_sub_20"
+    ],
+    "spec/SUB-21": [
+      "spec_sub_21"
+    ],
+    "spec/SUB-22": [
+      "spec_sub_22"
+    ],
+    "spec/SUB-23": [
+      "spec_sub_23"
+    ],
+    "spec/SUB-24": [
+      "spec_sub_24"
+    ],
+    "spec/SUB-25": [
+      "spec_sub_25"
+    ],
+    "spec/SUB-26": [
+      "spec_sub_26"
+    ],
+    "spec/SUB-27": [
+      "spec_sub_27"
+    ],
+    "spec/SUB-28": [
+      "spec_sub_28"
+    ],
+    "spec/SUB-29": [
+      "spec_sub_29"
+    ],
+    "spec/SUB-30": [
+      "spec_sub_30"
+    ],
+    "spec/SUB-31": [
+      "spec_sub_31"
+    ],
+    "spec/SUB-32": [
+      "spec_sub_32"
+    ],
+    "spec/SUB-33": [
+      "spec_sub_33"
+    ],
+    "spec/SUB-34": [
+      "spec_sub_34"
+    ],
+    "spec/SUB-35": [
+      "spec_sub_35"
+    ],
+    "spec/SUB-36": [
+      "spec_sub_36"
+    ],
+    "spec/SUB-37": [
+      "spec_sub_37"
+    ],
+    "spec/SUB-38": [
+      "spec_sub_38"
+    ],
+    "spec/SUB-39": [
+      "spec_sub_39"
+    ],
+    "spec/SUB-40": [
+      "spec_sub_40"
+    ],
+    "spec/SUB-41": [
+      "spec_sub_41"
+    ],
+    "spec/SUB-42": [
+      "spec_sub_42"
+    ],
+    "spec/SUB-43": [
+      "spec_sub_43"
+    ],
+    "spec/SUB-44": [
+      "spec_sub_44"
+    ],
+    "spec/SUB-45": [
+      "spec_sub_45"
+    ],
+    "spec/SUB-46": [
+      "spec_sub_46"
+    ],
+    "spec/SUB-47": [
+      "spec_sub_47"
+    ],
+    "spec/SUB-48": [
+      "spec_sub_48"
+    ]
+  }
+}

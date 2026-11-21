@@ -1,0 +1,17 @@
+[package]
+name = "satoshifi-header-time-policy"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "Application timestamp summary for verified Bitcoin header batches"
+
+[workspace]
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.release]
+debug = 0
+incremental = false

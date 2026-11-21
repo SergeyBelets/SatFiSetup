@@ -1,0 +1,94 @@
+{
+  "schema": "satoshifi.transition-input.v2",
+  "domain": "SATOSHIFI_TRANSITION_INPUT_V2",
+  "integer_byte_order": "big endian, fixed narrow widths",
+  "max_input_bytes": 2281208,
+  "append_input_bytes": 31805,
+  "guest_execution": "NOT_IMPLEMENTED",
+  "real_proof": "NOT_IMPLEMENTED",
+  "fields": [
+    [
+      "domain",
+      "32-byte right-zero-padded ASCII"
+    ],
+    [
+      "evm_chain_id",
+      "32"
+    ],
+    [
+      "state_address",
+      "20"
+    ],
+    [
+      "checkpoint_descriptor",
+      "32"
+    ],
+    [
+      "expected_accepted_commitment",
+      "32"
+    ],
+    [
+      "anchor",
+      "32"
+    ],
+    [
+      "anchor_height",
+      "8"
+    ],
+    [
+      "head",
+      "32"
+    ],
+    [
+      "height",
+      "8"
+    ],
+    [
+      "work",
+      "32"
+    ],
+    [
+      "tip_time",
+      "4"
+    ],
+    [
+      "canonical_root",
+      "32"
+    ],
+    [
+      "state_commitment",
+      "32"
+    ],
+    [
+      "known_root",
+      "32"
+    ],
+    [
+      "known_log",
+      "32"
+    ],
+    [
+      "known_count",
+      "8"
+    ],
+    [
+      "submitted_count",
+      "2, 1..64"
+    ],
+    [
+      "headers",
+      "count * (2-byte length + raw bytes), total raw <=5120"
+    ],
+    [
+      "witness_length",
+      "4, <=2275554"
+    ],
+    [
+      "witness",
+      "unchanged bounded resume-policy codec V2"
+    ]
+  ],
+  "implicit_state": "before.halted=false, before.halt=None, before.checkpoint_descriptor=deployment.checkpoint_descriptor; halted input cannot be encoded and a halted commitment cannot authenticate this running form",
+  "transport": "Caller must cap enclosing input length before allocation. Request::decode caps nested lengths before allocation. No RISC Zero SDK transport exists here.",
+  "output": "Exact encode_abi bytes (1216), not serde framing, must be committed by a future real guest; fixed actual image ID must authenticate them in EVM"
+}

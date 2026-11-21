@@ -1,0 +1,16 @@
+{
+  "schema": "satoshifi.groth16-wrapper-build.v1",
+  "status": "BUILD_PASS",
+  "production_ready": false,
+  "source_sha256": {
+    "rust/zkspv/groth16-integration/Cargo.toml": "54a59377aaa3ed5c18f477e970b35f69a5743348a518290be44e1013635b8058",
+    "rust/zkspv/groth16-integration/Cargo.lock": "73170da5294ceee92b6ee9f5782843b2b21eac655b0c553de4364b20a6bbbddf",
+    "rust/zkspv/groth16-integration/src/bin/wrap_groth16.rs": "2c1aa5cc1c04d74c50730514d08ff000bb40d8d32eb60e38e153a167098e178b"
+  },
+  "wrapper_sha256": "5474c420a8091f5a8a5aee70a72f2a2b9d05a0c279cc58fc8ba90871d3fb352e",
+  "bridge_sha256": "767cc24c13247e3a5fe55369fb0e770de724fd74822c954a41cd7d9996e97b98",
+  "sdk": "3.0.3",
+  "rust": "1.88.0",
+  "architecture": "aarch64-apple-darwin",
+  "runtime_qualification": "NOT_PERFORMED"
+}

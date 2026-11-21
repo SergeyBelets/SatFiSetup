@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-27",
+  "scope": "Experimental minimal reference arithmetic corrections only",
+  "status": "LOCAL_ARITHMETIC_REGRESSION_PASS",
+  "production_ready": false,
+  "applied_to_vendor": false,
+  "applied_to_production": false,
+  "upstream_commit": "2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8",
+  "original_sha256": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+  "patched_sha256": "d7dfa614897b43edfcc6a8957baf87a8c94ff0a73620a3613d15b7a7ae222c6f",
+  "series": [
+    {
+      "file": "0001-target-one-work.patch",
+      "symbol": "target_to_work",
+      "sha256": "96e395473b944ee02b61c29dcc57feff155ceecb46948cc779a7b11b48ba8669",
+      "input_sha256": "a7784140e36beedee14f89b0077d88c98e272b35dab2c7c9971c97ed2b05c444",
+      "output_sha256": "2471a4c711da6212a5ba2f8dd3a028336cec5798011cbff5a308d5c7ee820ca1"
+    },
+    {
+      "file": "0002-compact-encoder-boundaries.patch",
+      "symbol": "target_to_bits",
+      "sha256": "f56664f4e3730a15b34afd092518d0d9bbde79efeeb22111ee8fd6bfbe21e1a8",
+      "input_sha256": "2471a4c711da6212a5ba2f8dd3a028336cec5798011cbff5a308d5c7ee820ca1",
+      "output_sha256": "b225ac0449f88ad9564882fbbd5e5c9cb520df1d821d8935594ef1b24241da08"
+    },
+    {
+      "file": "0003-signed-retarget-timespan.patch",
+      "symbol": "calculate_new_difficulty",
+      "sha256": "67ccb707e947f4b3cbf9887a4e287aa6b3261e078949c5557305a7b9712ebda5",
+      "input_sha256": "b225ac0449f88ad9564882fbbd5e5c9cb520df1d821d8935594ef1b24241da08",
+      "output_sha256": "d7dfa614897b43edfcc6a8957baf87a8c94ff0a73620a3613d15b7a7ae222c6f"
+    }
+  ],
+  "toolchain": {
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)\nbinary: rustc\ncommit-hash: 29483883eed69d5fb4db01964cdf2af4d86e9cb2\ncommit-date: 2025-08-04\nhost: aarch64-apple-darwin\nrelease: 1.89.0\nLLVM version: 20.1.7",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "upstream_required_rust": "1.88.0",
+    "matches_upstream_toolchain": false,
+    "reason": "Disk-constrained local function probe uses preinstalled1.89.0; no complete native rebuild attempted"
+  },
+  "reference_sources": [
+    {
+      "project": "Bitcoin Core",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/arith_uint256.cpp",
+      "sha256": "33099a41d032d02f49f2d0269f31749c6b9d7cee3fdc8ce0c3cadfe46786d1a8",
+      "symbol": "arith_uint256::GetCompact",
+      "url": "https://github.com/bitcoin/bitcoin/blob/ee42d59d4de970769ebabf77b89ff4269498f61e/src/arith_uint256.cpp"
+    },
+    {
+      "project": "Bitcoin Core",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/chain.cpp",
+      "sha256": "f22d9f8f444e6949d5e1a45d3b8e35f565bef0b7e8c0fd7707ffe56ea6352032",
+      "symbol": "GetBlockProof",
+      "url": "https://github.com/bitcoin/bitcoin/blob/ee42d59d4de970769ebabf77b89ff4269498f61e/src/chain.cpp"
+    },
+    {
+      "project": "Bitcoin Core",
+      "commit": "ee42d59d4de970769ebabf77b89ff4269498f61e",
+      "path": "rust/zkspv/vendor/bitcoin-core-ee42d59d/src/pow.cpp",
+      "sha256": "a01f9a36201f1f28de72cf1a82ed67634a47b03bb5d3387eef961f461cbc2002",
+      "symbol": "CalculateNextWorkRequired",
+      "url": "https://github.com/bitcoin/bitcoin/blob/ee42d59d4de970769ebabf77b89ff4269498f61e/src/pow.cpp"
+    },
+    {
+      "project": "rust-bitcoin",
+      "version": "0.32.7",
+      "archive_sha256": "0fda569d741b895131a88ee5589a467e73e9c4718e958ac9308e4f7dc44b6945",
+      "path": "rust/zkspv/patches/references/rust-bitcoin-0.32.7-pow.rs",
+      "sha256": "fc61b03d8be8be29c3c4dae809c79864de3dfa9ec890971d5a2701916443c557",
+      "symbols": [
+        "Target::to_compact_lossy",
+        "Target::to_work / U256::inverse"
+      ],
+      "license": "CC0-1.0",
+      "url": "https://docs.rs/bitcoin/0.32.7/src/bitcoin/pow.rs.html",
+      "note": "Pinned to_work target-one exception disagrees with Core formula; explicitly excluded as target-one oracle"
+    }
+  ],
+  "validation": {
+    "target_vectors": 832,
+    "nonzero_work_vectors": 831,
+    "mainnet_retarget_vectors": 80,
+    "debug_tests_passed": 8,
+    "release_tests_passed": 8,
+    "application_tests_passed": 3,
+    "original_observations_included": true,
+    "no_network_during_cargo_runs": true,
+    "commands": [
+      "python3 rust/zkspv/patches/prepare_probe.py",
+      "python3 rust/zkspv/patches/generate_vectors.py",
+      "python3 rust/zkspv/patches/test_patch_application.py",
+      "CARGO_HOME=/private/tmp/satoshifi-arithmetic-cargo CARGO_TARGET_DIR=/private/tmp/satoshifi-arithmetic-target cargo test --locked --offline --manifest-path rust/zkspv/patches/probe/Cargo.toml",
+      "CARGO_HOME=/private/tmp/satoshifi-arithmetic-cargo CARGO_TARGET_DIR=/private/tmp/satoshifi-arithmetic-target cargo test --locked --offline --release --manifest-path rust/zkspv/patches/probe/Cargo.toml"
+    ]
+  },
+  "evidence": {
+    "evidence/application.log": {
+      "sha256": "0d4526f9bbd2035458e8b506745d47e69364736641af04bebe82579ff8aaf6bc",
+      "bytes": 214
+    },
+    "evidence/debug.log": {
+      "sha256": "f9e91621790a395895b11ff97bb4c3f608707626f152b506af21baecff166dc4",
+      "bytes": 2124
+    },
+    "evidence/release.log": {
+      "sha256": "0b9afc6de5340e4dabb540a16e5ec0b8d42da3b5752e7700ac182b21621d594d",
+      "bytes": 2130
+    },
+    "evidence/vendor-integrity.log": {
+      "sha256": "7e6fc2a5dfae9d0e582cf9ecc6ea6668b81b482b3e4330916033a19f2c34a665",
+      "bytes": 88
+    }
+  },
+  "unclosed_gates": {
+    "full_header_compatibility": "FAIL",
+    "full_upstream_native_baseline": "UNKNOWN",
+    "independent_critical_code_review": "UNKNOWN",
+    "real_isolated_proof": "UNKNOWN",
+    "evm_verification": "UNKNOWN",
+    "complete_license_compatibility": "UNKNOWN"
+  },
+  "limitations": [
+    "No new core, guest or EVM verifier; no production activation",
+    "Zero invalid-target guard and overflow/sign decoding are unchanged",
+    "Saturating chainwork, future-time, fork selection/LCA/history are unchanged",
+    "Retarget inputs use mainnet pow limit and fixed positive1209600-second period; arbitrary network parameters and zero duration not qualified",
+    "Work and compact vectors include raw target helpers; they are not evidence of end-to-end valid Bitcoin blocks",
+    "Python exact-integer vectors are a test oracle implementing retained Core arithmetic equations, not execution of a complete Core node",
+    "Full upstream native test fixtures were not run for patched source",
+    "Local reference tests do not supply independent external security review"
+  ],
+  "artifact_sha256": {
+    ".gitignore": "acf122ec41e0ed1f5a6117665cc86c4bb64f7b289100c8169f0cb341037061bb",
+    "0001-target-one-work.patch": "96e395473b944ee02b61c29dcc57feff155ceecb46948cc779a7b11b48ba8669",
+    "0002-compact-encoder-boundaries.patch": "f56664f4e3730a15b34afd092518d0d9bbde79efeeb22111ee8fd6bfbe21e1a8",
+    "0003-signed-retarget-timespan.patch": "67ccb707e947f4b3cbf9887a4e287aa6b3261e078949c5557305a7b9712ebda5",
+    "README.md": "b9bbc0489500453665a080568c10ecfbf3d7a9224f79b7869ee1201cdbb346a7",
+    "apply_patches.py": "1f8d74b1a183541332fda633e14dd369900bd485f5b3219d75b93c9a600a4cb2",
+    "evidence/application.log": "0d4526f9bbd2035458e8b506745d47e69364736641af04bebe82579ff8aaf6bc",
+    "evidence/debug.log": "f9e91621790a395895b11ff97bb4c3f608707626f152b506af21baecff166dc4",
+    "evidence/release.log": "0b9afc6de5340e4dabb540a16e5ec0b8d42da3b5752e7700ac182b21621d594d",
+    "generate_vectors.py": "d2e42bc47a4ebecbaaf5e2a9ac647d4247c0efc76e9bd7a3708fdb018c7033d5",
+    "prepare_probe.py": "7e876921db4c5ad18425aca074770ade7b6c118c7764a6a3003e6855a3ac8399",
+    "probe/Cargo.lock": "0865bc9a86c7b086ad30bf01f7deec87063dcbc3e1ba30218510cc3029180ae5",
+    "probe/Cargo.toml": "25cb2884f22d2ea6cb676c7cbb6f2825cede7ae303b1a579079e8da646d34777",
+    "probe/src/lib.rs": "a8727107ae3964fc7c3d6cc64f217265e01385e8671e7321892e0f0b4c8505bd",
+    "probe/src/regression_tests.rs": "26cd5ad1fc809898e867a493f8e5f99b28dc5e0ecc16222b81cbbd1f3a5ce4e4",
+    "probe/src/vectors.rs": "6020b4df5c4f42951f59021494cfa15012c410274ec6d0a5559c137ce14d6017",
+    "references/rust-bitcoin-0.32.7-Cargo.toml": "329bb4a15a0b10b31adc61d48fd93cf5e70b3817670cb751f8c7fa5e26653bca",
+    "references/rust-bitcoin-0.32.7-pow.rs": "fc61b03d8be8be29c3c4dae809c79864de3dfa9ec890971d5a2701916443c557",
+    "series.json": "c27865039e25b02e93fa07d398ca52936096fd7e7cdd70032cde05c81b3c7515",
+    "test_patch_application.py": "6371eda59cd32bdbd748980c04f0f995922c4c9bcd147a3d3ec0b0809fc2db72",
+    "evidence/vendor-integrity.log": "7e6fc2a5dfae9d0e582cf9ecc6ea6668b81b482b3e4330916033a19f2c34a665"
+  },
+  "generated_probe_sha256": "a8727107ae3964fc7c3d6cc64f217265e01385e8671e7321892e0f0b4c8505bd",
+  "test_executable_sha256": {
+    "/private/tmp/satoshifi-arithmetic-target/debug/deps/satoshifi_arithmetic_patch_probe-685f74021eec6c10": "ba99b6dfaf973c125288a934c82710a9714d2ac0fc763852fa4571edf98e92b4",
+    "/private/tmp/satoshifi-arithmetic-target/release/deps/satoshifi_arithmetic_patch_probe-20758c986ff05968": "bdf26d7238613bdf64234c09cbb6a6e1eeba0bd2ab25e616ef8ed5585ee47140"
+  },
+  "temporary_build_cleanup": {
+    "removed_only_task_created_paths": [
+      "/private/tmp/satoshifi-arithmetic-target",
+      "/private/tmp/satoshifi-arithmetic-cargo"
+    ],
+    "reason": "Constrained disk; test logs and executable hashes retained; original user cache untouched"
+  }
+}

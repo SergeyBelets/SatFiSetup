@@ -1,0 +1,29 @@
+[Unit]
+Description=Satoshifi Bitcoin header relay keeper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=satoshifi-relay
+Group=satoshifi-relay
+WorkingDirectory=/opt/satoshify
+EnvironmentFile=/etc/satoshifi/relay-keeper.env
+# Replace public deployment values and paths before installing. Keep RPC URLs
+# in the mode-0600 EnvironmentFile; never place private keys on this command line.
+# REPLACE_CREATION_BLOCK is the positive block number from the deployment manifest.
+# The locator is verified against canonical receipt/initcode; it grants no trust.
+ExecStart=/opt/satoshify/.venv/bin/frost-relay-keeper --chain-id 1 --evm-confirmations 12 --relay REPLACE_RELAY_ADDRESS --relay-code-hash REPLACE_RUNTIME_HASH --relay-creation-block REPLACE_CREATION_BLOCK --bitcoin-policy /etc/satoshifi/bitcoin-policy.json --bitcoin-cookie /var/lib/satoshifi-relay/bitcoin/.cookie --identity-file /var/lib/satoshifi-relay/identity.json --interval 30 --max-backoff 300
+Restart=on-failure
+RestartSec=30
+RestartPreventExitStatus=78
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/satoshifi-relay
+
+[Install]
+WantedBy=multi-user.target

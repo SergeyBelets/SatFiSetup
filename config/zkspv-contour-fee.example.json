@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "mode": "FUNDING",
+  "fee_config": "/srv/satoshifi/private/withdrawal-fee.json",
+  "request_file": "/srv/satoshifi/private/scenarios/fee/need.json",
+  "accepted_request_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}

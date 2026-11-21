@@ -1,0 +1,94 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -972,7 +972,9 @@
+         assert_eq!(work, U256::MAX);
+         target[31] = 1;
+         let work = target_to_work(&target);
+-        assert_eq!(work, U256::MAX);
++        // Bitcoin Core GetBlockProof: floor(2^256 / (target + 1)).
++        assert_eq!(work, U256::from_be_hex(
++            "8000000000000000000000000000000000000000000000000000000000000000"));
+         let target: [u8; 32] = [0xFF; 32];
+         let work = target_to_work(&target);
+         assert_eq!(work, U256::ONE);
+@@ -1020,3 +1022,80 @@
+         }
+     }
+ }
++
++
++#[cfg(test)]
++mod satoshifi_reviewed_work_tests {
++    use crypto_bigint::{Encoding, U256};
++    use super::{checked_chainwork, ValidationError};
++
++    #[test]
++    fn checked_cumulative_work_preserves_representable_sum() {
++        let maximum = U256::MAX.to_be_bytes();
++        assert_eq!(checked_chainwork(maximum, &U256::ZERO), Ok(maximum));
++        assert_eq!(checked_chainwork(U256::MAX.wrapping_sub(&U256::ONE).to_be_bytes(), &U256::ONE), Ok(maximum));
++        assert_eq!(checked_chainwork(maximum, &U256::ONE), Err(ValidationError::ChainworkOverflow));
++    }
++}
++
++#[cfg(test)]
++mod satoshifi_reviewed_compact_tests {
++    fn decode(bits: u32, limit: [u8; 32]) -> Option<[u8; 32]> {
++        super::checked_target(bits, crypto_bigint::U256::from_be_bytes(limit)).ok()
++    }
++// Shared assertions for the extracted harness and actual native verifier.
++// `decode` is supplied by the enclosing test module and uses checked_target.
++use crypto_bigint::{Encoding, U256};
++
++const CORE_VECTORS: &str = include_str!(r"/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/header-qualification/fixtures/compact-core-vectors.tsv");
++
++fn limits() -> [[u8; 32]; 4] {
++    [
++        U256::from_be_hex("00000000ffff0000000000000000000000000000000000000000000000000000").to_be_bytes(),
++        U256::from_be_hex("00000377ae000000000000000000000000000000000000000000000000000000").to_be_bytes(),
++        U256::from_be_hex("7fffff0000000000000000000000000000000000000000000000000000000000").to_be_bytes(),
++        U256::MAX.to_be_bytes(),
++    ]
++}
++
++#[test]
++fn checked_targets_match_executed_core_arithmetic() {
++    let limits = limits();
++    let mut total = 0;
++    for line in CORE_VECTORS.lines() {
++        let columns: Vec<_> = line.split('\t').collect();
++        assert_eq!(columns.len(), 5);
++        let bits = u32::from_str_radix(columns[0], 16).unwrap();
++        for index in 0..4 {
++            let expected = if columns[index + 1] == "-" { None }
++                else { Some(hex::decode(columns[index + 1]).unwrap().try_into().unwrap()) };
++            assert_eq!(decode(bits, limits[index]), expected, "Core compact={bits:08x}, limit={index}");
++            total += 1;
++        }
++    }
++    assert!(total > 40_000);
++    println!("Executed Core target comparisons: {total}");
++}
++
++#[test]
++fn range_guard_retains_core_permitted_encoding_aliases() {
++    // Range validation must not introduce a new minimal-encoding consensus rule.
++    // Header transition logic still separately requires its exact expected bits.
++    let one = U256::ONE.to_be_bytes();
++    for bits in [0x01010000, 0x02000100, 0x03000001] {
++        assert_eq!(decode(bits, limits()[0]), Some(one));
++    }
++}
++
++#[test]
++fn pow_limit_is_inclusive_and_context_bound() {
++    let mainnet = limits()[0];
++    assert_eq!(decode(0x1d00ffff, mainnet), Some(mainnet));
++    let smaller = U256::from_be_bytes(mainnet).wrapping_sub(&U256::ONE).to_be_bytes();
++    assert_eq!(decode(0x1d00ffff, smaller), None);
++    assert_eq!(decode(0x1d00ffff, U256::ZERO.to_be_bytes()), None);
++    assert_eq!(decode(0x1e0377ae, mainnet), None);
++    assert_eq!(decode(0x1e0377ae, limits()[1]), Some(limits()[1]));
++}
++
++}

@@ -1,0 +1,234 @@
+[
+  {
+    "type": "function",
+    "name": "checkKeys",
+    "inputs": [
+      {
+        "name": "policy",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "raw",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verify",
+    "inputs": [
+      {
+        "name": "policy",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "p",
+        "type": "tuple",
+        "internalType": "struct WithdrawalFeeTypes.Candidate",
+        "components": [
+          {
+            "name": "control",
+            "type": "tuple",
+            "internalType": "struct WithdrawalFeeTypes.Control",
+            "components": [
+              {
+                "name": "sequence",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "cg",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "dg",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "deadline",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "batch",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "previous",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "planHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "raw",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "requests",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          },
+          {
+            "name": "charges",
+            "type": "tuple[]",
+            "internalType": "struct WithdrawalFeeTypes.Charge[]",
+            "components": [
+              {
+                "name": "request",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "revision",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "sats",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "credits",
+            "type": "tuple[]",
+            "internalType": "struct WithdrawalFeeTypes.CreditUse[]",
+            "components": [
+              {
+                "name": "id",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "payer",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "fee",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "refund",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "carryVout",
+                "type": "uint32",
+                "internalType": "uint32"
+              }
+            ]
+          },
+          {
+            "name": "treasury",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "v",
+        "type": "tuple",
+        "internalType": "struct WithdrawalFeeTypes.Verified",
+        "components": [
+          {
+            "name": "root",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "txid",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "inputHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "fee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tokenBurn",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "treasuryFee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "inputFree",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "dg",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "freeKeys",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "FundingOutputIndex",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFundingCount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFundingLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTxLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidVarInt",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NonCanonicalCompactSize",
+    "inputs": []
+  }
+]

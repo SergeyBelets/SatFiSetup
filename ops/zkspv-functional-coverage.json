@@ -1,0 +1,419 @@
+{
+  "version": "3",
+  "as_of": "2026-11-02",
+  "specification_version": "2.16",
+  "functional_complete": false,
+  "production_ready": false,
+  "areas": [
+    {
+      "id": "base",
+      "requirements": [
+        "1",
+        "3",
+        "14",
+        "17",
+        "2",
+        "18",
+        "19"
+      ],
+      "code": "PARTIAL",
+      "summary": "Pinned native witness host restored with exact original compiler/source checks and separately retained binary. Current local regression and retained-receipt verification have fresh evidence; full upstream/production qualification and independent review remain open.",
+      "sources": [
+        "ops/zkspv/report.py",
+        "rust/zkspv/guest-integration/report.json",
+        "ops/artifacts/zkspv/upstream-lock.json"
+      ]
+    },
+    {
+      "id": "state",
+      "requirements": [
+        "4",
+        "5",
+        "6"
+      ],
+      "code": "PRESENT_SELECTED_POLICY_UNQUALIFIED",
+      "summary": "Production-image state/adapter and local receipts remain unchanged. Selected LOCAL_FENCE_RETAIN_MAINNET_GUEST_V1 explicitly does not prove completeness of unpublished history or guarantee global on-chain halt.",
+      "sources": [
+        "rust/zkspv/state-adapter/contracts/ZkBitcoinStateV2.sol",
+        "rust/zkspv/state-adapter/contracts/ZkSpvAdapter.sol",
+        "rust/zkspv/state-proof-integration/report.json"
+      ]
+    },
+    {
+      "id": "money",
+      "requirements": [
+        "7"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Existing monetary guards, exact allocation/payout and shared backing/consumed/reservations remain in code; complete current-source DAO/FROST/money regression is not inferred from the selected suite run.",
+      "sources": [
+        "web3/contracts/src/federation/MiningPoolV1.sol",
+        "web3/contracts/src/federation/BitcoinWithdrawalEscrow.sol",
+        "signer-agent/signer_agent/bitcoin_funding.py"
+      ]
+    },
+    {
+      "id": "worker",
+      "requirements": [
+        "8",
+        "15"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "V7 retains detected tips and bounded linked branch witnesses in dual journals, restores atomic needs/outbox and blocks new work after a >100 observed rollback; own-funded maintenance retains deadlines and budgets. Continuous availability and long real contour remain unqualified.",
+      "sources": [
+        "signer-agent/signer_agent/zk_worker.py",
+        "ops/zkspv/contour_heartbeat.py",
+        "ops/zkspv/contour_worker_cycle.py",
+        "signer-agent/signer_agent/zk_archive.py",
+        "signer-agent/signer_agent/zk_observations.py",
+        "ops/zkspv-observation-policy.json"
+      ]
+    },
+    {
+      "id": "service",
+      "requirements": [
+        "15",
+        "16"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Encrypted request/ACK/status, admission/quote/payment, compatible grouping and explicitly budgeted confederation own funding exist; production authorization/profile and real contention/availability/cost checks remain open.",
+      "sources": [
+        "signer-agent/signer_agent/spv_transport.py",
+        "signer-agent/signer_agent/spv_automation.py",
+        "signer-agent/signer_agent/zk_worker_service.py",
+        "ops/zkspv/contour_service.py"
+      ]
+    },
+    {
+      "id": "bootstrap",
+      "requirements": [
+        "7.13",
+        "9",
+        "16"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Relay/ZK consumer bootstrap retains original deployment journals; fee profile V2 creates the first independently pinned canonical family root or joins an enrolled existing root with original root/graph FROST authority. Production parameters and acceptance remain open.",
+      "sources": [
+        "signer-agent/signer_agent/bootstrap.py",
+        "signer-agent/signer_agent/bootstrap_withdrawal_fee.py",
+        "web3/contracts/src/federation/CallbackPoolRegistry.sol",
+        "ops/zkspv/contour_bootstrap.py",
+        "signer-agent/signer_agent/family_registry.py"
+      ]
+    },
+    {
+      "id": "address",
+      "requirements": [
+        "20",
+        "21.2",
+        "21.3",
+        "21.4",
+        "21.13",
+        "21.16",
+        "21"
+      ],
+      "code": "PRESENT_ACTIVATION_DISABLED",
+      "summary": "Intent registration, native derivation, recipient binding, watch/admission and mint exist; real candidate QUALIFIED is false and mainnet-proof address lifecycle is not accepted.",
+      "sources": [
+        "web3/contracts/src/federation/BitcoinAddressRegistry.sol",
+        "web3/contracts/src/core/BitcoinDepositDerivation.sol",
+        "signer-agent/signer_agent/address_registration_client.py",
+        "signer-agent/signer_agent/address_mint.py"
+      ]
+    },
+    {
+      "id": "signer",
+      "requirements": [
+        "20.4",
+        "20.20",
+        "21.5"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "V3 mixed BASE/DERIVED and V4 fee input signing reuse native signatures, generations and original nonce/spent journals; actual Core acceptance and full combined coverage are pending.",
+      "sources": [
+        "signer-agent/signer_agent/bitcoin_input_keys.py",
+        "signer-agent/signer_agent/bitcoin_worker.py",
+        "frost-crypto/src/main.rs"
+      ]
+    },
+    {
+      "id": "reserve",
+      "requirements": [
+        "21.7",
+        "21.8",
+        "21.9",
+        "21.10",
+        "21.11",
+        "21.21"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Canonical fee reserve/allocation, protected UTXOs and full reconciliation exist; live runway, stress bounds and operational recovery qualification remain open.",
+      "sources": [
+        "web3/contracts/src/federation/BitcoinFeeReserve.sol",
+        "signer-agent/signer_agent/btc_fee_reserve.py",
+        "ops/zkspv/contour_reconcile.py"
+      ]
+    },
+    {
+      "id": "withdrawal",
+      "requirements": [
+        "22"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Original BTC/MP/S budgets, principal and exact consent are reused by explicit RBF chains, old/new winners, per-owner batch V3, safe owner cancel and fee/refund lifecycle adapters. Private case inputs and actual monetary acceptance remain pending.",
+      "sources": [
+        "signer-agent/signer_agent/withdrawal_user.py",
+        "signer-agent/signer_agent/withdrawal_fee_client.py",
+        "web3/contracts/src/federation/WithdrawalFeePayments.sol",
+        "ops/zkspv/contour_withdrawal.py",
+        "ops/zkspv/contour_refund.py"
+      ]
+    },
+    {
+      "id": "fee-purpose",
+      "requirements": [
+        "22.5",
+        "22.6",
+        "22.24"
+      ],
+      "code": "PRESENT_ACTIVATION_DISABLED",
+      "summary": "External funding classification, personal credit ledger and carry/refund paths exist; FEE_QUALIFIED remains false independently of deposit qualification.",
+      "sources": [
+        "web3/contracts/src/core/BitcoinWithdrawalFeeDerivation.sol",
+        "web3/contracts/src/federation/WithdrawalFeeFunding.sol",
+        "signer-agent/signer_agent/withdrawal_fee_funding.py",
+        "ops/zkspv/contour_fee.py"
+      ]
+    },
+    {
+      "id": "recipients",
+      "requirements": [
+        "21.20",
+        "7.13",
+        "22.23",
+        "22.25"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "EOA, explicitly supported smart-wallet recipient and advanced contract flow/callback admission are separate profiles; arbitrary contracts or relayed ERC-1271 fee-owner consent are not implied.",
+      "sources": [
+        "signer-agent/signer_agent/recipient_profiles.py",
+        "web3/contracts/src/federation/RecipientPolicy.sol",
+        "web3/contracts/src/federation/CallbackPoolRegistry.sol"
+      ]
+    },
+    {
+      "id": "incident",
+      "requirements": [
+        "21.13",
+        "21.14",
+        "21.15",
+        "21.16",
+        "21.17"
+      ],
+      "code": "PRESENT_CANONICAL_ROOT_UNQUALIFIED",
+      "summary": "Original scoped HPKE/FROST incident recovery now synchronizes monotonic family generations, terminal/closed status and known child aliases across admitted registries on one independently pinned canonical root. Other roots/chains are outside that trust boundary.",
+      "sources": [
+        "signer-agent/signer_agent/address_status.py",
+        "signer-agent/signer_agent/incident_transport.py",
+        "ops/zkspv/contour_incident.py",
+        "signer-agent/signer_agent/bitcoin_continuity.py",
+        "web3/contracts/src/federation/BitcoinKeyFamilyRegistry.sol",
+        "docs/BITCOIN_KEY_FAMILY.md"
+      ]
+    },
+    {
+      "id": "old-epochs",
+      "requirements": [
+        "21.18",
+        "21.19"
+      ],
+      "code": "PRESENT_PROFILE_UNQUALIFIED",
+      "summary": "Original Fleet, late deposits/refunds, archives, watch and retained-member claims exist; real departure/offline-quorum/restore capacity and service funding must be demonstrated.",
+      "sources": [
+        "signer-agent/signer_agent/epoch_service.py",
+        "signer-agent/signer_agent/epoch_retention.py",
+        "ops/zkspv/contour_epoch.py"
+      ]
+    },
+    {
+      "id": "continuity",
+      "requirements": [
+        "9",
+        "21.13",
+        "21.19"
+      ],
+      "code": "PRESENT_CONDITIONAL_MIGRATION_OPEN",
+      "summary": "Canonical on-chain family/status/alias directory and independent SDK pins implemented. Original graphs/accounting remain authoritative; actual live asset/accounting migration is a separate conditional task.",
+      "sources": [
+        "signer-agent/signer_agent/bitcoin_continuity.py",
+        "signer-agent/signer_agent/continuity_handover.py",
+        "docs/BITCOIN_CONTINUITY.md",
+        "web3/contracts/src/federation/BitcoinKeyFamilyRegistry.sol",
+        "signer-agent/signer_agent/family_registry.py"
+      ]
+    },
+    {
+      "id": "suite",
+      "requirements": [
+        "11",
+        "12"
+      ],
+      "code": "PRESENT_PRIVATE_BINDINGS_AND_QUALIFICATION_PENDING",
+      "summary": "43 workflow recipes plus 195 mandatory observation slots and explicit local executable test-program bindings across 55 modules. Full private real-contour configuration/execution is deferred by the user for disk capacity; local checks are not complete qualified scenario coverage.",
+      "sources": [
+        "ops/zkspv/contour_suite.py",
+        "ops/zkspv/contour_suite_plan.py",
+        "ops/zkspv/contour_matrix.py",
+        "ops/artifacts/zkspv/worker-integration/contour-suite-report.json",
+        "ops/zkspv/contour_checks.py",
+        "ops/zkspv-required-scenarios.json",
+        "ops/artifacts/zkspv/worker-integration/c123-implementation-report.json",
+        "ops/zkspv-acceptance-bindings.json",
+        "ops/zkspv/acceptance_cases.py",
+        "ops/artifacts/zkspv/acceptance-20261102/local-acceptance-report.json"
+      ]
+    },
+    {
+      "id": "operations",
+      "requirements": [
+        "8",
+        "9",
+        "10",
+        "13"
+      ],
+      "code": "PARTIAL_OR_OPERATOR_INPUT",
+      "summary": "Runbooks, caps, manifests and launch preparation exist; selected target/tool installation, latency/TCO/payback, inventory and independent acceptance remain open.",
+      "sources": [
+        "docs/ZK_SPV_OPERATIONS.md",
+        "docs/ZK_SPV_MIGRATION.md",
+        "ops/artifacts/zkspv/tco.json",
+        "ops/artifacts/zkspv/decision.json",
+        "docs/ZKSPV_LOCAL_ACCEPTANCE.md"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "C1",
+      "kind": "CODE",
+      "priority": "P0",
+      "requirements": [
+        "21.13",
+        "21.16",
+        "21.19"
+      ],
+      "title": "Canonical cross-graph key-family/status inheritance",
+      "done_when": "Fresh clients and new registries/issuers cannot bypass terminal/closed state through new scopes, same-key resharing or parent/child aliases; shared accounting and historical lawful settlement remain intact.",
+      "status": "CODE_IMPLEMENTED_QUALIFICATION_PENDING",
+      "result": "Root enrollment/bind uses original FROST authority. Full runtime/constructor pin, same-key and known child aliases, sticky generations/status, lawful historical receipts preserved. Scope is one independently pinned canonical EVM root; no implicit cross-chain/global-root guarantee."
+    },
+    {
+      "id": "C2",
+      "kind": "CODE_AND_POLICY",
+      "priority": "P0",
+      "requirements": [
+        "15.11",
+        "11.9",
+        "11.10"
+      ],
+      "title": "Durable observation history, recoverable enqueue and competing-submitter policy",
+      "done_when": "Observed events and required branch witnesses survive the detect/enqueue crash boundary; stale emergency anchors and independent-observer availability have a tested explicit policy and residual-risk statement. Proof is not claimed to prove never-published history.",
+      "status": "CODE_IMPLEMENTED_USER_POLICY_SELECTED_QUALIFICATION_PENDING",
+      "result": "User selected LOCAL_FENCE_RETAIN_MAINNET_GUEST_V1. Durable detected tips, resumable branch chunks, dual-journal restoration, sticky 100/101 boundary and recoverable outbox implemented. Mainnet guest unchanged; independent submitters may update EVM without global halt; unpublished-history completeness is not proven."
+    },
+    {
+      "id": "C3",
+      "kind": "RUNNER_AND_CASE_BINDINGS",
+      "priority": "P1",
+      "requirements": [
+        "11.9",
+        "11.10",
+        "11.11",
+        "11.12",
+        "11.13",
+        "11.14",
+        "11.15"
+      ],
+      "title": "Expanded workflows and exact mandatory assertion bindings",
+      "done_when": "Address request/registration/Ready and recipient variants, signed replacement old/new winners, cap/consent changes, safe cancel, refund RBF/dust, concurrency, outage/reorg and security cases have exact executable bindings and evidence-mode assertions. Existing SDK support is reused.",
+      "status": "LOCAL_EXECUTABLE_BINDINGS_PRESENT_REAL_CONTOUR_DEFERRED",
+      "result": "All 195 rows have explicit original local setup/action/assertion programs, source pins and declared model/fixture boundaries. Concrete private deployed-graph inputs and full real-contour coverage remain deferred by the user; module checks do not establish complete per-row qualification."
+    },
+    {
+      "id": "C4",
+      "kind": "CONDITIONAL_CODE",
+      "priority": "CONDITIONAL",
+      "requirements": [
+        "9",
+        "21.13",
+        "21.19"
+      ],
+      "title": "Real custody/accounting transition for live obligations",
+      "done_when": "If migrating live obligations, prove complete inventory, independent custody transfer and continuity of backing/consumed/pending/signed/refund rights. A proven empty new deployment can explicitly classify migration N/A; current incomplete inventory cannot do so.",
+      "status": "OPEN_CONDITIONAL"
+    },
+    {
+      "id": "Q1",
+      "kind": "QUALIFICATION",
+      "priority": "P0",
+      "requirements": [
+        "3",
+        "5",
+        "14",
+        "15.11",
+        "20.4",
+        "20.20",
+        "22.5"
+      ],
+      "title": "Bitcoin, derivation and fee-purpose qualification",
+      "done_when": "Reviewed exact source/build/tool/profile evidence closes upstream and applicable real-proof/negative checks; independent deposit and fee-purpose qualification are justified. Flipping QUALIFIED/FEE_QUALIFIED is not qualification.",
+      "status": "LOCAL_REVIEW_PACKAGE_PRESENT_INDEPENDENT_QUALIFICATION_PENDING",
+      "result": "Current-source local evidence and candidate runtime/ABI/source package prepared. QUALIFIED/FEE_QUALIFIED remain false. Historical source bytes retained exactly; one old FROST executable snapshot unavailable and historical reproduction remains explicitly incomplete."
+    },
+    {
+      "id": "Q2",
+      "kind": "REAL_INTEGRATION",
+      "priority": "P1",
+      "requirements": [
+        "11.1",
+        "11.2",
+        "11.6",
+        "11.12",
+        "11.13",
+        "11.14",
+        "11.15"
+      ],
+      "title": "Actual isolated Core/FROST/Groth16/EVM contour and complete regression",
+      "done_when": "Current-source per-case REAL/MOCK/SYNTHETIC records include real native signatures, Core acceptance, bound production-image Bitcoin proof and exact local-EVM mint/settle/refund receipts. Deferred native checks are restored and mandatory negative/recovery cases are run.",
+      "status": "DEFERRED_BY_USER_FOR_DISK_CAPACITY",
+      "result": "User postponed the actual Core/FROST/Groth16/EVM contour. Native host restored; original excluded checks and local contract/Python regression executed separately from real contour."
+    },
+    {
+      "id": "O1",
+      "kind": "OPERATOR_INPUT_AND_MEASUREMENT",
+      "priority": "P1",
+      "requirements": [
+        "8",
+        "9",
+        "10",
+        "13"
+      ],
+      "title": "Target parameters, durable tools, resources and economics",
+      "done_when": "Chosen network/checkpoint/profile, durable pinned tool paths, capacity, continuous service and measured latency/TCO/payback are recorded with explicit own-funding bounds; unknown values are not replaced by zero.",
+      "status": "OPEN"
+    },
+    {
+      "id": "A1",
+      "kind": "INDEPENDENT_ACCEPTANCE",
+      "priority": "BEFORE_ACTIVATION",
+      "requirements": [
+        "3",
+        "9",
+        "13"
+      ],
+      "title": "Independent review and activation decision",
+      "done_when": "Independent review, deployment bounds, actual inventory and all applicable gates are accepted on the final snapshot; no local coverage count automatically sets production_ready.",
+      "status": "OPEN"
+    }
+  ]
+}

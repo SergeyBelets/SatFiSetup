@@ -1,0 +1,22 @@
+[package]
+name = "satoshifi-header-transition-qualification"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "GPL-3.0-only"
+description = "Test-only qualification of extracted pinned Citrea header transitions"
+
+[workspace]
+
+[dependencies]
+bitcoin = { version = "=0.32.5", default-features = false, features = ["std"] }
+crypto-bigint = { version = "=0.5.5", default-features = false }
+hex = "=0.4.3"
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.release]
+debug = 0
+incremental = false

@@ -1,0 +1,20 @@
+{
+  "schema": "satoshifi.resume-reuse.v2",
+  "classification": "NEW_INTEGRATION",
+  "reused": "V1 persistent history bytes and four encoding/parsing function bodies unchanged",
+  "new_critical_code": [
+    "256-bit authenticated known-context index",
+    "V2 state commitment",
+    "exact LCA witnesses",
+    "bounded stateless transitions",
+    "archive witness construction"
+  ],
+  "source_sha256": {
+    "rust/zkspv/fork-policy/src/lib.rs": "ce8f7b4e314087a67dbcec7437c4f65786db3d42cd58f5b29e197ecacce9ad98",
+    "rust/zkspv/fork-policy/src/history.rs": "add4104f710939cdaefbc06037d32fecd9fbf865fdf74ef2bf65265e1f9ce754"
+  },
+  "generated_sha256": {
+    "src/history.rs": "add4104f710939cdaefbc06037d32fecd9fbf865fdf74ef2bf65265e1f9ce754",
+    "src/bindings.rs": "0194bb253edd724a6e1764a10dc73950e0d9542d9ae0cf2b0403049c6a05ec52"
+  }
+}

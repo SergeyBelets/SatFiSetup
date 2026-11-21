@@ -1,0 +1,24 @@
+[package]
+name = "satoshifi-transition-policy"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "Checkpoint, fork/history and time integration with a versioned transition journal"
+
+[workspace]
+
+[dependencies]
+satoshifi-checkpoint-policy = { path = "../checkpoint-policy" }
+satoshifi-fork-policy = { path = "../fork-policy" }
+satoshifi-header-time-policy = { path = "../time-policy" }
+
+bitcoin = { version = "=0.32.5", default-features = false, features = ["std"] }
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.release]
+debug = 0
+incremental = false

@@ -1,0 +1,13 @@
+{
+  "started_unix": 1793371761.158072,
+  "timeout_seconds": 7200,
+  "command": [
+    "/private/tmp/satoshifi-proof-tools/wrap_groth16",
+    "/private/tmp/satoshifi-risc0-3.0.3/r0vm",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/test-policy.r0bf",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/halt101-prefix/state.journal",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/halt101-prefix/succinct/receipt.bin",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/proof-scenarios/evidence/halt101-prefix/groth16/receipt.bin"
+  ],
+  "preparation_sha256": "f17bd7650a9c78141d8db474903d8e17cb899b224a654bbcf884d2c590fa6d98"
+}

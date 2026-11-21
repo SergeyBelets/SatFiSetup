@@ -1,0 +1,66 @@
+--- a/crates/bitcoin-da/src/verifier.rs
++++ b/crates/bitcoin-da/src/verifier.rs
+@@ -1,6 +1,6 @@
+ //! This module provides the Bitcoin DA verifier implementation.
+ 
+-use crypto_bigint::{Encoding, U256};
++use crypto_bigint::{CheckedAdd, Encoding, U256};
+ use itertools::Itertools;
+ use sov_rollup_interface::da::{BlockHeaderTrait, DaSpec, DaVerifier, LatestDaState};
+ use sov_rollup_interface::Network;
+@@ -71,6 +71,8 @@
+     FailedToDeserializeCompleteChunks,
+     /// Failed to deserialize batch proof method id body
+     FailedToDeserializeBatchProofMethodIdBody,
++    /// The cumulative chainwork cannot be represented in 256 bits.
++    ChainworkOverflow,
+ }
+ 
+ impl DaVerifier for BitcoinVerifier {
+@@ -356,9 +358,7 @@
+             block_header.bits()
+         };
+ 
+-        let total_work = U256::from_be_bytes(latest_da_state.total_work)
+-            .saturating_add(&work_add)
+-            .to_be_bytes();
++        let total_work = checked_chainwork(latest_da_state.total_work, &work_add)?;
+ 
+         Ok(LatestDaState {
+             block_hash: block_header.hash().to_byte_array(),
+@@ -424,9 +424,7 @@
+             latest_da_state.current_target_bits
+         };
+ 
+-        let total_work = U256::from_be_bytes(latest_da_state.total_work)
+-            .saturating_add(&work_add)
+-            .to_be_bytes();
++        let total_work = checked_chainwork(latest_da_state.total_work, &work_add)?;
+ 
+         Ok(LatestDaState {
+             block_hash: block_header.hash().to_byte_array(),
+@@ -484,9 +482,7 @@
+             block_header.bits()
+         };
+ 
+-        let total_work = U256::from_be_bytes(latest_da_state.total_work)
+-            .saturating_add(&work_add)
+-            .to_be_bytes();
++        let total_work = checked_chainwork(latest_da_state.total_work, &work_add)?;
+ 
+         Ok(LatestDaState {
+             block_hash: block_header.hash().to_byte_array(),
+@@ -575,6 +571,13 @@
+ 
+         Ok(())
+     }
++}
++
++/// Reject an unrepresentable cumulative work value instead of saturating it.
++fn checked_chainwork(total_work: [u8; 32], work_add: &U256) -> Result<[u8; 32], ValidationError> {
++    Option::<U256>::from(U256::from_be_bytes(total_work).checked_add(work_add))
++        .map(|value| value.to_be_bytes())
++        .ok_or(ValidationError::ChainworkOverflow)
+ }
+ 
+ /// Verifies the block time against the median of the previous 11 blocks' timestamps
