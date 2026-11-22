@@ -1,0 +1,14 @@
+info: syncing channel updates for '1.88.0-aarch64-apple-darwin'
+info: latest update on 2025-06-26, rust version 1.88.0 (6b00bc388 2025-06-23)
+info: downloading component 'cargo'
+info: downloading component 'rust-std'
+info: downloading component 'rustc'
+info: installing component 'cargo'
+info: installing component 'rust-std'
+info: installing component 'rustc'
+
+  1.88.0-aarch64-apple-darwin installed - rustc 1.88.0 (6b00bc388 2025-06-23)
+
+info: default toolchain set to '1.88.0-aarch64-apple-darwin'
+info: checking for self-update
+info: downloading self-update

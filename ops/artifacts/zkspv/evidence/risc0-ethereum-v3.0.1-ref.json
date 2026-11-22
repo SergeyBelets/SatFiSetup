@@ -1,0 +1,10 @@
+{
+  "ref": "refs/tags/v3.0.1",
+  "node_id": "REF_kwDOLOaYILByZWZzL3RhZ3MvdjMuMC4x",
+  "url": "https://api.github.com/repos/risc0/risc0-ethereum/git/refs/tags/v3.0.1",
+  "object": {
+    "sha": "365e7b2db4f620fa256580c27558d2623362b9ae",
+    "type": "commit",
+    "url": "https://api.github.com/repos/risc0/risc0-ethereum/git/commits/365e7b2db4f620fa256580c27558d2623362b9ae"
+  }
+}

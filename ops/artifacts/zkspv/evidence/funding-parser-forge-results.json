@@ -1,0 +1,496 @@
+{
+  "test/BitcoinFundingParser.t.sol:BitcoinFundingParserTest": {
+    "duration": "25ms 347\u00b5s 125ns",
+    "test_results": {
+      "test256Outputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "outputs_256: 266261"
+        ],
+        "duration": "1ms 808\u00b5s 41ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 303002
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000041015000000000000000000000000000000000000000000000000000000000000000b6f7574707574735f323536000000000000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "test257Inputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "inputs_257: 582991"
+        ],
+        "duration": "3ms 88\u00b5s 750ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 685456
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000008e54f000000000000000000000000000000000000000000000000000000000000000a696e707574735f32353700000000000000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "test257Outputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "outputs_257: 267268"
+        ],
+        "duration": "1ms 791\u00b5s 792ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 304152
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000041404000000000000000000000000000000000000000000000000000000000000000b6f7574707574735f323537000000000000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "test33Outputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "outputs_33: 45118"
+        ],
+        "duration": "2ms 134\u00b5s 625ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 78820
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000b03e000000000000000000000000000000000000000000000000000000000000000a6f7574707574735f333300000000000000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testAllInputsAndOutputsStructurallyChecked()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "99\u00b5s 208ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 52890
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testCanonical65536ByteScript()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "script_65536: 179650"
+        ],
+        "duration": "1ms 681\u00b5s 791ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 599658
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000002bdc2000000000000000000000000000000000000000000000000000000000000000c7363726970745f36353533360000000000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testCompactSizeCannotReadLocktimeBytes()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "876\u00b5s 709ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 119156
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testDeclaredCountBoundedBeforeAllocation()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "95\u00b5s 83ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 43942
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testEveryTruncationRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "6ms 53\u00b5s 875ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 5659184
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testExact100000ByteEnvelope()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "stripped_100000: 357422"
+        ],
+        "duration": "1ms 127\u00b5s 875ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 1216656
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000005742e000000000000000000000000000000000000000000000000000000000000000f73747269707065645f3130303030300000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testFuzzMatchesLegacyForSharedEnvelope(uint8,uint8,uint64,bytes32)": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "18ms 65\u00b5s 375ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Fuzz": {
+            "failed_corpus_replays": 0,
+            "first_case": {
+              "gas": 153005,
+              "stipend": 22032
+            },
+            "mean_gas": 114660,
+            "median_gas": 113445,
+            "runs": 256
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testHugeDeclaredScriptLengthRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "761\u00b5s 792ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 40901
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testLongInputScriptPreservesNextSequenceAndOutput()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "648\u00b5s 375ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 212477
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testMaximum11105Outputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "max_outputs_11105: 11238358"
+        ],
+        "duration": "23ms 322\u00b5s 83ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 12096759
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000ab7bd600000000000000000000000000000000000000000000000000000000000000116d61785f6f7574707574735f3131313035000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testMaximum2438Inputs()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "max_inputs_2438: 6977909"
+        ],
+        "duration": "13ms 696\u00b5s 875ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 8839219
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000006a7975000000000000000000000000000000000000000000000000000000000000000f6d61785f696e707574735f323433380000000000000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testMixedReference()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [
+          "mixed_inputs_outputs: 27027"
+        ],
+        "duration": "349\u00b5s 125ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 62231
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [
+          {
+            "address": "0x7fa9385be102ac3eac297483dd6233d62b3e1496",
+            "data": "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000699300000000000000000000000000000000000000000000000000000000000000146d697865645f696e707574735f6f757470757473000000000000000000000000",
+            "topics": [
+              "0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8"
+            ]
+          }
+        ],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testNonCanonicalCompactSizeAtEveryVectorAndScript()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "395\u00b5s 375ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 218259
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testOutOfEnvelopeRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "67\u00b5s",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 126023
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testSelectedLongScriptCopiedExactly()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "717\u00b5s 125ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 936802
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testTrailingBytesRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "53\u00b5s 500ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 24681
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testUnknownOutputRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "70\u00b5s 666ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 22631
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testWitnessSerializationRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "214\u00b5s 292ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 102652
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      },
+      "testZeroVectorCountsRejected()": {
+        "breakpoints": {},
+        "counterexample": null,
+        "decoded_logs": [],
+        "duration": "54\u00b5s 917ns",
+        "gas_snapshots": {},
+        "kind": {
+          "Unit": {
+            "gas": 35419
+          }
+        },
+        "labeled_addresses": {},
+        "logs": [],
+        "reason": null,
+        "status": "Success",
+        "traces": []
+      }
+    },
+    "warnings": []
+  }
+}

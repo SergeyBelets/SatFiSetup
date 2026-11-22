@@ -1,0 +1,14 @@
+{
+  "status": "PINNED_ARM64_IMAGE_READY",
+  "checked_at_unix": 1793370473.2846878,
+  "reference": "risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
+  "image_id": "sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
+  "docker_id_representation": "manifest digest; initial comparison to config digest was corrected",
+  "architecture": "arm64",
+  "os": "linux",
+  "size_bytes": 2401604955,
+  "rootfs_layers_matched": 9,
+  "pin_sha256": "db13397290d1ed9c12d9eb788b7eaf599dde61b33b455ece45ac36b83c49f806",
+  "pull_log_sha256": "43a5d80f06f29ac54aff6c9516db9b8348ec0cd433676db8f9551014ce40b387",
+  "scope": "Public image download outside proof sandbox; proving containers require network=none and pull=never"
+}

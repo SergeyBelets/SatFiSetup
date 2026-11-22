@@ -1,0 +1,2 @@
+info: syncing channel updates for '1.88-aarch64-apple-darwin'
+error: could not create temp file /Users/dmitrysubbotin/.rustup/tmp/tkkcnjiptbsiv88u_file: Operation not permitted (os error 1)

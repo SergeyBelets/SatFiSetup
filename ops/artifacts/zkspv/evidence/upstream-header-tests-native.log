@@ -1,0 +1,1339 @@
+ Downloading crates ...
+  Downloaded aead v0.5.2
+  Downloaded hex-literal v0.4.1
+  Downloaded http-body-util v0.1.2
+  Downloaded alloy-hardforks v0.1.3
+  Downloaded alloy-rpc-types-txpool v0.13.0
+  Downloaded alloy-consensus-any v0.13.0
+  Downloaded alloy-rpc-types-debug v0.13.0
+  Downloaded alloy-network-primitives v0.13.0
+  Downloaded alloy-chains v0.1.69
+  Downloaded alloy-rpc-types-any v0.13.0
+  Downloaded bech32 v0.9.1
+  Downloaded hashlink v0.9.1
+  Downloaded alloy-signer v0.13.0
+  Downloaded alloy-evm v0.3.1
+  Downloaded alloy-sol-macro v0.8.26
+  Downloaded alloy-rpc-types-admin v0.13.0
+  Downloaded alloy-json-rpc v0.13.0
+  Downloaded allocator-api2 v0.2.21
+  Downloaded hkdf v0.12.4
+  Downloaded camino v1.1.9
+  Downloaded http-body v1.0.1
+  Downloaded hostname v0.4.0
+  Downloaded heck v0.5.0
+  Downloaded alloy-sol-macro-expander v0.8.26
+  Downloaded alloy-serde v0.13.0
+  Downloaded http v1.2.0
+  Downloaded alloy-rpc-types-mev v0.13.0
+  Downloaded alloy-rpc-types-engine v0.13.0
+  Downloaded alloy-rpc-types v0.13.0
+  Downloaded alloy-dyn-abi v0.8.26
+  Downloaded alloy-network v0.13.0
+  Downloaded hmac v0.8.1
+  Downloaded minimal-lexical v0.2.1
+  Downloaded alloy-rpc-types-anvil v0.13.0
+  Downloaded aho-corasick v1.1.3
+  Downloaded alloy-rpc-types-trace v0.13.0
+  Downloaded icu_properties_data v1.5.0
+  Downloaded ark-ff-macros v0.5.0
+  Downloaded alloy-json-abi v0.8.26
+  Downloaded aes-gcm v0.10.3
+  Downloaded aes v0.8.4
+  Downloaded anstyle-query v1.1.2
+  Downloaded ark-ff-macros v0.4.2
+  Downloaded alloy-rpc-types-eth v0.13.0
+  Downloaded multibase v0.9.1
+  Downloaded humantime-serde v1.1.1
+  Downloaded hmac-drbg v0.3.0
+  Downloaded hickory-proto v0.25.1
+  Downloaded multiaddr v0.18.2
+  Downloaded instant v0.1.13
+  Downloaded if-addrs v0.13.3
+  Downloaded lazy_static v1.5.0
+  Downloaded hyper-rustls v0.27.5
+  Downloaded hickory-resolver v0.25.1
+  Downloaded heapless v0.8.0
+  Downloaded httparse v1.10.0
+  Downloaded hyper v1.6.0
+  Downloaded macro-string v0.1.4
+  Downloaded libsecp256k1-gen-genmult v0.3.0
+  Downloaded include_dir v0.7.4
+  Downloaded jsonrpsee-core v0.24.9
+  Downloaded matchers v0.2.0
+  Downloaded icu_provider_macros v1.5.0
+  Downloaded ark-bn254 v0.5.0
+  Downloaded memoffset v0.9.1
+  Downloaded malloc_buf v0.0.6
+  Downloaded lru v0.12.5
+  Downloaded linked_hash_set v0.1.5
+  Downloaded libsecp256k1-gen-ecmult v0.3.0
+  Downloaded keccak-asm v0.1.4
+  Downloaded anstream v0.6.18
+  Downloaded alloy-signer-local v0.13.0
+  Downloaded anstyle-parse v0.2.6
+  Downloaded alloy-sol-type-parser v0.8.26
+  Downloaded inout v0.1.4
+  Downloaded indenter v0.3.3
+  Downloaded httpdate v1.0.3
+  Downloaded impl-codec v0.6.0
+  Downloaded linked-hash-map v0.5.6
+  Downloaded include_dir_macros v0.7.4
+  Downloaded alloy-genesis v0.13.0
+  Downloaded metrics-derive v0.1.0
+  Downloaded ark-ec v0.5.0
+  Downloaded more-asserts v0.3.1
+  Downloaded jsonrpsee-types v0.24.9
+  Downloaded lock_api v0.4.12
+  Downloaded jsonrpsee-wasm-client v0.24.9
+  Downloaded is_terminal_polyfill v1.70.1
+  Downloaded idna_adapter v1.2.0
+  Downloaded serde_urlencoded v0.7.1
+  Downloaded jsonrpc-async v2.0.2
+  Downloaded jsonrpsee-http-client v0.24.9
+  Downloaded icu_locid_transform v1.5.0
+  Downloaded byte-slice-cast v1.2.2
+  Downloaded ark-ff-macros v0.3.0
+  Downloaded jobserver v0.1.32
+  Downloaded multihash v0.19.5
+  Downloaded lru v0.18.4
+  Downloaded jsonrpsee v0.24.9
+  Downloaded humantime v2.1.0
+  Downloaded bit-set v0.8.0
+  Downloaded anstyle v1.0.10
+  Downloaded ident_case v1.0.1
+  Downloaded iana-time-zone v0.1.61
+  Downloaded jsonrpsee-ws-client v0.24.9
+  Downloaded modular-bitfield-impl v0.11.2
+  Downloaded mime v0.3.17
+  Downloaded jsonrpsee-client-transport v0.24.9
+  Downloaded bitflags v1.3.2
+  Downloaded libsecp256k1-core v0.3.0
+  Downloaded libp2p-identity v0.2.10
+  Downloaded ark-ff v0.3.0
+  Downloaded libloading v0.8.6
+  Downloaded ark-ff-asm v0.5.0
+  Downloaded alloy-sol-macro-input v0.8.26
+  Downloaded ark-serialize v0.3.0
+  Downloaded atomic-waker v1.1.2
+  Downloaded ark-serialize v0.4.2
+  Downloaded boa_profiler v0.20.0
+  Downloaded ark-serialize-derive v0.5.0
+  Downloaded block-padding v0.3.3
+  Downloaded litemap v0.7.4
+  Downloaded block-buffer v0.9.0
+  Downloaded ark-ff-asm v0.3.0
+  Downloaded impl-trait-for-tuples v0.2.3
+  Downloaded memmap2 v0.9.11
+  Downloaded block v0.1.6
+  Downloaded boa_interner v0.20.0
+  Downloaded modular-bitfield v0.11.2
+  Downloaded ark-serialize v0.5.0
+  Downloaded notify v8.0.0
+  Downloaded jsonrpsee-proc-macros v0.24.9
+  Downloaded ipnet v2.11.0
+  Downloaded async-recursion v1.1.1
+  Downloaded metrics v0.24.3
+  Downloaded lz4_flex v0.11.6
+  Downloaded icu_provider v1.5.0
+  Downloaded icu_properties v1.5.1
+  Downloaded indexmap v1.9.3
+  Downloaded log v0.4.26
+  Downloaded jsonrpsee-server v0.24.9
+  Downloaded jsonwebtoken v9.3.1
+  Downloaded icu_locid_transform_data v1.5.0
+  Downloaded js-sys v0.3.77
+  Downloaded boa_macros v0.20.0
+  Downloaded libsecp256k1 v0.7.2
+  Downloaded intrusive-collections v0.9.7
+  Downloaded icu_normalizer v1.5.0
+  Downloaded icu_normalizer_data v1.5.0
+  Downloaded icu_locid v1.5.0
+  Downloaded ark-ff-asm v0.4.2
+  Downloaded hyper-util v0.1.10
+  Downloaded base-x v0.2.11
+  Downloaded mio v1.0.3
+  Downloaded icu_collections v1.5.0
+  Downloaded nom v7.1.3
+  Downloaded aurora-engine-modexp v1.2.0
+  Downloaded ark-relations v0.5.1
+  Downloaded ark-std v0.5.0
+  Downloaded wasm-bindgen v0.2.100
+  Downloaded backoff v0.4.0
+  Downloaded idna v1.0.3
+  Downloaded tower v0.5.2
+  Downloaded asn1_der v0.7.6
+  Downloaded async-trait v0.1.86
+  Downloaded ark-poly v0.5.0
+  Downloaded boa_gc v0.20.0
+  Downloaded bit-vec v0.8.0
+  Downloaded ark-std v0.3.0
+  Downloaded ark-std v0.4.0
+  Downloaded bcs v0.1.6
+  Downloaded alloy-trie v0.7.9
+  Downloaded bytemuck_derive v1.8.1
+  Downloaded bs58 v0.5.1
+  Downloaded boa_string v0.20.0
+  Downloaded moka v0.12.10
+  Downloaded base64-compat v1.0.0
+  Downloaded lz4-sys v1.11.1+lz4-1.10.0
+  Downloaded bincode v1.3.3
+  Downloaded sha3-asm v0.1.4
+  Downloaded semver v0.11.0
+  Downloaded bytemuck v1.21.0
+  Downloaded alloy-sol-types v0.8.26
+  Downloaded ark-ff v0.4.2
+  Downloaded ark-ff v0.5.0
+  Downloaded base64 v0.22.1
+  Downloaded bumpalo v3.17.0
+  Downloaded ark-r1cs-std v0.5.0
+  Downloaded boa_ast v0.20.0
+  Downloaded webpki-roots v0.26.8
+  Downloaded boa_parser v0.20.0
+  Downloaded libz-sys v1.1.21
+  Downloaded zerofrom v0.1.5
+  Downloaded zstd-safe v7.2.3
+  Downloaded zstd v0.13.3
+  Downloaded bindgen v0.70.1
+  Downloaded bitvec v1.0.1
+  Downloaded clap_builder v4.5.31
+  Downloaded bindgen v0.72.1
+  Downloaded fixed-hash v0.8.0
+  Downloaded fnv v1.0.7
+  Downloaded foldhash v0.1.4
+  Downloaded siphasher v1.0.1
+  Downloaded tagptr v0.2.0
+  Downloaded educe v0.6.0
+  Downloaded alloy-rpc-types-beacon v0.13.0
+  Downloaded soketto v0.8.1
+  Downloaded spin v0.9.9
+  Downloaded blst v0.3.14
+  Downloaded curve25519-dalek v4.1.3
+  Downloaded phf_shared v0.11.3
+  Downloaded scopeguard v1.2.0
+  Downloaded strum v0.27.1
+  Downloaded option-ext v0.2.0
+  Downloaded phf_generator v0.11.3
+  Downloaded opaque-debug v0.3.1
+  Downloaded quick-error v1.2.3
+  Downloaded unsigned-varint v0.8.0
+  Downloaded concat-kdf v0.1.0
+  Downloaded crypto-mac v0.8.0
+  Downloaded yoke-derive v0.7.5
+  Downloaded derive_builder_macro v0.20.2
+  Downloaded delay_map v0.4.0
+  Downloaded revm-primitives v17.0.0
+  Downloaded uint v0.10.0
+  Downloaded phf_macros v0.11.3
+  Downloaded rlimit v0.10.2
+  Downloaded risc0-zkvm-platform v2.2.1
+  Downloaded synstructure v0.13.1
+  Downloaded wasm-bindgen-backend v0.2.100
+  Downloaded yoke v0.7.5
+  Downloaded dashmap v6.1.0
+  Downloaded revm-database-interface v2.0.0
+  Downloaded snap v1.1.1
+  Downloaded smallvec v1.14.0
+  Downloaded op-revm v2.0.0
+  Downloaded rustls-platform-verifier v0.5.1
+  Downloaded sharded-slab v0.1.7
+  Downloaded quick-protobuf v0.8.1
+  Downloaded quinn v0.11.5
+  Downloaded secp256k1 v0.30.0
+  Downloaded ark-bls12-381 v0.5.0
+  Downloaded foreign-types v0.5.0
+  Downloaded errno v0.3.10
+  Downloaded num-conv v0.1.0
+  Downloaded powerfmt v0.2.0
+  Downloaded wasm-bindgen-shared v0.2.100
+  Downloaded zeroize_derive v1.4.2
+  Downloaded defmt-parser v1.1.0
+  Downloaded risc0-zkp v3.0.2
+  Downloaded unicode-segmentation v1.12.0
+  Downloaded dirs-sys-next v0.1.2
+  Downloaded rustc-hash v2.1.1
+  Downloaded syn v3.0.9
+  Downloaded libgit2-sys v0.18.3+1.9.2
+  Downloaded primeorder v0.13.6
+  Downloaded num-complex v0.4.6
+  Downloaded foldhash v0.2.0
+  Downloaded time v0.3.37
+  Downloaded num-integer v0.1.46
+  Downloaded deranged v0.3.11
+  Downloaded critical-section v1.2.0
+  Downloaded resolv-conf v0.7.1
+  Downloaded revm-bytecode v2.0.0
+  Downloaded vergen v9.0.4
+  Downloaded threadpool v1.8.1
+  Downloaded semver v1.0.25
+  Downloaded revm v21.0.0
+  Downloaded enr v0.13.0
+  Downloaded utf8_iter v1.0.4
+  Downloaded tracing-journald v0.3.1
+  Downloaded rayon-core v1.12.1
+  Downloaded data-encoding-macro v0.1.17
+  Downloaded futures-macro v0.3.31
+  Downloaded fast-float2 v0.2.3
+  Downloaded tokio-macros v2.5.0
+  Downloaded num-bigint v0.4.6
+  Downloaded tracing-futures v0.2.5
+  Downloaded utf8parse v0.2.2
+  Downloaded universal-hash v0.5.1
+  Downloaded defmt v0.3.101
+  Downloaded data-encoding-macro-internal v0.1.15
+  Downloaded hashbrown v0.14.5
+  Downloaded discv5 v0.9.1
+  Downloaded futures-io v0.3.31
+  Downloaded hash32 v0.3.1
+  Downloaded tinystr v0.7.6
+  Downloaded faster-hex v0.10.1
+  Downloaded bzip2-sys v0.1.12+1.0.8
+  Downloaded data-encoding v2.8.0
+  Downloaded ethereum_ssz_derive v0.8.3
+  Downloaded funty v2.0.0
+  Downloaded futures-executor v0.3.31
+  Downloaded rlp v0.5.2
+  Downloaded fastrlp v0.4.0
+  Downloaded num-iter v0.1.45
+  Downloaded pollster v0.4.0
+  Downloaded num v0.4.3
+  Downloaded clang-sys v1.8.1
+  Downloaded rustc-hex v2.1.0
+  Downloaded sha1 v0.10.6
+  Downloaded ucd-trie v0.1.7
+  Downloaded want v0.3.1
+  Downloaded rustls v0.23.25
+  Downloaded num-rational v0.4.2
+  Downloaded futures-timer v3.0.3
+  Downloaded crossbeam-deque v0.8.6
+  Downloaded quinn-udp v0.5.9
+  Downloaded pem v3.0.5
+  Downloaded glob v0.3.2
+  Downloaded num_enum v0.7.4
+  Downloaded sha2 v0.9.9
+  Downloaded wyz v0.5.1
+  Downloaded revm-context v2.0.0
+  Downloaded uint v0.9.5
+  Downloaded substrate-bn v0.6.0
+  Downloaded ethereum_ssz v0.8.3
+  Downloaded rustls-pki-types v1.11.0
+  Downloaded clap v4.5.31
+  Downloaded ed25519-dalek v2.1.1
+  Downloaded boa_engine v0.20.0
+  Downloaded hashbrown v0.12.3
+  Downloaded h2 v0.4.19
+  Downloaded regress v0.10.1
+  Downloaded regex-syntax v0.8.5
+  Downloaded page_size v0.6.0
+  Downloaded polyval v0.6.2
+  Downloaded tracing-logfmt v0.3.5
+  Downloaded tracing-log v0.2.0
+  Downloaded tower v0.4.13
+  Downloaded metal v0.29.0
+  Downloaded colorchoice v1.0.3
+  Downloaded regex-automata v0.4.9
+  Downloaded wait-timeout v0.2.1
+  Downloaded zerofrom-derive v0.1.5
+  Downloaded tracing-subscriber v0.2.25
+  Downloaded chrono v0.4.39
+  Downloaded enum-as-inner v0.6.1
+  Downloaded form_urlencoded v1.2.1
+  Downloaded cipher v0.4.4
+  Downloaded num_enum_derive v0.7.4
+  Downloaded core-foundation-sys v0.8.7
+  Downloaded portable-atomic v1.11.0
+  Downloaded git2 v0.20.4
+  Downloaded strsim v0.11.1
+  Downloaded tower-service v0.3.3
+  Downloaded tap v1.0.1
+  Downloaded foreign-types-macros v0.2.3
+  Downloaded dunce v1.0.5
+  Downloaded filetime v0.2.25
+  Downloaded num_cpus v1.16.0
+  Downloaded rolling-file v0.2.0
+  Downloaded pin-project-internal v1.1.9
+  Downloaded vergen-git2 v1.0.5
+  Downloaded tracing-appender v0.2.3
+  Downloaded signal-hook-registry v1.4.2
+  Downloaded schnellru v0.2.4
+  Downloaded core-foundation v0.9.4
+  Downloaded tokio v1.44.2
+  Downloaded rustls-pemfile v2.2.0
+  Downloaded op-alloy-consensus v0.12.0
+  Downloaded revm-context-interface v2.0.0
+  Downloaded proc-macro-error2 v2.0.1
+  Downloaded darling v0.20.10
+  Downloaded darling_core v0.20.10
+  Downloaded librocksdb-sys v0.17.3+10.4.2
+  Downloaded tracing-serde v0.2.0
+  Downloaded tokio-rustls v0.26.1
+  Downloaded futures-sink v0.3.31
+  Downloaded stability v0.2.1
+  Downloaded serde_with v3.12.0
+  Downloaded zerovec v0.10.4
+  Downloaded tracing-subscriber v0.3.20
+  Downloaded writeable v0.5.5
+  Downloaded core-foundation v0.10.0
+  Downloaded derive_builder_core v0.20.2
+  Downloaded fastrand v2.3.0
+  Downloaded ed25519 v2.2.3
+  Downloaded ghash v0.5.1
+  Downloaded pin-project v1.1.9
+  Downloaded parking_lot v0.12.3
+  Downloaded getrandom v0.3.2
+  Downloaded revm-database v2.0.0
+  Downloaded rustc-hash v1.1.0
+  Downloaded same-file v1.0.6
+  Downloaded sptr v0.3.2
+  Downloaded tokio-stream v0.1.17
+  Downloaded tokio-util v0.7.13
+  Downloaded wasm-bindgen-macro v0.2.100
+  Downloaded clap_derive v4.5.28
+  Downloaded digest v0.9.0
+  Downloaded futures v0.3.31
+  Downloaded c-kzg v2.1.1
+  Downloaded gloo-timers v0.2.6
+  Downloaded p256 v0.13.2
+  Downloaded num_threads v0.1.7
+  Downloaded notify-types v2.0.0
+  Downloaded sync_wrapper v1.0.2
+  Downloaded dirs v5.0.1
+  Downloaded untrusted v0.9.0
+  Downloaded cexpr v0.6.0
+  Downloaded objc v0.2.7
+  Downloaded strum_macros v0.27.1
+  Downloaded walkdir v2.5.0
+  Downloaded revm-inspector v2.0.0
+  Downloaded security-framework v3.2.0
+  Downloaded percent-encoding v2.3.1
+  Downloaded hashbrown v0.17.1
+  Downloaded proc-macro-error-attr2 v2.0.0
+  Downloaded enum-ordinalize v4.3.0
+  Downloaded futures-channel v0.3.31
+  Downloaded primitive-types v0.12.2
+  Downloaded semver-parser v0.10.3
+  Downloaded uuid v1.12.1
+  Downloaded pin-utils v0.1.0
+  Downloaded route-recognizer v0.3.1
+  Downloaded url v2.5.4
+  Downloaded ethereum_hashing v0.7.0
+  Downloaded foreign-types-shared v0.3.1
+  Downloaded displaydoc v0.2.5
+  Downloaded regex v1.11.1
+  Downloaded radium v0.7.0
+  Downloaded tower-http v0.5.2
+  Downloaded rustversion v1.0.19
+  Downloaded pest v2.7.14
+  Downloaded revm-precompile v18.0.0
+  Downloaded parity-scale-codec-derive v3.6.12
+  Downloaded core-graphics-types v0.1.3
+  Downloaded socket2 v0.5.8
+  Downloaded zstd-sys v2.0.14+zstd.1.5.7
+  Downloaded aquamarine v0.6.0
+  Downloaded reqwest v0.12.15
+  Downloaded shellexpand v3.1.0
+  Downloaded security-framework-sys v2.14.0
+  Downloaded ryu-js v1.0.1
+  Downloaded stable_deref_trait v1.2.0
+  Downloaded tinyvec_macros v0.1.1
+  Downloaded tree_hash_derive v0.9.1
+  Downloaded time-macros v0.2.19
+  Downloaded thin-vec v0.2.16
+  Downloaded tinyvec v1.8.1
+  Downloaded syn-solidity v0.8.26
+  Downloaded tree_hash v0.9.1
+  Downloaded cargo_metadata v0.19.2
+  Downloaded convert_case v0.7.1
+  Downloaded ctr v0.9.2
+  Downloaded defmt-macros v1.2.0
+  Downloaded alloy-consensus v0.13.0
+  Downloaded nu-ansi-term v0.50.1
+  Downloaded rustls-webpki v0.103.0
+  Downloaded tower-layer v0.3.3
+  Downloaded thread_local v1.1.8
+  Downloaded send_wrapper v0.4.0
+  Downloaded tikv-jemalloc-sys v0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7
+  Downloaded vcpkg v0.2.15
+  Downloaded darling_macro v0.20.10
+  Downloaded derivative v2.2.0
+  Downloaded defmt v1.2.0
+  Downloaded crossbeam-epoch v0.9.20
+  Downloaded clap_lex v0.7.4
+  Downloaded cargo-platform v0.1.9
+  Downloaded enumn v0.1.14
+  Downloaded fsevent-sys v4.1.0
+  Downloaded fastrlp v0.3.1
+  Downloaded futures-util v0.3.31
+  Downloaded futures-utils-wasm v0.1.0
+  Downloaded phf v0.11.3
+  Downloaded futures-task v0.3.31
+  Downloaded quinn-proto v0.11.8
+  Downloaded revm-interpreter v17.0.0
+  Downloaded risc0-core v3.0.0
+  Downloaded roaring v0.10.10
+  Downloaded utf16_iter v1.0.5
+  Downloaded serde_spanned v0.6.8
+  Downloaded rusty-fork v0.3.0
+  Downloaded static_assertions v1.1.0
+  Downloaded slab v0.4.9
+  Downloaded tempfile v3.20.0
+  Downloaded toml v0.8.20
+  Downloaded derive-where v1.2.7
+  Downloaded dirs-next v2.0.0
+  Downloaded ethereum_serde_utils v0.7.0
+  Downloaded op-alloy-rpc-types-engine v0.12.0
+  Downloaded parking_lot_core v0.9.10
+  Downloaded rand_chacha v0.9.0
+  Downloaded revm-handler v2.0.0
+  Downloaded ring v0.17.12
+  Downloaded rustc_version v0.4.1
+  Downloaded enum-ordinalize-derive v4.3.1
+  Downloaded nybbles v0.3.4
+  Downloaded rustc_version v0.3.3
+  Downloaded eyre v0.6.12
+  Downloaded rustix v1.0.7
+  Downloaded try-lock v0.2.5
+  Downloaded crossbeam-channel v0.5.15
+  Downloaded parity-scale-codec v3.6.12
+  Downloaded write16 v1.0.0
+  Downloaded serde_with_macros v3.12.0
+  Downloaded revm-state v2.0.0
+  Downloaded simple_asn1 v0.6.2
+  Downloaded zerovec-derive v0.10.3
+  Downloaded rocksdb v0.24.0
+  Downloaded sysinfo v0.33.1
+  Downloaded vergen-lib v0.1.6
+  Downloaded derive_builder v0.20.2
+  Downloaded futures-core v0.3.31
+  Downloaded rayon v1.10.0
+  Downloaded dirs-sys v0.4.1
+  Downloaded crossbeam-utils v0.8.21
+  Downloaded wasm-bindgen-macro-support v0.2.100
+  Downloaded pkg-config v0.3.31
+  Downloaded time-core v0.1.2
+    Blocking waiting for file lock on package cache
+   Compiling libc v0.2.170
+   Compiling portable-atomic v1.11.0
+   Compiling critical-section v1.2.0
+   Compiling generic-array v0.14.7
+   Compiling subtle v2.6.1
+   Compiling byteorder v1.5.0
+   Compiling memchr v2.7.4
+   Compiling zeroize_derive v1.4.2
+   Compiling equivalent v1.0.2
+   Compiling zerocopy v0.7.35
+   Compiling bytes v1.11.1
+   Compiling log v0.4.26
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.1.4
+   Compiling zeroize v1.8.1
+   Compiling arrayvec v0.7.6
+   Compiling hashbrown v0.15.2
+   Compiling ppv-lite86 v0.2.20
+   Compiling fnv v1.0.7
+   Compiling smallvec v1.14.0
+   Compiling unicode-segmentation v1.12.0
+   Compiling getrandom v0.3.2
+   Compiling alloy-rlp v0.3.11
+   Compiling convert_case v0.7.1
+   Compiling const-hex v1.14.0
+   Compiling serde v1.0.218
+   Compiling serde_json v1.0.139
+   Compiling derive_more-impl v2.0.1
+   Compiling thiserror v2.0.12
+   Compiling getrandom v0.2.15
+   Compiling jobserver v0.1.32
+   Compiling rand_core v0.6.4
+   Compiling cc v1.2.15
+   Compiling once_cell v1.21.1
+   Compiling cpufeatures v0.2.17
+   Compiling rand_chacha v0.3.1
+   Compiling rand v0.8.6
+   Compiling crypto-common v0.1.6
+   Compiling block-buffer v0.10.4
+   Compiling der v0.7.9
+   Compiling digest v0.10.7
+   Compiling hmac v0.12.1
+   Compiling signature v2.2.0
+   Compiling sha2-asm v0.6.4
+   Compiling ff v0.13.0
+   Compiling crypto-bigint v0.5.5
+   Compiling group v0.13.0
+   Compiling rfc6979 v0.4.0
+   Compiling tracing-core v0.1.33
+   Compiling ruint v1.16.0
+   Compiling spki v0.7.3
+   Compiling derive_more v2.0.1
+   Compiling pkcs8 v0.10.2
+   Compiling sec1 v0.7.3
+   Compiling tracing v0.1.41
+   Compiling strsim v0.11.1
+   Compiling indexmap v2.7.1
+   Compiling either v1.15.0
+   Compiling elliptic-curve v0.13.8
+   Compiling winnow v0.7.3
+   Compiling ident_case v1.0.1
+   Compiling parking_lot_core v0.9.10
+   Compiling darling_core v0.20.10
+   Compiling ecdsa v0.16.9
+   Compiling sha2 v0.10.8
+   Compiling scopeguard v1.2.0
+   Compiling k256 v0.13.4
+   Compiling mio v1.0.3
+   Compiling socket2 v0.5.8
+   Compiling tokio-macros v2.5.0
+   Compiling rustversion v1.0.19
+   Compiling alloy-primitives v0.8.26
+   Compiling futures-core v0.3.31
+   Compiling lock_api v0.4.12
+   Compiling futures-sink v0.3.31
+   Compiling num-traits v0.2.19
+   Compiling bitflags v2.8.0
+   Compiling stable_deref_trait v1.2.0
+   Compiling heck v0.5.0
+   Compiling slab v0.4.9
+   Compiling synstructure v0.13.1
+   Compiling futures-io v0.3.31
+   Compiling itertools v0.13.0
+   Compiling parking_lot v0.12.3
+   Compiling derive_more-impl v1.0.0
+   Compiling ahash v0.8.11
+   Compiling darling_macro v0.20.10
+   Compiling signal-hook-registry v1.4.2
+   Compiling darling v0.20.10
+   Compiling tokio v1.44.2
+   Compiling futures-channel v0.3.31
+   Compiling blst v0.3.14
+   Compiling zerofrom-derive v0.1.5
+   Compiling num_cpus v1.16.0
+   Compiling threadpool v1.8.1
+   Compiling yoke-derive v0.7.5
+   Compiling alloy-eip2930 v0.1.0
+   Compiling futures-macro v0.3.31
+   Compiling serde_with_macros v3.12.0
+   Compiling zerofrom v0.1.5
+   Compiling pin-utils v0.1.0
+   Compiling futures-task v0.3.31
+   Compiling alloy-eip2124 v0.1.0
+   Compiling futures-util v0.3.31
+   Compiling derive_more v1.0.0
+   Compiling serde_with v3.12.0
+   Compiling zerovec-derive v0.10.3
+   Compiling displaydoc v0.2.5
+   Compiling toml_edit v0.22.24
+   Compiling yoke v0.7.5
+   Compiling syn v1.0.109
+   Compiling ethereum_serde_utils v0.7.0
+   Compiling proc-macro-crate v3.2.0
+   Compiling c-kzg v2.1.1
+   Compiling zerovec v0.10.4
+   Compiling http v1.2.0
+   Compiling writeable v0.5.5
+   Compiling litemap v0.7.4
+   Compiling ethereum_ssz v0.8.3
+   Compiling icu_provider_macros v1.5.0
+   Compiling alloy-eip7702 v0.5.1
+   Compiling ethereum_ssz_derive v0.8.3
+   Compiling alloy-serde v0.13.0
+   Compiling icu_locid_transform_data v1.5.0
+   Compiling icu_properties_data v1.5.0
+   Compiling nybbles v0.3.4
+   Compiling tinystr v0.7.6
+   Compiling icu_collections v1.5.0
+   Compiling write16 v1.0.0
+   Compiling icu_normalizer_data v1.5.0
+   Compiling utf8_iter v1.0.4
+   Compiling utf16_iter v1.0.5
+   Compiling alloy-trie v0.7.9
+   Compiling pkg-config v0.3.31
+   Compiling rustc-hash v2.1.1
+   Compiling num-integer v0.1.46
+   Compiling icu_locid v1.5.0
+   Compiling alloy-eips v0.13.0
+   Compiling crossbeam-utils v0.8.21
+   Compiling num-bigint v0.4.6
+   Compiling icu_provider v1.5.0
+   Compiling num_enum_derive v0.7.4
+   Compiling alloy-sol-type-parser v0.8.26
+   Compiling alloy-consensus v0.13.0
+   Compiling num_enum v0.7.4
+   Compiling secp256k1-sys v0.10.1
+   Compiling proc-macro-error-attr2 v2.0.0
+   Compiling icu_locid_transform v1.5.0
+   Compiling radium v0.7.0
+   Compiling tap v1.0.1
+   Compiling proc-macro-error2 v2.0.1
+   Compiling icu_properties v1.5.1
+   Compiling alloy-json-abi v0.8.26
+   Compiling syn-solidity v0.8.26
+   Compiling macro-string v0.1.4
+   Compiling enumn v0.1.14
+   Compiling dunce v1.0.5
+   Compiling static_assertions v1.1.0
+   Compiling revm-primitives v17.0.0
+   Compiling wyz v0.5.1
+   Compiling jsonrpsee-types v0.24.9
+   Compiling ripemd v0.1.3
+   Compiling core-foundation-sys v0.8.7
+   Compiling untrusted v0.9.0
+   Compiling funty v2.0.0
+   Compiling base64 v0.22.1
+   Compiling alloy-sol-macro-input v0.8.26
+   Compiling tokio-util v0.7.13
+   Compiling icu_normalizer v1.5.0
+   Compiling bitvec v1.0.1
+   Compiling alloy-sol-macro-expander v0.8.26
+   Compiling zstd-sys v2.0.14+zstd.1.5.7
+   Compiling aho-corasick v1.1.3
+   Compiling crossbeam-epoch v0.9.20
+   Compiling regex-syntax v0.8.5
+   Compiling spin v0.9.9
+   Compiling lazy_static v1.5.0
+   Compiling secp256k1 v0.30.0
+   Compiling zstd-safe v7.2.3
+   Compiling percent-encoding v2.3.1
+   Compiling form_urlencoded v1.2.1
+   Compiling idna_adapter v1.2.0
+   Compiling ring v0.17.12
+   Compiling enum-ordinalize-derive v4.3.1
+   Compiling idna v1.0.3
+   Compiling revm-bytecode v2.0.0
+   Compiling enum-ordinalize v4.3.0
+   Compiling alloy-sol-macro v0.8.26
+   Compiling regex-automata v0.4.9
+   Compiling revm-state v2.0.0
+   Compiling alloy-sol-types v0.8.26
+   Compiling ark-std v0.5.0
+   Compiling revm-database-interface v2.0.0
+   Compiling strum_macros v0.27.1
+   Compiling keccak v0.1.6
+   Compiling ark-serialize-derive v0.5.0
+   Compiling sha3 v0.10.8
+   Compiling ark-serialize v0.5.0
+   Compiling educe v0.6.0
+   Compiling ark-ff-macros v0.5.0
+   Compiling url v2.5.4
+   Compiling regex v1.11.1
+   Compiling strum v0.27.1
+   Compiling ark-ff-asm v0.5.0
+   Compiling rayon-core v1.12.1
+   Compiling semver v1.0.25
+   Compiling crossbeam-deque v0.8.6
+   Compiling modular-bitfield-impl v0.11.2
+   Compiling alloy-genesis v0.13.0
+   Compiling ark-ff v0.5.0
+   Compiling itertools v0.14.0
+   Compiling reth-codecs-derive v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling rayon v1.10.0
+   Compiling modular-bitfield v0.11.2
+   Compiling num-rational v0.4.2
+   Compiling num-iter v0.1.45
+   Compiling futures-executor v0.3.31
+   Compiling num-complex v0.4.6
+   Compiling futures v0.3.31
+   Compiling revm-context-interface v2.0.0
+   Compiling alloy-network-primitives v0.13.0
+   Compiling num v0.4.3
+   Compiling alloy-consensus-any v0.13.0
+   Compiling primeorder v0.13.6
+   Compiling rustc-hex v2.1.0
+   Compiling p256 v0.13.2
+   Compiling substrate-bn v0.6.0
+   Compiling aurora-engine-modexp v1.2.0
+   Compiling revm-database v2.0.0
+   Compiling derive-where v1.2.7
+   Compiling revm-interpreter v17.0.0
+   Compiling alloy-chains v0.1.69
+   Compiling num-conv v0.1.0
+   Compiling time-core v0.1.2
+   Compiling powerfmt v0.2.0
+   Compiling deranged v0.3.11
+   Compiling alloy-hardforks v0.1.3
+   Compiling revm-context v2.0.0
+   Compiling rustc_version v0.4.1
+   Compiling num_threads v0.1.7
+   Compiling bytemuck_derive v1.8.1
+   Compiling pin-project-internal v1.1.9
+   Compiling curve25519-dalek v4.1.3
+   Compiling async-trait v0.1.86
+   Compiling metrics v0.24.3
+   Compiling bytemuck v1.21.0
+   Compiling pin-project v1.1.9
+   Compiling ed25519 v2.2.3
+   Compiling metrics-derive v0.1.0
+   Compiling ed25519-dalek v2.1.1
+   Compiling time-macros v0.2.19
+   Compiling tokio-stream v0.1.17
+   Compiling enr v0.13.0
+   Compiling alloy-rpc-types-eth v0.13.0
+   Compiling httparse v1.10.0
+   Compiling utf8parse v0.2.2
+   Compiling rustls-pki-types v1.11.0
+   Compiling anstyle v1.0.10
+   Compiling colorchoice v1.0.3
+   Compiling anstyle-parse v0.2.6
+   Compiling time v0.3.37
+   Compiling is_terminal_polyfill v1.70.1
+   Compiling anstyle-query v1.1.2
+   Compiling reth-network-peers v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling anstream v0.6.18
+   Compiling reth-static-file-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling clap_lex v0.7.4
+   Compiling rustls v0.23.25
+   Compiling clap_builder v4.5.31
+   Compiling clap_derive v4.5.28
+   Compiling glob v0.3.2
+   Compiling ark-poly v0.5.0
+   Compiling clang-sys v1.8.1
+   Compiling reth-ethereum-forks v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling ark-ec v0.5.0
+   Compiling atomic-waker v1.1.2
+   Compiling tower-service v0.3.3
+   Compiling sharded-slab v0.1.7
+   Compiling clap v4.5.31
+   Compiling crossbeam-channel v0.5.15
+   Compiling tracing-serde v0.2.0
+   Compiling thread_local v1.1.8
+   Compiling eyre v0.6.12
+   Compiling nu-ansi-term v0.50.1
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.1
+   Compiling http-body v1.0.1
+   Compiling minimal-lexical v0.2.1
+   Compiling httpdate v1.0.3
+   Compiling ark-bn254 v0.5.0
+   Compiling ark-bls12-381 v0.5.0
+   Compiling indenter v0.3.3
+   Compiling nom v7.1.3
+   Compiling reth-metrics v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling iana-time-zone v0.1.61
+   Compiling matchers v0.2.0
+   Compiling revm-precompile v18.0.0
+   Compiling tracing-subscriber v0.3.20
+   Compiling libloading v0.8.6
+   Compiling wasm-bindgen-shared v0.2.100
+   Compiling revm-handler v2.0.0
+   Compiling cexpr v0.6.0
+   Compiling revm-inspector v2.0.0
+   Compiling chrono v0.4.39
+   Compiling revm v21.0.0
+   Compiling alloy-evm v0.3.1
+   Compiling borsh-derive v1.5.5
+   Compiling tower-layer v0.3.3
+   Compiling tracing-logfmt v0.3.5
+   Compiling rolling-file v0.2.0
+   Compiling tracing-appender v0.2.3
+   Compiling tracing-journald v0.3.1
+   Compiling simple_asn1 v0.6.2
+   Compiling pem v3.0.5
+   Compiling rand_core v0.9.3
+   Compiling borsh v1.5.5
+   Compiling zstd v0.13.3
+   Compiling bumpalo v3.17.0
+   Compiling jsonwebtoken v9.3.1
+   Compiling reth-tracing v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling http-body-util v0.1.2
+   Compiling reth-zstd-compressors v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling wasm-bindgen-backend v0.2.100
+   Compiling reth-codecs v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling hashbrown v0.13.2
+   Compiling impl-trait-for-tuples v0.2.3
+   Compiling byte-slice-cast v1.2.2
+   Compiling alloy-rpc-types-engine v0.13.0
+   Compiling wasm-bindgen-macro-support v0.2.100
+   Compiling rustls-webpki v0.103.0
+   Compiling roaring v0.10.10
+   Compiling wasm-bindgen v0.2.100
+   Compiling reth-primitives-traits v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-prune-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling parity-scale-codec v3.6.12
+   Compiling reth-trie-common v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-ethereum-primitives v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-storage-errors v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-chainspec v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-db-models v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-execution-errors v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling wasm-bindgen-macro v0.2.100
+   Compiling reth-fs-util v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling uuid v1.12.1
+   Compiling h2 v0.4.19
+   Compiling core-foundation v0.10.0
+   Compiling reth-stages-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-execution-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-db-api v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-trie-sparse v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-consensus v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling js-sys v0.3.77
+   Compiling security-framework-sys v2.14.0
+   Compiling hashbrown v0.14.5
+   Compiling send_wrapper v0.4.0
+   Compiling reth-trie v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-errors v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling webpki-roots v0.26.8
+   Compiling tinyvec_macros v0.1.1
+   Compiling digest v0.9.0
+   Compiling tinyvec v1.8.1
+   Compiling libsecp256k1-core v0.3.0
+   Compiling block-padding v0.3.3
+   Compiling reth-trie-db v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling tokio-rustls v0.26.1
+   Compiling reth-storage-api v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling bincode v1.3.3
+   Compiling opaque-debug v0.3.1
+   Compiling inout v0.1.4
+   Compiling blake3 v1.6.0
+   Compiling data-encoding v2.8.0
+   Compiling siphasher v1.0.1
+   Compiling reth-chain-state v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling phf_shared v0.11.3
+   Compiling gloo-timers v0.2.6
+   Compiling futures-timer v3.0.3
+   Compiling cipher v0.4.4
+   Compiling hyper v1.6.0
+   Compiling jsonrpsee-core v0.24.9
+   Compiling libsecp256k1-gen-genmult v0.3.0
+   Compiling libsecp256k1-gen-ecmult v0.3.0
+   Compiling core-foundation v0.9.4
+   Compiling reth-net-banlist v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling blake2 v0.10.6
+   Compiling crypto-mac v0.8.0
+   Compiling malloc_buf v0.0.6
+   Compiling foreign-types-macros v0.2.3
+   Compiling bitflags v1.3.2
+   Compiling hyper-util v0.1.10
+   Compiling humantime v2.1.0
+   Compiling vcpkg v0.2.15
+   Compiling hyper-rustls v0.27.5
+   Compiling bindgen v0.72.1
+   Compiling heapless v0.8.0
+   Compiling foreign-types-shared v0.3.1
+   Compiling libz-sys v1.1.21
+   Compiling humantime-serde v1.1.1
+   Compiling foreign-types v0.5.0
+   Compiling core-graphics-types v0.1.3
+   Compiling objc v0.2.7
+   Compiling hmac v0.8.1
+   Compiling libsecp256k1 v0.7.2
+   Compiling prost v0.13.5
+   Compiling phf_generator v0.11.3
+   Compiling security-framework v3.2.0
+   Compiling reth-eth-wire-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling lz4-sys v1.11.1+lz4-1.10.0
+   Compiling tikv-jemalloc-sys v0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7
+   Compiling sha1 v0.10.6
+   Compiling block-buffer v0.9.0
+   Compiling faster-hex v0.10.1
+   Compiling hash32 v0.3.1
+   Compiling stability v0.2.1
+   Compiling sptr v0.3.2
+   Compiling block v0.1.6
+   Compiling bindgen v0.70.1
+   Compiling route-recognizer v0.3.1
+   Compiling fast-float2 v0.2.3
+   Compiling ipnet v2.11.0
+   Compiling risc0-zkp v3.0.2
+   Compiling boa_string v0.20.0
+   Compiling risc0-zkvm-platform v2.2.1
+   Compiling metal v0.29.0
+   Compiling data-encoding-macro-internal v0.1.15
+   Compiling sha2 v0.9.9
+   Compiling rustls-platform-verifier v0.5.1
+   Compiling soketto v0.8.1
+   Compiling phf_macros v0.11.3
+   Compiling ics23 v0.12.0
+   Compiling hmac-drbg v0.3.0
+   Compiling schemars v0.8.22
+   Compiling reth-network-types v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling reth-payload-primitives v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling risc0-core v3.0.0
+   Compiling num-derive v0.3.3
+   Compiling derive_builder_core v0.20.2
+   Compiling boa_macros v0.20.0
+   Compiling itertools v0.10.5
+   Compiling universal-hash v0.5.1
+   Compiling thin-vec v0.2.16
+   Compiling rustc-hash v1.1.0
+   Compiling camino v1.1.9
+   Compiling boa_profiler v0.20.0
+   Compiling hex-literal v0.4.1
+   Compiling unsigned-varint v0.8.0
+   Compiling jmt v0.11.0 (https://github.com/penumbra-zone/jmt.git?rev=550a2f2#550a2f20)
+   Compiling multihash v0.19.5
+   Compiling boa_gc v0.20.0
+   Compiling librocksdb-sys v0.17.3+10.4.2
+   Compiling polyval v0.6.2
+   Compiling derive_builder_macro v0.20.2
+   Compiling reth-payload-builder-primitives v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling sov-keys v2.8.0 (/private/tmp/citrea-2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/sovereign-sdk/module-system/sov-keys)
+   Compiling phf v0.11.3
+   Compiling data-encoding-macro v0.1.17
+   Compiling dashmap v6.1.0
+   Compiling tower v0.4.13
+   Compiling libgit2-sys v0.18.3+1.9.2
+   Compiling vergen-lib v0.1.6
+   Compiling sync_wrapper v1.0.2
+   Compiling hkdf v0.12.4
+   Compiling memoffset v0.9.1
+   Compiling quick-protobuf v0.8.1
+   Compiling bs58 v0.5.1
+   Compiling base-x v0.2.11
+   Compiling asn1_der v0.7.6
+   Compiling multibase v0.9.1
+   Compiling libp2p-identity v0.2.10
+   Compiling tower v0.5.2
+   Compiling boa_interner v0.20.0
+   Compiling sov-rollup-interface v2.8.0 (/private/tmp/citrea-2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/sovereign-sdk/rollup-interface)
+   Compiling derive_builder v0.20.2
+   Compiling reth-mdbx-sys v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling reth-engine-primitives v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling ghash v0.5.1
+   Compiling reth-network-p2p v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling jsonrpsee-client-transport v0.24.9
+   Compiling schnellru v0.2.4
+   Compiling rand_chacha v0.9.0
+   Compiling rustls-pemfile v2.2.0
+   Compiling reth-tokio-util v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling tracing-futures v0.2.5
+   Compiling serde_urlencoded v0.7.1
+   Compiling vergen v9.0.4
+   Compiling cargo-platform v0.1.9
+   Compiling aead v0.5.2
+   Compiling include_dir_macros v0.7.4
+   Compiling rustix v1.0.7
+   Compiling mime v0.3.17
+   Compiling moka v0.12.10
+   Compiling reqwest v0.12.15
+   Compiling include_dir v0.7.4
+   Compiling cargo_metadata v0.19.2
+   Compiling aes-gcm v0.10.3
+   Compiling reth-tasks v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)
+   Compiling rand v0.9.4
+   Compiling jsonrpsee-ws-client v0.24.9
+   Compiling boa_ast v0.20.0
+   Compiling multiaddr v0.18.2
+rustc-LLVM ERROR: IO failure on output stream: No space left on device
+error: could not compile `reqwest` (lib)
+
+Caused by:
+  process didn't exit successfully: `/private/tmp/satoshifi-zkspv-rustup/toolchains/1.88.0-aarch64-apple-darwin/bin/rustc --crate-name reqwest --edition=2021 /private/tmp/satoshifi-zkspv-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.15/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --warn=unexpected_cfgs --check-cfg 'cfg(reqwest_unstable)' --cfg 'feature="__rustls"' --cfg 'feature="__rustls-ring"' --cfg 'feature="__tls"' --cfg 'feature="h2"' --cfg 'feature="http2"' --cfg 'feature="json"' --cfg 'feature="rustls-tls"' --cfg 'feature="rustls-tls-webpki-roots"' --cfg 'feature="rustls-tls-webpki-roots-no-provider"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("__rustls", "__rustls-ring", "__tls", "blocking", "brotli", "charset", "cookies", "default", "default-tls", "deflate", "gzip", "h2", "hickory-dns", "http2", "http3", "json", "macos-system-configuration", "multipart", "native-tls", "native-tls-alpn", "native-tls-vendored", "rustls-tls", "rustls-tls-manual-roots", "rustls-tls-manual-roots-no-provider", "rustls-tls-native-roots", "rustls-tls-native-roots-no-provider", "rustls-tls-no-provider", "rustls-tls-webpki-roots", "rustls-tls-webpki-roots-no-provider", "socks", "stream", "trust-dns", "zstd"))' -C metadata=5c67802e193011ea -C extra-filename=-be4e938b98eeee29 --out-dir /private/tmp/satoshifi-zkspv-target/debug/deps -L dependency=/private/tmp/satoshifi-zkspv-target/debug/deps --extern base64=/private/tmp/satoshifi-zkspv-target/debug/deps/libbase64-019bd94199d388a7.rmeta --extern bytes=/private/tmp/satoshifi-zkspv-target/debug/deps/libbytes-f0ad19c1d5bccd36.rmeta --extern futures_core=/private/tmp/satoshifi-zkspv-target/debug/deps/libfutures_core-e27af8bd8171b8ce.rmeta --extern futures_util=/private/tmp/satoshifi-zkspv-target/debug/deps/libfutures_util-27aa6e5c2d9f0ffb.rmeta --extern h2=/private/tmp/satoshifi-zkspv-target/debug/deps/libh2-c6f57d952e50bf12.rmeta --extern http=/private/tmp/satoshifi-zkspv-target/debug/deps/libhttp-90f1820bdbc7f064.rmeta --extern http_body=/private/tmp/satoshifi-zkspv-target/debug/deps/libhttp_body-5e0121805bfa3916.rmeta --extern http_body_util=/private/tmp/satoshifi-zkspv-target/debug/deps/libhttp_body_util-86172d95c7f5dcd9.rmeta --extern hyper=/private/tmp/satoshifi-zkspv-target/debug/deps/libhyper-31cdbe432677bb11.rmeta --extern hyper_rustls=/private/tmp/satoshifi-zkspv-target/debug/deps/libhyper_rustls-fc56921e85fe95e0.rmeta --extern hyper_util=/private/tmp/satoshifi-zkspv-target/debug/deps/libhyper_util-2ebca3cf7cf4ee1c.rmeta --extern ipnet=/private/tmp/satoshifi-zkspv-target/debug/deps/libipnet-1b7d10333a7ebec9.rmeta --extern log=/private/tmp/satoshifi-zkspv-target/debug/deps/liblog-f17107389bfa12d8.rmeta --extern mime=/private/tmp/satoshifi-zkspv-target/debug/deps/libmime-20cf2e0ad55ce997.rmeta --extern once_cell=/private/tmp/satoshifi-zkspv-target/debug/deps/libonce_cell-aab7919e4cccb780.rmeta --extern percent_encoding=/private/tmp/satoshifi-zkspv-target/debug/deps/libpercent_encoding-c54ff84c3c204cb4.rmeta --extern pin_project_lite=/private/tmp/satoshifi-zkspv-target/debug/deps/libpin_project_lite-b3644ee9bd935317.rmeta --extern rustls=/private/tmp/satoshifi-zkspv-target/debug/deps/librustls-e3da850dfe718a6e.rmeta --extern rustls_pemfile=/private/tmp/satoshifi-zkspv-target/debug/deps/librustls_pemfile-0e0a534ffa4b3fcf.rmeta --extern rustls_pki_types=/private/tmp/satoshifi-zkspv-target/debug/deps/librustls_pki_types-0b3b7395655f77f8.rmeta --extern serde=/private/tmp/satoshifi-zkspv-target/debug/deps/libserde-5d91b5dcedda434f.rmeta --extern serde_json=/private/tmp/satoshifi-zkspv-target/debug/deps/libserde_json-2e0d52f819ef1bce.rmeta --extern serde_urlencoded=/private/tmp/satoshifi-zkspv-target/debug/deps/libserde_urlencoded-f48121ea7ae72742.rmeta --extern sync_wrapper=/private/tmp/satoshifi-zkspv-target/debug/deps/libsync_wrapper-b13bf2f4d1f46b2f.rmeta --extern tokio=/private/tmp/satoshifi-zkspv-target/debug/deps/libtokio-718279e716905b2c.rmeta --extern tokio_rustls=/private/tmp/satoshifi-zkspv-target/debug/deps/libtokio_rustls-4a345adb592b1fe2.rmeta --extern tower=/private/tmp/satoshifi-zkspv-target/debug/deps/libtower-5c07487f1aff9f8f.rmeta --extern tower_service=/private/tmp/satoshifi-zkspv-target/debug/deps/libtower_service-aa8b8b499319d807.rmeta --extern url=/private/tmp/satoshifi-zkspv-target/debug/deps/liburl-6ac9e35e88810a56.rmeta --extern webpki_roots=/private/tmp/satoshifi-zkspv-target/debug/deps/libwebpki_roots-88384491c41f0fe2.rmeta --cap-lints allow -L native=/private/tmp/satoshifi-zkspv-target/debug/build/ring-8693ec567395211a/out` (exit status: 101)
+warning: build failed, waiting for other jobs to finish...
+error: failed to build archive at `/private/tmp/satoshifi-zkspv-target/debug/deps/libreth_tasks-afa74427bfa7ffb2.rlib`: No space left on device (os error 28)
+
+error: could not compile `reth-tasks` (lib) due to 1 previous error
+rustc-LLVM ERROR: IO failure on output stream: No space left on device
+error: could not compile `hyper-util` (lib)
+
+Caused by:
+  process didn't exit successfully: `/private/tmp/satoshifi-zkspv-rustup/toolchains/1.88.0-aarch64-apple-darwin/bin/rustc --crate-name hyper_util --edition=2021 /private/tmp/satoshifi-zkspv-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.10/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --cfg 'feature="client"' --cfg 'feature="client-legacy"' --cfg 'feature="default"' --cfg 'feature="http1"' --cfg 'feature="http2"' --cfg 'feature="server"' --cfg 'feature="server-auto"' --cfg 'feature="service"' --cfg 'feature="tokio"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("__internal_happy_eyeballs_tests", "client", "client-legacy", "default", "full", "http1", "http2", "server", "server-auto", "server-graceful", "service", "tokio"))' -C metadata=cb1d75b3183f1228 -C extra-filename=-fcdd7243a5f4db7f --out-dir /private/tmp/satoshifi-zkspv-target/debug/deps -L dependency=/private/tmp/satoshifi-zkspv-target/debug/deps --extern bytes=/private/tmp/satoshifi-zkspv-target/debug/deps/libbytes-7470b19f3726901f.rmeta --extern futures_channel=/private/tmp/satoshifi-zkspv-target/debug/deps/libfutures_channel-611b982b032501e0.rmeta --extern futures_util=/private/tmp/satoshifi-zkspv-target/debug/deps/libfutures_util-27aa6e5c2d9f0ffb.rmeta --extern http=/private/tmp/satoshifi-zkspv-target/debug/deps/libhttp-336dea1350ae2d72.rmeta --extern http_body=/private/tmp/satoshifi-zkspv-target/debug/deps/libhttp_body-2b380559d161f906.rmeta --extern hyper=/private/tmp/satoshifi-zkspv-target/debug/deps/libhyper-303e11ecfdbe40b2.rmeta --extern pin_project_lite=/private/tmp/satoshifi-zkspv-target/debug/deps/libpin_project_lite-b3644ee9bd935317.rmeta --extern socket2=/private/tmp/satoshifi-zkspv-target/debug/deps/libsocket2-05c8eb0b00aedab4.rmeta --extern tokio=/private/tmp/satoshifi-zkspv-target/debug/deps/libtokio-4da11311f75f3021.rmeta --extern tower_service=/private/tmp/satoshifi-zkspv-target/debug/deps/libtower_service-aa8b8b499319d807.rmeta --extern tracing=/private/tmp/satoshifi-zkspv-target/debug/deps/libtracing-b72b658b0e7f0c9b.rmeta --cap-lints allow` (exit status: 101)
+error: failed to write /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/rustclAFvhi/lib.rmeta: No space left on device (os error 28)
+
+error: could not compile `multiaddr` (lib) due to 1 previous error
+rustc-LLVM ERROR: IO failure on output stream: No space left on device
+error: could not compile `boa_ast` (lib)
+
+Caused by:
+  process didn't exit successfully: `/private/tmp/satoshifi-zkspv-rustup/toolchains/1.88.0-aarch64-apple-darwin/bin/rustc --crate-name boa_ast --edition=2021 /private/tmp/satoshifi-zkspv-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/boa_ast-0.20.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --warn=unused '--warn=clippy::suspicious' '--warn=clippy::style' --warn=rust_2021_compatibility --warn=rust_2018_idioms --warn=rust_2018_compatibility '--warn=clippy::perf' '--warn=clippy::pedantic' --warn=nonstandard_style --warn=let_underscore --warn=future_incompatible '--warn=clippy::correctness' '--warn=clippy::complexity' '--warn=clippy::all' --warn=warnings --warn=variant_size_differences --warn=unused_qualifications --warn=unused_lifetimes --warn=unused_import_braces --warn=unused_crate_dependencies --warn=unsafe_op_in_unsafe_fn --warn=unreachable_pub --warn=trivial_numeric_casts --warn=trivial_casts --warn=single_use_lifetimes '--warn=rustdoc::private_intra_doc_links' '--warn=rustdoc::private_doc_tests' '--warn=clippy::print_stdout' '--warn=clippy::print_stderr' --warn=noop_method_call --warn=non_ascii_idents --warn=missing_docs --warn=missing_debug_implementations '--warn=rustdoc::missing_crate_level_docs' --warn=missing_copy_implementations --warn=missing_abi --warn=meta_variable_misuse --warn=macro_use_extern_crate '--warn=rustdoc::invalid_rust_codeblocks' '--warn=rustdoc::invalid_codeblock_attributes' '--warn=clippy::dbg_macro' '--warn=rustdoc::broken_intra_doc_links' '--warn=rustdoc::bare_urls' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("annex-b", "arbitrary", "serde"))' -C metadata=13eeea6748e55a8e -C extra-filename=-6b7ed758218aa647 --out-dir /private/tmp/satoshifi-zkspv-target/debug/deps -L dependency=/private/tmp/satoshifi-zkspv-target/debug/deps --extern bitflags=/private/tmp/satoshifi-zkspv-target/debug/deps/libbitflags-3711c06522959e1a.rmeta --extern boa_interner=/private/tmp/satoshifi-zkspv-target/debug/deps/libboa_interner-2e43f9067112938f.rmeta --extern boa_macros=/private/tmp/satoshifi-zkspv-target/debug/deps/libboa_macros-0bd8a66c5f8eb1c0.dylib --extern boa_string=/private/tmp/satoshifi-zkspv-target/debug/deps/libboa_string-62f8f34ab8b6edae.rmeta --extern indexmap=/private/tmp/satoshifi-zkspv-target/debug/deps/libindexmap-15fe1d534dfa5bff.rmeta --extern num_bigint=/private/tmp/satoshifi-zkspv-target/debug/deps/libnum_bigint-8c8c235405a3263c.rmeta --extern rustc_hash=/private/tmp/satoshifi-zkspv-target/debug/deps/librustc_hash-7febe1aef7c978ef.rmeta --cap-lints allow` (exit status: 101)
+warning: tikv-jemalloc-sys@0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7: "Unprefixed `malloc` requested on unsupported platform `aarch64-apple-darwin` => using prefixed `malloc`"
+error: failed to run custom build command for `tikv-jemalloc-sys v0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7`
+
+Caused by:
+  process didn't exit successfully: `/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-6d627dadc8324a7c/build-script-build` (exit status: 101)
+  --- stdout
+  TARGET=aarch64-apple-darwin
+  HOST=aarch64-apple-darwin
+  NUM_JOBS=8
+  OUT_DIR="/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out"
+  BUILD_DIR="/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build"
+  SRC_DIR="/private/tmp/satoshifi-zkspv-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tikv-jemalloc-sys-0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7"
+  cargo:warning="Unprefixed `malloc` requested on unsupported platform `aarch64-apple-darwin` => using prefixed `malloc`"
+  cargo:rustc-cfg=prefixed
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_OVERRIDE
+  cargo:rerun-if-env-changed=JEMALLOC_OVERRIDE
+  OPT_LEVEL = Some(0)
+  OUT_DIR = Some(/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out)
+  TARGET = Some(aarch64-apple-darwin)
+  HOST = Some(aarch64-apple-darwin)
+  cargo:rerun-if-env-changed=CC_aarch64-apple-darwin
+  CC_aarch64-apple-darwin = None
+  cargo:rerun-if-env-changed=CC_aarch64_apple_darwin
+  CC_aarch64_apple_darwin = None
+  cargo:rerun-if-env-changed=HOST_CC
+  HOST_CC = None
+  cargo:rerun-if-env-changed=CC
+  CC = None
+  cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+  RUSTC_WRAPPER = None
+  cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+  CRATE_CC_NO_DEFAULTS = None
+  DEBUG = Some(true)
+  cargo:rerun-if-env-changed=MACOSX_DEPLOYMENT_TARGET
+  MACOSX_DEPLOYMENT_TARGET = None
+  cargo:rerun-if-env-changed=CFLAGS
+  CFLAGS = None
+  cargo:rerun-if-env-changed=HOST_CFLAGS
+  HOST_CFLAGS = None
+  cargo:rerun-if-env-changed=CFLAGS_aarch64_apple_darwin
+  CFLAGS_aarch64_apple_darwin = None
+  cargo:rerun-if-env-changed=CFLAGS_aarch64-apple-darwin
+  CFLAGS_aarch64-apple-darwin = None
+  CARGO_ENCODED_RUSTFLAGS = Some()
+  CC="cc"
+  CFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall"
+  JEMALLOC_REPO_DIR="jemalloc"
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_MALLOC_CONF
+  cargo:rerun-if-env-changed=JEMALLOC_SYS_WITH_MALLOC_CONF
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_LG_PAGE
+  cargo:rerun-if-env-changed=JEMALLOC_SYS_WITH_LG_PAGE
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_LG_HUGEPAGE
+  cargo:rerun-if-env-changed=JEMALLOC_SYS_WITH_LG_HUGEPAGE
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_LG_QUANTUM
+  cargo:rerun-if-env-changed=JEMALLOC_SYS_WITH_LG_QUANTUM
+  cargo:rerun-if-env-changed=AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_LG_VADDR
+  cargo:rerun-if-env-changed=JEMALLOC_SYS_WITH_LG_VADDR
+  --with-jemalloc-prefix=_rjem_
+  CARGO_FEATURE_STATS not set
+  running: cd "/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build" && CC="cc" CFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" CPPFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" LDFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" "sh" "/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/configure" "--with-version=5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7" "--disable-cxx" "--enable-doc=no" "--enable-shared=no" "--with-jemalloc-prefix=_rjem_" "--with-private-namespace=_rjem_" "--disable-stats" "--host=aarch64-apple-darwin" "--build=aarch64-apple-darwin" "--prefix=/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out"
+  checking for xsltproc... /usr/bin/xsltproc
+  checking for aarch64-apple-darwin-gcc... cc
+  checking whether the C compiler works... yes
+  checking for C compiler default output file name... a.out
+  checking for suffix of executables... 
+  checking whether we are cross compiling... no
+  checking for suffix of object files... o
+  checking whether we are using the GNU C compiler... yes
+  checking whether cc accepts -g... yes
+  checking for cc option to accept ISO C89... none needed
+  checking whether compiler is cray... no
+  checking whether compiler supports -std=gnu11... yes
+  checking whether compiler supports -Werror=unknown-warning-option... yes
+  checking whether compiler supports -Wall... yes
+  checking whether compiler supports -Wextra... yes
+  checking whether compiler supports -Wshorten-64-to-32... yes
+  checking whether compiler supports -Wsign-compare... yes
+  checking whether compiler supports -Wundef... yes
+  checking whether compiler supports -Wno-format-zero-length... yes
+  checking whether compiler supports -Wpointer-arith... yes
+  checking whether compiler supports -Wno-missing-braces... yes
+  checking whether compiler supports -Wno-missing-field-initializers... yes
+  checking whether compiler supports -Wno-missing-attributes... no
+  checking whether compiler supports -pipe... yes
+  checking whether compiler supports -g3... yes
+  checking how to run the C preprocessor... cc -E
+  checking for grep that handles long lines and -e... /usr/bin/grep
+  checking for egrep... /usr/bin/grep -E
+  checking for ANSI C header files... yes
+  checking for sys/types.h... yes
+  checking for sys/stat.h... yes
+  checking for stdlib.h... yes
+  checking for string.h... yes
+  checking for memory.h... yes
+  checking for strings.h... yes
+  checking for inttypes.h... yes
+  checking for stdint.h... yes
+  checking for unistd.h... yes
+  checking whether byte ordering is bigendian... no
+  checking size of void *... 8
+  checking size of int... 4
+  checking size of long... 8
+  checking size of long long... 8
+  checking size of intmax_t... 8
+  checking build system type... aarch64-apple-darwin
+  checking host system type... aarch64-apple-darwin
+  checking whether isb instruction is compilable... yes
+  checking number of significant virtual address bits... 48
+  checking for aarch64-apple-darwin-ar... no
+  checking for ar... ar
+  checking for aarch64-apple-darwin-nm... no
+  checking for nm... nm
+  checking for gawk... no
+  checking for mawk... no
+  checking for nawk... no
+  checking for awk... awk
+  checking malloc.h usability... no
+  checking malloc.h presence... no
+  checking for malloc.h... no
+  checking for library containing log... none required
+  checking whether __attribute__ syntax is compilable... yes
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether tls_model attribute is compilable... yes
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether alloc_size attribute is compilable... yes
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether format(gnu_printf, ...) attribute is compilable... no
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether format(printf, ...) attribute is compilable... yes
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether format(printf, ...) attribute is compilable... yes
+  checking whether compiler supports -Wimplicit-fallthrough... yes
+  checking whether fallthrough attribute is compilable... yes
+  checking whether compiler supports -Wimplicit-fallthrough... yes
+  checking whether compiler supports -Wimplicit-fallthrough... no
+  checking whether compiler supports -Werror... yes
+  checking whether compiler supports -herror_on_warning... no
+  checking whether cold attribute is compilable... yes
+  checking whether vm_make_tag is compilable... no
+  checking for a BSD-compatible install... /usr/bin/install -c
+  checking for aarch64-apple-darwin-ranlib... no
+  checking for ranlib... ranlib
+  checking for ld... /usr/bin/ld
+  checking for autoconf... /opt/homebrew/bin/autoconf
+  checking for memalign... no
+  checking for valloc... no
+  checking for malloc_size... yes
+  checking whether compiler supports -O3... yes
+  checking whether compiler supports -O3... no
+  checking whether compiler supports -funroll-loops... yes
+  checking configured backtracing method... N/A
+  checking for sbrk... yes
+  Disabling dss allocation because sbrk is deprecated
+  checking whether utrace(2) is compilable... no
+  checking whether utrace(2) with label is compilable... no
+  checking whether a program using __builtin_unreachable is compilable... yes
+  checking whether a program using __builtin_ffsl is compilable... yes
+  checking whether a program using __builtin_popcountl is compilable... no
+  checking LG_PAGE... undefined
+  running: "tail" "-n" "100" "/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/config.log"
+  enable_zone_allocator=''
+  exe=''
+  exec_prefix='/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out'
+  host='aarch64-apple-darwin'
+  host_alias='aarch64-apple-darwin'
+  host_cpu='aarch64'
+  host_os='darwin'
+  host_vendor='apple'
+  htmldir='${docdir}'
+  importlib='dylib'
+  includedir='${prefix}/include'
+  infodir='${datarootdir}/info'
+  install_suffix=''
+  je_='je_'
+  jemalloc_version='5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7'
+  jemalloc_version_bugfix='0'
+  jemalloc_version_gid='e13ca993e8ccb9ba9847cc330696e02839f328f7'
+  jemalloc_version_major='5'
+  jemalloc_version_minor='3'
+  jemalloc_version_nrev='1'
+  libdir='${exec_prefix}/lib'
+  libdl=''
+  libexecdir='${exec_prefix}/libexec'
+  libprefix='lib'
+  link_whole_archive='0'
+  localedir='${datarootdir}/locale'
+  localstatedir='${prefix}/var'
+  mandir='${datarootdir}/man'
+  o='o'
+  objroot=''
+  oldincludedir='/usr/include'
+  pdfdir='${docdir}'
+  prefix='/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out'
+  private_namespace='_rjem_je_'
+  program_transform_name='s,x,x,'
+  psdir='${docdir}'
+  rev='2'
+  sbindir='${exec_prefix}/sbin'
+  sharedstatedir='${prefix}/com'
+  so='dylib'
+  srcroot=''
+  sysconfdir='${prefix}/etc'
+  target_alias=''
+
+  ## ----------- ##
+  ## confdefs.h. ##
+  ## ----------- ##
+
+  /* confdefs.h */
+  #define PACKAGE_NAME ""
+  #define PACKAGE_TARNAME ""
+  #define PACKAGE_VERSION ""
+  #define PACKAGE_STRING ""
+  #define PACKAGE_BUGREPORT ""
+  #define PACKAGE_URL ""
+  #define JEMALLOC_HAS_RESTRICT
+  #define STDC_HEADERS 1
+  #define HAVE_SYS_TYPES_H 1
+  #define HAVE_SYS_STAT_H 1
+  #define HAVE_STDLIB_H 1
+  #define HAVE_STRING_H 1
+  #define HAVE_MEMORY_H 1
+  #define HAVE_STRINGS_H 1
+  #define HAVE_INTTYPES_H 1
+  #define HAVE_STDINT_H 1
+  #define HAVE_UNISTD_H 1
+  #define SIZEOF_VOID_P 8
+  #define LG_SIZEOF_PTR 3
+  #define SIZEOF_INT 4
+  #define LG_SIZEOF_INT 2
+  #define SIZEOF_LONG 8
+  #define LG_SIZEOF_LONG 3
+  #define SIZEOF_LONG_LONG 8
+  #define LG_SIZEOF_LONG_LONG 3
+  #define SIZEOF_INTMAX_T 8
+  #define LG_SIZEOF_INTMAX_T 3
+  #define HAVE_CPU_SPINWAIT 1
+  #define CPU_SPINWAIT __asm__ volatile("isb")
+  #define LG_VADDR 48
+  #define JEMALLOC_USABLE_SIZE_CONST const
+  #define JEMALLOC_HAVE_ATTR  
+  #define JEMALLOC_HAVE_ATTR_ALLOC_SIZE  
+  #define JEMALLOC_HAVE_ATTR_FORMAT_PRINTF  
+  #define JEMALLOC_HAVE_ATTR_FORMAT_ARG  
+  #define JEMALLOC_HAVE_ATTR_FALLTHROUGH  
+  #define JEMALLOC_HAVE_ATTR_COLD  
+  #define JEMALLOC_PREFIX "_rjem_"
+  #define JEMALLOC_CPREFIX "_RJEM_"
+  #define JEMALLOC_HAVE_MALLOC_SIZE  
+  #define JEMALLOC_PRIVATE_NAMESPACE _rjem_je_
+  #define JEMALLOC_CONFIG_MALLOC_CONF ""
+  #define JEMALLOC_MAPS_COALESCE  
+  #define JEMALLOC_FILL  
+  #define JEMALLOC_CACHE_OBLIVIOUS  
+  #define JEMALLOC_INTERNAL_UNREACHABLE __builtin_unreachable
+  #define JEMALLOC_INTERNAL_FFSLL __builtin_ffsll
+  #define JEMALLOC_INTERNAL_FFSL __builtin_ffsl
+  #define JEMALLOC_INTERNAL_FFS __builtin_ffs
+
+  configure: exit 1
+
+  --- stderr
+  rm: conftest.dSYM: is a directory
+  rm: conftest.dSYM: is a directory
+  /private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/configure: line 9924: cannot create temp file for here document: No space left on device
+  /private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/configure: line 1722: conftest.err: No space left on device
+  sed: conftest.c: No such file or directory
+  mv: rename conftest.er1 to conftest.err: No space left on device
+  /private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/configure: line 2118: cannot create temp file for here document: No space left on device
+  sed: conftest.c: No such file or directory
+  configure: error: cannot determine value for LG_PAGE
+
+  thread 'main' panicked at /private/tmp/satoshifi-zkspv-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tikv-jemalloc-sys-0.6.0+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7/build.rs:388:9:
+  command did not execute successfully: cd "/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build" && CC="cc" CFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" CPPFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" LDFLAGS="-O0 -ffunction-sections -fdata-sections -fPIC -gdwarf-2 -fno-omit-frame-pointer --target=arm64-apple-macosx -mmacosx-version-min=26.5 -Wall" "sh" "/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out/build/configure" "--with-version=5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7" "--disable-cxx" "--enable-doc=no" "--enable-shared=no" "--with-jemalloc-prefix=_rjem_" "--with-private-namespace=_rjem_" "--disable-stats" "--host=aarch64-apple-darwin" "--build=aarch64-apple-darwin" "--prefix=/private/tmp/satoshifi-zkspv-target/debug/build/tikv-jemalloc-sys-55b3e0abac843cb5/out"
+  expected success, got: exit status: 1
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: failed to run custom build command for `reth-mdbx-sys v1.3.7 (https://github.com/paradigmxyz/reth?tag=v1.3.7#ed7da87d)`
+
+Caused by:
+  process didn't exit successfully: `/private/tmp/satoshifi-zkspv-target/debug/build/reth-mdbx-sys-9b1da1318838ca0a/build-script-build` (exit status: 101)
+  --- stdout
+  cargo:rerun-if-changed=/private/tmp/satoshifi-zkspv-cargo/git/checkouts/reth-e231042ee7db3fb7/ed7da87/crates/storage/libmdbx-rs/mdbx-sys/libmdbx
+
+  --- stderr
+
+  thread 'main' panicked at /private/tmp/satoshifi-zkspv-cargo/git/checkouts/reth-e231042ee7db3fb7/ed7da87/crates/storage/libmdbx-rs/mdbx-sys/build.rs:111:38:
+  Couldn't write bindings!: Os { code: 28, kind: StorageFull, message: "No space left on device" }
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+warning: libgit2-sys@0.18.3+1.9.2: failed to probe system libgit2: 
+warning: libgit2-sys@0.18.3+1.9.2: error: unable to open output file '/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/build/43a19b30e9e69d8f-diff_parse.o': 'No space left on device'
+warning: libgit2-sys@0.18.3+1.9.2: 1 error generated.
+warning: libgit2-sys@0.18.3+1.9.2: ToolExecError: command did not execute successfully (status code exit status: 1): env -u IPHONEOS_DEPLOYMENT_TARGET LC_ALL="C" "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "--target=arm64-apple-macosx" "-mmacosx-version-min=26.5" "-I" "/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/include" "-I" "libgit2/src/libgit2" "-I" "libgit2/src/util" "-I" "libgit2/deps/llhttp" "-I" "libgit2/deps/xdiff" "-I" "libgit2/deps/pcre" "-fvisibility=hidden" "-DGIT_REGEX_BUILTIN=1" "-DHAVE_STDINT_H=1" "-DHAVE_MEMMOVE=1" "-DNO_RECURSE=1" "-DNEWLINE=10" "-DPOSIX_MALLOC_THRESHOLD=10" "-DLINK_SIZE=2" "-DPARENS_NEST_LIMIT=250" "-DMATCH_LIMIT=10000000" "-DMATCH_LIMIT_RECURSION=MATCH_LIMIT" "-DMAX_NAME_SIZE=32" "-DMAX_NAME_COUNT=10000" "-DSHA1DC_NO_STANDARD_INCLUDES=1" "-DSHA1DC_CUSTOM_INCLUDE_SHA1_C=\"common.h\"" "-DSHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"common.h\"" "-o" "/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/build/43a19b30e9e69d8f-diff_parse.o" "-c" "libgit2/src/libgit2/diff_parse.c"
+warning: libgit2-sys@0.18.3+1.9.2: error: unable to open output file '/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/build/43a19b30e9e69d8f-pack-objects.o': 'No space left on device'
+warning: libgit2-sys@0.18.3+1.9.2: 1 error generated.
+warning: libgit2-sys@0.18.3+1.9.2: ToolExecError: command did not execute successfully (status code exit status: 1): env -u IPHONEOS_DEPLOYMENT_TARGET LC_ALL="C" "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "--target=arm64-apple-macosx" "-mmacosx-version-min=26.5" "-I" "/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/include" "-I" "libgit2/src/libgit2" "-I" "libgit2/src/util" "-I" "libgit2/deps/llhttp" "-I" "libgit2/deps/xdiff" "-I" "libgit2/deps/pcre" "-fvisibility=hidden" "-DGIT_REGEX_BUILTIN=1" "-DHAVE_STDINT_H=1" "-DHAVE_MEMMOVE=1" "-DNO_RECURSE=1" "-DNEWLINE=10" "-DPOSIX_MALLOC_THRESHOLD=10" "-DLINK_SIZE=2" "-DPARENS_NEST_LIMIT=250" "-DMATCH_LIMIT=10000000" "-DMATCH_LIMIT_RECURSION=MATCH_LIMIT" "-DMAX_NAME_SIZE=32" "-DMAX_NAME_COUNT=10000" "-DSHA1DC_NO_STANDARD_INCLUDES=1" "-DSHA1DC_CUSTOM_INCLUDE_SHA1_C=\"common.h\"" "-DSHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"common.h\"" "-o" "/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/build/43a19b30e9e69d8f-pack-objects.o" "-c" "libgit2/src/libgit2/pack-objects.c"cargo:warning=error: unable to open output file '/private/tmp/satoshifi-zkspv-target/debug/build/libgit2-sys-c4342a6c561c5013/out/build/43a19b30e9e69d8f-pack.o': 'No space left on device'
+warning: libgit2-sys@0.18.3+1.9.2: 1 error generated.
+warning:

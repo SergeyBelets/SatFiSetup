@@ -1,0 +1,23 @@
+{
+  "checked_at_unix": 1793371958.3607879,
+  "model_anvil_pid": 53094,
+  "model_anvil_stopped": true,
+  "model_process_identity_after": "",
+  "no_task_prover_container": true,
+  "docker_services_restored": true,
+  "running_services": [
+    "obod-quickstart-qa-backend-1",
+    "obod-quickstart-qa-beat-1",
+    "obod-quickstart-qa-frontend-1",
+    "obod-quickstart-qa-gateway-1",
+    "obod-quickstart-qa-minio-1",
+    "obod-quickstart-qa-postgres-1",
+    "obod-quickstart-qa-realtime-1",
+    "obod-quickstart-qa-redis-1",
+    "obod-quickstart-qa-worker-1"
+  ],
+  "temporary_prover_image_removed": true,
+  "image_reference": "risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc",
+  "image_removal_output": "Untagged: risczero/risc0-groth16-prover@sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc\nDeleted: sha256:55236d558d1e16e27f86f73237215c49f686521cab7652931c61c96d62cabcfc\n",
+  "free_disk_bytes": 24253640704
+}

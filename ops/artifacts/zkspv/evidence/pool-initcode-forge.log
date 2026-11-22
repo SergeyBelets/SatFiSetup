@@ -1,0 +1,45 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.91s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/vendor/cryptography/Secp256k1.sol:119:9:
+    |
+119 |         uint256 yCompressed = yIsOdd ? 3 : 2;
+    |         ^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> contracts/src/vendor/cryptography/Secp256k1.sol:98:5:
+   |
+98 |     function yCompressed(uint256 y) internal pure returns (uint256) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 3 tests for test/PoolInitcodeLimits.t.sol:PoolInitcodeLimitsTest
+[PASS] test_ConfederationLargestPoolIdDeploysThroughRealDeployer() (gas: 35872809)
+[PASS] test_ShareTokensLargestJointNameSymbolPayloadsDeploy() (gas: 14199304)
+[PASS] test_SimpleLargestPoolIdDeploysThroughRealDeployerWithMaximumRoster() (gas: 39081363)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 36.68ms (36.25ms CPU time)
+
+Ran 1 test suite in 38.08ms (36.68ms CPU time): 3 tests passed, 0 failed, 0 skipped (3 total tests)
+2026-10-27T05:48:55.559804Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/dmitrysubbotin/.foundry/cache/signatures": Operation not permitted (os error 1)

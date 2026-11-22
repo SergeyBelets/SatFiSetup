@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.13, pytest-9.0.3, pluggy-1.6.0 -- /private/tmp/satoshifi-zkspv-py311/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4
+collecting ... collected 1 item
+
+tests/e2e/test_mint_admission.py::test_canonical_mint_and_operator_failover_across_participant_homes PASSED [100%]
+
+=============================== warnings summary ===============================
+../../../../private/tmp/satoshifi-zkspv-py311/lib/python3.11/site-packages/websockets/legacy/__init__.py:6
+  /private/tmp/satoshifi-zkspv-py311/lib/python3.11/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+    warnings.warn(  # deprecated in 14.0 - 2024-11-09
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/ops/artifacts/zkspv/mint-admission-client-e2e.xml -
+=================== 1 passed, 1 warning in 470.48s (0:07:50) ===================

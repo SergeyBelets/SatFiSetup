@@ -1,0 +1,17 @@
+{
+  "scope": "Task-local temporary compiler installations only; proving binaries, original sources, receipts and system rustup retained",
+  "removed": [
+    {
+      "path": "/private/tmp/satoshifi-risc0-rust188",
+      "rustc_sha256": "c30744c50da1a5cb824010f49125f800edb69cfe2fa214881d9b46dfafdcdf9b",
+      "allocated_bytes": 1487056896
+    },
+    {
+      "path": "/private/tmp/satoshifi-header-rust188",
+      "rustc_sha256": "6efc19b5cef1e23df77a75d94ce8b75ed9e8929f0dee0618154c88fd6d82c3e1",
+      "allocated_bytes": 478605312
+    }
+  ],
+  "free_before": 2300022784,
+  "free_after": 4053049344
+}

@@ -1,0 +1,114 @@
+Compiling 36 files with Solc 0.8.30
+Solc 0.8.30 finished in 7.45s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> ../../../web3/contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> ../../../web3/contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> ../../../web3/contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> ../../../web3/contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/web3/contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/web3/contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/web3/contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/web3/contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/StateAdapter.t.sol:27:30:
+   |
+27 |     function cpKey(uint256 i,string memory key) internal pure returns(string memory) {
+   |                              ^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/StateAdapter.t.sol:38:5:
+   |
+38 |     function key(uint256 i,string memory field) internal pure returns(string memory) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/StateAdapter.t.sol:125:45:
+    |
+125 |         for(uint256 i;i<fields.length;++i) {bytes memory j=journal(0);put(j,fields[i],bytes32(type(uint256).max));rejectBytes(j);}
+    |                                             ^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/StateAdapter.t.sol:126:9:
+    |
+126 |         bytes memory j=journal(0);put(j,24,bytes32(uint256(block.timestamp+7201)));rejectBytes(j);
+    |         ^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/StateAdapter.t.sol:27:20:
+   |
+27 |     function cpKey(uint256 i,string memory key) internal pure returns(string memory) {
+   |                    ^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/StateAdapter.t.sol:38:18:
+   |
+38 |     function key(uint256 i,string memory field) internal pure returns(string memory) {
+   |                  ^^^^^^^^^
+
+
+Ran 10 tests for test/StateAdapter.t.sol:ZkAdapterV2Test
+[PASS] testCanonicalRootChangeInvalidatesCacheWithoutTraversal() (gas: 3127059)
+[PASS] testCheckpointAndUnknownCannotAuthorizePaymentBeforeProgress() (gas: 223449)
+[PASS] testHaltClosesCachedBlocksAndFurtherMaterialization() (gas: 2835745)
+[PASS] testMaterializationIsPermissionlessIdempotentAndDoesNotRefresh() (gas: 1352615)
+[PASS] testMaterializingWhileStaleDoesNotReopenMoneyOrSetHalt() (gas: 865093)
+[PASS] testMembershipAndTransactionPathsPreservePaymentAbiAndHashOrder() (gas: 1405995)
+[PASS] testRawStateCannotActAsPaymentSpvBypass() (gas: 17798)
+[PASS] testShorterHeavierReorgRejectsOldTailAndAllowsReprovenAnchor() (gas: 3932866)
+[PASS] testSideBranchRetainsCacheAndDoesNotSubstituteItsTimestamp() (gas: 1175686)
+[PASS] testWrongHeightRawRootProofLengthAndLeafPositionAreRejected() (gas: 1906464)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 35.68ms (47.29ms CPU time)
+
+Ran 15 tests for test/StateAdapter.t.sol:ZkStateV2Test
+[PASS] testAllThreeRealCheckpointsMatchRustInitialization() (gas: 365111)
+[PASS] testChangedVerifierRuntimeFailsClosed() (gas: 94243)
+[PASS] testFreshStateAgeBoundaryInclusiveAndOverflowSafe() (gas: 317451)
+[PASS] testFreshTipAgeBoundaryInclusiveAndNonmonotonicTimestamp() (gas: 392076)
+[PASS] testFutureMaximumBoundaryUsesAcceptingEvmClock() (gas: 310816)
+[PASS] testInvalidCheckpointCannotSeedArbitraryState() (gas: 28933)
+[PASS] testInvalidConfigurationAndUnsupportedRelayProfile() (gas: 33984)
+[PASS] testOldTipCatchupDoesNotManufactureFreshness() (gas: 292318)
+[PASS] testPermanentHaltKeepsSafePrefixAndRejectsAllLaterUpdates() (gas: 2467074)
+[PASS] testPinnedRealVerifierRejectsFakeProofAndPreservesState() (gas: 404670)
+[PASS] testProofIsBoundToExactJournalAndFixedImage() (gas: 616872)
+[PASS] testReplayIsAtomicAndDoesNotRefresh() (gas: 534946)
+[PASS] testSideBranchAdvancesVersionButNeverUsefulFreshness() (gas: 538056)
+[PASS] testWrongDeploymentStateAndFutureMaximumRemainAtomicAfterVerifierReturn() (gas: 2150703)
+[PASS] testWrongSelectorDevAndTrailingSealAreRejectedByRealPath() (gas: 195973)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 41.20ms (61.68ms CPU time)
+
+Ran 2 test suites in 47.61ms (76.88ms CPU time): 25 tests passed, 0 failed, 0 skipped (25 total tests)

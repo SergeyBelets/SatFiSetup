@@ -1,0 +1,17 @@
+{
+  "scope": "Historical four-patch qualification; retained before compact-target changes",
+  "files_sha256": {
+    "report.json": "bccb7815626c87e2610441930c9d36054b7955bea651a8fc2c6bfe1292ad8ddc",
+    "corrected-native-report.json": "c2e26e6a3a77f9b75e6c001d96ea7bb7ef5e5c546c6932af14f86eea30e58375",
+    "series.json": "1dfc7faf25c884fd2b7b94eea1ccfc712e926857d6eccaebc5fb5a68cae2f99b",
+    "prepare.py": "8be621d6f48968248d2a16c97e42835d309bd3f2b11a59b57234789470ad225e",
+    "qualify.py": "093e448f5313a9962bbc3d2509a8a9082682dbd081d5cee5a6f3b59dd616ac8c",
+    "qualify_corrected_native.py": "d3139210765d06608e06e02f38ce969562d54ae46dcfe275a9f649a2634d237e",
+    "src/lib.rs": "b398bbb7c30e11922b6b68c8164c21aa59127406a585d67e48f3ee85ebcf74a2",
+    "src/transition_tests.rs": "63872bcf198e35e6f0a3ea13ed7f0dd2522c60783d429f96aab6725288d422e1",
+    "evidence/debug.log": "2b82e80e6319a4f6abed97147746abac0c268a08dec04ea86605debcc881d0c5",
+    "evidence/release.log": "70497b535e94a4cd85d466b3f87de649ecc0492b31defe4471ef0783d3a840d9",
+    "evidence/corrected-native.log": "dcd0755d31d4aede3c4ca769ca0d4c6f55f64e1e16936e6d654d5b4ad37820af",
+    "evidence/native-test-adjustment.patch": "32bd3e40c897cfea2469a4d930dfcdf68dfbb74575c00977adbd1eadb1be5197"
+  }
+}

@@ -1,0 +1,89 @@
+$ /private/tmp/satohsi-tools/forge test --root /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/satohsi-mint-admission-tests-tj9upet_ --offline --out out --cache-path cache --match-contract '^(BitcoinMintAdmissionTest|MiningDepositAllocationTest)$' --fuzz-seed 0x01 --fuzz-runs 256 --gas-limit 16777216 --enable-tx-gas-limit --isolate --json-file /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/satohsi-mint-admission-tests-tj9upet_/results.json --color never -vv
+Compiling 74 files with Solc 0.8.30
+Solc 0.8.30 finished in 15.79s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/vendor/cryptography/Secp256k1.sol:119:9:
+    |
+119 |         uint256 yCompressed = yIsOdd ? 3 : 2;
+    |         ^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> contracts/src/vendor/cryptography/Secp256k1.sol:98:5:
+   |
+98 |     function yCompressed(uint256 y) internal pure returns (uint256) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint64) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+  --> test/EscrowBoundary.t.sol:62:47:
+   |
+62 |         for(uint256 i;i<8;i++) little|=bytes8(uint64(uint8(amount>>(i*8)))<<((7-i)*8));
+   |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Ran 13 tests for test/MiningDepositAllocation.t.sol:MiningDepositAllocationTest
+[PASS] testCoinbaseAllocationRemainsThresholdPolicyAndRequires100Confirmations() (gas: 487009)
+[PASS] testCoinbaseWithoutMarkerStillHasBoundedOutputScan() (gas: 131883)
+[PASS] testCommittedDepositMintsExactRecipientAndStoresAllocation() (gas: 431085)
+[PASS] testDifferentPoolDomainCannotMint() (gas: 105299)
+[PASS] testHashOnlyPayloadAndWrongVersionAreRejected() (gas: 208629)
+[PASS] testMalformedMarkedCoinbaseCannotFallBackToUnboundRewardPolicy() (gas: 438361)
+[PASS] testMarkedCoinbaseCannotIgnoreWrongHashOrExplicitAddress() (gas: 241456)
+[PASS] testMarkedCoinbaseRequiresExplicitRecipientAndStill100Confirmations() (gas: 602158)
+[PASS] testNoCommitmentCannotMintOrdinaryDeposit() (gas: 93478)
+[PASS] testOnlyCoinbaseCanDistributeToMultipleRecipients() (gas: 441025)
+[PASS] testTamperedExplicitRecipientCannotUseHonestAllocationHash() (gas: 206364)
+[PASS] testThresholdApprovalCannotRedirectOrdinaryDeposit() (gas: 129426)
+[PASS] testWrongOutputIndexOrChainCommitmentCannotMint() (gas: 221862)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 5.28ms (9.21ms CPU time)
+
+Ran 25 tests for test/BitcoinMintAdmission.t.sol:BitcoinMintAdmissionTest
+[PASS] testBindingContextFailureDoesNotConsumeApprovalOrMoveMintNonce() (gas: 6735164)
+[PASS] testChangedExpectedNonceRejectsBeforeOpeningSession() (gas: 107572)
+[PASS] testClaimAllocationAndOriginalDeadlineAreImmutable() (gas: 1379003)
+[PASS] testDifferentClientsCannotOpenDifferentClaimsAtSamePoolNonce() (gas: 1479403)
+[PASS] testExpiredOpenSessionIsAbortedBeforeReleaseAndClaimCannotRefreshDeadline() (gas: 1628786)
+[PASS] testFinalizedOperatorTransferIsNotReleasedByExpiry() (gas: 1296995)
+[PASS] testFinalizedStaleAttemptCanBeSupersededWithoutDeletingItsHistory() (gas: 2494968)
+[PASS] testLiveOpenSessionCannotBeRetiredAndOriginalDeadlineOverridesAdminExtension() (gas: 1503459)
+[PASS] testLostReceiptOtherParticipantAdoptsExactSessionWithoutAnotherPaidStart() (gas: 1465513)
+[PASS] testNewClaimRequiresFutureDeadlineAndBoundedDistribution() (gas: 190263)
+[PASS] testNonceAdvanceCreatesBoundedAttemptAndPreservesPreviousContext() (gas: 2416622)
+[PASS] testOperatorTransferAbortRetryUsesCanonicalPreviousSession() (gas: 3258476)
+[PASS] testOperatorTransferRequiresApprovalAndRejectsPreviousOperatorNonce() (gas: 1285142)
+[PASS] testPreviouslyApprovedExactOperationDoesNotOpenAnotherSession() (gas: 377252)
+[PASS] testRealPoolBindingIsOneTimeUsesDistinctAuthorizationAndPreservesMintNonce() (gas: 153635)
+[PASS] testRealSessionAtomicallyBindsCreatorTargetEpochOperationAndSlot() (gas: 1661156)
+[PASS] testRetryBudgetCannotResetOnNonceAdvance() (gas: 8650076)
+[PASS] testStaleRetryPredecessorCannotRebaseANewerAttempt() (gas: 2352995)
+[PASS] testSyntheticApprovedOperationPreventsReleaseAndDuplicatePaidStart() (gas: 1378031)
+[PASS] testSyntheticConflictingAllocationRemainsConsumedWithoutRewritingClaim() (gas: 1362618)
+[PASS] testSyntheticExactCompletionStopsRetryAndLeavesExactAllocationRecoverable() (gas: 2689048)
+[PASS] testSyntheticFinalizedObservationIsRetainedAfterDeadline() (gas: 1516216)
+[PASS] testThreeSameNonceAbortedAttemptsHaveDistinctSessionIdentity() (gas: 3465048)
+[PASS] testTypedOperatorTransferUsesSeparateNonceAndPreservesExistingMintSlot() (gas: 2821629)
+[PASS] testUnboundAdmissionAndNonparticipantCannotOpen() (gas: 2829411)
+Suite result: ok. 25 passed; 0 failed; 0 skipped; finished in 5.29ms (16.15ms CPU time)
+
+Ran 2 test suites in 6.20ms (10.57ms CPU time): 38 tests passed, 0 failed, 0 skipped (38 total tests)

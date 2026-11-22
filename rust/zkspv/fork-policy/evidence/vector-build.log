@@ -1,0 +1,10 @@
+warning: function `chain` is never used
+  --> src/bin/../../tests/support/mod.rs:42:8
+   |
+42 | pub fn chain(state: &mut ForkState<TestContext>, mut parent: Hash, count: u32, serial: &mut u32, delta: u32) -> Hash {
+   |        ^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `satoshifi-fork-policy` (bin "policy_vectors") generated 1 warning
+    Finished `dev` profile [unoptimized] target(s) in 0.01s

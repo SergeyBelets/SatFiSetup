@@ -1,0 +1,792 @@
+{
+  "runtime_limit": 24576,
+  "initcode_limit": 49152,
+  "creation_excludes_constructor_arguments": true,
+  "portable_metadata_checked": true,
+  "contracts": [
+    {
+      "contract": "MultiPoolDeployer",
+      "source": "contracts/src/federation/MultiPoolDeployer.sol",
+      "creation_bytes": 24762,
+      "constructor_argument_budget": 24390,
+      "runtime_bytes": 24510,
+      "runtime_margin": 66
+    },
+    {
+      "contract": "SimpleMultiPoolDeployer",
+      "source": "contracts/src/federation/SimpleMultiPoolDeployer.sol",
+      "creation_bytes": 24192,
+      "constructor_argument_budget": 24960,
+      "runtime_bytes": 23851,
+      "runtime_margin": 725
+    },
+    {
+      "contract": "FROSTCoordinator",
+      "source": "contracts/src/FROSTCoordinator.sol",
+      "creation_bytes": 24119,
+      "constructor_argument_budget": 25033,
+      "runtime_bytes": 23433,
+      "runtime_margin": 1143
+    },
+    {
+      "contract": "SimpleMiningPoolWithCalculator",
+      "source": "contracts/src/demo/SimpleMiningPoolWithCalculator.sol",
+      "creation_bytes": 32858,
+      "constructor_argument_budget": 16294,
+      "runtime_bytes": 23181,
+      "runtime_margin": 1395
+    },
+    {
+      "contract": "ConfederationFactory",
+      "source": "contracts/src/federation/ConfederationFactory.sol",
+      "creation_bytes": 22155,
+      "constructor_argument_budget": 26997,
+      "runtime_bytes": 21592,
+      "runtime_margin": 2984
+    },
+    {
+      "contract": "ConfederationMultiPool",
+      "source": "contracts/src/federation/ConfederationMultiPool.sol",
+      "creation_bytes": 22226,
+      "constructor_argument_budget": 26926,
+      "runtime_bytes": 20901,
+      "runtime_margin": 3675
+    },
+    {
+      "contract": "ConfederationGovernance",
+      "source": "contracts/src/federation/ConfederationGovernance.sol",
+      "creation_bytes": 21823,
+      "constructor_argument_budget": 27329,
+      "runtime_bytes": 20508,
+      "runtime_margin": 4068
+    },
+    {
+      "contract": "SimpleMultiPool",
+      "source": "contracts/src/demo/SimpleMultiPool.sol",
+      "creation_bytes": 20639,
+      "constructor_argument_budget": 28513,
+      "runtime_bytes": 19390,
+      "runtime_margin": 5186
+    },
+    {
+      "contract": "BitcoinWithdrawalEscrow",
+      "source": "contracts/src/federation/BitcoinWithdrawalEscrow.sol",
+      "creation_bytes": 19661,
+      "constructor_argument_budget": 29491,
+      "runtime_bytes": 18880,
+      "runtime_margin": 5696
+    },
+    {
+      "contract": "initialFROSTCoordinator",
+      "source": "contracts/src/initialFROST.sol",
+      "creation_bytes": 18053,
+      "constructor_argument_budget": 31099,
+      "runtime_bytes": 18022,
+      "runtime_margin": 6554
+    },
+    {
+      "contract": "FROSTCustodianDeployer",
+      "source": "contracts/src/federation/FROSTCustodianDeployer.sol",
+      "creation_bytes": 17399,
+      "constructor_argument_budget": 31753,
+      "runtime_bytes": 17286,
+      "runtime_margin": 7290
+    },
+    {
+      "contract": "DKGCoordinator",
+      "source": "contracts/src/federation/DKGCoordinator.sol",
+      "creation_bytes": 16521,
+      "constructor_argument_budget": 32631,
+      "runtime_bytes": 16495,
+      "runtime_margin": 8081
+    },
+    {
+      "contract": "ApiMiningPool",
+      "source": "contracts/src/demo/ApiMiningPool.sol",
+      "creation_bytes": 16128,
+      "constructor_argument_budget": 33024,
+      "runtime_bytes": 15104,
+      "runtime_margin": 9472
+    },
+    {
+      "contract": "FederationGovernance",
+      "source": "contracts/src/federation/FederationGovernance.sol",
+      "creation_bytes": 15068,
+      "constructor_argument_budget": 34084,
+      "runtime_bytes": 14061,
+      "runtime_margin": 10515
+    },
+    {
+      "contract": "FROSTAuthorizationDeployer",
+      "source": "contracts/src/federation/FROSTAuthorizationDeployer.sol",
+      "creation_bytes": 12450,
+      "constructor_argument_budget": 36702,
+      "runtime_bytes": 12337,
+      "runtime_margin": 12239
+    },
+    {
+      "contract": "ManualDirectCalculatorMulti",
+      "source": "contracts/src/demo/ManualDirectCalculatorMulti.sol",
+      "creation_bytes": 11706,
+      "constructor_argument_budget": 37446,
+      "runtime_bytes": 11502,
+      "runtime_margin": 13074
+    },
+    {
+      "contract": "FederationFactory",
+      "source": "contracts/src/federation/FederationFactory.sol",
+      "creation_bytes": 11420,
+      "constructor_argument_budget": 37732,
+      "runtime_bytes": 10935,
+      "runtime_margin": 13641
+    },
+    {
+      "contract": "SimpleMiningPoolWithBridge",
+      "source": "contracts/src/demo/SimpleMiningPoolWithBridge.sol",
+      "creation_bytes": 11740,
+      "constructor_argument_budget": 37412,
+      "runtime_bytes": 10483,
+      "runtime_margin": 14093
+    },
+    {
+      "contract": "SimpleMiningPool",
+      "source": "contracts/src/demo/SimpleMiningPool.sol",
+      "creation_bytes": 10728,
+      "constructor_argument_budget": 38424,
+      "runtime_bytes": 9478,
+      "runtime_margin": 15098
+    },
+    {
+      "contract": "CustodianDAODailySettlement",
+      "source": "contracts/src/federation/CustodianDAODailySettlement.sol",
+      "creation_bytes": 10937,
+      "constructor_argument_budget": 38215,
+      "runtime_bytes": 9111,
+      "runtime_margin": 15465
+    },
+    {
+      "contract": "SimpleDistributionTable",
+      "source": "contracts/src/demo/SimpleDistributionTable.sol",
+      "creation_bytes": 9378,
+      "constructor_argument_budget": 39774,
+      "runtime_bytes": 9077,
+      "runtime_margin": 15499
+    },
+    {
+      "contract": "RegtestHeaderRelay",
+      "source": "contracts/src/federation/RegtestHeaderRelay.sol",
+      "creation_bytes": 9289,
+      "constructor_argument_budget": 39863,
+      "runtime_bytes": 9052,
+      "runtime_margin": 15524
+    },
+    {
+      "contract": "ProjectWalletRegistryDeployer",
+      "source": "contracts/src/federation/ProjectWalletRegistryDeployer.sol",
+      "creation_bytes": 8892,
+      "constructor_argument_budget": 40260,
+      "runtime_bytes": 8779,
+      "runtime_margin": 15797
+    },
+    {
+      "contract": "ConfederationTokenDeployer",
+      "source": "contracts/src/federation/ConfederationTokenDeployer.sol",
+      "creation_bytes": 8660,
+      "constructor_argument_budget": 40492,
+      "runtime_bytes": 8547,
+      "runtime_margin": 16029
+    },
+    {
+      "contract": "MultiPoolShareTokenDeployer",
+      "source": "contracts/src/federation/MultiPoolShareTokenDeployer.sol",
+      "creation_bytes": 8642,
+      "constructor_argument_budget": 40510,
+      "runtime_bytes": 8530,
+      "runtime_margin": 16046
+    },
+    {
+      "contract": "BitcoinRedemptionTxBuilder",
+      "source": "contracts/src/demo/BitcoinRedemptionTxBuilder.sol",
+      "creation_bytes": 8428,
+      "constructor_argument_budget": 40724,
+      "runtime_bytes": 8402,
+      "runtime_margin": 16174
+    },
+    {
+      "contract": "FROSTCrypto",
+      "source": "contracts/src/crypto/FROSTCrypto.sol",
+      "creation_bytes": 8411,
+      "constructor_argument_budget": 40741,
+      "runtime_bytes": 8385,
+      "runtime_margin": 16191
+    },
+    {
+      "contract": "SimpleSPVContract",
+      "source": "contracts/src/demo/SimpleSPVContract.sol",
+      "creation_bytes": 9483,
+      "constructor_argument_budget": 39669,
+      "runtime_bytes": 8306,
+      "runtime_margin": 16270
+    },
+    {
+      "contract": "CustodianDAOStaking",
+      "source": "contracts/src/federation/CustodianDAOStaking.sol",
+      "creation_bytes": 9497,
+      "constructor_argument_budget": 39655,
+      "runtime_bytes": 7982,
+      "runtime_margin": 16594
+    },
+    {
+      "contract": "MiningPoolV1",
+      "source": "contracts/src/federation/MiningPoolV1.sol",
+      "creation_bytes": 19258,
+      "constructor_argument_budget": 29894,
+      "runtime_bytes": 7850,
+      "runtime_margin": 16726
+    },
+    {
+      "contract": "FederationNFTModifierDeployer",
+      "source": "contracts/src/federation/FederationNFTModifierDeployer.sol",
+      "creation_bytes": 7704,
+      "constructor_argument_budget": 41448,
+      "runtime_bytes": 7591,
+      "runtime_margin": 16985
+    },
+    {
+      "contract": "CustodianDAOSilo4626Adapter",
+      "source": "contracts/src/federation/CustodianDAOSilo4626Adapter.sol",
+      "creation_bytes": 8429,
+      "constructor_argument_budget": 40723,
+      "runtime_bytes": 7573,
+      "runtime_margin": 17003
+    },
+    {
+      "contract": "BitcoinDepositRegistry",
+      "source": "contracts/src/federation/BitcoinDepositRegistry.sol",
+      "creation_bytes": 7976,
+      "constructor_argument_budget": 41176,
+      "runtime_bytes": 7427,
+      "runtime_margin": 17149
+    },
+    {
+      "contract": "FederationFeeManagerDeployer",
+      "source": "contracts/src/federation/FederationFeeManagerDeployer.sol",
+      "creation_bytes": 7195,
+      "constructor_argument_budget": 41957,
+      "runtime_bytes": 7083,
+      "runtime_margin": 17493
+    },
+    {
+      "contract": "GlobalProjectWalletRegistry",
+      "source": "contracts/src/federation/GlobalProjectWalletRegistry.sol",
+      "creation_bytes": 8171,
+      "constructor_argument_budget": 40981,
+      "runtime_bytes": 6472,
+      "runtime_margin": 18104
+    },
+    {
+      "contract": "Testnet4HeaderRelay",
+      "source": "contracts/src/federation/Testnet4HeaderRelay.sol",
+      "creation_bytes": 8374,
+      "constructor_argument_budget": 40778,
+      "runtime_bytes": 6278,
+      "runtime_margin": 18298
+    },
+    {
+      "contract": "BitcoinBatchRegistry",
+      "source": "contracts/src/federation/BitcoinBatchRegistry.sol",
+      "creation_bytes": 7540,
+      "constructor_argument_budget": 41612,
+      "runtime_bytes": 5990,
+      "runtime_margin": 18586
+    },
+    {
+      "contract": "MainnetHeaderRelay",
+      "source": "contracts/src/federation/MainnetHeaderRelay.sol",
+      "creation_bytes": 7947,
+      "constructor_argument_budget": 41205,
+      "runtime_bytes": 5903,
+      "runtime_margin": 18673
+    },
+    {
+      "contract": "ProjectWalletRegistry",
+      "source": "contracts/src/federation/ProjectWalletRegistry.sol",
+      "creation_bytes": 7661,
+      "constructor_argument_budget": 41491,
+      "runtime_bytes": 5883,
+      "runtime_margin": 18693
+    },
+    {
+      "contract": "PoolMpToken",
+      "source": "contracts/src/tokens/PoolMpToken.sol",
+      "creation_bytes": 8585,
+      "constructor_argument_budget": 40567,
+      "runtime_bytes": 5812,
+      "runtime_margin": 18764
+    },
+    {
+      "contract": "CustodianDAOIncomeVault",
+      "source": "contracts/src/federation/CustodianDAOIncomeVault.sol",
+      "creation_bytes": 6073,
+      "constructor_argument_budget": 43079,
+      "runtime_bytes": 5722,
+      "runtime_margin": 18854
+    },
+    {
+      "contract": "FederationFeeManager",
+      "source": "contracts/src/federation/FederationFeeManager.sol",
+      "creation_bytes": 6225,
+      "constructor_argument_budget": 42927,
+      "runtime_bytes": 5439,
+      "runtime_margin": 19137
+    },
+    {
+      "contract": "FederationNFTModifier",
+      "source": "contracts/src/tokens/FederationNFTModifier.sol",
+      "creation_bytes": 6715,
+      "constructor_argument_budget": 42437,
+      "runtime_bytes": 5343,
+      "runtime_margin": 19233
+    },
+    {
+      "contract": "MultiPoolERC20Staking",
+      "source": "contracts/src/staking/MultiPoolERC20Staking.sol",
+      "creation_bytes": 5393,
+      "constructor_argument_budget": 43759,
+      "runtime_bytes": 5239,
+      "runtime_margin": 19337
+    },
+    {
+      "contract": "ManualPercentageCalculator",
+      "source": "contracts/src/demo/ManualPercentageCalculator.sol",
+      "creation_bytes": 5431,
+      "constructor_argument_budget": 43721,
+      "runtime_bytes": 5166,
+      "runtime_margin": 19410
+    },
+    {
+      "contract": "FROSTWithDKG",
+      "source": "contracts/src/demo/FROSTWithDKG.sol",
+      "creation_bytes": 5105,
+      "constructor_argument_budget": 44047,
+      "runtime_bytes": 5079,
+      "runtime_margin": 19497
+    },
+    {
+      "contract": "MultiPoolShareToken",
+      "source": "contracts/src/tokens/MultiPoolShareToken.sol",
+      "creation_bytes": 7573,
+      "constructor_argument_budget": 41579,
+      "runtime_bytes": 5032,
+      "runtime_margin": 19544
+    },
+    {
+      "contract": "ConfederationToken",
+      "source": "contracts/src/tokens/ConfederationToken.sol",
+      "creation_bytes": 7590,
+      "constructor_argument_budget": 41562,
+      "runtime_bytes": 5031,
+      "runtime_margin": 19545
+    },
+    {
+      "contract": "CustodianDAORateController",
+      "source": "contracts/src/federation/CustodianDAORateController.sol",
+      "creation_bytes": 5531,
+      "constructor_argument_budget": 43621,
+      "runtime_bytes": 4901,
+      "runtime_margin": 19675
+    },
+    {
+      "contract": "CustodianDAOFeeRouter",
+      "source": "contracts/src/federation/CustodianDAOFeeRouter.sol",
+      "creation_bytes": 5699,
+      "constructor_argument_budget": 43453,
+      "runtime_bytes": 4899,
+      "runtime_margin": 19677
+    },
+    {
+      "contract": "ManualDirectCalculator",
+      "source": "contracts/src/demo/ManualDirectCalculator.sol",
+      "creation_bytes": 5028,
+      "constructor_argument_budget": 44124,
+      "runtime_bytes": 4763,
+      "runtime_margin": 19813
+    },
+    {
+      "contract": "DKGOnchainBoard",
+      "source": "contracts/src/federation/DKGOnchainBoard.sol",
+      "creation_bytes": 5639,
+      "constructor_argument_budget": 43513,
+      "runtime_bytes": 4602,
+      "runtime_margin": 19974
+    },
+    {
+      "contract": "BitcoinSigningBoard",
+      "source": "contracts/src/federation/BitcoinSigningBoard.sol",
+      "creation_bytes": 5516,
+      "constructor_argument_budget": 43636,
+      "runtime_bytes": 4433,
+      "runtime_margin": 20143
+    },
+    {
+      "contract": "CustodianDAODecisionBoard",
+      "source": "contracts/src/federation/CustodianDAODecisionBoard.sol",
+      "creation_bytes": 4515,
+      "constructor_argument_budget": 44637,
+      "runtime_bytes": 4249,
+      "runtime_margin": 20327
+    },
+    {
+      "contract": "FeeDistributionCalculatorDeployer",
+      "source": "contracts/src/federation/FeeDistributionCalculatorDeployer.sol",
+      "creation_bytes": 4210,
+      "constructor_argument_budget": 44942,
+      "runtime_bytes": 4097,
+      "runtime_margin": 20479
+    },
+    {
+      "contract": "DKGAuthorization",
+      "source": "contracts/src/federation/DKGAuthorization.sol",
+      "creation_bytes": 6173,
+      "constructor_argument_budget": 42979,
+      "runtime_bytes": 3976,
+      "runtime_margin": 20600
+    },
+    {
+      "contract": "FeeSystemDeployer",
+      "source": "contracts/src/federation/FeeSystemDeployer.sol",
+      "creation_bytes": 4342,
+      "constructor_argument_budget": 44810,
+      "runtime_bytes": 3890,
+      "runtime_margin": 20686
+    },
+    {
+      "contract": "CustodianValidator",
+      "source": "contracts/src/federation/CustodianValidator.sol",
+      "creation_bytes": 4683,
+      "constructor_argument_budget": 44469,
+      "runtime_bytes": 3719,
+      "runtime_margin": 20857
+    },
+    {
+      "contract": "CustodianDAOConversionAdapter",
+      "source": "contracts/src/federation/CustodianDAOConversionAdapter.sol",
+      "creation_bytes": 4249,
+      "constructor_argument_budget": 44903,
+      "runtime_bytes": 3512,
+      "runtime_margin": 21064
+    },
+    {
+      "contract": "FROSTAuthorization",
+      "source": "contracts/src/FROSTAuthorization.sol",
+      "creation_bytes": 4873,
+      "constructor_argument_budget": 44279,
+      "runtime_bytes": 3425,
+      "runtime_margin": 21151
+    },
+    {
+      "contract": "FROSTVerifier",
+      "source": "contracts/src/FROSTVerifier.sol",
+      "creation_bytes": 3451,
+      "constructor_argument_budget": 45701,
+      "runtime_bytes": 3425,
+      "runtime_margin": 21151
+    },
+    {
+      "contract": "CallbackPoolRegistry",
+      "source": "contracts/src/federation/CallbackPoolRegistry.sol",
+      "creation_bytes": 3620,
+      "constructor_argument_budget": 45532,
+      "runtime_bytes": 3208,
+      "runtime_margin": 21368
+    },
+    {
+      "contract": "FrostSessionReader",
+      "source": "contracts/src/FrostSessionReader.sol",
+      "creation_bytes": 3238,
+      "constructor_argument_budget": 45914,
+      "runtime_bytes": 3017,
+      "runtime_margin": 21559
+    },
+    {
+      "contract": "PoolFeePipeline",
+      "source": "contracts/src/federation/PoolFeePipeline.sol",
+      "creation_bytes": 3550,
+      "constructor_argument_budget": 45602,
+      "runtime_bytes": 2872,
+      "runtime_margin": 21704
+    },
+    {
+      "contract": "FeeDistributionCalculator",
+      "source": "contracts/src/federation/FeeDistributionCalculator.sol",
+      "creation_bytes": 3293,
+      "constructor_argument_budget": 45859,
+      "runtime_bytes": 2830,
+      "runtime_margin": 21746
+    },
+    {
+      "contract": "ConfederationDeployer",
+      "source": "contracts/src/federation/ConfederationDeployer.sol",
+      "creation_bytes": 3194,
+      "constructor_argument_budget": 45958,
+      "runtime_bytes": 2631,
+      "runtime_margin": 21945
+    },
+    {
+      "contract": "GovernanceRegistry",
+      "source": "contracts/src/federation/GovernanceRegistry.sol",
+      "creation_bytes": 2721,
+      "constructor_argument_budget": 46431,
+      "runtime_bytes": 2522,
+      "runtime_margin": 22054
+    },
+    {
+      "contract": "ChainlinkBTCDailyTWAP",
+      "source": "contracts/src/federation/ChainlinkBTCDailyTWAP.sol",
+      "creation_bytes": 2802,
+      "constructor_argument_budget": 46350,
+      "runtime_bytes": 2481,
+      "runtime_margin": 22095
+    },
+    {
+      "contract": "CustodianDAOClaimAdapter",
+      "source": "contracts/src/federation/CustodianDAOClaimAdapter.sol",
+      "creation_bytes": 2957,
+      "constructor_argument_budget": 46195,
+      "runtime_bytes": 2286,
+      "runtime_margin": 22290
+    },
+    {
+      "contract": "FederationDeployer",
+      "source": "contracts/src/federation/FederationDeployer.sol",
+      "creation_bytes": 2581,
+      "constructor_argument_budget": 46571,
+      "runtime_bytes": 2144,
+      "runtime_margin": 22432
+    },
+    {
+      "contract": "FundedFeeConverter",
+      "source": "contracts/src/federation/FundedFeeConverter.sol",
+      "creation_bytes": 2550,
+      "constructor_argument_budget": 46602,
+      "runtime_bytes": 2004,
+      "runtime_margin": 22572
+    },
+    {
+      "contract": "DAOTestUSD",
+      "source": "contracts/src/demo/DAOTestUSD.sol",
+      "creation_bytes": 2580,
+      "constructor_argument_budget": 46572,
+      "runtime_bytes": 1691,
+      "runtime_margin": 22885
+    },
+    {
+      "contract": "CustodianDAOToken",
+      "source": "contracts/src/tokens/CustodianDAOToken.sol",
+      "creation_bytes": 2718,
+      "constructor_argument_budget": 46434,
+      "runtime_bytes": 1591,
+      "runtime_margin": 22985
+    },
+    {
+      "contract": "MainnetSPVGuard",
+      "source": "contracts/src/federation/MainnetSPVGuard.sol",
+      "creation_bytes": 1963,
+      "constructor_argument_budget": 47189,
+      "runtime_bytes": 1467,
+      "runtime_margin": 23109
+    },
+    {
+      "contract": "BitcoinCommentParser",
+      "source": "contracts/src/demo/BitcoinCommentParser.sol",
+      "creation_bytes": 1296,
+      "constructor_argument_budget": 47856,
+      "runtime_bytes": 1266,
+      "runtime_margin": 23310
+    },
+    {
+      "contract": "DAOMockFeed",
+      "source": "contracts/src/demo/DAOMockFeed.sol",
+      "creation_bytes": 655,
+      "constructor_argument_budget": 48497,
+      "runtime_bytes": 534,
+      "runtime_margin": 24042
+    },
+    {
+      "contract": "CurvePoolLiquidityGuard",
+      "source": "contracts/src/federation/CurvePoolLiquidityGuard.sol",
+      "creation_bytes": 772,
+      "constructor_argument_budget": 48380,
+      "runtime_bytes": 502,
+      "runtime_margin": 24074
+    },
+    {
+      "contract": "BIP143",
+      "source": "contracts/src/libs/BIP143.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "BTCScriptConstructor",
+      "source": "contracts/src/libs/BTCScriptConstructor.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Bech32Decoder",
+      "source": "contracts/src/libs/Bech32Decoder.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "BitcoinHash",
+      "source": "contracts/src/core/BitcoinHash.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "BitcoinTxParser",
+      "source": "contracts/src/core/BitcoinTxParser.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "BlockHeader",
+      "source": "contracts/src/libs/BlockHeader.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "BytesUtils",
+      "source": "contracts/src/libs/BytesUtils.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "DKGHash",
+      "source": "contracts/src/federation/DKGHash.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "ECDSA",
+      "source": "contracts/src/vendor/cryptography/ECDSA.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "FieldOps",
+      "source": "contracts/src/vendor/cryptography/FieldOps.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "FrostDKG",
+      "source": "contracts/src/FrostDKG.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Hashes",
+      "source": "contracts/src/vendor/cryptography/Hashes.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Memory",
+      "source": "contracts/src/vendor/cryptography/Memory.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "ModExp",
+      "source": "contracts/src/vendor/cryptography/ModExp.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Schnorr",
+      "source": "contracts/src/crypto/Schnorr.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Secp256k1",
+      "source": "contracts/src/crypto/Secp256k1.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Secp256k1Arithmetic",
+      "source": "contracts/src/vendor/cryptography/Secp256k1Arithmetic.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "TargetsHelper",
+      "source": "contracts/src/libs/TargetsHelper.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "TxMerkleProof",
+      "source": "contracts/src/libs/TxMerkleProof.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "Utils",
+      "source": "contracts/src/vendor/cryptography/Utils.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    },
+    {
+      "contract": "FROST",
+      "source": "contracts/src/vendor/cryptography/frost.sol",
+      "creation_bytes": 85,
+      "constructor_argument_budget": 49067,
+      "runtime_bytes": 57,
+      "runtime_margin": 24519
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+{
+  "status": "failed",
+  "isolation": "environment_tests_otherwise_suite",
+  "artifact_isolation": "private_temporary_out_cache_build_info",
+  "discovered_tests": 507,
+  "discovered_suites": 50,
+  "nondeployable_declarations": [
+    {
+      "path": "contracts/src/federation/BitcoinWithdrawalEscrow.sol",
+      "contract": "IPaymentSPV",
+      "tests": [
+        "testHelpersEnabled"
+      ],
+      "reason": "abstract/interface artifact has no creation bytecode"
+    },
+    {
+      "path": "test/WithdrawalRounding.t.sol",
+      "contract": "WithdrawalRoundingBase",
+      "tests": [
+        "testFuzz_RoundedAccountingAndFee",
+        "test_AllPathsCancellationRefundsFullSharesAndNoFee",
+        "test_AllPathsEnforceScriptMinimumAndRollbackAllState",
+        "test_AllPathsExactRoundingRemaindersWithOnePercentFee",
+        "test_AllPathsRoundWithNoManagerBeforeHashingAndLocking",
+        "test_AllPathsSettleExactFeeOnceAndClaimReducesTVL",
+        "test_DirectMinimumRequestsSettleAndCannotBurnTwice",
+        "test_DirectPendingRefundReturnsExactPrincipal",
+        "test_DirectRequestsMinimumBoundariesFractionalAndZero",
+        "test_ExplicitEscrowMinimumsAndConstructorValidation",
+        "test_FullNFTDiscountStillRoundsAndRollsBackConsumedLimitOnFailure",
+        "test_NoManagerDustSettlesAndCanBeReportedAfterConfiguration",
+        "test_NoSevenDayRefundOnceBitcoinSigningHasStarted",
+        "test_OneHundredPercentFeeAndSubSatoshiZeroRejectAtomically",
+        "test_OnePercentRoundingExamplesOnEveryPath",
+        "test_SubSatoshiRoundingToZeroRejectsWithoutFee"
+      ],
+      "reason": "abstract/interface artifact has no creation bytecode"
+    },
+    {
+      "path": "test/fixtures/LegacyCallbackEscrow.sol",
+      "contract": "IPaymentSPV",
+      "tests": [
+        "testHelpersEnabled"
+      ],
+      "reason": "abstract/interface artifact has no creation bytecode"
+    }
+  ],
+  "suites": [
+    {
+      "path": "contracts/src/federation/RegtestHeaderRelay.sol",
+      "contract": "RegtestHeaderRelay",
+      "tests": [
+        "testHelpersEnabled"
+      ],
+      "isolation": "process_per_suite",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "all",
+          "tests": [
+            "testHelpersEnabled"
+          ],
+          "command": [
+            "forge",
+            "test",
+            "--root",
+            "web3",
+            "--threads",
+            "1",
+            "--color",
+            "never",
+            "--match-path",
+            "contracts/src/federation/RegtestHeaderRelay.sol",
+            "--match-contract",
+            "^RegtestHeaderRelay$"
+          ],
+          "status": "passed",
+          "returncode": 0,
+          "seconds": 53.469,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    {
+      "path": "test/BitcoinByteOrder.t.sol",
+      "contract": "BitcoinByteOrderTest",
+      "tests": [
+        "testFuzzReverseIsInvolution",
+        "testRegtestGenesisWireHashReversesForProofOfWork"
+      ],
+      "isolation": "process_per_suite",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "all",
+          "tests": [
+            "testFuzzReverseIsInvolution",
+            "testRegtestGenesisWireHashReversesForProofOfWork"
+          ],
+          "command": [
+            "forge",
+            "test",
+            "--root",
+            "web3",
+            "--threads",
+            "1",
+            "--color",
+            "never",
+            "--match-path",
+            "test/BitcoinByteOrder.t.sol",
+            "--match-contract",
+            "^BitcoinByteOrderTest$"
+          ],
+          "status": "passed",
+          "returncode": 0,
+          "seconds": 53.721,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    {
+      "path": "test/BitcoinRosterBinding.t.sol",
+      "contract": "BitcoinRosterBindingTest",
+      "tests": [
+        "testAcceptsDistinctBtcKeyAndEpochWithSameOrderedRosterAndThreshold",
+        "testRejectsChangedBtcParticipant",
+        "testRejectsDifferentBtcRosterLength",
+        "testRejectsDifferentBtcThreshold",
+        "testRejectsReorderedBtcParticipants",
+        "testRejectsUnfinishedBtcWallet",
+        "testRejectsWrongPurposeBeforeRoster",
+        "testRejectsWrongRegistryBeforeResult"
+      ],
+      "isolation": "process_per_suite",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "all",
+          "tests": [
+            "testAcceptsDistinctBtcKeyAndEpochWithSameOrderedRosterAndThreshold",
+            "testRejectsChangedBtcParticipant",
+            "testRejectsDifferentBtcRosterLength",
+            "testRejectsDifferentBtcThreshold",
+            "testRejectsReorderedBtcParticipants",
+            "testRejectsUnfinishedBtcWallet",
+            "testRejectsWrongPurposeBeforeRoster",
+            "testRejectsWrongRegistryBeforeResult"
+          ],
+          "command": [
+            "forge",
+            "test",
+            "--root",
+            "web3",
+            "--threads",
+            "1",
+            "--color",
+            "never",
+            "--match-path",
+            "test/BitcoinRosterBinding.t.sol",
+            "--match-contract",
+            "^BitcoinRosterBindingTest$"
+          ],
+          "status": "passed",
+          "returncode": 0,
+          "seconds": 55.899,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    {
+      "path": "test/BitcoinSigningBoard.t.sol",
+      "contract": "BitcoinSigningBoardTest",
+      "tests": [
+        "testBatchInputKindAndActualSenderHaveIndependentKeys",
+        "testBatchLastConflictRollsBackEarlierWrites",
+        "testBatchPublishesAllInputsAndExactRetryHasNoEvents",
+        "testBatchRejectsOutsiderIncompleteInputsAndOversizedAggregate",
+        "testBothPacketKindsExactKeysPayloadHashesAndEventsAtFirstAndLastInput",
+        "testIdenticalDeliveryAfterStateChangeSucceedsWithoutEventButNewOrChangedBytesFail",
+        "testImmutableBindingGettersAndEmptyPacket",
+        "testMaximumPayloadLengthAndIdempotentDeliveryProduceExactlyOneEvent",
+        "testPublicationLeavesRealEscrowReservationsApprovalsAndRefundBoundaryUnchanged",
+        "testRejectsConflictingRetryAndNeverOverwrites",
+        "testRejectsEmptyAndOversizedPayloadWithoutRecording",
+        "testRejectsIndexAtLengthAndMaximumUint32",
+        "testRejectsInvalidConstructorBindingsAndZeroMaximum",
+        "testRejectsInvalidKindFromRawCalldata",
+        "testRejectsOutsiderCannotImpersonateParticipant",
+        "testRejectsUnknownReservedAndCancelledBatchForFirstPublication",
+        "testScriptDeploysWithExplicitBindingAndMaximum",
+        "testScriptRejectsWrongChainAndInvalidConfigurationBeforeDeployment"
+      ],
+      "isolation": "process_per_test",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "testBatchInputKindAndActualSenderHaveIndependentKeys",
+          "tests": [
+            "testBatchInputKindAndActualSenderHaveIndependentKeys"
+          ],
+          "command": [
+            "forge",
+            "test",
+            "--root",
+            "web3",
+            "--threads",
+            "1",
+            "--color",
+            "never",
+            "--match-path",
+            "test/BitcoinSigningBoard.t.sol",
+            "--match-contract",
+            "^BitcoinSigningBoardTest$",
+            "--match-test",
+            "^testBatchInputKindAndActualSenderHaveIndependentKeys\\("
+          ],
+          "status": "running"
+        }
+      ]
+    }
+  ],
+  "error": {
+    "type": "KeyboardInterrupt",
+    "message": "",
+    "traceback": "Traceback (most recent call last):\n  File \"/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/ops/local_acceptance.py\", line 131, in _run_solidity_suites\n    result = subprocess.run(command,cwd=ROOT,text=True,capture_output=True,env=environment)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.13/Frameworks/Python.framework/Versions/3.11/lib/python3.11/subprocess.py\", line 550, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.13/Frameworks/Python.framework/Versions/3.11/lib/python3.11/subprocess.py\", line 1209, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.13/Frameworks/Python.framework/Versions/3.11/lib/python3.11/subprocess.py\", line 2115, in _communicate\n    ready = selector.select(timeout)\n            ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.11/3.11.13/Frameworks/Python.framework/Versions/3.11/lib/python3.11/selectors.py\", line 415, in select\n    fd_event_list = self._selector.poll(timeout)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyboardInterrupt\n"
+  },
+  "seconds": 219.997
+}

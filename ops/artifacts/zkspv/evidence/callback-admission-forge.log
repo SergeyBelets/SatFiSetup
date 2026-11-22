@@ -1,0 +1,85 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 14.06s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/vendor/cryptography/Secp256k1.sol:119:9:
+    |
+119 |         uint256 yCompressed = yIsOdd ? 3 : 2;
+    |         ^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> contracts/src/vendor/cryptography/Secp256k1.sol:98:5:
+   |
+98 |     function yCompressed(uint256 y) internal pure returns (uint256) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint64) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+   --> test/WithdrawalRounding.t.sol:352:54:
+    |
+352 |         for (uint256 i; i < 8; i++) little |= bytes8(uint64(uint8(sats >> (8 * i))) << (8 * (7 - i)));
+    |                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint64) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+   --> test/WithdrawalRounding.t.sol:465:58:
+    |
+465 |             for (uint256 i; i < 8; i++) little |= bytes8(uint64(uint8(amount >> (8 * i))) << (8 * (7 - i)));
+    |                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint64) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+   --> test/CallbackPoolAdmission.t.sol:158:54:
+    |
+158 |         for (uint256 i; i < 8; ++i) little |= bytes8(uint64(uint8(sats >> (i * 8))) << ((7 - i) * 8));
+    |                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Ran 25 tests for test/CallbackPoolAdmission.t.sol:CallbackPoolAdmissionTest
+[PASS] testBaselineCounterfeitPoolLocksRealMPAndRevertsWholeSettlement() (gas: 6020214)
+[PASS] testCanonicalPoolAndDirectMPSettleAtomicallyInOneBatch() (gas: 2079653)
+[PASS] testCanonicalPoolCannotLockFabricatedRequestFields() (gas: 642823)
+[PASS] testCanonicalPoolRuntimeChangeRejected() (gas: 65963)
+[PASS] testCanonicalShareRuntimeChangeRejected() (gas: 82493)
+[PASS] testCounterfeitGettersAndRealMPRejectedBeforeLockOrBind() (gas: 455658)
+[PASS] testFuzz_RoundedAccountingAndFee(uint64,uint16,uint8) (runs: 256, μ: 3147369, ~: 3150057)
+[PASS] testRealPoolWithWrongCreationOriginRejected() (gas: 279495)
+[PASS] testRegistryCannotBeReboundAfterAdmission() (gas: 222847)
+[PASS] testUnpreparedCanonicalRequestCannotBind() (gas: 1023042)
+[PASS] test_AllPathsCancellationRefundsFullSharesAndNoFee() (gas: 3393552)
+[PASS] test_AllPathsEnforceScriptMinimumAndRollbackAllState() (gas: 12096863)
+[PASS] test_AllPathsExactRoundingRemaindersWithOnePercentFee() (gas: 12636306)
+[PASS] test_AllPathsRoundWithNoManagerBeforeHashingAndLocking() (gas: 11770397)
+[PASS] test_AllPathsSettleExactFeeOnceAndClaimReducesTVL() (gas: 7309806)
+[PASS] test_DirectMinimumRequestsSettleAndCannotBurnTwice() (gas: 2145912)
+[PASS] test_DirectPendingRefundReturnsExactPrincipal() (gas: 428897)
+[PASS] test_DirectRequestsMinimumBoundariesFractionalAndZero() (gas: 1440677)
+[PASS] test_ExplicitEscrowMinimumsAndConstructorValidation() (gas: 69693)
+[PASS] test_FullNFTDiscountStillRoundsAndRollsBackConsumedLimitOnFailure() (gas: 2354345)
+[PASS] test_NoManagerDustSettlesAndCanBeReportedAfterConfiguration() (gas: 2975801)
+[PASS] test_NoSevenDayRefundOnceBitcoinSigningHasStarted() (gas: 1446068)
+[PASS] test_OneHundredPercentFeeAndSubSatoshiZeroRejectAtomically() (gas: 1775112)
+[PASS] test_OnePercentRoundingExamplesOnEveryPath() (gas: 6795600)
+[PASS] test_SubSatoshiRoundingToZeroRejectsWithoutFee() (gas: 1775466)
+Suite result: ok. 25 passed; 0 failed; 0 skipped; finished in 835.95ms (832.08ms CPU time)
+
+Ran 1 test suite in 842.58ms (835.95ms CPU time): 25 tests passed, 0 failed, 0 skipped (25 total tests)
+2026-10-27T05:48:46.447833Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/dmitrysubbotin/.foundry/cache/signatures": Operation not permitted (os error 1)

@@ -1,0 +1,11 @@
+Command: ['/private/tmp/satoshifi-zkspv-py311/bin/python', '-m', 'pytest', '-q', 'signer-agent/tests/test_mint_attempts.py', 'signer-agent/tests/test_mint_recovery_dispatch.py', 'signer-agent/tests/test_bitcoin_funding.py', 'signer-agent/tests/test_callback_admission.py', 'signer-agent/tests/test_funding_envelope.py', 'signer-agent/tests/test_bitcoin_mainnet_finality.py']
+....................................................................     [100%]
+=============================== warnings summary ===============================
+../../../../private/tmp/satoshifi-zkspv-py311/lib/python3.11/site-packages/websockets/legacy/__init__.py:6
+  /private/tmp/satoshifi-zkspv-py311/lib/python3.11/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+    warnings.warn(  # deprecated in 14.0 - 2024-11-09
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+68 passed, 1 warning in 0.74s
+
+Exit: 0

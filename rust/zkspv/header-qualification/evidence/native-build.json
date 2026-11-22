@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/Users/dmitrysubbotin/.rustup/toolchains/1.88-aarch64-apple-darwin/bin/cargo",
+    "test",
+    "--locked",
+    "-p",
+    "bitcoin-da",
+    "--features",
+    "native",
+    "--lib",
+    "verifier::tests",
+    "--no-run"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 525.72,
+  "stop_reason": null,
+  "source_modified": false,
+  "network_phase": "dependency retrieval and compilation; no proof",
+  "environment": {
+    "CARGO_HOME": "/private/tmp/satoshifi-header-cargo",
+    "CARGO_TARGET_DIR": "/private/tmp/satoshifi-header-native-target",
+    "RUSTC": "/private/tmp/satoshifi-header-rust188/bin/rustc",
+    "RUSTDOC": "/private/tmp/satoshifi-header-rust188/bin/rustdoc",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_BUILD_JOBS": "2"
+  }
+}

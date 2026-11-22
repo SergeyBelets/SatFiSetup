@@ -1,0 +1,331 @@
+[
+  {
+    "path": "/private/tmp/satoshifi-zkspv-target/debug/libbitcoin_da.rlib",
+    "sha256": "a34383017b2d708ddab24ef72855374a13b30aa3e84d3f46c2854a9a52a6cc5a",
+    "bytes": 1824608,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/release/deps/satoshifi_upstream_qualification_probe-f7f8fbabe100064b",
+    "sha256": "245b3c59515695e55ce79f0e1c3ff0260e0ff3d9e2eee4a873a50a01a08fbc68",
+    "bytes": 954256,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.c3t1rpvrherb3mrvkqtmg6307.0nep8gf.rcgu.o",
+    "sha256": "2b931ebb71a5594fabc75950954d32a08037d379a5205d86d45c9799c16b6fc7",
+    "bytes": 3304,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.cl4q5unbctfdqcjasj2h40s7p.0nep8gf.rcgu.o",
+    "sha256": "04211a8fba00bc062f6d7c0fa361d5695135f5686d341663ef7243c507119edf",
+    "bytes": 85040,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.2vgfkbbzn4y2ymk4s04jcc0dv.0nep8gf.rcgu.o",
+    "sha256": "178fc7e40ebb240efeabe6d4e842a9afcbae64a600afe04dbab0d5ed2b447c6e",
+    "bytes": 9176,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.cqrqg093j8iccymkafpesxes3.0nep8gf.rcgu.o",
+    "sha256": "79019a2d643a83c37c30187b138157728283df5f7a64d5ef275ee375272381b7",
+    "bytes": 3840,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.bazgq2jn74d90wnsi7do85mnf.0nep8gf.rcgu.o",
+    "sha256": "6383fae92054badd0483bece3a7685ee987892e579d2419889de9dbf1822c9d9",
+    "bytes": 5232,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.3obuy1z26l8b39n3x46z2trx2.0nep8gf.rcgu.o",
+    "sha256": "f1d4e676468efb245ef171f7440a5cfe297cb991d8e4804641c39ab51a26d287",
+    "bytes": 8536,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.1muy9ei78rufh6tjb7ccqv1w1.0nep8gf.rcgu.o",
+    "sha256": "b7e2f3c88c1be1fd20d4921c30dde0bc5c4a79605475d4c7f43c26e8e9deb6e9",
+    "bytes": 5256,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.3iw63sjh1upl16wzncs16o0nv.0nep8gf.rcgu.o",
+    "sha256": "67a038070905b4a610278ab7f51de8a7b955b6a66031104da20390114c635290",
+    "bytes": 2824,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db",
+    "sha256": "cea5e251a8775ee8023d72d154cc75cf34b99ce2be479cba3ae280e709728a58",
+    "bytes": 1109672,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.arp08xhebqw9nggh5lqf1gd25.0nep8gf.rcgu.o",
+    "sha256": "b4c75eb293782a51182ac59a147602d299af6b9e01b8f8f5016cc535c4bdca62",
+    "bytes": 10752,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.4yp2j3271bqxsgpri2nrf5jj0.0nep8gf.rcgu.o",
+    "sha256": "e502a77e405b0960864356a4a932830f9ab271dddc8b531a5b7ea2bf7982a54e",
+    "bytes": 11448,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.ami1r5jz28j4e63xqafnc5gpy.0nep8gf.rcgu.o",
+    "sha256": "b2c006893b7abefd049895c737db7586188e31b2617037b68df9d84e18a2debc",
+    "bytes": 15840,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.2ehlpwpclsbcgaefeqz3ihzh3.0nep8gf.rcgu.o",
+    "sha256": "4c6a4823d45b71fa25753daa0706b30f4064b8f25c2a0a804b5b2e294ba38f02",
+    "bytes": 5920,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.668svqv8hp1w2nxniu299eyem.0nep8gf.rcgu.o",
+    "sha256": "38e66c68e9c758337282565d25dc24ed6b2abf5fec8740f0a25f4710825163b3",
+    "bytes": 7560,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.91uam0a5ffjgk2uxophdgeud3.0nep8gf.rcgu.o",
+    "sha256": "fe1e85a887ce878cebef71cd46b250b13ff7eff2e312918a4774fb418a4e3c9d",
+    "bytes": 9608,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.ervxr2p8lm8uks03500kjo2b7.0nep8gf.rcgu.o",
+    "sha256": "539ff2719eeee3679b2a842cfc17bbf34cd9c3bdebfd88cbeda66050f7396958",
+    "bytes": 2928,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.69ndd7uv5pcvpdeixznn4f639.0nep8gf.rcgu.o",
+    "sha256": "1f859308d913ff8812f09085a3a39bd144c39919197f47761e9309ad6f1b5740",
+    "bytes": 11344,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.enktfgdjuykgcp0o7qarkfvu3.0nep8gf.rcgu.o",
+    "sha256": "18bcad0e741ee56f60f3b99657a045da4c8b1db912faf6c07d95162d3914e82c",
+    "bytes": 7000,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.233zxfkkynxkdniq10jjwv20z.0nep8gf.rcgu.o",
+    "sha256": "6076ffc3ef6f0169949c21fd0bebdbaece5fe2892dcd89532a4b9d7cd0073703",
+    "bytes": 3088,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.ak39wgoul2q5e2in3bh5ps5l8.0nep8gf.rcgu.o",
+    "sha256": "ecf27ce3dba6fd9531f7ffa73fbea72703129e04ef12280620fdc334fdc6c39f",
+    "bytes": 6376,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.5yribc4fmz8jnp2zrcjk4juxg.0nep8gf.rcgu.o",
+    "sha256": "b56bc2302441e1285e0822b989005a1c5dcdc6272104b48c18856f107aece23a",
+    "bytes": 5704,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.bkvuu9g9comxd2etcm099wjt3.0nep8gf.rcgu.o",
+    "sha256": "c586d691dbe411e47e6a04a189be0f55faf8cc6ea05532c66ac1c4f4daccf50f",
+    "bytes": 14400,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.bt57g4jqhekq2isu1ea80r2w3.0nep8gf.rcgu.o",
+    "sha256": "aba03fcefe49e6d56e8f86cbcf8ce5edbfff57dce86f8417b2923219f21ae195",
+    "bytes": 11720,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.19vnxf10y4wb14wu0hhyraj90.0nep8gf.rcgu.o",
+    "sha256": "2f5a83de81623dd0cd9b20f035315502afb0949bc4fed3bae8318c43282e20c1",
+    "bytes": 6008,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.796xzjmx10k8z92ejvygc64l7.0nep8gf.rcgu.o",
+    "sha256": "972f5ec028280df2ffd1e9f95fef39a32c1c66f636b214785cfea95e688907ff",
+    "bytes": 12104,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.18nxt5ei3qyogz8vpylcju4ut.0nep8gf.rcgu.o",
+    "sha256": "026c55d7afda9ad0576c8ea7795ce401e1a134dab10c695940a4c9acb2e58de4",
+    "bytes": 13368,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.39bju4hzdgre2ceohxiwndemb.0nep8gf.rcgu.o",
+    "sha256": "42db349f9506049bffcc42cdc23fabe68261d6fdedeeae4b22f9fb83fbc1dea3",
+    "bytes": 11440,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.af7rshdj64ah93cr6m2iihh8q.0nep8gf.rcgu.o",
+    "sha256": "bfb21d6c043922ba831175d9c2cd6873e7be5545eeeb2308e688dfa3c8960dfb",
+    "bytes": 8624,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.9xw4qgdmua3wubybwm4ee801d.0nep8gf.rcgu.o",
+    "sha256": "4efcc5c2fab89ee4be2a02cac1a5ec8aa8814501e24534be3d589ac50d81d2ff",
+    "bytes": 8208,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.41p76z739r3ybksrdlk70xjnj.0nep8gf.rcgu.o",
+    "sha256": "17706110b0a26e6b9e5aa1d4085817c4ec3eba1b89e139102747cf2012ff72d0",
+    "bytes": 7968,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.5xmt0qtpk043rlci75j27t2aw.0nep8gf.rcgu.o",
+    "sha256": "8fd74d25c474125841f0900b3b8f96e38c7c7c53f7bbc4c70ea4c7f91f3394ba",
+    "bytes": 16304,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.cmev85cn8mif2hxd1nu77c4re.0nep8gf.rcgu.o",
+    "sha256": "bf9b7295b3ac47a88b76c3bfb49ebe7fabcd43e5a5536d7fc9dd8357dc7c0a8c",
+    "bytes": 3232,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-f78f0703c90a8b2c.ayq0yaxunlh2b2aisoxoi23l6.1czq9lv.rcgu.o",
+    "sha256": "f3124e9d286263b952339a435a7ec73a9e11122ef7024abe7d38e09a42c6b6ca",
+    "bytes": 808,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.2tkbys47dystqsf2cuepo36aw.0nep8gf.rcgu.o",
+    "sha256": "f9195690654e8376270159c0b70dc78750df002d353cef5dafc73e91e6db2749",
+    "bytes": 4296,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.60xl0nliaf0l91tao105w8iwy.0nep8gf.rcgu.o",
+    "sha256": "9b77f8e55a981fbb490eb6d2eca7dc97e330ee2683b29f6a6eefd8359d469bd2",
+    "bytes": 3536,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.8h18zxtzio4sq5bjintglbow5.0nep8gf.rcgu.o",
+    "sha256": "0c39ab1c86c36e81d427cbb9bf49a36d6f370d52726188b451e72a2316fb7b56",
+    "bytes": 5056,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.439x1xfh21thsag0wb3nyhxiy.0nep8gf.rcgu.o",
+    "sha256": "5e6d946c7b84abca183050c78d4f1b78e9ade97d44996fc43d8e2d85bae51436",
+    "bytes": 25032,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.4ksk7y185rozk7546jm8bjimg.0nep8gf.rcgu.o",
+    "sha256": "0927ae3884064f1df0584ee9430f26eec16f660ebfdd9e4898f1d287af8cda07",
+    "bytes": 8888,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.3ukw75nepz5xuqy18q1dfzahr.0nep8gf.rcgu.o",
+    "sha256": "6d1c5099b19dec12f39b41760b953d5d7587de99272a3bcf8bbfe9e03dc33ab1",
+    "bytes": 9448,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.ep12o44rb8n1b6pe9uq3tdrq6.0nep8gf.rcgu.o",
+    "sha256": "556a0011283c9b287f92be5149327088e8a66a8bbcfb3e0c263b31a7e92ce5d7",
+    "bytes": 7688,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.achjj4xt5xdecbtt586libfd6.0nep8gf.rcgu.o",
+    "sha256": "c85404ab19ba02a20e402b696370562b9b18810c5af1d2c267e56dc2c8c61aee",
+    "bytes": 6112,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.1y9w9lble1j5l2p5lyv0tsftl.0nep8gf.rcgu.o",
+    "sha256": "08f3e113155fdd4c6ab5b0d275d19b5dac764e3d9a5b2acd2f964579355cfd3d",
+    "bytes": 3688,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.65pdhxxkmvgwjiu79ah9qr4z0.0nep8gf.rcgu.o",
+    "sha256": "7ab46568087e27134f5e39c9879709232debb23d8e7896cf2652661a8e0ef467",
+    "bytes": 8224,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.3fptmp3f1wk7d3lbxqauwregi.0nep8gf.rcgu.o",
+    "sha256": "9a2d8ae915254fabfda2eb1d11e6f9beb4e3886332907e258e2bf21f9a0db9da",
+    "bytes": 9424,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  },
+  {
+    "path": "/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db.5qe3ams1mzs5hk3sxc1xfg1io.0nep8gf.rcgu.o",
+    "sha256": "d75fc48a143b2423624a3f68f09b81d926535729849ec3c99563565575ce4baa",
+    "bytes": 3704,
+    "retained": false,
+    "reason": "Task-generated build directory removed after ENOSPC; reproducible from pinned sources."
+  }
+]

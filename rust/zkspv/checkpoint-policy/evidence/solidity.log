@@ -1,0 +1,38 @@
+Compiling 24 files with Solc 0.8.30
+Solc 0.8.30 finished in 3.49s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 8 tests for test/BitcoinCheckpoint.t.sol:BitcoinCheckpointTest
+[PASS] testDescriptorBindsTrustedConfiguration() (gas: 2208101)
+[PASS] testPredecessorsDoNotEnterRelayCanonicalHistory() (gas: 3345101)
+[PASS] testRejectsEveryAncestorLengthLikeRelay() (gas: 10854467)
+[PASS] testRejectsEveryBrokenAncestorLikeRelay() (gas: 10907021)
+[PASS] testRejectsInvalidTargetAndPowLikeRelay() (gas: 9799913)
+[PASS] testRejectsShapeAndHeightLikeRelay() (gas: 5310281)
+[PASS] testSharedRustContextsAndActualRelayConstructors() (gas: 530163)
+[PASS] testWorkIncludesAnchorExactlyOnce() (gas: 3231900)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 24.30ms (79.56ms CPU time)
+
+Ran 1 test suite in 32.62ms (24.30ms CPU time): 8 tests passed, 0 failed, 0 skipped (8 total tests)

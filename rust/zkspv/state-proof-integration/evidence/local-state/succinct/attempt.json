@@ -1,0 +1,15 @@
+{
+  "started_unix": 1793309173.693365,
+  "timeout_seconds": 7200,
+  "command": [
+    "/private/tmp/satoshifi-proof-tools/satoshifi-receipt-bridge",
+    "compress",
+    "succinct",
+    "/private/tmp/satoshifi-risc0-3.0.3/r0vm",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/guest-integration/evidence/mainnet-transition.r0bf",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/state-proof-integration/evidence/local-state/state.journal",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/state-proof-integration/evidence/local-state/composite/receipt.bin",
+    "/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/state-proof-integration/evidence/local-state/succinct/result"
+  ],
+  "preparation_sha256": "2328633aebd30a75e231a6adb66a7c2ebcfde3fa3c6983d0153d06c12b1d6b96"
+}

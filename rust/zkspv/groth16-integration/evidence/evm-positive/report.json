@@ -1,0 +1,52 @@
+{
+  "schema": "satoshifi.groth16-evm.v1",
+  "status": "LOCAL_GROTH16_EVM_PASS",
+  "production_ready": false,
+  "positive_proof": "PASS",
+  "receipt_kind": "groth16",
+  "image_id": "a4c00c90dcc2600acd756df56ae4915e2180d0ebacc20c157382ec184fe0adea",
+  "journal_sha256": "d6d3228c48bbce18e80939941390239cf27d1408bb314c3c84fd22584450b2cd",
+  "receipt_sha256": "4c60c72d451534f88b268793f27b2441bc1b7d094de8bfeec53747b3581fe97f",
+  "selector": "73c457ba",
+  "verifier": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "runtime_keccak256": "c74c866ad3cc02fbe6c1283d1e650ff9be31501d60fa55be7bd0e10e0a9cda7a",
+  "ordinary_runtime_match": true,
+  "deployment": {
+    "status": 1,
+    "gas_used": 1122537,
+    "transaction_hash": "5df860685a95c5adc2e0911dbfe07e3370342c1b9e383dc9f405c7f88c1ae373"
+  },
+  "checks": [
+    {
+      "case": "genuine_proof_accepted",
+      "status": 1,
+      "gas_used": 250656,
+      "transaction_hash": "23f4c3f97fc6ba67d25559f1976e746b6148066dd7bb3714e5203c0b66c7cfd3"
+    },
+    {
+      "case": "wrong_image_rejected",
+      "status": 0,
+      "gas_used": 250658,
+      "transaction_hash": "c9cff6841b54103a4aacbd5da234e3010200a744469969b39a2cb10fe7870a0a"
+    },
+    {
+      "case": "wrong_journal_rejected",
+      "status": 0,
+      "gas_used": 250658,
+      "transaction_hash": "7602481ec6b2e26eddd41957e5b880720a04b6fb6f3e69406d8de498918ec24d"
+    },
+    {
+      "case": "modified_seal_rejected",
+      "status": 0,
+      "gas_used": 970972,
+      "transaction_hash": "fca6728d3b9d6823139bc34ee0bf01dc1dca4d664f8697e4667ecc82c600c943"
+    }
+  ],
+  "artifact_sha256": "f02c34919924898ca7fab0613626f96c49e0dfc6563c31ec414ea8c5f6780897",
+  "state_report_sha256": "24b1cf9b3e2717dcf0ed4318761658bafe3e5e39c211f198a86519208f5096e4",
+  "bridge_sha256": "767cc24c13247e3a5fe55369fb0e770de724fd74822c954a41cd7d9996e97b98",
+  "script_sha256": "d4785433b2abd52d5367ae34d6df413f772d1f9c682864d8f3cb5ad0ab4aadc2",
+  "public_transactions": 0,
+  "state_transition_acceptance": "NOT_PERFORMED",
+  "scope": "Disposable Anvil verifier only. Existing journal binds test state address 0x1111111111111111111111111111111111111111; no production/state/consumer activation."
+}

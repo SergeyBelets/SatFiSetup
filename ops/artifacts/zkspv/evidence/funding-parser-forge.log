@@ -1,0 +1,311 @@
+$ /private/tmp/satohsi-tools/forge test --root /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/satohsi-funding-parser-gvvibmx_ --offline --out out --cache-path cache --match-contract BitcoinFundingParserTest --gas-limit 16777216 --enable-tx-gas-limit --isolate --fuzz-seed 0x01 --fuzz-runs 256 --color never -vv --json-file /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/satohsi-funding-parser-gvvibmx_/test-results.json
+Compiling 21 files with Solc 0.8.30
+Solc 0.8.30 finished in 3.13s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 23 tests for test/BitcoinFundingParser.t.sol:BitcoinFundingParserTest
+[PASS] test256Outputs() (gas: 303002)
+Logs:
+  outputs_256: 266261
+
+[PASS] test257Inputs() (gas: 685456)
+Logs:
+  inputs_257: 582991
+
+[PASS] test257Outputs() (gas: 304152)
+Logs:
+  outputs_257: 267268
+
+[PASS] test33Outputs() (gas: 78820)
+Logs:
+  outputs_33: 45118
+
+[PASS] testAllInputsAndOutputsStructurallyChecked() (gas: 52890)
+[PASS] testCanonical65536ByteScript() (gas: 599658)
+Logs:
+  script_65536: 179650
+
+[PASS] testCompactSizeCannotReadLocktimeBytes() (gas: 119156)
+[PASS] testDeclaredCountBoundedBeforeAllocation() (gas: 43942)
+[PASS] testEveryTruncationRejected() (gas: 5659184)
+[PASS] testExact100000ByteEnvelope() (gas: 1216656)
+Logs:
+  stripped_100000: 357422
+
+[PASS] testFuzzMatchesLegacyForSharedEnvelope(uint8,uint8,uint64,bytes32) (runs: 256, μ: 114660, ~: 113445)
+[PASS] testHugeDeclaredScriptLengthRejected() (gas: 40901)
+[PASS] testLongInputScriptPreservesNextSequenceAndOutput() (gas: 212477)
+[PASS] testMaximum11105Outputs() (gas: 12096759)
+Logs:
+  max_outputs_11105: 11238358
+
+[PASS] testMaximum2438Inputs() (gas: 8839219)
+Logs:
+  max_inputs_2438: 6977909
+
+[PASS] testMixedReference() (gas: 62231)
+Logs:
+  mixed_inputs_outputs: 27027
+
+[PASS] testNonCanonicalCompactSizeAtEveryVectorAndScript() (gas: 218259)
+[PASS] testOutOfEnvelopeRejected() (gas: 126023)
+[PASS] testSelectedLongScriptCopiedExactly() (gas: 936802)
+[PASS] testTrailingBytesRejected() (gas: 24681)
+[PASS] testUnknownOutputRejected() (gas: 22631)
+[PASS] testWitnessSerializationRejected() (gas: 102652)
+[PASS] testZeroVectorCountsRejected() (gas: 35419)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 25.35ms (77.17ms CPU time)
+
+Ran 1 test suite in 25.98ms (25.35ms CPU time): 23 tests passed, 0 failed, 0 skipped (23 total tests)
+$ /private/tmp/satohsi-tools/forge build --root /var/folders/56/0p5_94tn5b1bts1wjfdg9tlw0000gn/T/satohsi-funding-parser-gvvibmx_ --offline --out out --cache-path cache --force --build-info --build-info-path build-info --color never
+Compiling 21 files with Solc 0.8.30
+Solc 0.8.30 finished in 3.89s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:181:9:
+    |
+181 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> contracts/src/core/BitcoinTxParser.sol:263:9:
+    |
+263 |         VarInt memory outputCount = _readVarInt(raw, offset);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> contracts/src/core/BitcoinTxParser.sol:161:5:
+    |
+161 |     function outputCount(bytes calldata raw) internal pure returns(uint256) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ contracts/src/core/BitcoinFundingParser.sol:87:50
+   │
+87 │         if (offset > end || size > end - offset) revert InvalidFundingLength();
+   │                                                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[uninitialized-local]: local variable is read before being initialized
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:32:17
+   │
+32 │                 value |= uint256(uint8(raw[offset + 1 + i])) << (8 * i);
+   │                 ━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinFundingParser.sol:101:55
+    │
+101 │             || (width == 8 && value < 4_294_967_296)) revert NonCanonicalCompactSize();
+    │                                                       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ contracts/src/core/BitcoinFundingParser.sol:53:48
+   │
+53 │             result.inputs[i] = Input(previous, uint32(_le64(raw, offset + 32)));
+   │                                                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:12:35
+   │
+12 │         if (offset >= raw.length) revert InvalidVarInt();
+   │                                   ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:16:42
+   │
+16 │             if (offset + 3 > raw.length) revert InvalidVarInt();
+   │                                          ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:21:42
+   │
+21 │             if (offset + 5 > raw.length) revert InvalidVarInt();
+   │                                          ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:28:38
+   │
+28 │         if (offset + 9 > raw.length) revert InvalidVarInt();
+   │                                      ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:139:69
+    │
+139 │                 if (locktimeOffset + itemLength.value > raw.length) revert InvalidTxLength();
+    │                                                                     ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:280:38
+    │
+280 │         if (offset + 8 > raw.length) revert InvalidTxLength();
+    │                                      ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:170:13
+    │
+170 │             require(offset+len.value<=raw.length,"output bounds");
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:186:42
+    │
+186 │             if (offset + 8 > raw.length) revert InvalidTxLength();
+    │                                          ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:192:59
+    │
+192 │             if (offset + scriptLength.value > raw.length) revert InvalidTxLength();
+    │                                                           ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:209:17
+    │
+209 │                 y |= bytes32(uint256(uint8(x[i])) << (i * 8));
+    │                 ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:231:43
+    │
+231 │             if (offset + 36 > raw.length) revert InvalidTxLength();
+    │                                           ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:236:60
+    │
+236 │             if (offset + scriptLen.value + 4 > raw.length) revert InvalidTxLength();
+    │                                                            ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:254:43
+    │
+254 │             if (offset + 36 > raw.length) revert InvalidTxLength();
+    │                                           ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:259:60
+    │
+259 │             if (offset + scriptLen.value + 4 > raw.length) revert InvalidTxLength();
+    │                                                            ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:267:42
+    │
+267 │             if (offset + 8 > raw.length) revert InvalidTxLength();
+    │                                          ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:272:56
+    │
+272 │             if (offset + scriptLen.value > raw.length) revert InvalidTxLength();
+    │                                                        ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:283:26
+    │
+283 │                 value |= uint64(uint256(uint8(raw[offset + i])) << (8 * i));
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[inconsistent-type-names]: contract mixes shorthand and explicit integer type names; use `uint256` and `int256` consistently
+   ╭▸ contracts/src/core/BitcoinTxParser.sol:31:18
+   │
+31 │             for (uint i = 0; i < 8; ++i) {
+   │                  ━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/inconsistent-type-names
+
+warning[inconsistent-type-names]: contract mixes shorthand and explicit integer type names; use `uint256` and `int256` consistently
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:167:13
+    │
+167 │         for(uint i;i<count.value;i++) {
+    │             ━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/inconsistent-type-names
+
+warning[inconsistent-type-names]: contract mixes shorthand and explicit integer type names; use `uint256` and `int256` consistently
+    ╭▸ contracts/src/core/BitcoinTxParser.sol:208:18
+    │
+208 │             for (uint i = 0; i < 32; ++i) {
+    │                  ━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/inconsistent-type-names
+

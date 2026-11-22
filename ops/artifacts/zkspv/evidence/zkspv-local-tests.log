@@ -1,0 +1,8 @@
+........................................................................ [100%]
+=============================== warnings summary ===============================
+tests/zkspv/test_funding_parser_vectors.py::test_pinned_rust_inspector_matches_shared_fixture[mixed_inputs_outputs]
+  /private/tmp/satoshifi-zkspv-py311/lib/python3.11/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+    warnings.warn(  # deprecated in 14.0 - 2024-11-09
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+72 passed, 1 warning in 17.58s

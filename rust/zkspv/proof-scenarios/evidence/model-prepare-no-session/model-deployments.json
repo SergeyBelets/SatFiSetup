@@ -1,0 +1,51 @@
+{
+  "status": "TEST_ONLY_DEPLOYED",
+  "rpc_url": "http://127.0.0.1:60804",
+  "node_pid": 48598,
+  "anvil_sha256": "a082205c1b76cccc39516aeb784ea0478f66772451b9412dfaa271c23abf118a",
+  "deployments": {
+    "fork-work-reorg100": {
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "receipt": {
+        "status": 1,
+        "gas_used": 3199579,
+        "transaction_hash": "f6ba06ddb3d493fbd1c020ee159c38759501030f29427681ea5e5703fc6ed181",
+        "block_number": 1
+      },
+      "graph": {
+        "TestPolicyReceiver": {
+          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+          "runtime_sha256": "a33bf676dd3bc973a7deee8ad42521f762118a12377c5b96b17d5a7d87820401",
+          "ordinary_match": true
+        },
+        "RiscZeroGroth16Verifier": {
+          "address": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be",
+          "runtime_sha256": "16f32fdfaae3278700f769eab01910fbc5700ce07dea7fefc0d630b807232701",
+          "ordinary_match": true
+        }
+      }
+    },
+    "halt101-prefix": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "receipt": {
+        "status": 1,
+        "gas_used": 3199579,
+        "transaction_hash": "4b48688d35b26861c00be380e0c0383d64aea6924e852fdad523b04bd7d76afa",
+        "block_number": 2
+      },
+      "graph": {
+        "TestPolicyReceiver": {
+          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+          "runtime_sha256": "cb0af5028ee47b3d2eb6b6d90c6eb03e8a046df0570239865ec9f4dbc65c6b41",
+          "ordinary_match": true
+        },
+        "RiscZeroGroth16Verifier": {
+          "address": "0xCafac3dD18aC6c6e92c921884f9E4176737C052c",
+          "runtime_sha256": "16f32fdfaae3278700f769eab01910fbc5700ce07dea7fefc0d630b807232701",
+          "ordinary_match": true
+        }
+      }
+    }
+  },
+  "scope": "Synthetic initial states; historical disposable clock; no mainnet checkpoint authentication or production activation"
+}

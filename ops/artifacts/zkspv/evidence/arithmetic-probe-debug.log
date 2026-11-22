@@ -1,0 +1,62 @@
+    Updating crates.io index
+     Locking 7 packages to latest compatible versions
+      Adding crypto-bigint v0.5.5 (available: v0.7.10)
+ Downloading crates ...
+  Downloaded subtle v2.6.1
+  Downloaded getrandom v0.2.17
+  Downloaded cfg-if v1.0.5
+  Downloaded rand_core v0.6.4
+  Downloaded crypto-bigint v0.5.5
+  Downloaded libc v0.2.191
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling subtle v2.6.1
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling crypto-bigint v0.5.5
+   Compiling satoshifi-upstream-qualification-probe v0.1.0 (/Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/qualification-probe)
+warning: function `bits_to_target` is never used
+ --> src/lib.rs:4:4
+  |
+4 | fn bits_to_target(bits: u32) -> [u8; 32] {
+  |    ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` on by default
+
+warning: function `target_to_bits` is never used
+  --> src/lib.rs:29:21
+   |
+29 | pub(crate) const fn target_to_bits(target: &[u8; 32]) -> u32 {
+   |                     ^^^^^^^^^^^^^^
+
+warning: function `target_to_work` is never used
+  --> src/lib.rs:41:4
+   |
+41 | fn target_to_work(target: &[u8; 32]) -> U256 {
+   |    ^^^^^^^^^^^^^^
+
+warning: function `calculate_new_difficulty` is never used
+  --> src/lib.rs:63:4
+   |
+63 | fn calculate_new_difficulty(
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `satoshifi-upstream-qualification-probe` (lib) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.22s
+     Running unittests src/lib.rs (/private/tmp/satoshifi-zkspv-probe-target/debug/deps/satoshifi_upstream_qualification_probe-c42a719f483fd0db)
+
+running 5 tests
+test qualification_tests::mainnet_pow_limit_matches_bitcoin_core_reference ... ok
+test qualification_tests::signed_compact_target_is_zero_in_integration_snapshot ... ok
+test qualification_tests::observed_target_one_work_differs_from_bitcoin_core ... ok
+test qualification_tests::observed_target_one_compact_encoder_panics ... ok
+test qualification_tests::observed_reversed_epoch_timestamps_do_not_use_signed_clamp ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests satoshifi_upstream_qualification_probe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

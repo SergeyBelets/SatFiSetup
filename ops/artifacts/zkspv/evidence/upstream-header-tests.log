@@ -1,0 +1,5 @@
+error: package `bitcoin-da v2.8.0 (/private/tmp/citrea-2ed54463bb7c4c3f1ff29dcd66d4b28c26fb63c8/crates/bitcoin-da)` does not have feature `serde_json`
+
+help: an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+Dependency `serde_json` would be enabled by these features:
+	- `native`

@@ -1,0 +1,36 @@
+2026-10-30T15:26:43.124819Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 135.615584ms
+2026-10-30T15:26:43.125731Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_session: exit_code = Halted(0), journal = Some("5341544f53484946495f524547544553545f4445504f5349545f563100000000626974636f696e2d7265677465737400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007a690000000000000000000000005fc8d32690cc91d4c39d9d3abcbd16989f875707bf0795a244b9fc2c067345d56ad5c00a58e8097bc78c1c777675752ac8cca9371b5f672d201a3b7e194540413a07e650e84e869b2878fab9d3a0864f866d0f3200000000000000000000000000000000000000000000000000000000000007e0dcbd0a2c719910592e29052e82c02a574d6e7c5b176c7c0c555cba99812d893400000000000000000000000000000000000000000000000000000000000007e60000000000000000000000000000000000000000000000000000000000000fce000000000000000000000000000000000000000000000000000000006ae4b7609a7798a8bb0f21946ebdc7036c8f010ef33c21d12a573738e3b6802156b93fff6097a5acc40c93ad7d48a8137061b2d83dd40f483b0811aed2d602bcd8d6a96d000000000000000000000000000000000000000000000000000000006ae4b760000000000000000000000000000000000000000000000000000000000000000692257ad7388ed7eab661888392386072a2a1416f9c8fbfde290fbccc5bfab32f"), segments: 11
+2026-10-30T15:26:43.125977Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:26:43.125983Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:26:43.292292Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:29:23.774132Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:29:23.775003Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:29:24.610543Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:31:45.359151Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:31:45.359319Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:31:45.621863Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:34:31.023191Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:34:31.023489Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:34:31.420710Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:37:24.715923Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:37:24.717623Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:37:25.289084Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:39:53.061746Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:39:53.063578Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:39:53.385055Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:42:30.015987Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:42:30.018310Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:42:30.471553Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:45:00.725922Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:45:00.726193Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:45:01.105876Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:47:43.167949Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:47:43.169771Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:47:44.193976Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:50:15.796230Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:50:15.796487Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:50:16.202463Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+2026-10-30T15:52:47.411940Z DEBUG risc0_zkvm::host::server::prove: prove_segment
+2026-10-30T15:52:47.412185Z DEBUG risc0_zkvm::host::server::prove::prover_impl: segment_preflight
+2026-10-30T15:52:48.087510Z DEBUG risc0_zkvm::host::server::prove::prover_impl: prove_segment_core
+Wrote 3095598 bytes of receipt to /Users/dmitrysubbotin/Downloads/satohsi_test_repo 4/rust/zkspv/deposit-integration/evidence/run-04/composite/receipt.bin

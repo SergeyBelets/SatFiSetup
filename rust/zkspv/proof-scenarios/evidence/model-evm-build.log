@@ -1,0 +1,68 @@
+Compiling 11 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.85s
+Compiler run successful!
+2026-10-30T06:12:02.310873Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/dmitrysubbotin/.foundry/cache/signatures": Operation not permitted (os error 1)
+warning[unsafe-typecast]: typecast can truncate values
+  ╭▸ rust/zkspv/proof-scenarios/contracts/TestPolicyReceiver.sol:9:41
+  │
+9 │     bytes32 public constant TEST_DOMAIN=bytes32("SATOSHIFI_TEST_POLICY_V1");
+  │                                         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  │
+  ├ note: consider disabling this lint if you're certain the cast is safe
+  │       
+  │       // casting to 'bytes32' is safe because [explain why]
+  │       // forge-lint: disable-next-line(unsafe-typecast)
+  │       
+  │       
+  ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ rust/zkspv/proof-scenarios/contracts/TestPolicyReceiver.sol:10:42
+   │
+10 │     bytes32 public constant TEST_NETWORK=bytes32("synthetic-no-pow");
+   │                                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ rust/zkspv/proof-scenarios/contracts/TestPolicyReceiver.sol:28:98
+   │
+28 │ …eturn !accepted.halted && hasUsefulUpdate && block.timestamp<=lastUsefulAcceptedAt+3600;}
+   │                                               ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ rust/zkspv/proof-scenarios/contracts/TestPolicyReceiver.sol:38:34
+   │
+38 │         bytes32 productionDomain=bytes32("SATOSHIFI_TRANSITION_V2");bytes32 productionNetwork=bytes32("bitcoin-mainnet");
+   │                                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ rust/zkspv/proof-scenarios/contracts/TestPolicyReceiver.sol:38:95
+   │
+38 │         bytes32 productionDomain=bytes32("SATOSHIFI_TRANSITION_V2");bytes32 productionNetwork=bytes32("bitcoin-mainnet");
+   │                                                                                               ━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
