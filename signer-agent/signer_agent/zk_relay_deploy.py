@@ -18,7 +18,7 @@ import time
 
 from hexbytes import HexBytes
 from web3 import Web3
-from web3.exceptions import TransactionNotFound
+from web3.exceptions import TransactionNotFound, Web3RPCError
 
 ZK_STATE_ARTIFACTS = ("ZkBitcoinStateV2", "ZkBitcoinTestnet4StateV2")
 TX_HASH = re.compile(r"0x[0-9a-f]{64}")
@@ -213,8 +213,9 @@ def main(argv=None):
             result = dict(status="VERIFIED", **verify_deployment(w3, policy, adoption["address"], adoption["tx_hash"]))
         print(json.dumps(result, indent=2, default=str))
         return 0
-    except (ValueError, OSError) as error:
-        print(json.dumps(dict(status="ERROR", code=str(error) or type(error).__name__, action=a.action)))
+    except (ValueError, OSError, Web3RPCError) as error:
+        code = error.message if isinstance(error, Web3RPCError) else str(error)
+        print(json.dumps(dict(status="ERROR", code=code or type(error).__name__, action=a.action)))
         return 2
 
 
