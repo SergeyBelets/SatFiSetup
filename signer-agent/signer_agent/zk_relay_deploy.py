@@ -12,6 +12,7 @@ same post-deploy checks. Any mismatch stops bootstrap.
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -161,6 +162,7 @@ def deploy(w3, policy, account, *, dry_run=False, wait_seconds=900):
     signed = account.sign_transaction(transaction)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction).hex()
     tx_hash = tx_hash if tx_hash.startswith("0x") else "0x" + tx_hash
+    print(json.dumps(dict(plan, tx_hash=tx_hash)), file=sys.stderr, flush=True)
     deadline = time.monotonic() + wait_seconds
     while True:
         try:
@@ -198,6 +200,8 @@ def main(argv=None):
         if a.action == "deploy":
             if not a.identity_file or (not a.dry_run and not a.output):
                 p.error("deploy requires --identity-file and, unless --dry-run, --output")
+            if a.output and os.path.exists(a.output):
+                raise ValueError("OUTPUT_EXISTS")
             account = Account.from_key(json.loads(read_private(a.identity_file))["private_key"])
             result = deploy(w3, policy, account, dry_run=a.dry_run)
             if result.get("status") == "DEPLOYED":

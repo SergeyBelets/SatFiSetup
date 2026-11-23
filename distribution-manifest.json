@@ -18459,8 +18459,8 @@
       "sha256": "7cf2ccad2f87f5478a4676c502cbafe7428a0c5f96c789e8b8393f11c0b535db"
     },
     "signer-agent/signer_agent/zk_relay_deploy.py": {
-      "bytes": 11155,
-      "sha256": "737ebfd1f8e959c0957314213327d27e841cfd13aec2610a1684a148d76f4e76"
+      "bytes": 11349,
+      "sha256": "32897da31023417c72d0aa45ec5e0cc6769afc3b6bb9c05ada47be8f8064ebfe"
     },
     "signer-agent/signer_agent/zk_service_binding.py": {
       "bytes": 1832,
@@ -29624,7 +29624,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "5e71da4bc01e0d852cea5efa959f185489204af7",
+  "source_revision": "4936c595a70901e63bba36868443cbc3da83ed34",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }
