@@ -19,11 +19,15 @@ Licensed under Apache 2.0 (`LICENSE`); third-party notices in `rust/zkspv/NOTICE
 ## Install (Linux or Windows WSL2)
 
 ```bash
+umask 022                      # SDK refuses a FROST binary or parent dir writable by group/others
 git clone https://github.com/SergeyBelets/SatFiSetup.git ~/satfi-sdk
+chmod -R go-w ~/satfi-sdk
 cd ~/satfi-sdk/signer-agent
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.lock && pip install -e '.[evm-test]'
 cd .. && python ops/bootstrap_host.py build     # native FROST and both Solidity projects
+# Foundry must be on PATH (export PATH="$HOME/.foundry/bin:$PATH"), version 1.8.5.
+# FROST_BINARY_UNSAFE_PATH: rerun with umask 022 after chmod go-w on the binary.
 python -m pytest signer-agent/tests -q
 ```
 
