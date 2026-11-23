@@ -148,7 +148,7 @@ def main():
             checks['prove']['broker'] = job.diagnostics()
         if checks['prove']['exit_code']==0:
             if a.stage=='succinct':shutil.copy2(out/'result/receipt.bin',out/'receipt.bin')
-            checks['verify']=run([bridge,'inspect',program,base/'state.journal',out/'receipt.bin',out/'verified'],out/'verify.log',profile,env,180,**kwargs)
+            checks['verify']=run([bridge,'inspect',program,base/'state.journal',out/'receipt.bin',out/'verified'],out/'verify.log',profile,env,int(a.timeout),**kwargs)
     unchanged=all(sha(ROOT/p)==digest for p,digest in prep['source_sha256'].items())
     verified=read(out/'verified/receipt.json') if (out/'verified/receipt.json').exists() else {}
     ok=(checks.get('verify',{}).get('exit_code')==0 and unchanged and input_matches()
