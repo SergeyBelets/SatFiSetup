@@ -16071,8 +16071,8 @@
       "sha256": "745aa4dc810ec47b68109ff3507267f1399c845f45f148ee20b8e8c8d2754e6b"
     },
     "ops/zkspv/state_trial_prove.py": {
-      "bytes": 10368,
-      "sha256": "98e5bc28332153521b9fb12ce7b7da530b56e7fb5f94564cba78dc4c8a0c68d9"
+      "bytes": 10559,
+      "sha256": "ca36e050e187205ff7fa79815e0494a8aa520b7ab73f2a60327906203721fef4"
     },
     "ops/zkspv/testnet4_build.py": {
       "bytes": 5176,
@@ -29624,7 +29624,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "4936c595a70901e63bba36868443cbc3da83ed34",
+  "source_revision": "0cfe481211707338349739b48f75d5aab961d772",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }

@@ -102,7 +102,9 @@ def main():
         if free<8*1024**3:raise ValueError('At least 8 GiB free required for STARK launch')
         profile='(version 1) (allow default) (deny network*)'
         # Strict no-network probe already qualified by the original runner.
-        probe=probe_code(False)
+        # CUDA runs without the socket filter (the driver needs sockets), so the
+        # sandbox is loopback-only there: verify exactly that, not strict denial.
+        probe=probe_code(cuda is not None)
         command=[r0vm,'--elf',program,'--initial-input',base/'state.input','--receipt',out/'receipt.bin','--receipt-kind','composite','-v']
         if cuda is not None:
             command += ["--po2", cuda["segment_limit_po2"]]
@@ -155,7 +157,7 @@ def main():
         with (out / "prove.log").open() as log:
             ok = any(line.strip() == "SatoshiFi segment_limit_po2=" + cuda["segment_limit_po2"] for line in log)
     if a.stage=='groth16':ok=ok and bool(observed)
-    effective_profile=('linux: private user/pid/net namespaces; '+('strict socket denial' if a.stage=='composite' else 'loopback-only RPC')
+    effective_profile=('linux: private user/pid/net namespaces; '+('strict socket denial' if a.stage=='composite' and cuda is None else 'loopback-only RPC')
         if sys.platform=='linux' else profile)
     if a.stage == 'groth16':
         effective_profile += '; single-job Docker broker'
