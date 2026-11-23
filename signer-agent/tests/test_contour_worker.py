@@ -13,6 +13,7 @@ from web3.exceptions import TransactionNotFound
 from ops.zkspv import contour_worker as adapter
 from ops.zkspv.contour import Contour, digest, sha
 from signer_agent import zk_worker as worker_module, zk_worker_prover as prover_module
+from signer_agent.zk_archive import Ref
 from signer_agent.zk_worker import Inbox, Worker, state_wire
 from signer_agent.zk_worker_prover import LocalProver, ROOT, write, read
 from signer_agent.zk_spv import MAINNET_IMAGE, VERIFIER_SELECTOR
@@ -64,7 +65,8 @@ def pipeline(tmp_path, monkeypatch):
         out.mkdir(parents=True,exist_ok=True)
         reference=ROOT/'rust/zkspv/state-proof-integration/evidence/local-state'
         for name in ('state.input','state.journal'):(out/name).write_bytes((reference/name).read_bytes())
-        result=dict(before=e.before,after=e.after,archive=new,memberships=[])
+        result=dict(before=e.before,after=e.after,memberships=[])
+        result["delta" if isinstance(archive, Ref) else "archive"] = new
         write(out/'native.json',result);return result
     w.native=native
     def verify(self,base,receipt,output):

@@ -54,20 +54,22 @@ def attest(fleet,request,manifest,registry,state,private_key,configuration):
             value=key['result'].get(field)
             if (not isinstance(value,str) or not 64<=len(value)<=131072 or len(value)%2
                     or any(ch not in '0123456789abcdef' for ch in value)):raise ValueError('EPOCH_SIGNER_UNAVAILABLE')
-        public=crypto.call('public_share',share=key['result']['signing_share'])['public']
-        from .address_mint import read
-        if public!=key['result']['public_share'] or bytes(read(s['dkg'],s['block'].number,'getPublicKeyShare',manifest.session_id,account.address)).hex()!=public:
-            raise ValueError('EPOCH_SIGNER_UNAVAILABLE')
         # Validate/provision the existing independent journal, never delete or replace it.
         with state._journal():pass
         if state.get('btc-payments-recovery:'+manifest.context.hex()):raise ValueError('PAYMENTS_PAUSED_FOR_RECOVERY')
-        from .bitcoin_trust import require_registry
+        from .bitcoin_trust import graph_network, require_registry
+        from .secure_state import requires_independent_nonce_ledger
         pinned=require_registry(manifest,key,registry,state,s['identity']['batches'])
         graph=pinned['graph']
         if (graph.get('usage')!='BTC_INPUT_KEYS_V1' or graph['contracts']['address_registry']['address']!=s['identity']['registry']
                 or graph['contracts']['batches']['address']!=s['identity']['batches']):raise ValueError('EPOCH_WALLET_BINDING')
         from .bitcoin_onchain import checked_board
         checked_board(manifest,key,registry,state,e['signing_board'])
+        with crypto.require_pin(requires_independent_nonce_ledger(manifest.chain_id, graph_network(graph))):
+            public=crypto.call('public_share',share=key['result']['signing_share'])['public']
+        from .address_mint import read
+        if public!=key['result']['public_share'] or bytes(read(s['dkg'],s['block'].number,'getPublicKeyShare',manifest.session_id,account.address)).hex()!=public:
+            raise ValueError('EPOCH_SIGNER_UNAVAILABLE')
         issued=int(s['latest'].timestamp)
         body=dict(version='1',fleet_id=fleet.c['fleet_id'],challenge=request['challenge'],request_hash=digest(request),wallet_context=manifest.context.hex(),
             participant=account.address,service_fingerprint=review['service_fingerprint'],custody=review['custody'],derivation=review['derivation'],

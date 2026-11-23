@@ -59,6 +59,19 @@
   },
   {
     "type": "function",
+    "name": "bitcoinGenesis",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "cancel",
     "inputs": [
       {
@@ -444,6 +457,22 @@
   },
   {
     "type": "error",
+    "name": "CustodyNetworkMismatch",
+    "inputs": [
+      {
+        "name": "source",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "destination",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidTxLength",
     "inputs": []
   },
@@ -467,5 +496,10 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnsupportedCustodySPV",
+    "inputs": []
   }
 ]

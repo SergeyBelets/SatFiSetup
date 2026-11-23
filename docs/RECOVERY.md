@@ -18,6 +18,7 @@
 | Повтор уже исполненной операции | При `ALREADY_EXECUTED` перейдите к следующему шагу. При ошибке привязки или `OPERATION_PARAMETERS_MISMATCH` сверяйте исходный intent и board. | [SVG](../ops/artifacts/sdk-recovery-20261121/diagrams/docs_RECOVERY_md_3.svg) · [PNG](../ops/artifacts/sdk-recovery-20261121/diagrams/png/docs_RECOVERY_md_3.png) |
 | `EVM_PENDING_FEE_CAP_BELOW_BASE` | Дождитесь снижения base fee или подготовьте `bootstrap replace-pending` для исходной транзакции. | [SVG](../ops/artifacts/sdk-recovery-20261121/diagrams/docs_RECOVERY_md_4.svg) · [PNG](../ops/artifacts/sdk-recovery-20261121/diagrams/png/docs_RECOVERY_md_4.png) |
 | RPC участника отстаёт | Дождитесь требуемой глубины и повторите исходную команду. Для EVM можно указать проверенный RPC той же сети. | [SVG](../ops/artifacts/rpc-lag-20261121/diagrams/docs_RECOVERY_md_5.svg) · [PNG](../ops/artifacts/rpc-lag-20261121/diagrams/png/docs_RECOVERY_md_5.png) |
+| Срок batch S → BTC истёк в состоянии `Signing` | Откройте исходный batch и продолжите недостающие шаги с `--resume-expired`. | [Схема](#expired-s-btc-recovery) |
 
 ## 1. Гонка finalizeSession
 
@@ -206,6 +207,9 @@ flowchart TD
   RPC не видит сохранённый подтверждённый блок. Несовпадение известного хеша
   вызывает `EVM_REORG_RECOVERY_REQUIRED` или `DKG_ANCHOR_REORG`. Сверьте
   сохранённый блок перед продолжением.
+- После распределения ULR тот же принцип сохраняет подписанный чекпоинт.
+  SPV transport при отставании не сбрасывает входящий курсор и не ставит
+  подтверждённые пакеты в очередь снова. Возобновите команды с исходным журналом.
 - Перед новой EVM-подписью SDK сверяет последнюю успешную транзакцию адреса,
   завершённые операции восстановления и открытые резервирования в журнале nonce.
   Если `pending` nonce RPC ниже проверенной нижней границы, новая подпись ждёт.
@@ -248,3 +252,253 @@ frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$STATE" \
 сохранённый якорь, контур может сообщить `EVM_RPC_BEHIND`.
 Принятый результат остаётся в журнале, зависимые этапы ждут, а независимые
 задачи могут продолжиться. [Поведение контроллера](ZKSPV_CONTOUR.md).
+
+## 6. Выход из DAO и возобновление продажи комиссий
+
+```mermaid
+flowchart TD
+    accTitle: Возвраты после закрытия и смена EVM RPC
+    A["Сохранить исходный pin, identity, ID и журнал"] --> B["Повторить ту же команду с текущим --rpc"]
+    B --> C{"Новый RPC подтверждает исходные якоря?"}
+    C -->|"Ещё не видит блок"| W["AWAITING_EVM_RPC, ждать"]
+    C -->|"Хеш расходится"| X["EVM_REORG_RECOVERY_REQUIRED"]
+    C -->|"Да"| D{"Источник активен?"}
+    D -->|"Да"| E["Продолжить исходное действие и nonce"]
+    D -->|"Нет"| F["Доступны cancel просроченной заявки<br/>и DAO unstake, claim, reimburse"]
+```
+
+При сбое провайдера повторите исходный вызов `fee-sale` или `dao` с рабочим
+`--rpc`. Сохраните тот же журнал, идентификатор действия, identity и входные
+данные, включая бюллетень или intent, если он нужен команде. SDK использует
+наибольшую из сохранённой и запрошенной глубин. При отставании он ждёт блок,
+а при несовпадении сохранённого хеша требует разбор reorg. Оператору не нужно
+создавать новый nonce или новую FROST-сессию для того же действия.
+
+При деактивации исходные `fee-sale cancel`, `dao in-kind unstake`, `claim`
+и `reimburse` доступны с прежними привязками. Покупатель получает свой
+стейблкоин после срока заявки. Стейкер или плательщик газа подписывает только
+собственный вывод. Для новых заявок, стейка и управленческих операций SDK требует
+активный граф. [Продажа комиссий и покрытие](FEE_FLOW.md#продажа-комиссий-s-и-mp) ·
+[Выплаты DAO](CONFEDERATION_DAO_IN_KIND.md#приём-и-распределение).
+
+<a id="expired-s-btc-recovery"></a>
+
+## 7. Вывод S → BTC после дедлайна подписания
+
+Для нового V3 при потере основного Bitcoin-кворума доступен
+[отдельный профиль CLTV](BITCOIN_WITHDRAWAL_RECOVERY.md).
+Просрочка подписания сама по себе не открывает возврат S.
+Подтверждённый перенос и FROST-ротация возвращают обычный вывод с преемника.
+[Порядок ротации](BITCOIN_WITHDRAWAL_RECOVERY.md#ротация-после-переноса).
+
+У этого восстановления свой срок batch. `--deadline` в `dao in-kind withdraw`
+новой сборки ограничивает только включение первоначальной заявки в EVM. После
+включения сохранённые минимум чистой выплаты и предел miner fee проверяются
+при повторном расчёте, включая RBF и settlement. Просрочка включения откатывает
+создание заявки целиком. Для такого отката проверьте исходный receipt до
+подачи новой заявки. [Условия заявки и котировка](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров).
+
+```mermaid
+flowchart TD
+    accTitle: Возобновление связанной выплаты S в BTC
+    accDescr: По исходному batch SDK проверяет escrow, состояние Signing и точный план. Выбранные участники завершают публикацию commitments и долей по тому же транскрипту, затем выплата отправляется и рассчитывается.
+    A["btc-status<br/>Исходные board и batch"] --> B{"Подтверждённый Signing<br/>с точной связанной выплатой?"}
+    B -->|"Нет"| X["Остановить попытку восстановления"]
+    B -->|"Да, срок истёк"| C["Сверить Core, UTXO, план, комиссии и локальный журнал"]
+    C --> D{"Есть все commitments?"}
+    D -->|"Нет"| E["btc-commit --resume-expired<br/>Участники с недостающими commitments"]
+    E --> D
+    D -->|"Да"| F["btc-sign --resume-expired<br/>Участники с недостающими долями"]
+    F --> G["btc-broadcast<br/>Исходная транзакция, тот же txid"]
+    G --> H["btc-settle<br/>После подтверждения BTC и SPV"]
+```
+
+Для плана версии `5` с `BitcoinWithdrawalEscrowV2` продолжите тот же
+batch после дедлайна, если EVM подтверждает `Signing` и исходный платёж всё
+ещё связан с escrow. Используйте прежние DKG, identity, состояние подписанта,
+журнал nonce и переменные из [инструкции `btc()`](BITCOIN_ONCHAIN_RUNBOOK.md#1-локальные-параметры).
+Укажите оба исходных идентификатора явно.
+
+```sh
+btc btc-status --signing-board "$SIGNING_BOARD" --batch "$BATCH"
+
+# Выбранные участники дополняют недостающие commitment, если они есть.
+btc btc-commit --signing-board "$SIGNING_BOARD" --batch "$BATCH" --resume-expired
+
+# После подтверждения всех commitment выбранные участники дополняют доли.
+btc btc-sign --signing-board "$SIGNING_BOARD" --batch "$BATCH" --resume-expired
+
+btc btc-broadcast --signing-board "$SIGNING_BOARD" --batch "$BATCH"
+btc btc-settle --signing-board "$SIGNING_BOARD" --batch "$BATCH"
+```
+
+До подготовки новых подписных данных SDK повторно сверяет закреплённый граф,
+сетевой профиль, состояние Bitcoin Core, резервы входов, полный план и
+обязательства escrow. Получатели, суммы, лимиты комиссии, Bitcoin txid и
+состав подписантов сохраняются. `BTC_EXPIRED_SIGNING_NOT_BOUND` означает,
+что условия восстановления не выполнены. Для исходного batch без отдельного
+fee reserve, который остался в `Reserved`, SDK поддерживает
+[проверяемую FROST-отмену](BITCOIN_ONCHAIN_RUNBOOK.md#cancel-reserved-bitcoin-batch).
+При `BTC_INPUT_CORE_CHANGED` дождитесь согласованного ответа Core и повторите
+исходную команду для того же batch.
+
+Если commitment участника уже опубликован, нужен исходный локальный nonce
+или ранее сохранённая доля того же транскрипта. При
+`NONCE_COMMITMENT_MISMATCH` восстановите точное локальное состояние и сверяйте
+его с журналом nonce. Повтор проверенного вызова отправляет уже подготовленную
+долю. Возврат S после начала подписания заблокирован контрактом.
+
+<a id="unused-factory-id-recovery"></a>
+
+## 8. Перенос резервации ID после остановки DKG
+
+Процедура применима к неиспользованным ID новых `FederationFactory` и
+`ConfederationFactory`. Оператор из `feeSetupAuthority()` подтверждает перенос
+на точную новую сессию. Оба хеша условий и сам ID сохраняются.
+Фабрика проверяет терминальную фазу в состоянии сети при исполнении
+транзакции. SDK дополнительно проверяет глубину подтверждения и финальность
+на Ethereum mainnet перед отправкой.
+
+```mermaid
+flowchart TD
+    accTitle: Перенос неиспользованной резервации ID после остановки DKG
+    A["Оператор сверяет factory, ID и текущую EVM_AUTH"] --> B{"Реестр зафиксировал Failed или Aborted<br/>в подтверждённом блоке?"}
+    B -->|"Нет"| W["Дождаться блока RPC или завершить<br/>отдельную процедуру остановки DKG"]
+    B -->|"Да"| I["Новое приглашение и enrollment<br/>Сохранить ID и хеши условий"]
+    I --> N["Создать замену в исходном DKG registry<br/>Сверить registry, board и coordinator"]
+    N --> C{"ID ещё не принят<br/>и новая DKG соответствует условиям?"}
+    C -->|"Нет"| X["Отклонить перенос"]
+    C -->|"Да"| P["Сверить хеши условий и подтвердить fingerprint"]
+    P --> T["Factory атомарно переключает сессию<br/>и сохраняет оба хеша"]
+    T --> R["Подтвердить квитанцию и новую привязку"]
+    T -->|"Транзакция ждёт"| F["Сверить подтверждённый источник и DKG<br/>Одобрить fee bump или закрытие nonce"]
+    F -->|"Точный перенос"| R
+    F -->|"Подтверждённая отмена"| B
+    R --> D["Завершить новую DKG, затем выполнить adoption"]
+```
+
+1. Сверьте текущие `reservedFederationSession(ID)` и
+   `reservedFederationTerms(ID)` либо соответствующие getters конфедерации.
+   Перенос доступен только до adoption. Уже принятая организация использует
+   свой исходный путь до deploy.
+2. Дождитесь `Aborted` или `Failed` в каноническом DKG-реестре фабрики.
+   Для согласованного abort участник выполняет исходный
+   `dkg run-once --confirm-abort` по [процедуре выше](#5-отставание-rpc-участников).
+   Если фаза просрочена, запишите `Failed` отдельной транзакцией
+   `advancePhase(bytes32)`. Для V1 она разрешена после
+   `phaseDeadline`. Истечение времени и отставание RPC сами по себе не меняют
+   фазу. Для прежней DKG в `Completed` действует обычный adoption.
+   Дождитесь глубины подтверждения по профилю и финальности на Ethereum mainnet.
+3. Для федерации и конфедерации из приглашения V6 подготовьте отдельный
+   enrollment. Используйте проверенный отпечаток исходного V6 приглашения
+   `OLD_INVITE_FINGERPRINT`, новый идентификатор запуска `RECOVERY_RUN_ID` и
+   будущий Unix-дедлайн `APPROVAL_DEADLINE`. Исходные ID, настройки и хеши
+   сохраняются. Новые epoch, session IDs и fingerprint видны при проверке.
+
+   ```bash
+   frost-signer setup reservation-invite --invite "$ORIGINAL_INVITE" \
+     --accept-fingerprint "$OLD_INVITE_FINGERPRINT" --deployment-id "$RECOVERY_RUN_ID" \
+     --deadline "$APPROVAL_DEADLINE" --output "$RECOVERY_INVITE"
+   frost-signer setup publish --invite "$RECOVERY_INVITE" --rpc "$RPC" \
+     --identity-file "$OPERATOR_IDENTITY" --state "$LOCAL/factory-transactions.sqlite"
+   ```
+
+   Опубликованный board и новый fingerprint каждый сверяет через свой RPC.
+   Все приглашённые регистрируют транспортные ключи командой `setup join-chain`
+   в **новом** локальном каталоге. На Ethereum mainnet и для Bitcoin mainnet
+   с Sepolia нужен отдельный `--nonce-ledger-dir`. Для защиты от совместного
+   отката локальных томов привяжите новый signer state через `--nonce-anchor-config`
+   и сохраните его локальное окружение. Публичный Bitcoin требует свои флаги Core.
+   [Параметры enrollment](FIRST_DKG_ONCHAIN.md) ·
+   [Подготовка HTTPS-якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
+
+   ```bash
+   CEREMONY_ARGS=(
+     --kind "$KIND" --factory "$FACTORY" --from-session "$OLD_DKG"
+     --board "$RECOVERY_BOARD" --rpc "$RPC" --confirmations "$EVM_CONFIRMATIONS"
+   )
+   frost-signer setup reservation-ceremony "${CEREMONY_ARGS[@]}"
+   frost-signer setup reservation-ceremony "${CEREMONY_ARGS[@]}" --send \
+     --accept-fingerprint "$CEREMONY_FINGERPRINT" --identity-file "$OPERATOR_IDENTITY" \
+     --state "$LOCAL/factory-transactions.sqlite"
+   ```
+
+   До отправки сверяются точный board, исходная factory, DKG registry, роль,
+   обе сессии, хеши formation и токена и порядок участников. Если `feeSetupAuthority`
+   отличается от `ceremonyRegistrar`, registrar разрешает создание только
+   указанного session ID через `authorizeCeremonyCreator` и ждёт подтверждения.
+   Из `RESERVATION_CEREMONY_READY` возьмите `NEW_DKG` и `role`. Участники
+   этой роли выполняют `dkg run-once --board "$RECOVERY_BOARD" --role "$ROLE"`
+   со своим RPC и новым состоянием. Для custodian-only конфедерации подпись
+   федеративного представителя в этой DKG не нужна. Остальные роли нового
+   приглашения остаются без созданной сессии. Замена для переноса должна
+   иметь действующую фазу или `Completed`.
+4. Выполните проверку. В `KIND` укажите `federation` или `confederation`.
+   Сверьте адреса, старую и новую сессии и хеши с согласованными данными.
+   После проверки передайте полученный `FINGERPRINT` и identity владельца резервации.
+
+   ```bash
+   RESERVATION_ARGS=(
+     --kind "$KIND" --factory "$FACTORY" --entity-id "$ENTITY_ID"
+     --from-session "$OLD_DKG" --to-session "$NEW_DKG"
+     --rpc "$RPC" --chain-id "$CHAIN_ID" --confirmations "$EVM_CONFIRMATIONS"
+   )
+   frost-signer setup reservation-transfer "${RESERVATION_ARGS[@]}"
+
+   frost-signer setup reservation-transfer "${RESERVATION_ARGS[@]}" --send \
+     --accept-fingerprint "$FINGERPRINT" --identity-file "$OPERATOR_IDENTITY" \
+     --state "$LOCAL/factory-transactions.sqlite"
+   ```
+
+5. При `RESERVATION_TRANSFERRED` сверьте подтверждённую EVM-квитанцию,
+   новый session ID и прежние хеши. При потере ответа повторите команду
+   с тем же fingerprint и журналом. SDK вернёт результат той же транзакции.
+   Новая сессия становится единственным основанием для adoption.
+   Прежняя сессия навсегда остаётся недоступной для резервирования на этой фабрике.
+
+После подтверждённого `Completed` используйте метод и аргументы из
+`review.adoption` команды `reservation-ceremony`. Для федерации это
+`adoptFederationDKG`, для обычной конфедерации `adoptConfederationDKG`,
+для конфедерации только кастодианов `adoptCustodianConfederationDKG`.
+Вызов выполняет уполномоченный участник. Фабрика снова сверяет formation
+с зарезервированным хешем. Для custodian-only board оператор после
+`Completed` исполняет точный вызов `review.enable_custodian_publishers`.
+После подтверждения кастодиан сможет публиковать намерения только для
+сессий, которые создал сам. При deploy передайте точные имя и символ
+из `review.token_metadata`. Исходный bootstrap-журнал остаётся закреплён
+за старой сессией. Для произвольной multi-federation formation используйте
+[отдельный фабричный сценарий](FEDERATION_CONFEDERATION_SETUP.md#несколько-федераций-в-конфедерации).
+Этот сценарий доводит замену до adoption и фабричного deploy. Подключение
+существующей BTC_SPEND роли и средств требует штатной процедуры continuity с
+её собственными контекстом и проверками. [Bitcoin continuity](BITCOIN_CONTINUITY.md).
+Для ранее развёрнутых неизменяемых фабрик действует их исходный ABI.
+
+### Зависшая транзакция переноса
+
+Даже общий recovery другого EVM-процесса перед повторной отправкой сверяет
+сохранённый подтверждённый блок, точный calldata и актуальность обеих DKG.
+При отставании RPC подождите или смените RPC с тем же журналом. Для
+актуального переноса штатный `bootstrap replace-pending` даёт пересмотреть
+газ с тем же nonce и calldata. Если перенос больше не нужен или прежний
+якорь перестал быть каноническим, оператор может подтвердить замену на
+нулевую транзакцию себе. Оба варианта используют исходный EOA и его журнал.
+
+```bash
+CANCEL_ARGS=(
+  --rpc "$RPC" --identity-file "$OPERATOR_IDENTITY" --tx-hash "$PENDING_TX"
+  --max-fee-per-gas-wei "$MAX_FEE" --max-priority-fee-per-gas-wei "$MAX_TIP"
+  --max-cost-wei "$MAX_COST" --cancel-reservation
+)
+frost-signer bootstrap replace-pending "${CANCEL_ARGS[@]}"
+frost-signer bootstrap replace-pending "${CANCEL_ARGS[@]}" \
+  --confirm-replacement "$CANCEL_FINGERPRINT"
+```
+
+Транзакции конкурируют за один nonce. Повторяйте с тем же fingerprint до
+`RESERVATION_TRANSFER_CANCELLED` либо квитанции исходной операции. Если
+исходный перенос успел исполниться, сверяйте его квитанцию и состояние ID.
+Если оригинал или его fee bump уже откатился, сначала прочитайте итог
+`replace-pending`. После финальности подтвердите расход именно этого nonce
+через `bootstrap acknowledge-revert --tx-hash "$MINED_TX" --rpc "$RPC"
+--identity-file "$OPERATOR_IDENTITY"`. Новый перенос потребует новой
+допустимой DKG и отдельного review.

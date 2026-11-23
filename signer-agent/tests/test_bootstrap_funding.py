@@ -85,6 +85,16 @@ def test_funding_reorg_is_fatal_before_any_send(tmp_path):
     assert b.w3.eth.sent==[]
 
 
+def test_operator_confirmation_floor_is_used_for_funding_snapshot(tmp_path):
+    b, identity, *_ = setup(tmp_path)
+    b.w3.eth.block_number = 100
+    b._evm_confirmation_floor = 5
+    result = arm(b, identity)
+    assert result["status"] == "PAUSED_FOR_FUNDING"
+    assert result["funding"]["anchor"]["number"] == "96"
+    assert not b.w3.eth.sent
+
+
 def test_flow_arms_once_then_polls_without_rearming(monkeypatch):
     from signer_agent import flow_cli
     calls=[]

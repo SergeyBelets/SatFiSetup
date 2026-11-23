@@ -349,7 +349,7 @@ not acquire this behavior from a source change.
 
 The explicit `btc-address-mint-propose`, `btc-address-mint-execute` and
 `btc-address-mint-retry` commands use canonical `BitcoinMintAdmission` records.
-They take `--intent-id`, display-order `--txid`, `--vout`, the original
+They take `--intent-id`, display-order `--txid`, `--vout`, the current attempt's
 `--deadline` and `--mint-admission`. Recipient and amount have no CLI overrides:
 the recipient comes from the immutable binding, and sats from the parsed output.
 The client independently recomputes the native descriptor, binding and validation
@@ -375,8 +375,10 @@ intent, binding, outpoint, beneficiary, sats, provenance, deadline and original
 generation snapshot. Each attempt separately binds current custody/derivation
 generations. A monotonic generation change permanently fences the old attempt,
 including approved authorizations after resume. Explicit retry preserves the
-economic claim and eight-attempt budget; it cannot extend the deadline or reset
-signing journals. The client checks again after authorization before sending mint.
+economic claim, current deadline and eight-attempt budget. On the updated graph,
+the operator can explicitly renew an expired and retired attempt with
+`btc-mint-renew`. See the [conditions for a new deadline](BITCOIN_MINT_ADMISSION.md).
+The client checks again after authorization before sending mint.
 Temporary RPC failure does not establish permanent retirement.
 
 Exact completion recovery checks allocation, intent, immutable `mintedAddressSats`

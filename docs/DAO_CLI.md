@@ -40,8 +40,8 @@ DKG и журналы остаются в своих каталогах):
 ```sh
 python3.11 -m venv .venv-security
 source .venv-security/bin/activate
-python -m pip install -r signer-agent/requirements.lock
-python -m pip install --no-deps -e './signer-agent[test]'
+python -m pip install --require-hashes --only-binary :all: -r signer-agent/requirements.lock
+python -m pip install --no-deps --no-build-isolation -e './signer-agent[test]'
 ```
 
 При дальнейшем обновлении устанавливайте и `requirements.lock`, и пакет клиента.

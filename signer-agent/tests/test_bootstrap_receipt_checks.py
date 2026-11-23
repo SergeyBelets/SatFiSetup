@@ -7,8 +7,10 @@ from eth_account import Account
 from hexbytes import HexBytes
 from web3.datastructures import AttributeDict
 
-from signer_agent.bootstrap import Bootstrap
-from signer_agent.bootstrap_plan import build
+from signer_agent.bootstrap import Bootstrap, artifact_fingerprint
+from signer_agent.bootstrap_plan import build, spv_payment_deployment
+from signer_agent.bitcoin_trust import previous_artifact
+from signer_agent.contract_provenance import _creation_input
 from signer_agent.operations import Journal
 from test_ethereum_mainnet import ethereum_profile
 
@@ -74,10 +76,107 @@ def test_receipt_checks_do_not_weaken_current_persistent_binding_checks(tmp_path
         instance.verify_checks(dict(checks=[_check(at_receipt=False)]), receipt)
 
 
+def test_formation_postcondition_compares_only_persistent_fields(tmp_path):
+    instance, receipt, calls = _bootstrap(tmp_path,
+        current=("conf-id", ["fed-a", "fed-b"], 2, 3, 5, 4, b"\x02"))
+    check = dict(contract="confederations", method="getConfederation", args=["conf-id"],
+                 indices=[0, 1, 4, 5], equals=["conf-id", ["fed-a", "fed-b"], "5", "4"])
+    instance.verify_checks(dict(checks=[check]), receipt)
+    assert calls == ["current-finalized"]
+    for field, value in ((1, ["fed-b", "fed-a"]), (2, "4"), (3, "3")):
+        expected = list(check["equals"])
+        expected[field] = value
+        with pytest.raises(ValueError, match="^BINDING_CHECK_FAILED$"):
+            instance.verify_checks(dict(checks=[dict(check, equals=expected)]), receipt)
+
+
 def test_wrong_historical_allowance_rejected_even_if_current_value_matches(tmp_path):
     instance, receipt, _ = _bootstrap(tmp_path, historical=0, current=123)
     with pytest.raises(ValueError, match="^BINDING_CHECK_FAILED$"):
         instance.verify_checks(dict(checks=[_check()]), receipt)
+
+
+@pytest.mark.parametrize("historical", [False, True])
+def test_spv_payment_registry_activation_preserves_original_receipt(tmp_path, historical):
+    instance, receipt, _ = _bootstrap(tmp_path)
+    instance.profile["confederation_id"] = "conf-a"
+    step = spv_payment_deployment("conf-a", historical=historical)
+    original = json.loads(json.dumps(step))
+    values = {c["method"]: c["equals"] for c in step["checks"]}
+    live_enabled = {"value": True}
+    calls = []
+
+    def fn(check):
+        def call(*, block_identifier):
+            method = check["method"]
+            calls.append((method, block_identifier))
+            if method == "enabled" and block_identifier != receipt.blockNumber:
+                return live_enabled["value"]
+            return values[method]
+        return SimpleNamespace(call=call)
+
+    instance.fn = fn
+    instance.verify_checks(step, receipt)
+    assert step == original
+    assert calls[-1] == ("enabled", receipt.blockNumber)
+    assert all(block == "current-finalized" for _, block in calls[:-1])
+    with pytest.raises(ValueError, match="^BINDING_CHECK_RECEIPT_REQUIRED$"):
+        instance.verify_checks(step)
+    values["enabled"] = True
+    live_enabled["value"] = False
+    with pytest.raises(ValueError, match="^BINDING_CHECK_FAILED$"):
+        instance.verify_checks(step, receipt)
+    if not historical:
+        # A near-match custom configuration does not gain receipt-only semantics.
+        values["enabled"] = False
+        live_enabled["value"] = True
+        with pytest.raises(ValueError, match="^BINDING_CHECK_FAILED$"):
+            instance.verify_checks(dict(step, id="another-registry"), receipt)
+
+
+@pytest.mark.parametrize("kind,archive,arguments", [
+    ("ULRStaking", "ULRStaking", ["0x" + "11" * 20, "0x" + "22" * 20, 200_000, 1]),
+    ("BitcoinMintAdmission", "BitcoinMintAdmission", ["0x" + "11" * 20, "0x" + "22" * 20]),
+    ("BitcoinMintAdmission", "BitcoinMintAdmissionRetirementV1", ["0x" + "11" * 20, "0x" + "22" * 20]),
+    ("MiningPoolV1", "MiningPoolV1", ["old-mp", "0x" + "11" * 20, "0x" + "22" * 20, "MP", "MP"]),
+    ("ConfederationBitcoinReserve", "ConfederationBitcoinReserve",
+     ["old-s", "0x" + "11" * 20, "0x" + "22" * 20, "0x" + "33" * 20]),
+])
+@pytest.mark.parametrize("legacy_hash", [False, True])
+def test_bootstrap_previous_build_pin_requires_exact_canonical_creation(tmp_path, monkeypatch, kind, archive, arguments,
+                                                                   legacy_hash):
+    from signer_agent import bootstrap as module
+    from web3 import Web3
+
+    instance, receipt, _ = _bootstrap(tmp_path)
+    archived = previous_artifact(archive)
+    current = dict(archived, deployedBytecode={"object": "0x6000"})
+    monkeypatch.setattr(module, "artifact", lambda name: current)
+    addr = "0x" + "55" * 20
+    receipt = AttributeDict(dict(receipt, contractAddress=addr))
+    runtime = HexBytes(archived["deployedBytecode"]["object"])
+    tx_hash = HexBytes(b"t" * 32)
+    transaction = dict(to=None, hash=tx_hash, blockHash=receipt.blockHash,
+                       input=HexBytes(_creation_input(archived, arguments)))
+    instance.w3.eth.get_code = lambda *args, **kwargs: runtime
+    instance.w3.eth.get_transaction = lambda saved: transaction
+    pin = artifact_fingerprint(archived, legacy=legacy_hash)
+    item = dict(address=addr, artifact=kind, artifact_hash=pin, runtime_hash=Web3.keccak(runtime).hex())
+    step = dict(kind="deploy", artifact=kind, args=instance.wire(arguments))
+    result = dict(tx_hash=tx_hash.hex(), contract=item)
+    instance.contracts, instance.values = {"legacy": item}, {}
+    del instance.manifest
+    instance.profile.update(mode="integration", bitcoin_network="regtest")
+
+    instance.verify_deployment_pin(step, result, receipt)
+    assert instance.manifest()["contracts"] == {"legacy": item}
+    with pytest.raises(ValueError, match="^ARTIFACT_HASH_MISMATCH$"):
+        instance.verify_deployment_pin(step, dict(result, contract=dict(item, artifact_hash="bad-pin")), receipt)
+    with pytest.raises(ValueError, match="^BTC_CREATION_RECEIPT_MISMATCH$"):
+        instance.verify_deployment_pin(step, result, AttributeDict(dict(receipt, contractAddress="0x" + "44" * 20)))
+    transaction["input"] += b"\x00"
+    with pytest.raises(ValueError, match="^BTC_CANONICAL_CREATION_NOT_FOUND$"):
+        instance.verify_deployment_pin(step, result, receipt)
 
 
 @pytest.mark.parametrize("changed_at", [1, 2])
@@ -112,7 +211,7 @@ def test_mainnet_factory_allowances_are_exact_then_consumed_at_receipt():
     steps = {step["id"]: step for step in build(profile)["steps"]}
     for role in ("federation", "confederation"):
         approved = steps["approve_" + role + "_fee"]["checks"]
-        spent = steps["deploy_" + role]["checks"]
+        spent = [c for c in steps["deploy_" + role]["checks"] if c.get("at_receipt")]
         assert len(approved) == len(spent) == 1
         assert approved[0]["equals"] == profile["deployment_fee"]["amount"]
         assert spent[0]["equals"] == "0"

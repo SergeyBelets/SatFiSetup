@@ -143,7 +143,7 @@ def extend(p, deploy, call, approve):
         deployment_fee="project fee policy unchanged", ulr="one fixed 10m issue in create; reuse never deploys or mints ULR")
 
 
-def inspect_roots(w3, profile, roots, at):
+def inspect_roots(w3, profile, roots, at, *, previous_staking=False):
     """Authenticate shared roots before transactions and participant signatures."""
     from .ulr_treasury import contract, read, proven, configuration
     if type(at) is not int:
@@ -162,7 +162,8 @@ def inspect_roots(w3, profile, roots, at):
         return inspect_dao_roots(w3, profile, roots, at)
     pin = dict(version="1", chain_id=profile["chain_id"], staking=roots["staking"], snapshots=roots["snapshots"],
                confirmations=profile.get("evm_confirmations", "1"), treasuries=[])
-    registry, staking = configuration(w3, pin, at)
+    options = {"previous_staking": True} if previous_staking else {}
+    registry, staking = configuration(w3, pin, at, **options)
     from .launch_economics import encoded
     reward_decimals=read(contract(w3,"IERC20Metadata",roots["usd"]),at,"decimals")
     expected=encoded(policy,reward_decimals)
@@ -271,7 +272,7 @@ def review_pipeline(w3, target, router, factory, conf_id, bundle, at):
            [mp.address, reward, int(invite["converter_numerator"]), int(invite["converter_denominator"])])
 
 
-def manifest(bootstrap):
+def manifest(bootstrap, *, previous_staking=False):
     if bootstrap.profile["ulr"]["version"] == "3":
         from .bootstrap_confederation_dao import manifest as dao_manifest
         return dao_manifest(bootstrap)
@@ -281,13 +282,15 @@ def manifest(bootstrap):
     anchor = bootstrap.w3.eth.get_block(bootstrap.read_number())
     at = anchor.number
     roots = {name: bootstrap.contracts[name]["address"] for name in shared_roots(bootstrap.profile["ulr"])}
-    inspect_roots(bootstrap.w3, bootstrap.profile, roots, at)
+    options = {"previous_staking": True} if previous_staking else {}
+    registry_check = inspect_roots(bootstrap.w3, bootstrap.profile, roots, at, **options)
     pin = dict(version="1", chain_id=bootstrap.profile["chain_id"], staking=roots["staking"], snapshots=roots["snapshots"],
                confirmations=bootstrap.profile.get("evm_confirmations", "1"),
                treasuries=[bootstrap.contracts["ulr_treasury"]["address"]])
     from .ulr_treasury import treasury_context, voting_context, read
-    registry, _, treasury, _, _, _ = treasury_context(bootstrap.w3, pin, pin["treasuries"][0], at)
-    voting_context(bootstrap.w3, pin, bootstrap.contracts["decisions"]["address"], treasury.address, at)
+    configured = {"configured": registry_check[:2]} if previous_staking else {}
+    registry, _, treasury, _, _, _ = treasury_context(bootstrap.w3, pin, pin["treasuries"][0], at, **configured)
+    voting_context(bootstrap.w3, pin, bootstrap.contracts["decisions"]["address"], treasury.address, at, **configured)
     router = bootstrap.contract("fee_router")
     if (read(registry, at, "treasuries", read(treasury, at, "scope")) != treasury.address
             or not read(router, at, "authorizedPayers", bootstrap.contracts["fee_pipeline"]["address"])):

@@ -18,10 +18,22 @@ from .bitcoin_onchain_plan import (
 )
 from .bitcoin_proofs import inclusion, sha256d
 from .bitcoin_trust import require_registry, graph_network, bitcoin_for_graph, check_bitcoin_graph, confirmed_block
-from .bitcoin_rpc import satoshis
+from .bitcoin_rpc import mempool_fee_rates, satoshis
 from .bitcoin_worker import outpoint_hash
 from .operations import canonical
 from .bitcoin_network import is_public_network, relay_artifact
+
+
+CANCEL_HELPER = "getCancelOperationHash"
+APPROVAL_OPERATIONS = {
+    ("BitcoinBatchRegistry", "operationHash"): "reserve",
+    ("BitcoinWithdrawalEscrow", "getBindOperationHash"): "bind",
+    ("BitcoinBatchRegistry", "getReplacementOperationHash"): "reserve",
+    ("BitcoinWithdrawalEscrow", "getBindReplacementOperationHash"): "bind",
+    ("BitcoinWithdrawalEscrowV2", "getBindUserFundedOperationHash"): "bind",
+    ("BitcoinWithdrawalEscrowV2", "getBindUserFundedReplacementOperationHash"): "bind",
+    ("BitcoinBatchRegistry", CANCEL_HELPER): "cancel",
+}
 
 
 def _contract(registry, address, kind):
@@ -116,24 +128,30 @@ _LEGACY_CUSTODY_GATEWAYS = {
 }
 
 
-def _is_custody_gateway(w3, owner, block):
-    from .bitcoin_trust import checked_runtime
+def _custody_gateway_profile(w3, owner, block):
+    from .bitcoin_trust import _check_runtime
 
     at = block if block is not None else "latest"
+    code = bytes(w3.eth.get_code(owner, block_identifier=at))
+    if not code:
+        return None
     try:
-        checked_runtime(w3, owner, "BitcoinCustodyTransferV2", at)
-        return True
+        _check_runtime(code, artifact("BitcoinCustodyTransferV2")["deployedBytecode"])
+        return "quoted"
     except ValueError as error:
         if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
             raise
-    code = bytearray(w3.eth.get_code(owner, block_identifier=at))
+    from .custody_network import known_legacy_gateway_runtime
+    if known_legacy_gateway_runtime(code, "BitcoinCustodyTransferV2"):
+        return "legacy"
     legacy = _LEGACY_CUSTODY_GATEWAYS.get(len(code))
     if legacy is None:
-        return False
+        return None
     digest, offsets = legacy
+    code = bytearray(code)
     for offset in offsets:
         code[offset:offset + 32] = bytes(32)
-    return keccak(bytes(code)).hex() == digest
+    return "legacy" if keccak(bytes(code)).hex() == digest else None
 
 
 def validate_custody_outputs(escrow, requests, block, outputs=None):
@@ -152,15 +170,23 @@ def validate_custody_outputs(escrow, requests, block, outputs=None):
             continue
         owners = {row[3] for row in direct}
         amount = sum(row[4] for row in direct) // 10**10
-        if len(direct) == len(group) and len(owners) == 1 and (
-            outputs is None or output_values.get(script) == [amount]
-        ):
-            continue
         for owner in owners:
             if owner not in checked:
-                checked[owner] = _is_custody_gateway(escrow.w3, owner, block)
-            if checked[owner]:
-                raise ValueError("BTC_CUSTODY_OUTPUT_GROUP")
+                checked[owner] = _custody_gateway_profile(escrow.w3, owner, block)
+        gateways = {owner: checked[owner] for owner in owners if checked[owner]}
+        if not gateways:
+            continue
+        if (len(direct) != len(group) or len(owners) != 1 or len({row[2] for row in direct}) != 1
+                or outputs is not None and output_values.get(script) != [amount]):
+            raise ValueError("BTC_CUSTODY_OUTPUT_GROUP")
+        owner, profile = next(iter(gateways.items()))
+        if profile == "quoted":
+            gateway = escrow.w3.eth.contract(address=owner, abi=artifact("BitcoinCustodyTransferV2")["abi"])
+            for row in direct:
+                transfer = _read(gateway.functions.transfers(row[1]), block)
+                net = _read(gateway.functions.quotedShares(row[1]), block)
+                if transfer[5] != 1 or transfer[3] != row[4] or not 0 < transfer[4] <= net <= row[4]:
+                    raise ValueError("BTC_CUSTODY_ISSUANCE_QUOTE")
 
 
 def review_custody_outputs(registry, graph, plan, block):
@@ -181,8 +207,12 @@ def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None
     due = {}
     requests = []
     escrow = contracts["escrow"]
-    if fee is not None and not _escrow_v2(escrow):
-        raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
+    if fee is not None:
+        if not _escrow_v2(escrow) or type(block) is not int:
+            raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
+        pool_abi = artifact("ConfederationPoolV2")["abi"]
+        has_owner_minimum = any(item.get("type") == "function" and item.get("name") == "minimumPayoutSats"
+                                for item in pool_abi)
     for index, ref in enumerate(refs):
         request = _read(escrow.functions.requests(hex_value(ref, 32)), block)
         pending=int(request[-1])==1 and bytes(request[-2])==bytes(32)
@@ -193,8 +223,12 @@ def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None
         # A payment to our own wallet would make principal/change accounting ambiguous.
         if destination == wallet_script:
             raise ValueError("BTC_WITHDRAWAL_TO_WALLET_UNSUPPORTED")
-        if (fee is not None or "address_registry" in contracts) and int(_read(contracts["deposits"].functions.scriptPools(
-                keccak(bytes.fromhex(destination))), block), 16):
+        # An existing V3 binding fixes its payout role, including for an RBF
+        # replacement. The current registry still constrains a new request.
+        fixed_payout = fee is not None and bound
+        if (not fixed_payout and (fee is not None or "address_registry" in contracts)
+                and int(_read(contracts["deposits"].functions.scriptPools(
+                    keccak(bytes.fromhex(destination))), block), 16)):
             raise ValueError("BTC_WITHDRAWAL_TO_WALLET_UNSUPPORTED")
         minimum = (_read(escrow.functions.minP2WPKHSats(), block) if destination.startswith("0014")
                    else _read(escrow.functions.minP2TRSats(), block))
@@ -202,7 +236,7 @@ def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None
         if fee is not None:
             if not int(request[0], 16) or not int(request[2], 16):
                 raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
-            pool = escrow.w3.eth.contract(address=request[0], abi=artifact("ConfederationPoolV2")["abi"])
+            pool = escrow.w3.eth.contract(address=request[0], abi=pool_abi)
             limit = int(_read(pool.functions.minerFeeLimitSats(request[1]), block))
             if limit == 2**64 - 1:
                 limit = int(_read(escrow.functions.defaultMinerFeeLimitSats(), block))
@@ -211,6 +245,13 @@ def _requests(contracts, refs, wallet_script, block=None, *, root=None, fee=None
             if part > limit:
                 raise ValueError("BTC_WITHDRAWAL_FEE_CAP")
             amount -= part
+            # Callback admission below checks the exact pool artifact. Only an
+            # admitted older build whose ABI lacks this getter uses dust alone.
+            if has_owner_minimum:
+                owner_minimum = _read(pool.functions.minimumPayoutSats(request[1]), block)
+                if type(owner_minimum) is not int or not 0 < owner_minimum <= MAX_MONEY:
+                    raise ValueError("BTC_WITHDRAWAL_MINIMUM_INVALID")
+                minimum = max(minimum, owner_minimum)
         if amount < minimum:
             raise ValueError("BTC_WITHDRAWAL_BELOW_MINIMUM")
         if int(request[0], 16):
@@ -272,18 +313,21 @@ def protect_custody_transfer(deposits, item, transaction, block):
     if w3 is None:
         return
     from .bootstrap import artifact
-    from .bitcoin_trust import checked_runtime
+    from .bitcoin_trust import checked_runtime, runtime_artifact
+    from .contract_provenance import prove_creation
     origin = _read(deposits.functions.scriptPools(keccak(bytes.fromhex(item["script"]))), block)
     if int(origin, 16) == 0:
         return
     kind, gateway_kind = "MiningPoolV1", "BitcoinCustodyTransfer"
     try:
-        checked_runtime(w3, origin, kind, block)
+        _, compiled = runtime_artifact(w3, origin, kind, block, previous_build=True)
     except ValueError as error:
         if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
             raise
         kind, gateway_kind = "ConfederationBitcoinReserve", "BitcoinCustodyTransferV2"
-        checked_runtime(w3, origin, kind, block)
+        _, compiled = runtime_artifact(w3, origin, kind, block, previous_build=True)
+    if compiled.get("legacy_reference"):
+        prove_creation(w3, origin, kind, None, block, previous_build=True)
     mining = w3.eth.contract(address=origin, abi=artifact(kind)["abi"])
     gateway_address = _read(mining.functions.custodyTransfer(), block)
     if int(gateway_address, 16) == 0:
@@ -301,9 +345,30 @@ def _principal(contracts, refs, block=None):
     ) if int(request[2], 16) != 0)
 
 
+def require_v3_relay_fee(bitcoin, plan, built, escrow, block):
+    """Reject an already unaffordable Bitcoin fee before reserving or signing."""
+    floor, increment = mempool_fee_rates(bitcoin.call("getmempoolinfo"))
+    previous = _previous(plan)
+    # Rust's Bitcoin builder uses one 64-byte key-path signature per P2TR input.
+    # Marker/flag and each one-element witness stack contribute one WU per byte.
+    vsize = (len(bytes.fromhex(built["unsigned"])) * 4 + 2 + 66 * len(plan["inputs"]) + 3) // 4
+    required = (floor * vsize + 999) // 1000
+    if any(previous):
+        previous_fee = _read(escrow.functions.minerFee(previous), block)
+        required = max(required, previous_fee + max(1, (increment * vsize + 999) // 1000))
+    if int(plan["fee"]) < required:
+        raise ValueError("BTC_PLAN_BELOW_MEMPOOL_FEE")
+
+
 def _terms(contracts, plan, bitcoin=None, block=None, *, bound_root=None):
     """Check obligations and treasury-funded fees before asking for authorization."""
     core_anchor = None
+    fee = int(plan["fee"]) if plan["version"] == "5" else None
+    escrow = contracts["escrow"] if fee is not None else None
+    anchor = None
+    if escrow is not None and block is None:
+        anchor = escrow.w3.eth.get_block("latest")
+        block = anchor.number
     if bitcoin is not None and plan.get("version") in ("3", "4"):
         bitcoin.check_network()
         if bitcoin.call("getblockhash",0) != bytes(_read(contracts["address_registry"].functions.bitcoinGenesis(),block)).hex():
@@ -312,9 +377,7 @@ def _terms(contracts, plan, bitcoin=None, block=None, *, bound_root=None):
     previous = _previous(plan)
     root = (bytes(_read(contracts["batches"].functions.reservationRoot(previous), block))
             if previous != bytes(32) else bound_root)
-    fee = int(plan["fee"]) if plan["version"] == "5" else None
     if fee is not None and previous != bytes(32):
-        escrow = contracts["escrow"]
         old = _read(escrow.functions.payment(previous), block)
         previous_inputs = _read(contracts["batches"].functions.getInputs(previous), block)
         if (bytes(old[0]) == bytes(32) or [bytes(key).hex() for key in old[3]] != plan["withdrawal_refs"]
@@ -349,9 +412,12 @@ def _terms(contracts, plan, bitcoin=None, block=None, *, bound_root=None):
         raise ValueError("BTC_WITHDRAWAL_PRINCIPAL_MISMATCH")
     if backing < principal or paid.get(plan["wallet_script"], 0) < backing - principal:
         raise ValueError("MINER_FEE_CONSUMES_PRINCIPAL")
-    _build(plan)
+    built = _build(plan)
+    if anchor is not None and escrow.w3.eth.get_block(anchor.number).hash != anchor.hash:
+        raise ValueError("BTC_OPERATION_REORG")
     if core_anchor is not None and bitcoin.call("getbestblockhash") != core_anchor:
         raise ValueError("BTC_INPUT_CORE_CHANGED")
+    return built
 
 
 def _review_wallet(manifest, registry, board, plan, block,*,validate=True):
@@ -408,10 +474,11 @@ def review_intent(intent, manifest, key, registry, state, *, board_address=None,
     block = confirmed_block(registry.w3, getattr(registry, "bitcoin_graph", {}))
     btc_manifest, public_key = _review_wallet(manifest, registry, board, plan, block)
     profile = {"address_signing": True} if plan["version"] in ("3", "4") else {}
-    if discover_registry(btc_manifest, public_key, registry, board_address, **profile) != plan["batch_registry"]:
-        raise ValueError("BTC_REGISTRY_NOT_TRUSTED")
     options = board_options(btc_manifest, registry, board_address)
-    reviewed = inspect_registry(btc_manifest, public_key, registry, plan["batch_registry"], **options, **profile)
+    review = {"public_wallet": True} if "bitcoin_recovery" in options else {}
+    if discover_registry(btc_manifest, public_key, registry, board_address, **profile, **review) != plan["batch_registry"]:
+        raise ValueError("BTC_REGISTRY_NOT_TRUSTED")
+    reviewed = inspect_registry(btc_manifest, public_key, registry, plan["batch_registry"], **options, **profile, **review)
     graph = reviewed["graph"]
     _network_binding(graph, plan)
     reviewed_block = confirmed_block(registry.w3, graph)
@@ -423,8 +490,12 @@ def review_intent(intent, manifest, key, registry, state, *, board_address=None,
     prove_creation(registry.w3, board.address, "BitcoinSigningBoard", [
         plan["batch_registry"], board.functions.maxPacketBytes().call(block_identifier=block.number),
     ], block.number)
+    pair = (intent.get("artifact"), intent.get("hash_method"))
+    if pair not in APPROVAL_OPERATIONS:
+        raise ValueError("BTC_OPERATION_INVALID")
+    operation = APPROVAL_OPERATIONS[pair]
     bitcoin = None
-    if is_public_network(graph_network(graph)) or plan["version"] in ("3", "4"):
+    if operation != "cancel" and (is_public_network(graph_network(graph)) or plan["version"] in ("3", "4")):
         bitcoin = bitcoin_for_graph(graph, bitcoin_rpc, bitcoin_cookie)
         check_bitcoin_graph(registry, graph, bitcoin)
     if (graph["evm_dkg_id"] != manifest.session_id.hex() or graph["evm_result"] != key["result_hash"]
@@ -433,28 +504,32 @@ def review_intent(intent, manifest, key, registry, state, *, board_address=None,
         raise ValueError("BTC_AUTHORIZATION_GRAPH_MISMATCH")
     contracts = {name: _contract(registry, row["address"], row["artifact"])
                  for name, row in graph["contracts"].items()}
-    pair = (intent.get("artifact"), intent.get("hash_method"))
-    operations = {
-        ("BitcoinBatchRegistry", "operationHash"): "reserve",
-        ("BitcoinWithdrawalEscrow", "getBindOperationHash"): "bind",
-        ("BitcoinBatchRegistry", "getReplacementOperationHash"): "reserve",
-        ("BitcoinWithdrawalEscrow", "getBindReplacementOperationHash"): "bind",
-        ("BitcoinWithdrawalEscrowV2", "getBindUserFundedOperationHash"): "bind",
-        ("BitcoinWithdrawalEscrowV2", "getBindUserFundedReplacementOperationHash"): "bind",
-    }
-    if pair not in operations:
-        raise ValueError("BTC_OPERATION_INVALID")
-    target, helper, args, operation_hash = _operation(btc_manifest, contracts, plan, operations[pair], block.number)
-    if (intent.get("target") != target.address or intent.get("hash_args") != Bootstrap.wire(args)
+    target, helper, args, operation_hash = _operation(
+        btc_manifest, contracts, plan, operation, block.number,
+    )
+    if (intent.get("target") != target.address or intent.get("hash_method") != helper
+            or intent.get("hash_args") != Bootstrap.wire(args)
             or intent.get("operation_hash", "").removeprefix("0x") != operation_hash.hex()):
         raise ValueError("BTC_PUBLIC_PLAN_OPERATION_MISMATCH")
-    _terms(contracts, plan, bitcoin, block.number)
-    from .btc_fee_reserve import guard as fee_guard
-    fee_guard(btc_manifest,plan,registry,graph,bitcoin=bitcoin,reserved=False)
-    if plan["version"] in ("3", "4"):
-        from .bitcoin_input_keys import guard
-        guard(btc_manifest, public_key, plan, registry, graph)
-    if int(plan["deadline"]) <= registry.w3.eth.get_block("latest").timestamp:
+    if operation == "cancel":
+        latest = registry.w3.eth.get_block("latest")
+        deadline = decimal(intent.get("cancel_deadline"), positive=True)
+        if _operation(btc_manifest, contracts, plan, operation, latest.number)[3] != operation_hash:
+            raise ValueError("BTC_OPERATION_CHANGED")
+        if registry.w3.eth.get_block(latest.number).hash != latest.hash:
+            raise ValueError("BTC_OPERATION_REORG")
+    else:
+        deadline = int(plan["deadline"])
+        built = _terms(contracts, plan, bitcoin, block.number)
+        if plan["version"] == "5" and bitcoin is not None:
+            require_v3_relay_fee(bitcoin, plan, built, contracts["escrow"], block.number)
+        from .btc_fee_reserve import guard as fee_guard
+        fee_guard(btc_manifest,plan,registry,graph,bitcoin=bitcoin,reserved=False)
+        if plan["version"] in ("3", "4"):
+            from .bitcoin_input_keys import guard
+            guard(btc_manifest, public_key, plan, registry, graph)
+        latest = registry.w3.eth.get_block("latest")
+    if deadline <= latest.timestamp:
         raise ValueError("BATCH_EXPIRED")
     if registry.w3.eth.get_block(block.number).hash != block.hash:
         raise ValueError("BTC_OPERATION_REORG")
@@ -483,20 +558,23 @@ def _prepare(a, manifest, key, registry, state, board):
         raise ValueError("BTC_PLAN_INPUTS")
     address_mode = graph.get("usage") == "BTC_INPUT_KEYS_V1"
     user_funded = _escrow_v2(contracts["escrow"])
+    payment_anchor = confirmed_block(registry.w3, graph) if user_funded else None
+    block = payment_anchor.number if payment_anchor is not None else None
     previous = hex_value((getattr(a, "previous", None) or "0" * 64).removeprefix("0x"), 32)
     if previous != bytes(32) and not user_funded:
         raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
-    root = bytes(contracts["batches"].functions.reservationRoot(previous).call()) if previous != bytes(32) else None
+    root = (bytes(_read(contracts["batches"].functions.reservationRoot(previous), block))
+            if previous != bytes(32) else None)
     inputs = [_unspent(bitcoin, item, None if address_mode else wallet_script,
                        **({"include_mempool": False} if root else {})) for item in outpoints]
     refs = [item.removeprefix("0x") for item in (getattr(a, "withdrawals", None) or [])]
-    due = _requests(contracts, refs, wallet_script, root=root, fee=fee if user_funded else None)
+    due = _requests(contracts, refs, wallet_script, block, root=root, fee=fee if user_funded else None)
     outputs = [dict(script=destination, amount=str(amount)) for destination, amount in due.items()]
     change = sum(int(item["amount"]) for item in inputs) - sum(due.values()) - fee
     if change < 0:
         raise ValueError("INSUFFICIENT_BITCOIN_INPUTS")
     if change:
-        if change < int(contracts["escrow"].functions.minP2TRSats().call()):
+        if change < int(_read(contracts["escrow"].functions.minP2TRSats(), block)):
             raise ValueError("BTC_CHANGE_BELOW_MINIMUM")
         outputs.append(dict(script=wallet_script, amount=str(change)))
     plan = dict(
@@ -513,18 +591,22 @@ def _prepare(a, manifest, key, registry, state, board):
         prepare(manifest, key, registry, graph, plan, confirmed_block(registry.w3, graph).number)
     _validate_binding(manifest, key, board, plan)
     _network_binding(graph, plan)
-    _terms(contracts, plan, bitcoin)
+    built = _terms(contracts, plan, bitcoin, block)
     if address_mode:
         from .bitcoin_input_keys import guard
         guard(manifest, key, plan, registry, graph)
     existing = contracts["batches"].functions.batchState(bytes.fromhex(batch)).call()
     if existing:
         _batch_matches(manifest, contracts, plan)
+    if user_funded and existing != 2:
+        require_v3_relay_fee(bitcoin, plan, built, contracts["escrow"], block)
+    if payment_anchor is not None and registry.w3.eth.get_block(payment_anchor.number).hash != payment_anchor.hash:
+        raise ValueError("BTC_OPERATION_REORG")
     remember_plan(manifest, state, plan)
     return dict(status="BTC_PLAN_PREPARED", plan=plan, plan_hash=onchain_plan_hash(manifest, plan).hex())
 
 
-def _batch_matches(manifest, contracts, plan, block=None):
+def _batch_matches(manifest, contracts, plan, block=None, *, allowed_states=(1, 2)):
     batches = contracts["batches"]
     batch = bytes.fromhex(plan["batch_id"])
     entry = _read(batches.functions.batches(batch), block)
@@ -532,7 +614,7 @@ def _batch_matches(manifest, contracts, plan, block=None):
         return False
     previous = _previous(plan)
     expected_root=bytes(_read(batches.functions.reservationRoot(previous),block)) if previous!=bytes(32) else batch
-    if (int(entry[3]) not in (1, 2) or bytes(entry[0]) != onchain_plan_hash(manifest, plan)
+    if (int(entry[3]) not in allowed_states or bytes(entry[0]) != onchain_plan_hash(manifest, plan)
             or bytes(entry[1]).hex() != plan["wallet_result"] or int(entry[2]) != int(plan["deadline"])
             or [bytes(item) for item in _read(batches.functions.getInputs(batch), block)]
             != [outpoint_hash(item["outpoint"]) for item in plan["inputs"]]
@@ -552,9 +634,86 @@ def _payment_matches(contracts, plan, block=None):
     return True
 
 
+def confirmed_v5_broadcast(manifest, registry, graph, plan, txid):
+    """Authenticate the V5 payout and its lineage in the enrolled escrow."""
+    batch, previous = bytes.fromhex(plan["batch_id"]), _previous(plan)
+    batches_item, escrow_item = (graph["contracts"][name] for name in ("batches", "escrow"))
+    if plan["version"] != "5" or escrow_item["artifact"] != "BitcoinWithdrawalEscrowV2":
+        raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
+    batches = _contract(registry, batches_item["address"], batches_item["artifact"])
+    escrow = _contract(registry, escrow_item["address"], escrow_item["artifact"])
+    block = confirmed_block(registry.w3, graph)
+    number = block.number
+    if (batches.address != plan["batch_registry"]
+            or _read(batches.functions.withdrawalEscrow(), number) != escrow.address
+            or not _batch_matches(manifest, {"batches": batches}, plan, number, allowed_states=(2,))
+            or not _read(escrow.functions.isBound(batch), number)):
+        raise ValueError("ESCROW_PAYMENT_MISMATCH")
+    payment = _read(escrow.functions.payment(batch), number)
+    if (bytes(payment[0]) != hex_value(txid, 32)[::-1] or payment[2]
+            or [bytes(ref).hex() for ref in payment[3]] != plan["withdrawal_refs"]):
+        raise ValueError("ESCROW_PAYMENT_MISMATCH")
+    replacement = None
+    if any(previous):
+        parent = _read(escrow.functions.payment(previous), number)
+        root = bytes(_read(batches.functions.reservationRoot(batch), number))
+        if (parent[2] or not any(parent[0]) or bytes(parent[0]) == bytes(payment[0])
+                or payment[3] != parent[3] or not any(root) or root == batch
+                or _read(batches.functions.batchState(previous), number) != 2
+                or _read(batches.functions.getInputs(previous), number) != [
+                    outpoint_hash(item["outpoint"]) for item in plan["inputs"]
+                ]):
+            raise ValueError("BTC_REPLACEMENT_PLAN")
+        replacement = root.hex(), previous.hex()
+
+    def recheck():
+        # The confirmed binding and lineage are immutable. Check the live
+        # binding too, so another version's settlement blocks this send.
+        from .bitcoin_onchain import snapshot_check
+
+        snapshot_check(registry.w3, block)
+        latest = registry.w3.eth.get_block("latest")
+        if latest.number < block.number:
+            raise ValueError("EVM_RPC_BEHIND")
+        if not _read(escrow.functions.isBound(batch), latest.number):
+            raise ValueError("ESCROW_PAYMENT_MISMATCH")
+        snapshot_check(registry.w3, latest)
+
+    return replacement, recheck
+
+
+def _cancel_state(manifest, contracts, plan, block=None):
+    batches = contracts["batches"]
+    batch = bytes.fromhex(plan["batch_id"])
+    if (plan["version"] not in ("2", "5") or _previous(plan) != bytes(32)
+            or int(_read(batches.functions.feeReserve(), block), 16) != 0
+            or not _batch_matches(manifest, contracts, plan, block, allowed_states=(1, 3))
+            or int(_read(batches.functions.versionCount(batch), block)) != 1):
+        raise ValueError("BTC_CANCEL_REQUIRES_RESERVED_ROOT")
+    current = int(_read(batches.functions.batchState(batch), block))
+    if current not in (1, 3):
+        raise ValueError("BTC_CANCEL_REQUIRES_RESERVED_ROOT")
+    reserved = current == 1
+    for item in plan["inputs"]:
+        outpoint = outpoint_hash(item["outpoint"])
+        owner = bytes(_read(batches.functions.reservations(outpoint), block))
+        if (owner == batch) != reserved:
+            raise ValueError("BTC_CANCEL_RESERVATION_MISMATCH")
+    return current
+
+
 def _operation(manifest, contracts, plan, operation, block=None):
     batch = bytes.fromhex(plan["batch_id"])
     previous = _previous(plan)
+    if operation == "cancel":
+        if _cancel_state(manifest, contracts, plan, block) != 1:
+            raise ValueError("BTC_CANCEL_REQUIRES_RESERVED_ROOT")
+        batches, auth = contracts["batches"], contracts["authorization"]
+        selector = Web3.keccak(text="cancel(bytes32,bytes32)")[:4]
+        params = keccak(encode(["bytes32"], [batch]))
+        nonce = _read(batches.functions.nonce(), block)
+        digest = bytes(_read(auth.functions.hashOperation(batches.address, selector, params, nonce), block))
+        return batches, CANCEL_HELPER, [batch], digest
     if operation == "reserve":
         name, method = "batches", "operationHash"
         args = [batch, onchain_plan_hash(manifest, plan),
@@ -587,13 +746,16 @@ def _auth_board(a, manifest, registry, graph):
     from .onchain_transport import invitation
     from .bitcoin_trust import invitation_options, graph_options
 
-    if not getattr(a, "board", None):
+    rotation = graph.get("bitcoin_recovery_rotation")
+    recovery_board = getattr(a, "recovery_board", None)
+    board_address = recovery_board if rotation else getattr(a, "board", None)
+    if not board_address or bool(recovery_board) != bool(rotation):
         raise ValueError("ONCHAIN_BOARD_REQUIRED")
-    transport, invite = invitation(registry.w3, a.board)
+    transport, invite = invitation(registry.w3, board_address)
     roles = [role for role, session in invite["sessions"].items() if session == graph["evm_dkg_id"]]
     roster = invite["participants"][1:] if "bitcoin_custody" in invite else invite["participants"]
     if (transport.functions.registry().call() != manifest.registry
-            or invite["sessions"]["btc_ceremony"] != manifest.session_id.hex()
+            or (rotation["wallet_id"] if rotation else invite["sessions"]["btc_ceremony"]) != manifest.session_id.hex()
             or tuple(roster) != manifest.participants
             or len(roles) != 1 or roles[0] == "btc_ceremony"):
         raise ValueError("BTC_BOARD_WALLET_MISMATCH")
@@ -625,7 +787,8 @@ def _check_cached(registry, contracts, graph, cached, expected_intent, *, requir
     if (int(info[0]) != session or bytes(info[3]).hex() != expected_intent["operation_hash"]
             or not info[4] or info[15] != expected_intent["target"]
             or bytes(coordinator.functions.sessionDKGId(session).call()).hex() != graph["evm_dkg_id"]
-            or bytes(coordinator.functions.sessionDKGResult(session).call()).hex() != graph["evm_result"]):
+            or bytes(coordinator.functions.sessionDKGResult(session).call()).hex() != graph["evm_result"]
+            or ("cancel_deadline" in expected_intent and str(info[7]) != expected_intent["cancel_deadline"])):
         raise ValueError("BTC_OPERATION_SESSION_MISMATCH")
     if require_available and int(info[10]) not in (1, 2):
         raise ValueError("BTC_OPERATION_SESSION_UNAVAILABLE")
@@ -636,7 +799,7 @@ def _intent(manifest, graph, role, target, helper, args, operation_hash, plan):
     return dict(
         chain_id=str(manifest.chain_id), coordinator=graph["contracts"]["coordinator"]["address"],
         role=role, target=target.address, operation_hash=operation_hash.hex(),
-        artifact="BitcoinBatchRegistry" if helper in ("operationHash","getReplacementOperationHash")
+        artifact="BitcoinBatchRegistry" if helper in ("operationHash","getReplacementOperationHash",CANCEL_HELPER)
             else graph["contracts"]["escrow"]["artifact"],
         hash_method=helper, hash_args=Bootstrap.wire(args), bitcoin_plan=validate_plan(plan, manifest),
     )
@@ -662,31 +825,55 @@ def _authorize(action, a, manifest, key, registry, state, board, plan):
     _validate_binding(manifest, key, board, plan)
     _network_binding(graph, plan)
     operation = a.operation
-    if _completed(manifest, contracts, plan, operation):
+    cancelling = operation == "cancel"
+    anchor = confirmed_block(registry.w3, graph) if cancelling else None
+    complete = (_cancel_state(manifest, contracts, plan, anchor.number) == 3 if cancelling
+                else _completed(manifest, contracts, plan, operation))
+    if complete:
+        if cancelling and registry.w3.eth.get_block(anchor.number).hash != anchor.hash:
+            raise ValueError("BTC_OPERATION_REORG")
         return dict(status="BTC_OPERATION_EXECUTED", operation=operation, batch=plan["batch_id"])
-    if int(plan["deadline"]) <= registry.w3.eth.get_block("latest").timestamp:
+    deadline = decimal(getattr(a, "deadline", None), positive=True) if cancelling else int(plan["deadline"])
+    latest = registry.w3.eth.get_block("latest")
+    if deadline <= latest.timestamp:
         raise ValueError("BATCH_EXPIRED")
-    bitcoin = _bitcoin(a, graph)
-    check_bitcoin_graph(registry, graph, bitcoin)
-    _terms(contracts, plan, bitcoin)
     from .bitcoin_input_keys import guard
-    guard(manifest, key, plan, registry, graph)
     from .btc_fee_reserve import guard as fee_guard
-    fee_guard(manifest,plan,registry,graph,bitcoin=bitcoin,state=state,reserved=False)
+    if not cancelling:
+        bitcoin = _bitcoin(a, graph)
+        check_bitcoin_graph(registry, graph, bitcoin)
+        anchor = confirmed_block(registry.w3, graph) if plan["version"] == "5" else None
+        built = _terms(contracts, plan, bitcoin, anchor.number if anchor is not None else None)
+        if anchor is not None:
+            require_v3_relay_fee(bitcoin, plan, built, contracts["escrow"], anchor.number)
+        guard(manifest, key, plan, registry, graph)
+        fee_guard(manifest,plan,registry,graph,bitcoin=bitcoin,state=state,reserved=False)
     transport, role = _auth_board(a, manifest, registry, graph)
     if action == "btc-propose" and (not registry.account or
             transport.functions.operator().call() != registry.account.address
             and not transport.functions.canPublishIntent(registry.account.address).call()):
         raise ValueError("BTC_PROPOSAL_REQUIRES_BOARD_OPERATOR")
-    target, helper, args, operation_hash = _operation(manifest, contracts, plan, operation)
+    if cancelling:
+        target, helper, args, operation_hash = _operation(manifest, contracts, plan, operation, anchor.number)
+        if _operation(manifest, contracts, plan, operation, latest.number)[3] != operation_hash:
+            raise ValueError("BTC_OPERATION_CHANGED")
+        if registry.w3.eth.get_block(latest.number).hash != latest.hash:
+            raise ValueError("BTC_OPERATION_REORG")
+    else:
+        target, helper, args, operation_hash = _operation(manifest, contracts, plan, operation)
+    if anchor is not None and registry.w3.eth.get_block(anchor.number).hash != anchor.hash:
+        raise ValueError("BTC_OPERATION_REORG")
     expected = _intent(manifest, graph, role, target, helper, args, operation_hash, plan)
     cache_key = _cache_key(manifest, plan, operation)
+    if cancelling:
+        expected["cancel_deadline"] = str(deadline)
+        cache_key += ":" + operation_hash.hex() + ":" + str(deadline)
     with state.exclusive():
         cached = state.get(cache_key)
         if cached is None and action == "btc-propose":
             coordinator = contracts["coordinator"]
             receipt = send(registry, coordinator.address, "FROSTCoordinator", "createSessionFromDKG", [
-                bytes.fromhex(graph["evm_dkg_id"]), operation_hash, target.address, int(plan["deadline"]),
+                bytes.fromhex(graph["evm_dkg_id"]), operation_hash, target.address, deadline,
             ], graph=graph)
             events = coordinator.events.SessionCreated().process_receipt(receipt, errors=DISCARD)
             if len(events) != 1:
@@ -728,9 +915,18 @@ def _authorize(action, a, manifest, key, registry, state, board, plan):
             send(registry, authorization.address, "DKGAuthorization", "authorizeOperation", [
                 session, operation_hash, target.address,
             ], graph=graph)
-        kind = "BitcoinBatchRegistry" if operation == "reserve" else graph["contracts"]["escrow"]["artifact"]
-        guard(manifest, key, plan, registry, graph)
-        fee_guard(manifest,plan,registry,graph,bitcoin=bitcoin,state=state,reserved=False)
+        kind = "BitcoinBatchRegistry" if operation in ("reserve", "cancel") else graph["contracts"]["escrow"]["artifact"]
+        if cancelling:
+            latest = registry.w3.eth.get_block("latest")
+            if deadline <= latest.timestamp:
+                raise ValueError("BATCH_EXPIRED")
+            if _operation(manifest, contracts, plan, operation, latest.number)[3] != operation_hash:
+                raise ValueError("BTC_OPERATION_CHANGED")
+            if registry.w3.eth.get_block(latest.number).hash != latest.hash:
+                raise ValueError("BTC_OPERATION_REORG")
+        else:
+            guard(manifest, key, plan, registry, graph)
+            fee_guard(manifest,plan,registry,graph,bitcoin=bitcoin,state=state,reserved=False)
         apply_method = {"getReplacementOperationHash": "reserveReplacement",
             "getBindReplacementOperationHash": "bindReplacement",
             "getBindUserFundedOperationHash": "bindUserFunded",
@@ -739,7 +935,14 @@ def _authorize(action, a, manifest, key, registry, state, board, plan):
             index = 1 if _previous(plan) == bytes(32) else 2
             args[index] = bytes.fromhex(_build(plan)["unsigned"])
         send(registry, target.address, kind, apply_method, [*args, operation_hash], graph=graph)
-        if not _completed(manifest, contracts, plan, operation):
+        if cancelling:
+            anchor = confirmed_block(registry.w3, graph)
+            complete = _cancel_state(manifest, contracts, plan, anchor.number) == 3
+            if registry.w3.eth.get_block(anchor.number).hash != anchor.hash:
+                raise ValueError("BTC_OPERATION_REORG")
+        else:
+            complete = _completed(manifest, contracts, plan, operation)
+        if not complete:
             raise ValueError("BTC_OPERATION_POSTCONDITION")
         return dict(status="BTC_OPERATION_EXECUTED", operation=operation, batch=plan["batch_id"], session=str(session))
 

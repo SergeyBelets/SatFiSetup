@@ -104,11 +104,11 @@ def test_all_constructors_calls_checks_and_outputs_match_actual_abi():
             abi = next(a for a in artifact(kinds[step["contract"]])["abi"] if a.get("name") == step["method"])
             if step["method"] != "publishIntent":
                 encode_args(abi["inputs"], resolve(step["args"]))
-        for check in step.get("checks", []):
-            assert any(a.get("name") == check["method"] for a in artifact(kinds[check["contract"]])["abi"])
         for output in step.get("outputs", []):
             if "artifact" in output:
                 kinds[output["name"]] = output["artifact"]
+        for check in step.get("checks", []):
+            assert any(a.get("name") == check["method"] for a in artifact(kinds[check["contract"]])["abi"])
 
 
 def test_enrollments_and_profile_commit_every_ulr_input():
@@ -273,8 +273,10 @@ def test_ethereum_mainnet_keeps_project_fee_route_and_finality(backend, mode):
     assert steps["fund_ulr_converter"]["verify_token_transfer"]["amount"] == p["converter_funding"]
 
 
-@pytest.mark.parametrize("payer,enrolled,ready", [(True, True, True), (False, True, False), (True, False, False)])
-def test_manifest_waits_for_connections_and_exports_reusable_roots(monkeypatch, payer, enrolled, ready):
+@pytest.mark.parametrize("payer,enrolled,ready,previous_staking", [
+    (True, True, True, False), (False, True, False, False), (True, False, False, False), (True, True, True, True),
+])
+def test_manifest_waits_for_connections_and_exports_reusable_roots(monkeypatch, payer, enrolled, ready, previous_staking):
     p = proposal()
     contracts = {name: dict(address=address(60 + i)) for i, name in enumerate(
         (*ROOTS, "ulr_treasury", "ulr_voting", "decisions", "fee_router", "fee_pipeline"))}
@@ -283,15 +285,26 @@ def test_manifest_waits_for_connections_and_exports_reusable_roots(monkeypatch, 
                                              get_code=lambda a, at: b"runtime"))
     runner = SimpleNamespace(contracts=contracts, profile=p, w3=w3, read_number=lambda: "latest", contract=lambda n: objects[n])
     calls = []
-    monkeypatch.setattr(ulr, "inspect_roots", lambda w, p, roots, at: calls.append(at))
-    monkeypatch.setattr(treasury_policy, "treasury_context", lambda *args: (objects["snapshots"], None, objects["ulr_treasury"], None, None, None))
-    monkeypatch.setattr(treasury_policy, "voting_context", lambda *args: None)
+    configured = (objects["snapshots"], objects["staking"])
+
+    def inspect_roots(w, profile, roots, at, **options):
+        assert options == ({"previous_staking": True} if previous_staking else {})
+        calls.append(at)
+        return (*configured, objects["dao_token"])
+
+    def treasury_context(*args, **options):
+        assert options == ({"configured": configured} if previous_staking else {})
+        return (*configured, objects["ulr_treasury"], None, None, None)
+
+    monkeypatch.setattr(ulr, "inspect_roots", inspect_roots)
+    monkeypatch.setattr(treasury_policy, "treasury_context", treasury_context)
+    monkeypatch.setattr(treasury_policy, "voting_context", treasury_context)
     def read(_, at, method, *args):
         calls.append(at)
         return dict(scope=b"s" * 32, treasuries=objects["ulr_treasury"].address if enrolled else address(100),
                     authorizedPayers=payer, treasury=objects["ulr_treasury"].address, wrapStakerBps=0, deployStakerBps=0)[method]
     monkeypatch.setattr(treasury_policy, "read", read)
-    result = ulr.manifest(runner)
+    result = ulr.manifest(runner, previous_staking=previous_staking)
     assert result["ready"] == ready
     assert all(at == 5 for at in calls)
     if ready:

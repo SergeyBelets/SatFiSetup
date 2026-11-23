@@ -73,7 +73,7 @@ Build new test deployments with the pinned RISC Zero 3.1.0 verifier and seal
 selector `0xe71e6620`. The SDK verifies the verifier binding before deployment
 signing and rejects old selectors during publication. An existing state with
 an immutable 3.0.0 verifier needs a separate migration. Follow the
-[current proving setup](ZK_PROVER_LINUX.md) on each participant host.
+[current proving setup](ZK_PROVER_LINUX.md) on each host running the prover.
 
 From the repository root, using the repository's pinned Solidity toolchain:
 
@@ -99,12 +99,21 @@ verifier. Artifact names distinguish them from the ordinary relay profile.
 BitcoinWithdrawalEscrow and BitcoinDepositRegistry bind the same adapter;
 MiningPoolV1 uses these ordinary consumer contracts.
 
-The readiness barrier waits for a useful proof update. A checkpoint alone is
-not Fresh. Resume reports `AWAITING_BITCOIN_RELAY` with reason
-`AWAITING_ZK_PROOF`; it never tries `addBlockHeaders` on a ZK state. Each resume,
-verification and participant monetary check rechecks freshness and independent
-Core agreement. A latest-observed permanent halt blocks operation immediately,
-even before the configured EVM confirmation depth.
+CREATE first deploys the network's state, adapter and verifier. Normal resume
+then returns `status=AWAITING_BITCOIN_RELAY` and
+`bitcoin.reason=AWAITING_ZK_PROOF` while Fresh is pending. Read the actual
+state from `manifest.contracts.relay.address` and use it at a confirmed EVM
+block. The worker requires a populated consumer allowlist even in heartbeat
+mode. For a new graph, resume the same journal with `--defer-zk-freshness` to
+deploy the consumers before preparing the proof. The resulting
+`GRAPH_CONFIGURED_FRESHNESS_PENDING` describes structural setup.
+[State-first CREATE instructions](COLD_START.md#zk-первый-state-и-собственный-proof).
+
+A checkpoint alone is not Fresh. The selected publisher sends the useful
+transition using its own authenticated proof. Continue ordinary resume and
+verify after Fresh. Each normal resume, verification and monetary operations
+recheck freshness and independent Core agreement. A latest-observed permanent
+halt blocks the operation even before the configured EVM confirmation depth.
 
 ## Proof and header operations
 
@@ -117,8 +126,9 @@ public ZIP for independent review. The designated publisher explicitly uses
 proof. [Worker modes](ZK_SPV_WORKER.md#worker-modes-and-transition-archives) ·
 [Public archive for read-only review](DISTRIBUTION.md#публичный-архив-перехода).
 The supported local runner platforms are macOS arm64 and Linux/WSL2 x86-64.
-Follow the [Linux prover runbook](ZK_PROVER_LINUX.md) before enrollment.
-Unsupported platforms, including Linux ARM64 full proving, remain blocked.
+Follow the [Linux prover runbook](ZK_PROVER_LINUX.md) before proving. ZK
+enrollment retains the supported-platform check. Review-only ZIP verification
+uses the SDK, its pinned EVM graph and a confirmed RPC read.
 Component checks do not qualify fresh proving or physical WSL2 operation.
 
 The self-hosted prover must produce a receipt for the **actual deployed state
@@ -179,6 +189,9 @@ reverts, let the worker materialize the same Bitcoin header under the current
 root. Review the saved receipt and repeat the original participant command
 with the same identity, journal, and operation arguments. For a withdrawal,
 repeat `dkg btc-settle` with the original batch and Bitcoin payment.
+For a custody handover, repeat `custody-transfer finalize` with the original
+transfer IDs, paid batch, vout, executor, journal, and operation ID. The SDK
+reviews the destination's pinned adapter and the exact source payment first.
 
 The first EVM attempt retains its existing journal ID. A pending attempt is
 reconciled with its saved transaction and nonce. For an attempt with a

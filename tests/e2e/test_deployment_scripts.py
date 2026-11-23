@@ -2,6 +2,7 @@ import json
 import pytest
 from web3 import Web3
 from web3.exceptions import ContractCustomError
+from signer_agent.bootstrap_formation import federation_formation_hash, share_token_hash
 from test_dkg_processes import RPC, ceremony, tx, deploy
 from test_bitcoin_processes import authorize
 from lifecycle_helpers import contract, tx_from
@@ -56,7 +57,10 @@ def test_federation_script_broadcast_and_factory_creation(tmp_path, record_prope
     ceremony_dir = tmp_path / "ceremony"
     ceremony_dir.mkdir()
     manifest, participant, _ = ceremony(ceremony_dir, w3, dkg, 3, 2, "EVM_AUTH")
-    tx(w3, factory.functions.reserveFederationId(manifest.session_id, "script-fed"), sender=SENDER)
+    token_metadata = ("Script Shares", "SS")
+    tx(w3, factory.functions.reserveFederationId(manifest.session_id, "script-fed",
+        federation_formation_hash(manifest.participants, manifest.threshold), share_token_hash(*token_metadata)),
+        sender=SENDER)
     receipt = w3.eth.wait_for_transaction_receipt(
         factory.functions.adoptFederationDKG(
             manifest.session_id, "script-fed"
@@ -70,7 +74,7 @@ def test_federation_script_broadcast_and_factory_creation(tmp_path, record_prope
         ).call({"from": w3.eth.accounts[0]})
     receipt = tx_from(
         w3,
-        factory.functions.deployFederation(manifest.session_id, "Script Shares", "SS"),
+        factory.functions.deployFederation(manifest.session_id, *token_metadata),
         SENDER,
     )
     event = factory.events.FederationDeployed().process_receipt(receipt)[0]["args"]

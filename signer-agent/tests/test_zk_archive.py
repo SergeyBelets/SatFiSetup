@@ -74,6 +74,51 @@ def test_corrupt_backup_is_rejected_without_promoting_or_resetting_costs(tmp_pat
     w.close()
 
 
+def test_backup_uses_physical_limit_separate_from_admitted_data(tmp_path):
+    w = worker(tmp_path)
+    _, _, last = build(w, tmp_path)
+    context(w, last["after"])
+    w.c["archive"]["max_bytes"] = "160"
+    path = tmp_path / "snapshot.sqlite"
+    with pytest.raises(ValueError, match="^ZK_ARCHIVE_BACKUP_LIMIT$"):
+        backup(w, path)
+    assert not path.exists()
+
+    w.c["archive"]["max_backup_bytes"] = "1048576"
+    assert backup(w, path)["status"] == "BACKUP_SAVED"
+    assert 160 < path.stat().st_size <= 1048576
+    w.close()
+
+    w = worker(tmp_path, "new-worker", "new-archive")
+    context(w, last["after"])
+    w.c["archive"].update(max_bytes="160", max_backup_bytes="1048576")
+    w.inbox.reserve("kept-cost", 100)
+    assert restore(w, path)["status"] == "RESTORED"
+    assert w.archive_store().ref_existing(last["after"])
+    assert dict(w.inbox.db.execute("SELECT * FROM reservations")) == {"kept-cost": "100"}
+    w.close()
+
+
+@pytest.mark.parametrize("phase", ["PREPARED", "SENDING"])
+def test_archive_capacity_stops_before_publication_and_keeps_prepared_attempt(tmp_path, monkeypatch, phase):
+    from test_zk_worker import simulated
+
+    w = worker(tmp_path)
+    model = simulated(w, monkeypatch, tmp_path)
+    w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="11" * 32, vout="0"))
+    assert w.advance("prepare")["status"] == "PROOF_PREPARED"
+    active = dict(w.inbox.get("attempt"), phase=phase)
+    w.inbox.put("attempt", active)
+    w.archive_store().max_bytes = 79  # One exact 80-byte header must fit before publication.
+    w.inbox.reserve("previous-cost", 100)
+    with pytest.raises(ValueError, match="^ZK_ARCHIVE_DISK_BUDGET$"):
+        w.tick()
+    assert w.inbox.get("attempt") == active and not model["sends"]
+    assert dict(w.inbox.db.execute("SELECT * FROM reservations")) == {"previous-cost": "100"}
+    assert w.archive_store().db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] == 0
+    w.close()
+
+
 def test_legacy_array_is_migrated_without_changing_financial_records(tmp_path):
     w=worker(tmp_path);headers=fixture_headers()
     raw=[headers[h].hex() for h in (32257,32258)]
@@ -100,6 +145,12 @@ def test_v4_upgrade_keeps_v3_need_ids_semantics_and_spending(tmp_path):
     updated=Inbox(c)
     assert updated.enqueue(need)==key and updated.get('scope')==scope
     assert dict(updated.db.execute('SELECT * FROM reservations'))=={'cost':'1'}
+    updated.close()
+    c["archive"]["max_backup_bytes"] = "2147483648"
+    write(path, c)
+    assert load_config(path) == c
+    updated = Inbox(c)
+    assert updated.get("scope") == scope
     updated.close()
 
 

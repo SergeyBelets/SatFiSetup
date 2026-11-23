@@ -7,8 +7,8 @@ from .contract_provenance import prove_creation
 from .dkg_protocol import Manifest
 
 
-def review(w3, intent, bundle, at):
-    from .bootstrap_custody import review_publishers, sources_args
+def review(w3, intent, bundle, at, *, legacy_enrolled=False, enrolled_issuer=None):
+    from .bootstrap_custody import review_publishers, sources_args, SOURCE_FIELDS
     from .ethereum_intents import _prove_pool
     from .zk_spv import review_consumer
 
@@ -19,6 +19,7 @@ def review(w3, intent, bundle, at):
         ("BitcoinBatchRegistry", "getSetWithdrawalEscrowOperationHash"),
         ("BitcoinWithdrawalEscrowV2", "getSetDepositRegistryOperationHash"),
         ("BitcoinWithdrawalEscrowV2", "getRequireLocalCustodyOperationHash"),
+        ("BitcoinWithdrawalEscrowV2", "getSetRecoveryOperationHash"),
         ("BitcoinDepositRegistry", "getRegisterOperationHash"),
     })
     if not relevant:
@@ -28,22 +29,30 @@ def review(w3, intent, bundle, at):
     anchor = w3.eth.get_block(at)
     at = anchor.number
     review_publishers(w3, bundle, at, intent["coordinator"])
+    legacy_options = {"legacy_custody": True} if legacy_enrolled else {}
+
+    def artifact_options(address, name):
+        if (name == "ConfederationBitcoinReserve" and enrolled_issuer == address == intent["target"]
+                and method == "getSetCustodyTransferOperationHash"):
+            return dict(legacy_options, previous_build=True)
+        return legacy_options
 
     def node(address, name):
-        checked_runtime(w3, address, name, at)
+        checked_runtime(w3, address, name, at, **artifact_options(address, name))
         return w3.eth.contract(address=address, abi=artifact(name)["abi"])
 
     def get(contract, name, *args):
         return getattr(contract.functions, name)(*args).call(block_identifier=at)
 
     def direct(contract, name, args):
-        proof = prove_creation(w3, contract.address, name, args, at)
+        proof = prove_creation(w3, contract.address, name, args, at, **artifact_options(contract.address, name))
         if proof.get("method") != "direct" or proof.get("sender") != invite["operator"]:
             raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
 
     args = intent["hash_args"]
     target = node(intent["target"], kind)
     reserve = None
+    recovery_module = None
     pool = target if kind == "ConfederationPoolV2" else None
     if kind == "ConfederationBitcoinReserve":
         reserve = target
@@ -57,6 +66,15 @@ def review(w3, intent, bundle, at):
         reserve = node(args[0], "ConfederationBitcoinReserve")
     elif kind == "BitcoinWithdrawalEscrowV2" and method == "getRequireLocalCustodyOperationHash":
         pool = node(args[0], "ConfederationPoolV2")
+    elif kind == "BitcoinWithdrawalEscrowV2" and method == "getSetRecoveryOperationHash":
+        from .bitcoin_recovery_policy import ARTIFACT as RECOVERY_ARTIFACT, enrolled_policy
+
+        recovery_policy = enrolled_policy(invite)
+        if recovery_policy is None or len(args) != 1:
+            raise ValueError("BTC_RECOVERY_POLICY")
+        recovery_module = node(args[0], RECOVERY_ARTIFACT)
+        reserve = node(get(recovery_module, "reserve"), "ConfederationBitcoinReserve")
+        pool = node(get(reserve, "confederationPool"), "ConfederationPoolV2")
 
     if kind == "BitcoinBatchRegistry":
         escrow = node(args[0], "BitcoinWithdrawalEscrowV2")
@@ -103,7 +121,7 @@ def review(w3, intent, bundle, at):
     review_consumer(w3, invite, escrow, "BitcoinWithdrawalEscrowV2", intent, at)
 
     if pool is not None:
-        _prove_pool(w3, pool, "ConfederationPoolV2", invite["operator"], at)
+        _prove_pool(w3, pool, "ConfederationPoolV2", invite["operator"], at, **legacy_options)
         if get(pool, "confederationId") != invite["confederation_id"] or get(pool, "frostMultisig") != auth.address:
             raise ValueError("BITCOIN_CUSTODY_POOL_BINDING")
     deposit_address = args[0] if kind == "BitcoinWithdrawalEscrowV2" and method == "getSetDepositRegistryOperationHash" else get(escrow, "depositRegistry")
@@ -119,13 +137,49 @@ def review(w3, intent, bundle, at):
             raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
         direct(reserve, "ConfederationBitcoinReserve", [get(reserve, "poolId"), deposits.address, escrow.address, pool.address])
         if method == "getSetCustodyTransferOperationHash":
-            gateway = node(args[0], "BitcoinCustodyTransferV2")
-            constructor = next(row for row in artifact("BitcoinCustodyTransferV2")["abi"] if row["type"] == "constructor")
-            direct(gateway, "BitcoinCustodyTransferV2", encode_args(constructor["inputs"],
-                [reserve.address, pool.address, sources_args(invite["bitcoin_custody"])]))
+            from .custody_network import require_enrolled_legacy, review_gateway_network
+
+            gateway_kind = "BitcoinCustodyTransferV2"
+            if artifact_options(reserve.address, kind).get("previous_build"):
+                op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
+                if (not get(auth, "executedOperations", op) or get(auth, "operationTargets", op) != reserve.address
+                        or get(reserve, "custodyTransfer") != args[0]):
+                    raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+            if legacy_enrolled:
+                gateway = w3.eth.contract(address=args[0], abi=artifact(gateway_kind)["abi"])
+                op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
+                require_enrolled_legacy(w3, gateway, gateway_kind, reserve, op, at)
+                sources = invite["bitcoin_custody"]["sources"]
+                if get(gateway, "mining") != reserve.address or get(gateway, "pool") != pool.address or get(gateway, "sourceCount") != len(sources):
+                    raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+                for index, source in enumerate(sources):
+                    if list(get(gateway, "sourceAt", index)) != [source[field] if field in ("escrow", "token")
+                            else bytes.fromhex(source[field][2:]) for field in SOURCE_FIELDS]:
+                        raise ValueError("BITCOIN_CUSTODY_SOURCE")
+            else:
+                gateway = node(args[0], gateway_kind)
+                constructor = next(row for row in artifact(gateway_kind)["abi"] if row["type"] == "constructor")
+                direct(gateway, gateway_kind, encode_args(constructor["inputs"],
+                    [reserve.address, pool.address, sources_args(invite["bitcoin_custody"])]))
+                review_gateway_network(w3, gateway, invite, at)
         if method == "getSetMintAdmissionOperationHash":
             from .mint_admission import configuration
             configuration(w3, args[0], at, expected_pool=reserve.address,
                           expected_operator=invite["participants"][1], require_bound=False)
+    if recovery_module is not None:
+        from .bitcoin_recovery_policy import SUCCESSOR_DKG, review_module, review_successor
+
+        source_hash = Web3.to_hex(Web3.keccak(bytes(get(reserve, "payoutScript"))))
+        review_module(w3, escrow, reserve, recovery_module, at, recovery_policy)
+        fee_verifier = get(batches, "withdrawalFeeVerifier")
+        checked_runtime(w3, fee_verifier, "BitcoinWithdrawalFeeVerifier", at)
+        if get(escrow, "feeVerifier") != fee_verifier:
+            raise ValueError("BTC_RECOVERY_BINDING")
+        if SUCCESSOR_DKG in recovery_policy:
+            review_successor(dkg, at, bytes.fromhex(recovery_policy[SUCCESSOR_DKG]["wallet_id"]), recovery_policy,
+                             manifest.participants, manifest.threshold)
+        if (bytes(get(deposits, "poolScripts", reserve.address)) != bytes.fromhex(source_hash[2:])
+                or get(deposits, "totalBackingSats")):
+            raise ValueError("BTC_RECOVERY_FUNDING_STARTED")
     if w3.eth.get_block(at).hash != anchor.hash:
         raise ValueError("BITCOIN_CUSTODY_REORG")

@@ -32,9 +32,9 @@ def test_fee_need_native_merkle_inclusion_reuses_same_worker_state(fee_observed)
     o=fee_observed;assert o.observe()['status']=='NEEDS_STATE'
     o.e.view.canonical=True;assert o.observe()['status']=='READY'
 
-@pytest.mark.parametrize('coinbase,threshold',[(False,6),(True,101)])
-def test_fee_need_ordinary6_coinbase101_before_quote_or_job(fee_observed,coinbase,threshold):
-    o=fee_observed;o.e.transaction(coinbase=coinbase);o.core['blocks']=10+threshold-2
+@pytest.mark.parametrize('coinbase,configured,threshold',[(False,6,6),(True,6,101),(True,144,144)])
+def test_fee_need_uses_configured_depth_and_coinbase_floor(fee_observed,coinbase,configured,threshold):
+    o=fee_observed;o.e.common_values['depth']=configured;o.e.transaction(coinbase=coinbase);o.core['blocks']=10+threshold-2
     assert o.observe()['status']=='WAITING_BITCOIN'
     o.core['blocks']+=1;assert o.observe()['depth']==threshold
 

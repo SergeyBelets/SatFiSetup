@@ -7,6 +7,18 @@ from .launch_economics import integer
 
 CUSTODIAN_METHODS = {"getAddCustodianOperationHash", "getRemoveCustodianOperationHash",
                      "getSetMinCustodiansOperationHash"}
+PASS_PRICING_METHODS = {"getApproveTariffOperationHash", "getSetPriceControlOperationHash"}
+
+
+def validate_pass_pricing(helper, values, timestamp, get):
+    if helper == "getApproveTariffOperationHash":
+        duration, discount, volume, minimum_price, sales_until = values[0]
+        if not (duration and 0 < discount <= 10_000 and volume and minimum_price and sales_until > timestamp):
+            raise ValueError("CONFEDERATION_DAO_TARIFF")
+    elif helper == "getSetPriceControlOperationHash":
+        signer, paused = values
+        if int(signer, 16) == 0 or (signer == get("priceSigner") and paused == get("salesPaused")):
+            raise ValueError("CONFEDERATION_DAO_PRICE_CONTROL")
 
 
 def enabled(profile):
@@ -65,7 +77,8 @@ def extend(p, deploy, call, approve):
     p["steps"].append(dict(id="ulr_distribution", kind="ulr_distribution", token="dao_token", staking="staking",
         participants=p["conf_ceremony"]["participants"], issue_recipient=p["dao_token_recipient"] if create else None))
     deploy("decisions", "CustodianDAODecisionBoard", "$staking", "$conf_auth")
-    deploy("dao_income", "ConfederationDAOIncome", "$conf_pool", "$conf_shares", "$conf_auth", "$staking", "$decisions")
+    deploy("dao_income", "ConfederationDAOIncome", "$conf_pool", "$conf_shares", "$conf_auth", "$staking", "$decisions",
+           "$confederations")
     share_name = names["confederation_share"]
     deploy("nft_pass", "ConfederationNFTPass", share_name["name"] + " Pass", share_name["symbol"] + "-PASS",
            "$dao_income", "$fee_manager", p["operator"])
@@ -85,7 +98,7 @@ def extend(p, deploy, call, approve):
 
 
 def manifest(bootstrap):
-    names = ("dao_token", "usd", "conf_pool", "conf_shares", "staking", "dao_income", "decisions", "nft_pass",
+    names = ("dao_token", "usd", "confederations", "conf_pool", "conf_shares", "staking", "dao_income", "decisions", "nft_pass",
              "fee_manager", "validator", "escrow", "signing_board", "mining", "custody_transfer")
     if not all(name in bootstrap.contracts for name in names):
         return dict(version="3", status="BOOTSTRAP_PENDING", ready=False)
@@ -96,7 +109,7 @@ def manifest(bootstrap):
     links = (
         ("conf_pool", "daoIncome", "dao_income"), ("staking", "stakeToken", "dao_token"),
         ("staking", "custodianValidator", "validator"), ("dao_income", "staking", "staking"),
-        ("dao_income", "decisions", "decisions"),
+        ("dao_income", "decisions", "decisions"), ("dao_income", "factory", "confederations"),
         ("dao_income", "shareToken", "conf_shares"), ("dao_income", "passSale", "nft_pass"),
         ("nft_pass", "income", "dao_income"), ("fee_manager", "nftModifier", "nft_pass"),
         ("validator", "candidateStaking", "staking"), ("decisions", "staking", "staking"),
@@ -119,9 +132,10 @@ def manifest(bootstrap):
 
 def review(w3, intent, bundle, at):
     """Authenticate the new money graph before either FROST or custodian approval."""
+    from .confederation_dao_report import CLOSING_RATES_HELPER, REPORT_HELPERS
+
     kind, helper = intent.get("artifact"), intent.get("hash_method")
-    reports = {"getSettlementOperationHash", "getStageExpensesOperationHash"}
-    dao_methods = {"getAddStablecoinOperationHash", "getBindPassSaleOperationHash"} | reports
+    dao_methods = {"getAddStablecoinOperationHash", "getBindPassSaleOperationHash", CLOSING_RATES_HELPER} | REPORT_HELPERS
     relevant = (kind in ("ConfederationDAOIncome", "ConfederationNFTPass")
         or kind == "CustodianValidator" and helper in CUSTODIAN_METHODS
         or (kind, helper) in {("ConfederationPoolV2", "getBindDAOIncomeOperationHash"),
@@ -166,7 +180,7 @@ def review(w3, intent, bundle, at):
     target = node(intent["target"], kind)
     args = intent["hash_args"]
     if (kind == "ConfederationDAOIncome" and helper not in dao_methods
-            or kind == "ConfederationNFTPass" and helper != "getApproveTariffOperationHash"):
+            or kind == "ConfederationNFTPass" and helper not in PASS_PRICING_METHODS):
         raise ValueError("CONFEDERATION_DAO_METHOD")
 
     sale = None
@@ -259,7 +273,14 @@ def review(w3, intent, bundle, at):
             raise ValueError("CONFEDERATION_DAO_BINDING")
         decisions = node(get(income, "decisions"), "CustodianDAODecisionBoard")
         direct(decisions, "CustodianDAODecisionBoard", [staking.address, auth.address])
-        direct(income, "ConfederationDAOIncome", [pool.address, shares.address, auth.address, staking.address, decisions.address])
+        factory = node(get(income, "factory"), "ConfederationFactory")
+        direct(factory, "ConfederationFactory", [get(factory, "federationFactory"), manifest.registry,
+                                                  get(factory, "deployer"), intent["coordinator"]])
+        conf = get(factory, "getConfederation", invite["confederation_id"])
+        if tuple(conf[7:11]) != (auth.address, validator.address, pool.address, shares.address):
+            raise ValueError("CONFEDERATION_DAO_BINDING")
+        direct(income, "ConfederationDAOIncome", [pool.address, shares.address, auth.address, staking.address,
+                                                   decisions.address, factory.address])
         if helper == "getAddStablecoinOperationHash" and len(get(income, "rewardTokens")) == 1:
             if "reward_token" in invite:
                 spec = invite["reward_token"]
@@ -275,15 +296,26 @@ def review(w3, intent, bundle, at):
                 direct(node(args[0], "DAOTestUSD"), "DAOTestUSD", [])
         if sale is not None:
             manager = get(pool, "feeManager")
-            if (get(sale, "income") != income.address or get(sale, "priceSigner") != invite["operator"]
+            if (get(sale, "income") != income.address or get(sale, "initialPriceSigner") != invite["operator"]
                     or (kind == "FederationFeeManager" and manager != target.address)
                     or (helper != "getBindPassSaleOperationHash" and get(income, "passSale") != sale.address)):
                 raise ValueError("CONFEDERATION_DAO_BINDING")
             direct(sale, "ConfederationNFTPass", [names["confederation_share"]["name"] + " Pass",
                 names["confederation_share"]["symbol"] + "-PASS", income.address, manager, invite["operator"]])
-        if not executed and helper in reports:
+            if not executed and kind == "ConfederationNFTPass":
+                from .bootstrap import encode_args
+
+                abi = next(row["inputs"] for row in sale.abi if row.get("name") == helper)
+                validate_pass_pricing(helper, encode_args(abi, args), anchor.timestamp, lambda method: get(sale, method))
+        if not executed and helper in REPORT_HELPERS:
             from .confederation_dao_report import review as review_report
             review_report(w3, intent, invite["evm_confirmations"], at)
+        if not executed and helper == CLOSING_RATES_HELPER:
+            from .bootstrap import encode_args
+            from .confederation_dao_report import validate_closing_rates
+
+            abi = next(row["inputs"] for row in income.abi if row.get("name") == helper)
+            validate_closing_rates(income, anchor, encode_args(abi, args))
     if w3.eth.get_block(at).hash != anchor.hash:
         raise ValueError("EVM_SIGNING_SNAPSHOT_REORG")
     return auth.address, validator.address

@@ -16,6 +16,7 @@ import time
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 
 from .bitcoin_network import relay_artifact, relay_constructor_args, sync_relay, validate_policy
 from .bitcoin_rpc import BitcoinRPC, BitcoinRPCError, observation_error
@@ -74,7 +75,7 @@ class RelayKeeper:
         self.policy = validate_policy(json.loads(Path(args.bitcoin_policy).read_text()))
         if self.policy["version"] != "1":
             raise ValueError("ZK_PROFILE_REQUIRES_PROOF_WORKFLOW")
-        self.w3 = Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 30}))
+        self.w3 = evm_web3(args.rpc, timeout=30)
         self.relay = self.w3.eth.contract(address=Web3.to_checksum_address(args.relay),
             abi=artifact(relay_artifact(self.policy["network"]))["abi"])
         self.origin_anchor = None

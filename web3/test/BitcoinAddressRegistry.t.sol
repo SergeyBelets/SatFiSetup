@@ -64,6 +64,9 @@ contract BitcoinAddressRegistryTest is Test {
     function _approve(bytes32 op, address target) internal { auth.fixtureApprove(op, target); }
     function setUp() public virtual { _deploy(true); }
     function _deploy(bool syntheticQualified) internal {
+        _deploy(syntheticQualified, 6);
+    }
+    function _deploy(bool syntheticQualified, uint32 confirmations) internal {
         address[] memory members = new address[](3);
         members[0] = address(0xa1); members[1] = address(0xa2); members[2] = address(0xa3);
         dkg = new AddressDkgFixture(members);
@@ -80,7 +83,7 @@ contract BitcoinAddressRegistryTest is Test {
         bytes32 op = batches.getSetWithdrawalEscrowOperationHash(address(escrow));
         _approve(op, address(batches)); batches.setWithdrawalEscrow(address(escrow), op);
         common = BitcoinDepositRegistry(deployCode("BitcoinDepositRegistry.sol:BitcoinDepositRegistry",
-            abi.encode(address(proof), address(auth), uint32(6), address(escrow))));
+            abi.encode(address(proof), address(auth), confirmations, address(escrow))));
         op = escrow.getSetDepositRegistryOperationHash(address(common));
         _approve(op, address(escrow)); escrow.setDepositRegistry(address(common), op);
         BitcoinDepositDerivation candidate = new BitcoinDepositDerivation();
@@ -459,7 +462,7 @@ contract BitcoinAddressRegistryTest is Test {
         assertEq(abi.encode(a.getAttemptAddressClaim(session)), abi.encode(c));
         address[] memory recipients = new address[](1); recipients[0] = RECIPIENT;
         uint256[] memory amounts = new uint256[](1); amounts[0] = 1000 * 1e10;
-        vm.prank(address(0xa1)); vm.expectRevert("slot busy");
+        vm.prank(address(0xa1)); vm.expectRevert(BitcoinMintAdmission.MintSlotBusy.selector);
         a.openCustodyMint(bytes32(uint256(123)), 0, recipients, amounts, 1, deadline, 0);
         vm.prank(address(0xa1)); vm.expectRevert("generation admission required");
         a.openMint(bytes32(uint256(123)), 0, recipients, amounts, deadline, 0);
@@ -473,7 +476,7 @@ contract BitcoinAddressRegistryTest is Test {
         IBitcoinAddressRegistry.MintClaim memory c = _claim(id, raw, 0); uint64 deadline = uint64(block.timestamp + 3600);
         vm.prank(address(0xa1)); uint256 first = a.openAddressMint(c, deadline, 0);
         bytes32 oldOp = pool.getAddressMintOperationHash(c); _approve(oldOp, address(pool));
-        vm.prank(address(0xa1)); vm.expectRevert("executable authorization"); a.retire(first);
+        vm.prank(address(0xa1)); vm.expectRevert(BitcoinMintAdmission.AdmissionAuthorizationStillExecutable.selector); a.retire(first);
         _status(0, 2, false); assertFalse(a.active(first));
         bytes32 claimId = a.getClaimId(c.txid, c.vout);
         vm.prank(address(0xa1)); vm.expectRevert("custody fence"); a.retryGenerationMint(claimId, 0, first, 2, 2);
@@ -492,6 +495,35 @@ contract BitcoinAddressRegistryTest is Test {
         pool.mintFromAddressProof(raw, bytes32(uint256(1)), new bytes32[](0), 0, c, oldOp);
         _mint(raw, fresh); assertEq(pool.mintedAddressSats(keccak256(abi.encode(c.txid, c.vout))), 1000);
     }
+    function testExpiredAddressAttemptRenewsAfterIrreversibleFenceAtSameNonce() public {
+        BitcoinMintAdmission a = _admission();
+        bytes32 id = _register(1);
+        bytes memory raw = _funding(1, 1, 0, _script(id), bytes32(uint256(99)), false);
+        IBitcoinAddressRegistry.MintClaim memory c = _claim(id, raw, 0);
+        uint64 deadline = uint64(block.timestamp + 3600);
+        vm.prank(address(0xa1));
+        uint256 first = a.openAddressMint(c, deadline, 0);
+        bytes32 oldOp = pool.getAddressMintOperationHash(c);
+        _approve(oldOp, address(pool));
+        _status(0, 2, false);
+        vm.prank(address(0xa2)); a.retire(first);
+        assertEq(pool.nonce(), 0);
+        _status(0, 0, false);
+        bytes32 claimId = a.getClaimId(c.txid, c.vout);
+        vm.warp(deadline + 1);
+        uint64 freshDeadline = deadline + 3600;
+        vm.prank(address(0xa1));
+        uint256 second = a.renewMint(claimId, 0, first, freshDeadline, 3, 2);
+        (, bytes32 nextOp, uint256 nextNonce, uint64 effectiveDeadline,) = a.attempts(second);
+        assertNotEq(nextOp, oldOp);
+        assertEq(nextNonce, 0);
+        assertEq(effectiveDeadline, freshDeadline);
+        vm.expectRevert("custody fence");
+        pool.mintFromAddressProof(raw, bytes32(uint256(1)), new bytes32[](0), 0, c, oldOp);
+        _mint(raw, a.getAttemptAddressClaim(second));
+        assertEq(pool.mintedAddressSats(keccak256(abi.encode(c.txid, c.vout))), 1000);
+    }
+
     function testDerivationFenceReleasesSlotWithoutInvalidatingIndependentCustodyClaim() public {
         BitcoinMintAdmission a = _admission(); bytes32 id = _register(1);
         bytes memory raw = _funding(1, 1, 0, _script(id), bytes32(uint256(99)), false);

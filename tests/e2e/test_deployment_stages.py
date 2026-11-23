@@ -12,6 +12,7 @@ import subprocess
 import sys
 
 from web3 import Web3
+from signer_agent.bootstrap_formation import confederation_formation_hash, federation_formation_hash, share_token_hash
 
 from lifecycle_helpers import contract
 from script_helpers import SENDER, script_project
@@ -192,7 +193,9 @@ raise SystemExit(module["main"](sys.argv[2:]))
     fed_dir.mkdir()
     fed, _, _ = ceremony(fed_dir, w3, registry, 3, 2, "EVM_AUTH")
     assert fed.session_id != project_dkg.session_id
-    tx(w3, factory.functions.reserveFederationId(fed.session_id, "staged-paid-fed"), sender=SENDER)
+    fed_metadata = ("Staged Federation", "SF")
+    tx(w3, factory.functions.reserveFederationId(fed.session_id, "staged-paid-fed",
+        federation_formation_hash(fed.participants, fed.threshold), share_token_hash(*fed_metadata)), sender=SENDER)
     receipt = w3.eth.wait_for_transaction_receipt(factory.functions.adoptFederationDKG(
         fed.session_id, "staged-paid-fed").transact({"from": SENDER}))
     assert receipt.status == 1
@@ -215,19 +218,22 @@ raise SystemExit(module["main"](sys.argv[2:]))
         assert usd.functions.balanceOf(router.address).call() == 0
         assert usd.functions.balanceOf(vault.address).call() == 0
 
-    paid_deploy(factory, "deployFederation", [fed.session_id, "Staged Federation", "SF"],
+    paid_deploy(factory, "deployFederation", [fed.session_id, *fed_metadata],
                 lambda: factory.functions.isFederationActive("staged-paid-fed").call())
     conf_dir = tmp_path / "confederation-dkg"
     conf_dir.mkdir()
     conf, _, _ = ceremony(conf_dir, w3, registry, 3, 3, "EVM_AUTH")
-    tx(w3, conf_factory.functions.reserveConfederationId(conf.session_id, "staged-paid-conf"), sender=SENDER)
     custodians = [("C2", conf.participants[1], b"\x02", True),
                   ("C3", conf.participants[2], b"\x02", True)]
+    conf_metadata = ("Staged Confederation", "SC")
+    tx(w3, conf_factory.functions.reserveConfederationId(conf.session_id, "staged-paid-conf",
+        confederation_formation_hash(0, ["staged-paid-fed"], custodians, conf.threshold, 2),
+        share_token_hash(*conf_metadata)), sender=SENDER)
     receipt = w3.eth.wait_for_transaction_receipt(conf_factory.functions.adoptConfederationDKG(
         conf.session_id, ["staged-paid-fed"], custodians, 3, 2, "staged-paid-conf"
     ).transact({"from": SENDER}))
     assert receipt.status == 1
-    paid_deploy(conf_factory, "deployConfederation", [conf.session_id, "Staged Confederation", "SC"],
+    paid_deploy(conf_factory, "deployConfederation", [conf.session_id, *conf_metadata],
                 lambda: conf_factory.functions.isConfederationActive("staged-paid-conf").call())
     assert all(item["status"] == "CONFIRMED" for item in state["transactions"].values())
     record_property("staged_public_manifest", json.dumps(state))

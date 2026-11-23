@@ -147,7 +147,7 @@ def test_no_policy_preserves_historical_roster():
     "coordinator_admin", "coordinator_registry", "wrong_dkg_epoch", "wrong_dkg_result",
     "wrong_chain", "wrong_role", "frost_verifier_runtime"])
 def test_in_kind_first_escrow_binding_reviews_enrolled_graph(monkeypatch, attack):
-    from signer_agent import bootstrap_custody, bootstrap, bitcoin_trust, contract_provenance, dkg_protocol, zk_spv, bootstrap_native_s
+    from signer_agent import bootstrap_custody, bootstrap_native_s, zk_spv
 
     invite = custody_invite()
     invite["ulr"] = {"version": "3", "default_miner_fee_sats": "100"}
@@ -201,10 +201,6 @@ def test_in_kind_first_escrow_binding_reviews_enrolled_graph(monkeypatch, attack
             raise ValueError("ZK_CONSUMER_BINDING")
 
     monkeypatch.setattr(bootstrap_custody, "review_publishers", lambda *args: None)
-    monkeypatch.setattr(dkg_protocol, "Manifest", NS(from_dict=lambda _: manifest))
-    monkeypatch.setattr(bootstrap, "artifact", lambda _: dict(abi=[]))
-    monkeypatch.setattr(bitcoin_trust, "checked_runtime", checked)
-    monkeypatch.setattr(contract_provenance, "prove_creation", prove)
     monkeypatch.setattr(zk_spv, "review_consumer", verify_spv)
     monkeypatch.setattr(bootstrap_native_s, "Manifest", NS(from_dict=lambda _: manifest))
     monkeypatch.setattr(bootstrap_native_s, "artifact", lambda _: dict(abi=[]))
@@ -264,8 +260,9 @@ def test_representative_flow_never_loads_or_creates_a_custodian_private_state(tm
 
 @pytest.mark.parametrize("source_funding", [False, True])
 @pytest.mark.parametrize("native_s", [False, True])
-def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, source_funding, native_s):
-    from signer_agent import bitcoin_trust
+@pytest.mark.parametrize("previous", [False, True])
+def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, source_funding, native_s, previous):
+    from signer_agent import bitcoin_trust, contract_provenance
     from signer_agent.bitcoin_onchain_payment import protect_unminted_deposit
     origin = Web3.to_checksum_address("0x" + "ab" * 20)
     gateway_address = Web3.to_checksum_address("0x" + "bc" * 20)
@@ -286,7 +283,17 @@ def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, 
         reads.append((kind, block))
         if native_s and kind == "MiningPoolV1":
             raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+    def runtime(w, address, kind, block, *, previous_build):
+        assert previous_build and address == origin
+        checked(w, address, kind, block)
+        return "fixture", {"legacy_reference": kind} if previous else {}
+    proofs = []
+    def prove(w, address, kind, arguments, block, *, previous_build):
+        assert previous_build and address == origin
+        proofs.append((kind, block))
+    monkeypatch.setattr(bitcoin_trust, "runtime_artifact", runtime)
     monkeypatch.setattr(bitcoin_trust, "checked_runtime", checked)
+    monkeypatch.setattr(contract_provenance, "prove_creation", prove)
     item = dict(outpoint=txid + ":0", script="5120" + "11" * 32)
     if source_funding:
         with pytest.raises(ValueError, match="BTC_UNACCEPTED_CUSTODY_TRANSFER"):
@@ -296,6 +303,8 @@ def test_unaccepted_handover_output_never_becomes_treasury_surplus(monkeypatch, 
     assert reads == ([("MiningPoolV1", 123), ("ConfederationBitcoinReserve", 123),
                      ("BitcoinCustodyTransferV2", 123)] if native_s else
                     [("MiningPoolV1", 123), ("BitcoinCustodyTransfer", 123)])
+    issuer = "ConfederationBitcoinReserve" if native_s else "MiningPoolV1"
+    assert proofs == ([(issuer, 123)] if previous else [])
 
 
 @pytest.mark.parametrize("attack", [None, "missing_board", "wrong_epoch", "wrong_registry", "wrong_coordinator"])

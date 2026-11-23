@@ -2,13 +2,12 @@
 
 import os
 import re
-from urllib.parse import urlsplit
 
 import requests
-from web3 import HTTPProvider
 
 from .bitcoin_network import check_core, header_hash
 from .bitcoin_rpc import BitcoinRPC, BitcoinRPCError
+from .evm_rpc import endpoint, http_provider
 
 
 REMOTE_PROFILE = "remote-sepolia-testnet4"
@@ -104,10 +103,22 @@ def _evm_checks(provider, config, simulator=None):
         ))
 
     call("eth_sendRawTransaction", ["0x"], rejects_empty_tx)
+    simulation_at = at
+    simulation_anchor = anchor
     if simulator is not None:
         chain = read("eth_chainId", [], quantity, client=simulator)
-        other = read("eth_getBlockByNumber", [at, False], block, client=simulator)
-        if chain != "0xaa36a7" or other["hash"] != anchor["hash"]:
+        if chain != "0xaa36a7":
+            raise PreflightError("sepolia", "eth_simulateV1", "CREATE_SIMULATION_RPC_CHAIN_MISMATCH")
+        head = read("eth_getBlockByNumber", ["latest", False], block, client=simulator)
+        simulator_height = int(head["number"], 16) - int(config["evm_confirmations"]) + 1
+        if simulator_height < 0:
+            raise PreflightError("sepolia", "eth_simulateV1", "EVM_RPC_BEHIND")
+        simulation_at = hex(min(height, simulator_height))
+        if simulation_at != at:
+            simulation_anchor = read("eth_getBlockByNumber", [simulation_at, False], block)
+        other = read("eth_getBlockByNumber", [simulation_at, False], block, client=simulator)
+        if (simulation_anchor["number"] != simulation_at or other["number"] != simulation_at
+                or other["hash"] != simulation_anchor["hash"]):
             raise PreflightError("sepolia", "eth_simulateV1", "CREATE_SIMULATION_RPC_CHAIN_MISMATCH")
 
     def simulation(value):
@@ -119,7 +130,12 @@ def _evm_checks(provider, config, simulator=None):
 
     # Exercise the ordered simulation shape used by withdrawal-fee deployment.
     read("eth_simulateV1", [{"blockStateCalls": [{"calls": [probe_call]} for _ in range(2)],
-                           "validation": False}, at], simulation, client=simulator or provider)
+                           "validation": False}, simulation_at], simulation, client=simulator or provider)
+    if simulator is not None:
+        for client in (provider, simulator):
+            current = read("eth_getBlockByNumber", [simulation_at, False], block, client=client)
+            if current["number"] != simulation_at or current["hash"] != simulation_anchor["hash"]:
+                raise PreflightError("sepolia", "eth_simulateV1", "RPC_BLOCK_CHANGED")
     if read("eth_getBlockByNumber", [at, False], block)["hash"] != anchor["hash"]:
         raise PreflightError("sepolia", "eth_getBlockByNumber", "RPC_BLOCK_CHANGED")
     return dict(chain_id="11155111", methods=sorted(set(checked)),
@@ -180,6 +196,14 @@ class _BitcoinChecks:
         self.require(isinstance(proof, str) and proof.startswith(policy["checkpoint_header"]))
         self.require(self.call("verifytxoutproof", proof) == [txid])
         self.call("getmempoolentry", txid, reject=-5)
+        if config.get("income_model") == "in-kind":
+            from .bitcoin_rpc import mempool_fee_rates
+
+            info = self.call("getmempoolinfo")
+            try:
+                mempool_fee_rates(info)
+            except ValueError:
+                raise PreflightError("testnet4", self.method, "BTC_MEMPOOL_POLICY_UNAVAILABLE") from None
         self.call("scantxoutset", "status")
         # A malformed descriptor is rejected before Core traverses the UTXO set.
         self.call("scantxoutset", "start", [{"desc": "raw(not-hex)"}], reject=-5)
@@ -214,8 +238,7 @@ def check_rpc(config, policy):
     alternate = os.environ.get("SATOSHIFI_CREATE_SIMULATION_RPC")
     if alternate:
         try:
-            url = urlsplit(alternate)
-            valid = url.scheme == "https" and url.hostname and not url.fragment
+            valid = endpoint(alternate).scheme == "https"
         except ValueError:
             valid = False
         if not valid:
@@ -228,13 +251,9 @@ def check_rpc(config, policy):
     if not core.is_https:
         raise PreflightError("testnet4", "configuration", "BITCOIN_HTTPS_REQUIRED")
 
-    with requests.Session() as session:
-        session.trust_env = False
-        provider = HTTPProvider(evm, session=session, exception_retry_configuration=None,
-            request_kwargs={"timeout": 20, "allow_redirects": False})
-        simulator = HTTPProvider(alternate, session=session, exception_retry_configuration=None,
-            request_kwargs={"timeout": 20, "allow_redirects": False}) if alternate else None
-        evm_report = _evm_checks(provider, config, simulator)
+    provider = http_provider(evm, timeout=20)
+    simulator = http_provider(alternate, timeout=20) if alternate else None
+    evm_report = _evm_checks(provider, config, simulator)
     probe = _BitcoinChecks(core)
     try:
         bitcoin_report = probe.run(config, policy)

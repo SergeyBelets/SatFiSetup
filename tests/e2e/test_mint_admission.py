@@ -81,18 +81,42 @@ def test_canonical_mint_and_operator_failover_across_participant_homes(tmp_path,
         "--mint-admission", admission.address)["status"] == "ALREADY_EXECUTED"
     old_claim = admission.functions.attempts(session).call()
 
-    # A new request is opened by the replacement operator, independently of the
-    # immutable DKG transport operator, then executed from another participant.
+    # The replacement operator renews an expired admission without changing the
+    # deposit allocation. The participant executing the mint is independent.
     second_args = funding()
     second = env.participant("btc_ceremony", 1, "btc-mint-propose", *second_args)
     second_session = int(second["session"])
     assert second_session != session
     assert bytes(transport.functions.intents(second_session).call()) == b""
     _sign_session(env, second_session)
-    assert env.participant("btc_ceremony", 0, "btc-mint-execute", *second_args)["status"] == "BTC_FUNDING_EXECUTED"
-    assert admission.functions.attempts(session).call() == old_claim
+    old_attempt = admission.functions.attempts(second_session).call()
+    authorization = contract(w3, "DKGAuthorization", mining.functions.authorization().call())
+    receipt = w3.eth.wait_for_transaction_receipt(authorization.functions.authorizeOperation(
+        second_session, old_attempt[1], mining.address).transact({"from": w3.eth.accounts[0]}))
+    assert receipt.status == 1
+    assert "error" not in w3.provider.make_request("evm_setNextBlockTimestamp", [int(second_args[-1]) + 1])
+    assert "error" not in w3.provider.make_request("evm_mine", [])
+    second_claim = admission.functions.getClaim(old_attempt[0]).call()
+    retired = env.participant("btc_ceremony", 2, "btc-mint-retire",
+        "--mint-admission", admission.address, "--session", second_session)
+    assert retired["status"] == "BTC_MINT_ADMISSION_RETIRED"
     assert mining.functions.nonce().call() == 2
-    record_property("mint_sessions", 2)
+    renewed_deadline = w3.eth.get_block("latest").timestamp + 3600
+    renewed = env.participant("btc_ceremony", 1, "btc-mint-renew",
+        "--mint-admission", admission.address, "--session", second_session, "--deadline", renewed_deadline)
+    renewed_session = int(renewed["session"])
+    assert renewed_session != second_session
+    assert admission.functions.attempts(renewed_session).call()[1] != old_attempt[1]
+    new_claim = admission.functions.getClaim(old_attempt[0]).call()
+    assert new_claim[:5] == second_claim[:5]
+    assert tuple(new_claim[5:]) == (2, renewed_session)
+    _sign_session(env, renewed_session)
+    refreshed_args = second_args[:-1] + [renewed_deadline]
+    assert env.participant("btc_ceremony", 0, "btc-mint-execute", *refreshed_args)["status"] == "BTC_FUNDING_EXECUTED"
+    assert admission.functions.attempts(session).call() == old_claim
+    assert mining.functions.nonce().call() == 3
+    record_property("mint_sessions", 3)
+    record_property("retired_finalized_session_before_renewal", True)
     record_property("operator_transfer_sessions", 1)
     record_property("isolated_participant_homes", 3)
     record_property("legacy_transport_operator_unchanged", True)

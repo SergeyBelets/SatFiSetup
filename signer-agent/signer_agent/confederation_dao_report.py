@@ -6,7 +6,7 @@ from web3 import Web3
 from web3.logs import DISCARD
 
 from .bootstrap import artifact, encode_args
-from .bitcoin_trust import checked_runtime
+from .bitcoin_trust import checked_runtime, runtime_artifact
 from .evm_network import read_block
 from .launch_economics import integer
 from .operations import canonical
@@ -15,16 +15,34 @@ from .operations import canonical
 ARTIFACT = "ConfederationDAOIncome"
 HELPER = "getSettlementOperationHash"
 STAGE_HELPER = "getStageExpensesOperationHash"
+CLOSING_RATES_HELPER = "getSetClosingRatesOperationHash"
 MAX_UINT128 = 2**128 - 1
+REPORT_HELPERS = frozenset((HELPER, STAGE_HELPER))
 
 
-def _contract(w3, address, kind, block):
-    checked_runtime(w3, address, kind, block)
+def _contract(w3, address, kind, block, *, legacy_dao_exit=False):
+    if legacy_dao_exit:
+        runtime_artifact(w3, address, kind, block, legacy_dao_exit=True)
+    else:
+        checked_runtime(w3, address, kind, block)
     return w3.eth.contract(address=Web3.to_checksum_address(address), abi=artifact(kind)["abi"])
 
 
 def _read(contract, block, method, *args):
     return getattr(contract.functions, method)(*args).call(block_identifier=block)
+
+
+def validate_closing_rates(node, block, values):
+    day, assets, rates = values
+    at = block.number
+    limit = _read(node, at, "settlementDayLimit")
+    if (not 0 < limit <= day or day != block.timestamp // 86400
+            or _read(node, at, "nextSettlementDay") != limit or _read(node, at, "processing")
+            or _read(node, at, "debtHead") == _read(node, at, "debtTail")
+            or _read(node, at, "closingRatesDay") == day
+            or list(assets) != list(_read(node, at, "rewardTokens")) or len(rates) != len(assets)
+            or not all(0 < rate <= MAX_UINT128 for rate in rates)):
+        raise ValueError("CONFEDERATION_DAO_CLOSING_RATES")
 
 
 def _targets(w3, income, at):
@@ -143,7 +161,7 @@ def prepare(w3, settlement, inputs, block, *, stage=False):
         raise ValueError("DAO_REPORT_INPUTS")
     day = integer(inputs["day"], 0, 2**64 - 1)
     if (_read(node, block.number, "processing") or day != _read(node, block.number, "nextSettlementDay")
-            or day >= block.timestamp // 86400):
+            or day >= block.timestamp // 86400 or day >= _read(node, block.number, "settlementDayLimit")):
         raise ValueError("DAO_REPORT_DAY")
     transactions = inputs["transactions"]
     if not all(isinstance(digest, str) for digest in transactions):

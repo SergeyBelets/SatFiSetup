@@ -35,6 +35,7 @@ class Config:
     priority_fee_gwei: float
     auto_sign: bool
     auto_finalize: bool
+    nonce_ledger: Optional[str] = field(default=None, repr=False)
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -69,6 +70,7 @@ class Config:
             priority_fee_gwei=float(os.getenv("PRIORITY_FEE_GWEI", "2")),
             auto_sign=_env_bool("AUTO_SIGN"),
             auto_finalize=_env_bool("AUTO_FINALIZE"),
+            nonce_ledger=os.getenv("SIGNER_NONCE_LEDGER") or None,
         )
 
     def validate(self, require_signing: bool = True) -> None:

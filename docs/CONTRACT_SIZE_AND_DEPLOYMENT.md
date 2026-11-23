@@ -1,14 +1,51 @@
-# Contract sizes and deployment verification — 4 November 2026
+# Contract sizes and deployment verification
 
 Current V6 verification status: [acceptance](PARALLEL_NETWORKS_ACCEPTANCE.md). The earlier eight-section [implementation report](UPGRADE_REVIEW_2026_10_18.md) and fresh-clone [acceptance report](ACCEPTANCE_REPORT.md) retain their historical scope. Relative compiler remappings are required for identical runtime bytes on different participant computers.
 
-The project is built with Solidity 0.8.30, via-IR, optimizer enabled with one run,
-and the explicitly pinned Osaka EVM target. Changing any of these settings requires
-rebuilding and re-running the checks. No code-size override is used on the Anvil node.
+Both current contract builds pin Solidity `0.8.39+commit.ce47f2c8`, Osaka, via-IR
+and optimizer runs 1. The compiler includes the Yul correction for `SOL-2026-7`
+and the later storage-copy correction for `SOL-2026-8`. [Solidity bug registry](https://docs.soliditylang.org/en/latest/bugs.html) ·
+[Solidity 0.8.39 release](https://www.soliditylang.org/blog/2026/11/19/solidity-0.8.39-release-announcement/).
 
-## Current custody build: 4 November
+Build both projects in a fresh checkout or with `forge build --force` from the
+release source tree. `ops/bootstrap_host.py build` checks client ABIs, the fee
+verifier code hashes, the SPV executable pins and ordinary contract sizes.
+Bootstrap also checks the complete initcode including constructor arguments.
 
-The [current size inventory](../ops/artifacts/custody-completeness-20261104/contract-sizes.json)
+Keep the original release, build, code hashes and manifest for any previously
+deployed immutable graph. Use them for active governance and in-flight custody
+settlements. The reviewed `2630366` artifacts used by the new SDK are limited
+to the explicit DAO and fee-sale exit paths. Reusing an incompatible deployment
+in a new bootstrap fails its artifact and graph checks.
+
+## Current Solidity 0.8.39 build
+
+The ordinary size check passed for 148 project contracts and libraries. This
+table uses production artifacts and shows creation bytes before arguments.
+
+| Contract | Runtime bytes | Runtime headroom | Creation bytes |
+| --- | ---: | ---: | ---: |
+| MultiPoolDeployer | 24,427 | 149 | 24,679 |
+| WithdrawalFeeCredits | 24,406 | 170 | 26,466 |
+| BitcoinWithdrawalEscrow | 24,388 | 188 | 25,238 |
+| BitcoinWithdrawalEscrowV2 | 23,344 | 1,232 | 24,217 |
+| BitcoinDepositRegistry | 19,925 | 4,651 | 20,565 |
+| ConfederationFactory | 23,061 | 1,515 | 26,426 |
+| DKGCoordinator | 17,719 | 6,857 | 17,763 |
+| BitcoinCustodyTransferV2 | 13,630 | 10,946 | 24,531 |
+| FederationFactory | 12,992 | 11,584 | 13,512 |
+| ZkBitcoinStateV2 | 9,475 | 15,101 | 30,252 |
+| ZkBitcoinTestnet4StateV2 | 9,476 | 15,100 | 30,558 |
+| CustodianDAOConfigValidator | 2,662 | 21,914 | 2,688 |
+
+`ConfederationFactory` creates its immutable DAO graph validator in its
+constructor. Validator creation counts toward the factory's initcode and
+uses the factory transaction. The constructor keeps its four original
+address arguments.
+
+## Historical custody build of 4 November
+
+The [4 November size inventory](../ops/artifacts/custody-completeness-20261104/contract-sizes.json)
 checks **134 deployable production contracts/libraries**, portable metadata,
 EIP-170 runtime and EIP-3860 creation-object limits. No limit override is used.
 The [custody acceptance](../ops/artifacts/custody-transfer-20261104/README.md)

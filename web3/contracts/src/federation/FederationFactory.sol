@@ -45,7 +45,7 @@ contract FederationFactory is IFederationFactory {
         token.forceApprove(address(deploymentFeeRouter),0);
     }
     mapping(bytes32=>bool) public v1Sessions;
-    /// @notice Initiator may finish deployment; unrelated callers cannot choose token metadata.
+    /// @notice Initiator may finish deployment using the reserved token metadata.
     mapping(bytes32 => address) public deploymentInitiator;
     // ======== STATE ========
 
@@ -73,10 +73,17 @@ contract FederationFactory is IFederationFactory {
     /// @notice Federation ID to DKG session mapping
     mapping(string => bytes32) private federationToSession;
 
-    /// @notice One-time admission binding for a V1 federation ID.
+    struct ReservationTerms {
+        bytes32 formationHash;
+        bytes32 tokenHash;
+    }
+
+    /// @notice Admission binding for a V1 federation ID. Recovery preserves the reserved terms.
     mapping(string => bytes32) public reservedFederationSession;
+    mapping(string => ReservationTerms) public reservedFederationTerms;
     mapping(bytes32 => bool) private reservedSessions;
     event FederationIdReserved(string indexed federationId, bytes32 indexed sessionId);
+    event FederationReservationTransferred(string indexed federationId, bytes32 indexed previous, bytes32 indexed replacement);
 
     /// @notice Per-federation nonce for target-bound FROST operations
     mapping(string => uint256) private federationOperationNonces;
@@ -163,29 +170,64 @@ contract FederationFactory is IFederationFactory {
         emit DKGInitiated(sessionId, federationId, threshold);
     }
 
-    /// @notice The factory deployer binds an unused ID to exactly one DKG session.
+    /// @notice The factory deployer binds an unused ID to a DKG session, roster and token metadata.
     /// @dev May precede DKG completion. The exact retry is a no-op.
-    function reserveFederationId(bytes32 sessionId, string calldata federationId) external {
+    function reserveFederationId(
+        bytes32 sessionId, string calldata federationId, bytes32 formationHash, bytes32 tokenHash
+    ) external {
         if (msg.sender != feeSetupAuthority) revert NotAuthorized();
-        if (sessionId == 0 || bytes(federationId).length == 0) revert InvalidFederationReservation();
+        if (sessionId == 0 || bytes(federationId).length == 0 || formationHash == 0 || tokenHash == 0) {
+            revert InvalidFederationReservation();
+        }
         bytes32 previous = reservedFederationSession[federationId];
-        if (previous == sessionId) return;
+        if (previous == sessionId) {
+            ReservationTerms storage terms = reservedFederationTerms[federationId];
+            if (terms.formationHash != formationHash || terms.tokenHash != tokenHash) {
+                revert InvalidFederationReservation();
+            }
+            return;
+        }
         if (previous != 0 || federations[federationId].createdAt != 0) revert FederationAlreadyExists();
         if (reservedSessions[sessionId] || bytes(sessionToFederation[sessionId]).length != 0) {
             revert InvalidFederationReservation();
         }
         reservedFederationSession[federationId] = sessionId;
+        reservedFederationTerms[federationId] = ReservationTerms(formationHash, tokenHash);
         reservedSessions[sessionId] = true;
         emit FederationIdReserved(federationId, sessionId);
     }
 
-    function adoptFederationDKG(bytes32 sessionId,string calldata federationId) external {
+    /// @notice Move an unused reservation from a terminal ceremony to a replacement with the same signing terms.
+    function transferFederationReservation(string calldata federationId, bytes32 previous, bytes32 replacement) external {
+        if (msg.sender != feeSetupAuthority) revert NotAuthorized();
+        if (previous == 0 || replacement == 0 || previous == replacement
+            || reservedFederationSession[federationId] != previous || federations[federationId].createdAt != 0
+            || !reservedSessions[previous] || bytes(sessionToFederation[previous]).length != 0
+            || reservedSessions[replacement] || bytes(sessionToFederation[replacement]).length != 0) {
+            revert InvalidFederationReservation();
+        }
+        _requireCanonicalDKG();
+        DKGCoordinator(address(dkgCoordinator)).requireReservationTransfer(previous, replacement);
+
+        reservedFederationSession[federationId] = replacement;
+        reservedSessions[replacement] = true;
+        emit FederationReservationTransferred(federationId, previous, replacement);
+    }
+
+    function _requireCanonicalDKG() private view {
         require(IFederationFROSTCoordinator(frostCoordinator).dkgRegistry() == address(dkgCoordinator), "DKG registry mismatch");
+    }
+
+    function adoptFederationDKG(bytes32 sessionId,string calldata federationId) external {
+        _requireCanonicalDKG();
         if (sessionId == 0 || reservedFederationSession[federationId] != sessionId) {
             revert InvalidFederationReservation();
         }
         (, , ,bytes32 purpose, ,address[] memory participants,uint256 threshold)=DKGCoordinator(address(dkgCoordinator)).getCompletedResult(sessionId);
         require(purpose==keccak256("EVM_AUTH") && DKGCoordinator(address(dkgCoordinator)).isSessionParticipant(sessionId,msg.sender),"DKG admission");
+        if (keccak256(abi.encode(participants, threshold)) != reservedFederationTerms[federationId].formationHash) {
+            revert InvalidFederationReservation();
+        }
         require(bytes(sessionToFederation[sessionId]).length==0,"DKG already used");
         v1Sessions[sessionId]=true;
 
@@ -248,6 +290,10 @@ contract FederationFactory is IFederationFactory {
                 }
             }
             if (!participant) revert NotAuthorized();
+        }
+        if (v1Sessions[sessionId] && keccak256(abi.encode(shareTokenName, shareTokenSymbol))
+                != reservedFederationTerms[federationId].tokenHash) {
+            revert InvalidFederationReservation();
         }
 
         // Get group public key from DKG

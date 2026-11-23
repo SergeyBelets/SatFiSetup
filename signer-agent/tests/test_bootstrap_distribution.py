@@ -65,10 +65,28 @@ def test_stale_distribution_and_pending_transfers_cannot_release(tmp_path,monkey
 
 def test_confirmed_distribution_anchor_cannot_survive_reorg(tmp_path,monkeypatch):
     e=setup(tmp_path,monkeypatch);e.b.apply(e.identity);release(e)
+    e.b.w3.eth.block_number=101
     original=e.b.w3.eth.get_block
     e.b.w3.eth.get_block=lambda n:NS(number=100,hash=b'x'*32) if n==100 else original(n)
     with pytest.raises(ValueError,match='EVM_REORG_RECOVERY_REQUIRED'):e.b.apply(verify=True)
     assert len(e.b.w3.eth.sent)==1
+
+
+def test_distribution_waits_for_required_confirmations_without_resetting_journal(tmp_path, monkeypatch):
+    e = setup(tmp_path, monkeypatch)
+    e.b.apply(e.identity)
+    assert release(e)["status"] == "VERIFIED"
+    row_id = e.b.prefix + ":ulr_distribution"
+    before = e.b.journal.get(row_id)
+    e.b._evm_confirmation_floor = 3
+    e.b.w3.eth.block_number = 101
+    with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$"):
+        e.b.apply(e.identity)
+    assert e.b.journal.get(row_id) == before
+    assert len(e.b.w3.eth.sent) == 1
+    e.b.w3.eth.block_number = 102
+    assert e.b.apply(e.identity)["status"] == "VERIFIED"
+    assert len(e.b.w3.eth.sent) == 1
 
 
 @pytest.mark.parametrize('mode',['create','reuse'])

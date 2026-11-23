@@ -111,7 +111,7 @@ fees and finalized receipt validation; see the
 [the current inventory](../ops/artifacts/custody-completeness-20261104/contract-sizes.json);
 older reports retain their own snapshots.
 Bootstrap additionally checks the complete initcode, including constructor arguments,
-before signing. The compiler target is pinned to Solidity 0.8.30 / Osaka, via-IR,
+before signing. The compiler target is pinned to Solidity 0.8.39 / Osaka, via-IR,
 optimizer enabled with one run. Re-run the gates when these settings or code change.
 
 See the [documentation index](../docs/README.md) for architecture, API, FROST operation and audit status.

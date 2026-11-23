@@ -3,10 +3,11 @@ mod bitcoin;
 mod smp1_psbt;
 mod deposit_derivation;
 mod bitcoin_input_key;
+mod bitcoin_recovery;
 mod withdrawal_fee;
 #[cfg(test)]
 mod derivation_qualification;
-use frost::keys::EvenY;
+use frost::keys::{EvenY, Tweak};
 use frost_secp256k1_tr as frost;
 use hpke::{
     aead::ChaCha20Poly1305, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable,
@@ -63,6 +64,10 @@ fn execute(v: Value) -> Result<Value, E> {
         "bitcoin_script_address_v1" => bitcoin::script_address(&v)?,
         "bitcoin_address_script_v1" => bitcoin::address_script(&v)?,
         "bitcoin_smp1_psbt_v1" => smp1_psbt::inspect(&v)?,
+        "bitcoin_recovery_descriptor_v1" => bitcoin_recovery::descriptor(&v)?,
+        "bitcoin_recovery_plan_v1" => bitcoin_recovery::plan(&v)?,
+        "bitcoin_recovery_attach_v1" => bitcoin_recovery::attach(&v)?,
+        "bitcoin_recovery_verify_v1" => bitcoin_recovery::verify(&v)?,
         "bitcoin_attach" => bitcoin::attach(&v)?,
         "bitcoin_attach_v1" => bitcoin::attach_v1(&v)?,
         "bitcoin_nonce_v1" => {
@@ -149,16 +154,35 @@ fn execute(v: Value) -> Result<Value, E> {
                 raw_group += point.to_projective();
             }
             let raw_group_bytes = raw_group.to_affine().to_encoded_point(true);
-            let internal_key = &raw_group_bytes.as_bytes()[1..];
+            let mut internal_key = hex::encode(&raw_group_bytes.as_bytes()[1..]);
             use sha2::{Digest, Sha256};
             let tag = Sha256::digest(b"TapTweak");
-            let tweak = Sha256::new()
+            let mut tweak = hex::encode(Sha256::new()
                 .chain_update(tag)
                 .chain_update(tag)
-                .chain_update(internal_key)
-                .finalize();
-            let (key, public) = frost::keys::dkg::part3(&secret, &round1, &packages)?;
-            // ZF 2.2.0 post_dkg already applies the BIP341 no-tree tweak. Never apply it again.
+                .chain_update(&raw_group_bytes.as_bytes()[1..])
+                .finalize());
+            let (mut key, mut public) = frost::keys::dkg::part3(&secret, &round1, &packages)?;
+            let mut recovery = None;
+            let mut script_tree = Value::Null;
+            if let Some(policy) = v.get("recovery_policy") {
+                // The library's ordinary no-tree output key is the internal
+                // key of this separate descriptor. Its exact script-tree
+                // tweak is computed from that key, never from raw DKG shares.
+                internal_key = hex::encode(&public.verifying_key().serialize()?[1..]);
+                let descriptor = bitcoin_recovery::Descriptor::new(policy, &internal_key)?;
+                key = key.tweak(Some(descriptor.merkle_root));
+                public = public.tweak(Some(descriptor.merkle_root));
+                if public.verifying_key().serialize()?[1..] != descriptor.output_key()
+                    || public.verifying_shares().get(key.identifier()) != Some(key.verifying_share())
+                {
+                    return Err("recovery DKG output mismatch".into());
+                }
+                script_tree = json!(hex::encode(descriptor.merkle_root));
+                let descriptor = descriptor.public_json();
+                tweak = descriptor["taproot_tweak"].as_str().ok_or("recovery tweak")?.to_string();
+                recovery = Some(descriptor);
+            }
             let original = public.verifying_key().serialize()?;
             let negated = !public.has_even_y();
             let key = key.into_even_y(None);
@@ -167,11 +191,15 @@ fn execute(v: Value) -> Result<Value, E> {
             for (i, p) in public.verifying_shares() {
                 shares.insert(hex::encode(i.serialize()), hex::encode(p.serialize()?));
             }
-            json!({"key_package":hex::encode(key.serialize()?),"public_package":hex::encode(public.serialize()?),
+            let mut output = json!({"key_package":hex::encode(key.serialize()?),"public_package":hex::encode(public.serialize()?),
                 "signing_share":hex::encode(key.signing_share().serialize()),"public_share":hex::encode(key.verifying_share().serialize()?),
                 "group":hex::encode(public.verifying_key().serialize()?),"original_group":hex::encode(original),
                 "normalization_negated":negated,"public_shares":shares,"library_taproot_tweak_applied":true,"raw_dkg_group":hex::encode(raw_group_bytes.as_bytes()),
-                "internal_key":hex::encode(internal_key),"taproot_tweak":hex::encode(tweak),"script_tree":null})
+                "internal_key":internal_key,"taproot_tweak":tweak,"script_tree":script_tree});
+            if let Some(descriptor) = recovery {
+                output["recovery_descriptor"] = descriptor;
+            }
+            output
         }
         "nonce" => {
             let s = frost::keys::SigningShare::deserialize(&bytes(&v, "share")?)?;

@@ -19,7 +19,10 @@ V3 выпускает или подключает общий ULR и создаё
 после подтверждения BTC, поступивших в custody конфедерации.
 Для переноса MP заранее добавьте исходную федерацию в `custody_sources`
 конфигуратора. В подписанном приглашении это `bitcoin_custody.sources`.
-Ей нужен отдельный запас BTC на комиссию перевода в конфедерацию. При погашении S
+Сверьте Bitcoin-сеть источника и назначения по их SPV-контрактам. Relay
+и ZK можно сочетать внутри одной Bitcoin-сети. При запросе gateway фиксирует
+выпуск S и протокольную комиссию до блокировки MP. Федерации нужен отдельный
+запас BTC на комиссию перевода. При погашении S
 комиссия майнеров входит в сжигаемую сумму, а комиссия протокола остаётся в
 обеспеченных S у DAO. [Порядок переноса MP → S → BTC](BITCOIN_CUSTODY_TRANSFER.md#профиль-v3-с-прямым-btc-резервом).
 После `bootstrap verify` передайте коллегам публичный manifest либо адрес
@@ -53,6 +56,7 @@ deployment ID и журналом.
 | Один participant archive и согласованный SHA256 | Все | Проверить общий hash до распаковки; не смешивать версии |
 | Сборка SDK/FROST/Solidity и protocol source fingerprint | Каждый | Свой venv и native binaries; fingerprint совпал |
 | Identity, private directory, journals, свой RPC/Core | Каждый | Адрес проверен; secrets не передаются оператору |
+| Независимое хранение FROST nonce | Каждый подписант | Локальный журнал вне снапшота подписанта. Для защиты от отката обоих томов подготовьте HTTPS-якорь на отдельном хосте до enrollment |
 | Общий roster, role thresholds, сети и backend | Все | Оператор первый; роль представителя отделена от custody DKG |
 | Один расчётный USD | Все | В `backed` согласовать адрес, runtime hash и decimals до invitation. В regtest `create` адрес появится при развёртывании |
 | ETH для publish/enrollment/DKG/signing | Каждый, больше у оператора | В правильной EVM; optional funding pause не оплачивает enrollment |
@@ -130,6 +134,13 @@ native witness host. Для проверки публичного ZIP доста
 к архивному Core с txindex и согласованной сетью.
 
 ## 4. Оператор готовит пакет запуска
+
+Для нового V3 можно включить `bitcoin_recovery` до публикации приглашения.
+Команда связывает BTC DKG с высотой CLTV и холодными ключами. До первого
+депозита проверьте дескриптор, кошелёк-преемник и отдельный источник miner fee.
+Для возобновления вывода после Т‑02 сначала подготовьте отдельный BTC DKG
+преемника и включите его публичный результат в условия основного запуска.
+[Подготовка и запуск холодного восстановления](BITCOIN_WITHDRAWAL_RECOVERY.md).
 
 Все заранее согласуют deployment ID; ниже `pilot-v1` — пример нового ID.
 Значение вводится в wizard и затем не меняется в существующем journal.
@@ -272,12 +283,33 @@ frost-signer setup status --board "$BOARD" --rpc "$RPC" \
 
 Для enrollment используйте проверенный адрес, блок создания и fingerprint
 согласованного приглашения. Команда проверяет fingerprint приглашения на board.
+Для нового рабочего подписанта подготовьте приватный каталог журнала на
+отдельном томе. `--nonce-ledger-dir` обязателен на Ethereum mainnet и при
+Bitcoin mainnet вместе с Sepolia. Он закрепляет журнал каждой роли, включая
+файл `<роль>.enc.signing` для обеих ролей EVM_AUTH. Чтобы защититься также от
+отката обоих локальных томов, зарегистрируйте участника на независимом
+HTTPS-якоре и задайте `SATOSHIFI_NONCE_ANCHOR_CONFIG` как абсолютный путь к
+его приватному `0600` JSON. Привязка применяется при первом enrollment.
+Сохраните исходный журнал, конфиг и токен якоря для повторов. Оставьте путь к
+конфигу в среде подписанта, включая сервис, выполняющий DKG и подписи.
+В локальной репетиции `NONCE_ARGS` можно оставить пустым.
+[Независимый журнал](SIGNING_PROTOCOL.md#independent-nonce-ledger) ·
+[Подготовка HTTPS-якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
 
 ```bash
+NONCE_ARGS=()
+if [[ -n "${NONCE_LEDGER_DIR:-}" ]]; then
+  install -d -m 700 "$NONCE_LEDGER_DIR"
+  NONCE_ARGS=(--nonce-ledger-dir "$NONCE_LEDGER_DIR")
+  if [[ -n "${SATOSHIFI_NONCE_ANCHOR_CONFIG:-}" ]]; then
+    export SATOSHIFI_NONCE_ANCHOR_CONFIG
+    NONCE_ARGS+=(--nonce-anchor-config "$SATOSHIFI_NONCE_ANCHOR_CONFIG")
+  fi
+fi
 frost-signer setup join-chain --board "$BOARD" --rpc "$RPC" \
   --board-creation-block "$BOARD_BLOCK" --accept-fingerprint "$FINGERPRINT" \
   --identity-file "$IDENTITY" --directory "$PARTICIPANT_DIR" \
-  "${BTC_ARGS[@]}"
+  "${BTC_ARGS[@]}" "${NONCE_ARGS[@]}"
 ```
 
 Для regtest задайте `BITCOIN_NETWORK=regtest`: `BTC_ARGS` останется пустым.
@@ -344,9 +376,12 @@ attestations по правилам roster. [Порядок делегирова�
 
 После развёртывания фабрик оператор закрепляет `federation_id` за
 `evm_ceremony.id`, а `confederation_id` за `conf_ceremony.id` из приглашения.
-Bootstrap выполняет оба шага по плану. Adoption проверяет закреплённую пару,
-завершённый EVM_AUTH и допустимого инициатора. При `resume` используйте исходный
-журнал. [Общая factory федераций](FEDERATION_CONFEDERATION_SETUP.md#6-дополнительная-федерация-на-существующей-factory) ·
+Bootstrap закрепляет в каждой записи хеш состава и хеш метаданных share-токена.
+Adoption сверяет состав, завершённый EVM_AUTH и права инициатора. Deploy сверяет
+имя и символ до выпуска. При `resume` используйте исходный журнал. Bootstrap
+повторно проверяет резервации, принятый состав и выпущенные токены.
+[Хеши резерваций](FEDERATION_CONFEDERATION_SETUP.md#формат-хешей-резервации) ·
+[Общая factory федераций](FEDERATION_CONFEDERATION_SETUP.md#6-дополнительная-федерация-на-существующей-factory) ·
 [Общая factory конфедераций](FEDERATION_CONFEDERATION_SETUP.md#7-дополнительная-конфедерация-на-существующей-factory).
 
 ## 7. Проходите текущий барьер, сохраняя тот же запуск
@@ -368,9 +403,10 @@ Legacy journal проверяет полный исходный JSON артеф�
 | DKG in progress | Все участники соответствующей роли | Совпадающий completed result, не просто свой round-one |
 | `WAITING_DKG_RPC` / `AWAITING_EVM_RPC` | Затронутый участник | Дождаться исходного блока или продолжить той же командой с проверенным `--rpc` и прежним журналом |
 | `DKG_REVIEW_REQUIRED` | Участник церемонии | Сверить причину и фазу. Для остановки подтвердить `confirm_abort` исходной командой `dkg run-once --confirm-abort` |
+| DKG `Failed` / `Aborted`, ID ещё свободен от adoption | `feeSetupAuthority` фабрики | После подтверждения состояния создать новую EVM_AUTH с тем же составом и порогом. Проверить и подтвердить перенос точной резервации. [Порядок](RECOVERY.md#unused-factory-id-recovery) |
 | Root pin / FROST / custodian approval required | Нужные подписанты | Независимый pin, review точного target/helper/args и свои approvals |
 | Bitcoin relay readiness | Keeper и подписанты | Relay/guard согласованы со своим Core, confirmations/health пройдены |
-| `AWAITING_ZK_PROOF` / `AWAITING_BITCOIN_RELAY` при ZK | Prover и выбранный publisher | Собственный результат публикующего worker и принятый useful update, удовлетворяющий Fresh |
+| `AWAITING_BITCOIN_RELAY` с `bitcoin.reason=AWAITING_ZK_PROOF` | Оператор, prover и выбранный publisher | В partial manifest уже есть фактический state. Подготовить worker, при необходимости сначала развернуть consumers через defer, затем опубликовать достаточные для Fresh переходы |
 | `PAUSED_FOR_ULR_DISTRIBUTION` | Получатель выпуска и оператор | Ручная рассылка, confirmed balances, свежий distribution fingerprint |
 | `RECOVERY_REQUIRED` после revert withdrawal CREATE | Оператор | Сверить два журнала, закрыть открытые nonce по отдельному подтверждению, подтвердить recovery и продолжить с прежним DKG |
 | `TRANSACTION_PENDING` после гонки `finalizeSession` | Кастодиан | Дождаться финальности отката, повторить с тем же журналом. SDK сверит идентичный результат сессии и подтвердит использованный nonce |
@@ -417,27 +453,65 @@ frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$LOCAL/boot
 `0xe71e6620`. SDK проверяет их привязку до подписи. Существующий граф с
 неизменяемым verifier 3.0.0 требует отдельной миграции.
 
-По partial manifest настройте свой worker для подготовки, расчёта или публикации
-после появления state address. Если worker/heartbeat требует ещё не созданных consumer addresses,
-предусмотрен **явный** структурный этап `--defer-zk-freshness`; его порядок
-описан в [initial state runbook](ZK_TESTNET4_SEPOLIA.md#4-initial-state-собственные-proofs-и-fresh-barrier).
-Он не разрешает money calls и не делает checkpoint Fresh. Окончательный
-`verify` всегда выполняется без defer. Для relay этот этап не применяется.
+До развёртывания можно синхронизировать Bitcoin Core, проверить checkpoint
+и собрать witness host и prover. Рабочие режимы `prepare` и `export` требуют уже
+развёрнутый ZK state. Оба читают его подтверждённое состояние. Journal привязывает
+переход к сети EVM, адресу state, checkpoint и исходному состоянию.
+
+При новом `create` после DKG продолжите тот же bootstrap.
 
 ```bash
-python -m signer_agent.zk_worker prepare --config "$WORKER_CONFIG"
-python -m signer_agent.zk_worker prove --config "$WORKER_CONFIG"
-# Только выбранный publisher после своего prove:
-python -m signer_agent.zk_worker publish --config "$WORKER_CONFIG"
+frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$LOCAL/bootstrap.sqlite" \
+  --identity-file "$IDENTITY" --rpc "$RPC" "${BTC_ARGS[@]}" > "$LOCAL/zk-bootstrap.json"
 ```
 
-Для отдельного сервиса подготовки выберите `run --boundary prepare`.
-На prover-хосте `run --boundary export --bundle-file FILE` выполняет один
-локальный расчёт и выдаёт публичный ZIP для проверки коллегами.
-`verify-bundle` проверяет архив и подтверждённый EVM контекст. Публикующий
-worker использует собственное подтверждённое происхождение proof. Для Fresh
-достаточно принятого полезного перехода. Если исходное состояние изменилось,
-подготовьте новый переход. После публикации проверьте Fresh.
+На `status=AWAITING_BITCOIN_RELAY` и `bitcoin.reason=AWAITING_ZK_PROOF`
+state, adapter и verifier уже развёрнуты. CLI сообщает ожидание кодом 2.
+Из `manifest.contracts.relay.address` возьмите `zk_state`, из подписанного
+приглашения — полную `bitcoin_policy`. При настройке worker и проверки ZIP
+сверьте сеть, адрес state, привязки adapter/verifier и глубину подтверждений
+по своим EVM RPC. Используйте адреса фактического развёртывания.
+
+Штатный worker требует хотя бы один реальный адрес в `allowed_consumers`,
+включая конфигурацию с heartbeat. В обычном новом `create` Bitcoin-барьер
+предшествует развёртыванию consumers, поэтому продолжите тот же журнал с
+`--defer-zk-freshness`, чтобы получить их адреса.
+
+```bash
+frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$LOCAL/bootstrap.sqlite" \
+  --identity-file "$IDENTITY" --rpc "$RPC" "${BTC_ARGS[@]}" --defer-zk-freshness
+```
+
+На этом шаге продолжайте обычные подписи и паузу рассылки ULR, пока результат
+не покажет `GRAPH_CONFIGURED_FRESHNESS_PENDING`. Он подтверждает структуру
+графа. Начинайте денежный тест после Fresh и обычного `verify`. Если
+проверенные consumers уже развёрнуты, используйте их подтверждённые адреса
+без defer. Для relay используйте обычный resume.
+
+На мощном ПК заполните приватный worker config по подтверждённому графу с
+архивным Core и pinned prover. Для первого полезного перехода используйте
+heartbeat. Отдельный сервис с `run --boundary prepare` готовит свой attempt
+без RISC Zero и EVM-транзакций. Prover готовит входы своего worker и выполняет
+один расчёт с экспортом. Передавайте только публичный ZIP в новый файл.
+
+```bash
+# На мощном ПК, у worker с подтверждёнными state и consumers
+frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary export \
+  --bundle-file "$PUBLIC_ZIP"
+# У каждого проверяющего участника FROST
+frost-signer zk-worker verify-bundle --config "$REVIEW_CONFIG" \
+  --bundle-file "$PUBLIC_ZIP" --require-proof
+# Отдельный шаг выбранного publisher, с локальным результатом его worker
+frost-signer zk-worker publish --config "$WORKER_CONFIG"
+```
+
+Архивная проверка сверяет доказательство, состояние и Fresh через свой RPC.
+Она служит материалом для review и не выдаёт право на FROST-подпись или
+публикацию. При одном расчёте публикует тот же worker на мощном ПК. Другой
+publisher рассчитывает собственный proof. При изменении исходного состояния
+подготовьте соответствующий переход заново. После подтверждённого обновления
+до Fresh вернитесь к обычному `bootstrap resume` и `verify` без defer.
+[Testnet4 и Sepolia](ZK_TESTNET4_SEPOLIA.md#4-initial-state-собственные-proofs-и-fresh-barrier) ·
 [Команды режимов](ZK_SPV_WORKER.md#worker-modes-and-transition-archives) ·
 [Границы публичного ZIP](DISTRIBUTION.md#публичный-архив-перехода).
 
@@ -463,10 +537,13 @@ production qualification.
 | --- | --- |
 | Stake / свободный unstake | Сверить governance address и decimals, зачисление стейка и возврат основной суммы. Минимум взноса проверять по выбранному профилю |
 | Дневной доход DAO V3 → claim | За закрытые UTC-сутки принять фактический доход, подписать отчёт FROST и approvals кастодианов, возместить фактические расходы и выплатить владельцам стейка чистый остаток пропорционально их полному дневному стейку |
-| Treasury snapshot / startup прежнего профиля | Для payout сверить исторический inventory, поступившие USD и owner claim. Для включённого startup проверить отдельный бюджет, полный день, выплаты и возврат остатка |
-| BTC deposit → MP в федерации | Свой Core, каноническое включение, нужная зрелость и скрипт федерации. Прямой депозит в конфедерацию V3 выпускает S |
-| Внешний MP → S в V3 | Реальный перевод BTC, исходное погашение MP, принятие точного выхода и сверка выпуска S с приростом BTC-резерва. Прежний профиль выпускает cBTC через локальный MP |
-| S → BTC в V3 | План v5, подпись кастодианов конфедерации, точные выплаты, miner fee и сдача. После SPV сверить уменьшение выпуска S и резерва, а также комиссию DAO |
+| Treasury snapshot / startup прежнего профиля | Для payout сверить исторический inventory, поступившие USD и owner claim. Для startup проверить отдельный бюджет, полный день, выплаты и возврат остатка |
+| Первое пополнение общей казны ULR V1/V2 | Для адреса из manifest получить `enrolled: true` и `active: true` через `ulr-treasury status`. Выполнить `approve` и `deposit`, сверить баланс. На отдельном локальном графе с новым байткодом проверить отказ до регистрации и для другого экземпляра на том же scope без списания средств или allowance. [Проверка регистрации](ULR_TREASURIES.md#проверка-регистрации-перед-пополнением) |
+| Закрытие общей казны ULR V1/V2 | В отдельном тестовом графе проверить остановку payDay/spend/deposit при деактивации, согласованный вывод остатка новой казны и доступность ранее начисленных claims. [Процедура](ULR_TREASURIES.md#вывод-остатка-после-деактивации) |
+| BTC deposit → MP в федерации | Свой Core, каноническое включение, нужная зрелость и скрипт федерации |
+| Прямой BTC → S в V3 | До оплаты получить `LOCKED` для точного выхода и получателя. Изменить тариф на отдельном стенде, затем сверить S получателя, S в DAO и рост резерва. [Порядок фиксации комиссии](CONFEDERATION_DAO_IN_KIND.md#прямой-депозит-btc--s) |
+| Внешний MP → S в V3 | До допуска сверить сеть обоих SPV. Зафиксировать выпуск S, затем перевести BTC, погасить MP и принять точный выход. Сверить выпуск и комиссию с приростом BTC-резерва после смены тарифа или истечения NFT. Прежний профиль выпускает cBTC через локальный MP |
+| S → BTC в V3 | Прочитать `withdraw-quote` и подать заявку с минимумом чистых sats, лимитом miner fee и сроком включения. Проверить отказ на custody-скрипт, просрочку и потерю скидки, при которой обычный тариф не покрывает минимум. Сверить неизменность S, резерва и квоты при отказе. В плане v5 проверить минимум по каждой заявке и при RBF. После первой доли проверить восстановление того же batch по истечении срока подписания. После SPV сверить выплату, miner fee, сдачу, уменьшение выпуска S и резерва и комиссию DAO. [Условия и расчёт](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров) · [Восстановление](RECOVERY.md#expired-s-btc-recovery) |
 | NFT, если включены | В V3 провести тариф, привязанную к покупателю котировку, оплату S и погашение со скидкой. В прежнем профиле провести управляемые create/mint и read-only quote. Проверить владельца и повтор операции |
 
 Проверьте каждый шаг на своём стенде. Для V3 после расчёта дня стейкеры
@@ -481,12 +558,17 @@ production qualification.
 #### Тариф и покупка в V3
 
 После `VERIFIED` оператор готовит `tariff-prepare`. Кастодианы утверждают
-параметры через `conf_ceremony` FROST и свои approvals. После исполнения
+скидку, квоту, срок NFT, минимальную цену в S и конец окна продаж через
+`conf_ceremony` FROST и свои approvals. После исполнения
 тарифа оператор подписывает `price` для конкретного покупателя. Покупатель
 выполняет `approve-pass` и `buy-pass`; списание S и выпуск NFT проходят
 атомарно. Сверьте владельца, поступление S в DAO и сохранение общего выпуска
 S. Затем погасите S с NFT владельца, проверьте расход лимита и уменьшение
 комиссии протокола по подтверждённой выплате. [Команды и условия NFT V3](CONFEDERATION_DAO_IN_KIND.md#nft-и-эксплуатация).
+
+Проверьте смену оператора цены или паузу через `price-control-prepare`.
+После одобрения и исполнения старая котировка отклоняется. Выпущенный NFT
+сохраняет свои условия, а после возобновления продажи нужна новая котировка.
 
 Если конфедерация будет продавать часть комиссий, после `VERIFIED` подключите
 её `FundedFeeSale` с согласованным стейблкоином и долей комиссии на продажу.
@@ -800,7 +882,9 @@ inventory snapshot, treasury pay и, если включён, отдельный
 
 Для профиля общего ULR с новым реестром исходная системная группа
 активирует каждую зарегистрированную казну один раз перед её первой дневной
-выплатой. [Активация и исторический список казн](ULR_TREASURIES.md#ежедневный-запуск).
+выплатой. Пополнение доступно после регистрации казны активной конфедерации.
+Проверяйте оба поля `enrolled` и `active` перед каждым ручным пополнением.
+[Активация и исторический список казн](ULR_TREASURIES.md#ежедневный-запуск).
 
 ### Запуск Bitcoin-watch для адресных сервисов
 
@@ -836,7 +920,7 @@ frost-signer bitcoin withdrawal-fee scan --config "$FEE_CONFIG" --watch "$FEE_WA
 ```mermaid
 flowchart TD
     accTitle: Холодный старт с relay или ZK
-    accDescr: Для публичного Bitcoin первая проверка Fresh предшествует привязкам escrow и DAO. В ZK явный defer позволяет собрать граф и затем пройти обе проверки через обычный resume. Локальный regtest не использует публичный барьер Fresh.
+    accDescr: CREATE разворачивает state до расчёта proof. Если нужны адреса consumers, отдельный resume с defer завершает структуру. Prover выдаёт публичный ZIP для review. Собственный proof публикующего worker приводит к Fresh и обычному resume/verify.
     A["Чистый checkout или одна проверенная поставка<br/>SDK, Solidity и native FROST у каждого"] --> C["Конфигуратор: сети, backend и USD<br/>Проверка RPC, checkpoint и Bitcoin-watch"]
     C --> EN["Publish и enrollment<br/>Сверить fingerprint и подтверждённый board"]
     EN --> F["Пауза funding при включении<br/>Подтвердить ETH и выполнить resume"]
@@ -849,22 +933,24 @@ flowchart TD
     R --> BE{"Bitcoin backend"}
     BE -->|"Relay regtest"| L["Развернуть RegtestHeaderRelay"]
     BE -->|"Публичный relay"| LP["Развернуть relay и guard<br/>Первый Fresh: сверить relay с Core"]
-    BE -->|"ZK, пример testnet4"| Z["Развернуть state, adapter и verifier 3.1.0<br/>Первый Fresh: ожидание AWAITING_ZK_PROOF"]
-    Z -->|"Worker готов"| ZF["Свой proof публикующего worker<br/>Явная публикация перехода"]
-    ZF -.->|"Отдельный экспорт"| ZE["Публичный ZIP перехода<br/>Read-only проверка для FROST review"]
-    ZF --> ZR["Fresh: обычный resume"]
-    L --> H["Привязать escrow и callback<br/>Проверенный FROST intent и approvals"]
+    BE -->|"ZK CREATE"| Z["Развернуть state, adapter и verifier 3.1.0<br/>AWAITING_BITCOIN_RELAY / AWAITING_ZK_PROOF"]
+    Z --> ZM["Из partial manifest взять фактический state<br/>Сверить адрес и подтверждения по RPC"]
+    ZM --> ZC{"Consumers уже развёрнуты?"}
+    ZC -->|"Нет, обычный CREATE"| DEFER["Resume с --defer-zk-freshness<br/>Тот же журнал, привязки и пауза ULR"]
+    DEFER --> PENDING["GRAPH_CONFIGURED_FRESHNESS_PENDING<br/>Адреса есть, денежный запуск ждёт Fresh"]
+    ZC -->|"Да"| ZF
+    PENDING --> ZF["Мощный ПК: свой prepare и prove<br/>run --boundary export"]
+    ZF -.->|"Публичный ZIP"| ZE["Участники FROST: verify-bundle<br/>Проверка через собственный EVM RPC"]
+    ZF --> ZP["Отдельный publish своего результата<br/>Тот же worker или свой proof publisher"]
+    ZP --> ZR["Переходы подтверждены, state Fresh<br/>Обычный resume без defer"]
+    L --> H["Завершить и проверить привязки escrow и callback<br/>Проверенный FROST intent и approvals"]
     LP --> H
     ZR --> H
     H -->|"Публичный Bitcoin"| B["Сверить Fresh для consumers"]
     H -->|"Regtest"| U["Закончить привязки и настройку DAO<br/>Create: подтвердить ручную рассылку ULR"]
     B --> U
-    Z -->|"Нужны consumers или heartbeat"| DEFER["Явно resume с --defer-zk-freshness<br/>Настроить привязки, DAO и паузу ULR"]
-    DEFER --> PENDING["GRAPH_CONFIGURED_FRESHNESS_PENDING"]
     PENDING -.-> ZT["Локальный Anvil с chain ID Sepolia<br/>49 контрактов, 3 DKG, native witness<br/>Свежий Groth16 проверяется отдельно"]
-    PENDING --> PP["Свои proofs, публикация выбранным участником<br/>Fresh: resume без defer, с тем же журналом"]
     U --> V["bootstrap verify без defer → VERIFIED"]
-    PP --> V
     V -.-> LR["Локальный relay: 176 шагов create<br/>174 reuse, оба VERIFIED"]
     V --> T["Денежный smoke: Core и глубина Bitcoin<br/>Bitcoin-watch и ежедневная работа"]
     T --> N["V3 NFT: подписанный тариф и цена оператора<br/>Покупка за S и проверка owner/quota"]

@@ -166,8 +166,8 @@ Python 3.11 or newer is required. Use a current security patch release.
 ```bash
 python3.11 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.lock
-pip install --no-deps -e '.[test]'
+python -m pip install --require-hashes --only-binary :all: -r requirements.lock
+python -m pip install --no-deps --no-build-isolation -e '.[test]'
 cp .env.example .env
 ```
 
@@ -190,6 +190,10 @@ The signing share is the raw 32-byte Shamir scalar. Its public point must equal 
 The legacy scalar importer does not normalize group-key parity. The new `dkg` path uses library DKG, records its Taproot transform and normalizes the complete result consistently; see [DKG_PROTOCOL_V1](../docs/DKG_PROTOCOL_V1.md). The dated [strict review](../docs/STRICT_REVIEW_2026_10_05.md) describes the earlier scope and is not an audit of this adapter.
 
 ## One-Shot Operation
+
+The legacy approval commands below are for local Anvil. Public network signers
+use typed `dkg sign-evm` after enrollment. See the
+[signing protocol](../docs/SIGNING_PROTOCOL.md).
 
 ```bash
 frost-signer doctor

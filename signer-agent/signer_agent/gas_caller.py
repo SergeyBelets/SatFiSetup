@@ -13,6 +13,7 @@ from eth_account import Account
 from eth_account.typed_transactions import TypedTransaction
 from hexbytes import HexBytes
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import TransactionNotFound
 from web3.logs import DISCARD
 
@@ -288,7 +289,7 @@ def main(argv=None):
     try:
         if not 5 <= args.interval_seconds <= 3600:
             raise ValueError("GAS_CALLER_POLICY")
-        caller = GasCaller(Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 20})),
+        caller = GasCaller(evm_web3(args.rpc, timeout=20),
             json.loads(Path(args.config).read_text()), args.identity_file)
         while True:
             print(json.dumps(caller.tick(), sort_keys=True), flush=True)

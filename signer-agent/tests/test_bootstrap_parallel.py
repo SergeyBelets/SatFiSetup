@@ -85,7 +85,9 @@ def fixture(tmp_path, count=2):
     b.contracts, b.values, b.prepared, b.finished = {}, {}, [], []
     b.check_external_components = lambda: None
     b.manifest = lambda: dict(finished=list(b.finished))
-    b.record_deployment = lambda step, result, receipt: None
+    def record_deployment(step, result, receipt):
+        result["contract"] = {"artifact": step["artifact"]}
+    b.record_deployment = record_deployment
     b.outputs = lambda step, result: b.finished.append(step["id"])
     b.verify_checks = lambda step, receipt=None: None
     def build(step, account, nonce):
@@ -101,7 +103,7 @@ def fixture(tmp_path, count=2):
 
 def test_all_sends_before_common_finality_then_dependent_step(tmp_path):
     b, identity = fixture(tmp_path, 3)
-    b.profile["steps"].append(dict(id="dependent", kind="deploy", args=["$leaf0"]))
+    b.profile["steps"].append(dict(id="dependent", kind="deploy", artifact="Fixture", args=["$leaf0"]))
     result = b.apply(identity)
     assert result == dict(status="CONFIRMING", step="leaf0", parallel_group="leaves", pending=["leaf0", "leaf1", "leaf2"])
     assert len(b.w3.eth.sent) == 3

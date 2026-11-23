@@ -104,6 +104,39 @@ def test_legacy_invitation_publication_rejected_before_rpc_or_identity(tmp_path)
         chain_main(SimpleNamespace(action="publish", invite=path))
 
 
+def test_enrollment_provisions_private_ledgers_for_all_roles(tmp_path):
+    from signer_agent.secure_state import SecureState
+
+    proposal = invite()
+    identity = tmp_path / "identity.json"
+    identity.write_text(json.dumps({"private_key": f"{1:064x}"}))
+    identity.chmod(0o600)
+    local = tmp_path / "signer"
+    ledger = tmp_path / "external"
+    ledger.mkdir(mode=0o700)
+    expected = fingerprint(proposal)
+    entry = join(proposal, expected, identity, local, nonce_ledger_dir=ledger)
+    assert entry == join(proposal, expected, identity, local, nonce_ledger_dir=ledger)
+    assert str(ledger) not in json.dumps(entry)
+    password = password_file(local / "password")
+    for role in ("evm_ceremony", "conf_ceremony", "btc_ceremony"):
+        state = SecureState(local / (role + ".enc"), password)
+        state.require_nonce_ledger()
+        signer = SecureState(local / (role + ".enc.signing"), password)
+        if role == "btc_ceremony":
+            assert not signer.path.exists()
+        else:
+            bound = state.evm_nonce_ledger(signer)
+            assert bound.endswith(f"-{role}.spent.sqlite")
+            assert signer.path.is_file()
+    files = list(ledger.glob("*.spent.sqlite"))
+    assert len(files) == 3
+    files[0].unlink()
+    with pytest.raises(RuntimeError, match="NONCE_LEDGER_MISSING"):
+        join(proposal, expected, identity, local, nonce_ledger_dir=ledger)
+    assert not files[0].exists()
+
+
 def test_local_secret_files_fail_closed(tmp_path):
     path = tmp_path / "password"
     path.write_text("short")

@@ -105,8 +105,12 @@ The external parser retains the canonical 100 kB stripped envelope and supports
 more than 256 inputs/outputs. Classification advances at most 16 inputs per call;
 unknown context remains protected, never free reserve or mintable MP.
 
-Issuance requires exact canonical inclusion, ordinary depth max(6, policy depth),
-and **101 for coinbase spendability**. Core gettxout includes mempool spends.
+Issuance requires exact canonical inclusion. For an ordinary input, supported
+deployments use the configured deposit depth of at least 6. For a coinbase,
+the contract and SDK require **max(101, configured deposit depth)**. For
+example, a graph configured for 144 accepts it starting at 144 confirmations.
+The 100-confirmation coinbase mint rule is separate. Core `gettxout` includes
+mempool spends.
 The shared value ledger computes F=sum(all nominal inputs)−sum(all outputs);
 neither backingSats alone nor an RPC fee estimate substitutes for it. Selected
 inputs must be fully classified as principal + treasury free + named BTC claims.
@@ -119,7 +123,7 @@ flowchart LR
   E[External exchange or sender] --> A[Registered WITHDRAWAL_FEE script]
   A --> W[Durable purpose watch and bounded Core scan]
   W --> I[All-input ingress classification]
-  I --> V[Canonical SPV and maturity]
+  I --> V["Canonical SPV and configured depth<br/>Coinbase fee funding also requires at least 101"]
   V --> C[Named owner and request claim]
   C --> P[Selected version debit C]
   P --> R[External immutable refund script]

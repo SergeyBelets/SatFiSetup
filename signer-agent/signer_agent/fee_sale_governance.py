@@ -5,7 +5,7 @@ import json
 from web3 import Web3
 
 from .bootstrap import encode_args
-from .bitcoin_trust import checked_runtime
+from .bitcoin_trust import checked_runtime, runtime_artifact
 from .contract_provenance import prove_creation
 from .dao_client import address
 from .dkg_protocol import Manifest
@@ -50,7 +50,7 @@ def matches(intent):
             or intent.get("hash_method") == OPERATIONS["bind"][1])
 
 
-def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True):
+def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True, refund_context=False):
     validate_pin(pin)
     block = w3.eth.get_block(at)
     at = block.number
@@ -64,20 +64,23 @@ def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True):
         raise ValueError("FEE_SALE_ENROLLMENT")
     if require_finalized and at > read_block(w3, number(pin["confirmations"])).number:
         raise ValueError("FEE_SALE_UNFINALIZED")
-    board, published = _board_and_invitation(w3, pin["board"], block)
+    options = {"legacy_dao_exit": True} if refund_context else {}
+    board, published = _board_and_invitation(w3, pin["board"], block, **options)
     if published != invite or read(board, at, "registry") != manifest.registry:
         raise ValueError("FEE_SALE_ENROLLMENT")
 
     def checked(kind, target):
-        checked_runtime(w3, target, kind, at)
+        if refund_context:
+            runtime_artifact(w3, target, kind, at, legacy_dao_exit=True)
+        else:
+            checked_runtime(w3, target, kind, at)
         return contract(w3, kind, target)
 
     def direct(kind, target):
-        node = checked(kind, target)
-        proof = prove_creation(w3, target, kind, None, at)
+        proof = prove_creation(w3, target, kind, None, at, legacy_dao_exit=refund_context)
         if proof.get("method") != "direct" or proof.get("sender") != invite["operator"]:
             raise ValueError("FEE_SALE_ORIGIN")
-        return node
+        return contract(w3, kind, target)
 
     confederation = role == "conf_ceremony"
     factory = direct("ConfederationFactory" if confederation else "FederationFactory", pin["factory"])
@@ -88,7 +91,7 @@ def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True):
         authorization, validator, pool_address, shares = entity[7:11]
         pool = checked("ConfederationPoolV2", pool_address)
         source = direct(DAO, read(pool, at, "daoIncome"))
-        if (not entity[-1] or shares != pin["fee_token"] or source.address != pin["treasury"]
+        if (shares != pin["fee_token"] or source.address != pin["treasury"]
                 or read(source, at, "pool") != pool.address or read(source, at, "shareToken") != shares
                 or read(source, at, "authorization") != authorization or read(source, at, "validator") != validator
                 or not read(source, at, "approvedToken", pin["stablecoin"])):
@@ -99,12 +102,14 @@ def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True):
         authorization, validator = entity[4], ZERO
         source = checked(POOL, entity[5])
         pool_info = read(source, at, "getPoolInfo", pin["fee_token"])
-        if (not entity[-1] or not pool_info[3] or pool_info[0] != pin["fee_token"]
+        if (not pool_info[3] or pool_info[0] != pin["fee_token"]
                 or pin["treasury"] != invite["treasury"] or read(source, at, "getFrostMultisig") != authorization):
             raise ValueError("FEE_SALE_SOURCE")
         bound = ZERO
 
-    auth = authority_context(w3, authorization, at)
+    if not entity[-1] and not refund_context:
+        raise ValueError("FEE_SALE_SOURCE")
+    auth = authority_context(w3, authorization, at, **options)
     if (read(auth, at, "registry") != manifest.registry or bytes(read(auth, at, "dkgId")) != manifest.session_id
             or read(factory, at, "dkgCoordinator") != manifest.registry
             or read(factory, at, "frostCoordinator") != read(auth, at, "coordinator")):
@@ -122,12 +127,14 @@ def context(w3, bundle, pin, at, *, require_finalized=True, require_sale=True):
                         treasury=pin["treasury"], authorization=auth.address, validator=validator)
         if any(read(sale, at, key) != value for key, value in expected.items()):
             raise ValueError("FEE_SALE_BINDING")
-        if bound not in (ZERO, sale.address):
+        # A prior bid remains a liability of its exact sale even if the DAO
+        # subsequently binds a different sale for routing new fee income.
+        if bound not in (ZERO, sale.address) and not refund_context:
             raise ValueError("FEE_SALE_ALREADY_BOUND")
     if bytes(w3.eth.get_block(at).hash) != bytes(block.hash):
         raise ValueError("FEE_SALE_SNAPSHOT_REORG")
     return dict(sale=sale, source=source, authority=auth, board=board, block=block,
-                validator=validator, bound=bound)
+                validator=validator, bound=bound, source_active=entity[-1])
 
 
 def review(w3, intent, bundle, at, pin, *, require_finalized=True):

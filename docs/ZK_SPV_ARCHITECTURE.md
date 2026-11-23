@@ -18,10 +18,11 @@ production_ready=false, Ready-адреса не выдаются.** На стр�
 Код-кандидат и положительные проверки с fixtures не означают production-допуск.
 Mermaid в этой странице — исходник схем; [актуальные SVG и manifest](DIAGRAMS.md)
 создаются из точных исходных блоков.
-Текущий порядок [поставки и независимого расчёта](DISTRIBUTION.md): у каждого
-участника свой рабочий proof, Core, worker directory и локальные записи
-происхождения. Публикация выполняется явно выбранным publisher. Готовые proofs,
-рабочие inputs/journals и caches в participant archive не включаются.
+Текущий порядок [поставки и проверки переходов](DISTRIBUTION.md) выделяет
+отдельный ZIP для review. Prover готовит переход по своему Core, подтверждённому
+state и локально закреплённым источникам. Участник FROST может проверить
+публичный ZIP через свой EVM RPC. Выбранный publisher отправляет свой proof.
+Рабочие proofs, inputs/journals и caches хранятся отдельно от participant archive.
 Полная сверка функционала и кодового остатка:
 [карта покрытия ТЗ](ZKSPV_FUNCTIONAL_COVERAGE.md). 43 workflow-рецепта и 195 observation slots
 не заменяют квалифицированное исполнение строк таблиц §11.9–11.15.
@@ -60,11 +61,11 @@ flowchart TD
 
 Custody-профиль использует тот же выбранный backend для
 [передачи BTC между независимыми кошельками](BITCOIN_CUSTODY_TRANSFER.md).
-SPV-проверка не заменяет исходную EVM-квитанцию `Paid` и burn MP. Gateway
-проверяет обе стороны до выпуска cBTC. Для ZK каждый участник самостоятельно
-обновляет рабочее доказательство состояния заголовков; consumers используют
-обычные raw transaction и Merkle-ветку под каноническим состоянием. Новый
-fresh ZK перенос этим обновлением схем не подтверждается.
+Gateway сверяет точный Bitcoin-выход, исходную EVM-квитанцию `Paid` и burn MP
+до выпуска cBTC или S по выбранному профилю. Выбранный ZK publisher обновляет
+состояние заголовков собственным локальным proof. Участники FROST могут
+проверить отдельный публичный ZIP через свой EVM RPC. Consumers проверяют raw
+transaction и Merkle-ветку под каноническим состоянием.
 
 ZK proof обновляет общее Bitcoin-состояние. Депозит и выплата по-прежнему
 используют raw transaction и обычную Merkle-ветку; отдельный ZK proof для каждого
@@ -84,7 +85,7 @@ Checkpoint сам по себе не Fresh. Смена root инвалидиру
 ```mermaid
 sequenceDiagram
   accTitle: Consumer-driven обновление ZK-state
-  accDescr: Показан явный publisher service loop. Каждый другой участник отдельно вычисляет свой proof; обновление state не заменяет этот расчёт и повторные денежные проверки consumer.
+  accDescr: Publisher service loop считает и проверяет собственный proof. Участники могут отдельно проверить публичный ZIP через свой EVM RPC. Consumer повторяет денежные проверки после обновления state.
   participant C as Consumer client
   participant T as SPVMessageBoard
   participant W as Publisher worker
@@ -112,11 +113,13 @@ sequenceDiagram
 без `SPVMessageBoard`. Worker не запускает mint/settle за пользователя.
 Секретные DKG shares и Bitcoin signing nonces не передаются prover.
 Схема показывает publisher/service loop с `run --boundary all`. Обычный `run`
-и `prove` считают локально без транзакций; они не опрашивают transport и не
-отправляют ACK/STATUS. Остальные участники отдельно готовят свои needs/attempts
-и считают proof, в том числе после чужой публикации уже подготовленного перехода.
-Пошаговая [схема нескольких участников](DISTRIBUTION.md#рабочий-переход-у-каждого-участника)
-сохраняет эту границу. Self-hosted runner реализован для macOS arm64 и
+и `prove` считают локально без транзакций. Для отдельной подготовки
+используйте `run --boundary prepare`. Архив для проверки формируется
+`run --boundary export` или `export-bundle`. Все эти локальные режимы
+оставляют transport и отправку ACK/STATUS сервисному циклу. Участники
+проверяют ZIP через отдельный `verify-bundle` или выполняют собственный
+расчёт. [Порядок экспорта и проверки](DISTRIBUTION.md#публичный-архив-перехода).
+Self-hosted runner реализован для macOS arm64 и
 Linux/WSL2 x86-64. [Настройка Linux prover](ZK_PROVER_LINUX.md) включает
 immutable tools и реальные namespace/seccomp probes; неподдерживаемые платформы
 блокируются. Полный fresh-proof и физический WSL2 прогон ещё не подтверждены.
@@ -465,7 +468,7 @@ per-owner batch, consent/caps, safe cancel и refunds. 195 read-only assertion s
 ```mermaid
 sequenceDiagram
   accTitle: Bounded consumer catch-up и восстановление
-  accDescr: Показан publisher contour: каждый chunk проходит prepare, свои proving стадии и authenticated completion, pre-sign latch, canonical receipt и archive promotion. Остальные участники считают независимо; повтор не сбрасывает бюджеты или nonce.
+  accDescr: Каждый chunk publisher проходит prepare, proving и authenticated completion, pre-sign latch, canonical receipt и archive promotion. Другие участники могут независимо проверить публичный ZIP. Повтор сохраняет бюджеты и nonce.
   participant S as Suite / original worker
   participant P as Local prover
   participant E as State / EVM engine
@@ -501,8 +504,13 @@ read probes и не создаёт consent, payment, новую подпись �
 ```mermaid
 flowchart TD
     C["Launch config: пара сетей и relay или ZK<br/>Имена, глубины, H, m, резерв, bps, APY"] --> I["V6 fingerprint и независимый review"]
-    I --> Z["ZK: network-specific image и verifier<br/>Каждый сам считает рабочий proof"]
-    Z --> F["Полезный принятый update и Fresh<br/>Canonical inclusion и глубина consumer"]
+    I --> Z["ZK CREATE: state и verifier<br/>Подтверждённый адрес из partial manifest"]
+    Z --> K{"Consumers уже есть?"}
+    K -->|"Нет"| BIND["Resume с defer<br/>Структурный граф без Fresh"]
+    K -->|"Да"| P
+    BIND --> P["Мощный ПК: prepare, prove и публичный ZIP"]
+    P -.-> ZIP["Участники FROST проверяют ZIP<br/>через свои EVM RPC"]
+    P --> F["Отдельный publish своего proof и Fresh<br/>Обычные resume и verify"]
     F --> B["Bitcoin mint, custody transfer и вывод<br/>Точные получатель, backing и UTXO reservations"]
     I --> E["Общий governance staking и USD-программы<br/>Только фактически внесённые средства"]
     E --> D["Treasury payout и prefunded APY<br/>Claim владельцу за закрытые сутки"]

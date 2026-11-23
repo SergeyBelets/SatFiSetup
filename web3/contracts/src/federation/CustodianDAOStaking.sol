@@ -183,7 +183,15 @@ contract CustodianDAOStaking is ReentrancyGuard, EIP712 {
                 reward += dayReward[day] * eligible / dayEligibleTotal[day];
             }
         }
-        if (reward > 0) rewardToken.safeTransfer(msg.sender, reward);
+        if (reward > 0) {
+            uint256 beforeBalance = rewardToken.balanceOf(address(this));
+            uint256 beforeRecipient = rewardToken.balanceOf(msg.sender);
+            rewardToken.safeTransfer(msg.sender, reward);
+            if (
+                rewardToken.balanceOf(address(this)) != beforeBalance - reward
+                    || rewardToken.balanceOf(msg.sender) != beforeRecipient + reward
+            ) revert InvalidTransfer();
+        }
         emit RewardClaimed(msg.sender, reward);
     }
 

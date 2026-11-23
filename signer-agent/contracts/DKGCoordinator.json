@@ -860,6 +860,24 @@
   },
   {
     "type": "function",
+    "name": "requireReservationTransfer",
+    "inputs": [
+      {
+        "name": "previous",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "replacement",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "resultApprovals",
     "inputs": [
       {
@@ -1393,6 +1411,11 @@
   {
     "type": "error",
     "name": "InvalidRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidReservationTransfer",
     "inputs": []
   },
   {

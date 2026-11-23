@@ -1,6 +1,7 @@
 """Remote launch checks using provider envelopes and a real checkpoint policy."""
 
 import json
+from decimal import Decimal
 
 import pytest
 
@@ -15,14 +16,17 @@ class Sepolia:
         self.calls = []
         self.errors = {}
         self.block_hash = "0x" + "12" * 32
+        self.tip = 100
 
     def make_request(self, method, params):
         self.calls.append((method, params))
         if method in self.errors:
             return {"error": self.errors[method]}
-        block = dict(hash=self.block_hash, number="0x64", transactions=[])
+        requested = params[0] if method == "eth_getBlockByNumber" else "latest"
+        block = dict(hash=self.block_hash, number=hex(self.tip) if requested == "latest" else requested,
+                     transactions=[])
         results = {
-            "eth_chainId": "0xaa36a7", "eth_blockNumber": "0x64", "eth_getBlockByNumber": block,
+            "eth_chainId": "0xaa36a7", "eth_blockNumber": hex(self.tip), "eth_getBlockByNumber": block,
             "eth_getTransactionByHash": None, "eth_getTransactionReceipt": None,
             "eth_getCode": "0x", "eth_getBalance": "0x0", "eth_getTransactionCount": "0x0",
             "eth_gasPrice": "0x1", "eth_maxPriorityFeePerGas": "0x1",
@@ -81,6 +85,9 @@ class Core:
             return self.tip
         if method == "getblockcount":
             return 2200
+        if method == "getmempoolinfo":
+            return dict(loaded=True, mempoolminfee=Decimal("0.00001"),
+                        minrelaytxfee=Decimal("0.000001"), incrementalrelayfee=Decimal("0.000001"))
         code, expected = {
             "getmempoolentry": (-5, (self.txid,)),
             "scantxoutset": (-5, ("start", [{"desc": "raw(not-hex)"}])),
@@ -105,7 +112,7 @@ def remote(tmp_path, monkeypatch):
     monkeypatch.setenv("BTC_RPC", "https://btc.example.invalid/FakeSecret2")
     monkeypatch.setenv("BTC_COOKIE", str(tmp_path / "FakeSecret3"))
     monkeypatch.delenv("SATOSHIFI_CREATE_SIMULATION_RPC", raising=False)
-    monkeypatch.setattr(rpc, "HTTPProvider", lambda *a, **kw: evm)
+    monkeypatch.setattr(rpc, "http_provider", lambda *a, **kw: evm)
     monkeypatch.setattr(rpc, "BitcoinRPC", lambda *a: core)
     monkeypatch.setattr(rpc, "check_core", lambda *a: dict(blocks=2200, bestblockhash=core.tip))
     return config, policy, evm, core
@@ -137,6 +144,17 @@ def test_method_not_found_and_provider_text_are_handled_before_build_writes(remo
     assert not out.exists() and not captured.err
     assert (error["network"], error["method"], error["rpc_error_code"]) == ("testnet4", "scantxoutset", -32601)
     assert "secret" not in captured.out.lower()
+
+
+def test_v3_preflight_requires_unsigned_plan_mempool_fee_observation(remote):
+    config, policy, _, core = remote
+    config["income_model"] = "in-kind"
+    policy = dict(policy, genesis_hash=core.genesis_hash)
+    assert "getmempoolinfo" in rpc.check_rpc(config, policy)["testnet4"]["methods"]
+    core.errors["getmempoolinfo"] = -32601
+    with pytest.raises(rpc.PreflightError) as exc:
+        rpc.check_rpc(config, policy)
+    assert exc.value.details["method"] == "getmempoolinfo"
 
 
 @pytest.mark.parametrize("backend", ["relay", "zk-state-v2"])
@@ -188,6 +206,21 @@ def test_alternate_simulator_must_match_sepolia_block_before_running(remote):
     with pytest.raises(rpc.PreflightError) as exc:
         rpc._evm_checks(evm, config, alternate)
     assert exc.value.details["reason"] == "CREATE_SIMULATION_RPC_CHAIN_MISMATCH"
+    assert not any(method == "eth_simulateV1" for method, _ in alternate.calls)
+
+
+def test_preflight_distinguishes_lagging_simulator(remote):
+    config, _, evm, _ = remote
+    alternate = Sepolia()
+    config["evm_confirmations"] = "4"
+    alternate.tip = 96
+    rpc._evm_checks(evm, config, alternate)
+    assert [params[1] for method, params in alternate.calls if method == "eth_simulateV1"] == ["0x5d"]
+    alternate.tip = 2
+    alternate.calls.clear()
+    with pytest.raises(rpc.PreflightError) as exc:
+        rpc._evm_checks(evm, config, alternate)
+    assert exc.value.details["reason"] == "EVM_RPC_BEHIND"
     assert not any(method == "eth_simulateV1" for method, _ in alternate.calls)
 
 

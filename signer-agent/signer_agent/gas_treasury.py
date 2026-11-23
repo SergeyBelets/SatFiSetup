@@ -9,6 +9,7 @@ from pathlib import Path
 
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 
 from .bitcoin_trust import checked_runtime
 from .bootstrap import Bootstrap, artifact
@@ -253,7 +254,7 @@ def main(argv=None):
     submit.add_argument("--identity-file", required=True)
     args = parser.parse_args(argv)
     try:
-        client = GasTreasuryClient(Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 20})),
+        client = GasTreasuryClient(evm_web3(args.rpc, timeout=20),
                                    json.loads(Path(args.binding).read_text()))
         if args.action == "status":
             result = client.status(args.job)

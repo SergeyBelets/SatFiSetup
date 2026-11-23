@@ -61,6 +61,35 @@ def test_queue_capacity_keeps_pending_detection_and_no_partial_obligation(tmp_pa
     b.db.execute('DELETE FROM needs');log.drain();assert b.get('obligation:'+key)['deadline']==60;b.close()
 
 
+def test_observation_queue_recovers_after_completion_without_resetting_deadline(tmp_path):
+    c = dict(config(tmp_path), observations=policy(), max_pending="1", max_retained_needs="2")
+    inbox = Inbox(c)
+    try:
+        log = Log(inbox)
+        first = log.detect_need(dict(vout="0"), "READY", 1, 30, True)
+        log.drain()
+        second = log.detect_need(dict(vout="1"), "NEEDS_STATE", 10, 40, True)
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            log.drain()
+
+        inbox.status(first, "COMPLETED")
+        assert log.detect_need(dict(vout="1"), "READY", 20, 50, True) == second
+        log.drain()
+        assert inbox.needs() == [(first, dict(vout="0"), "COMPLETED"),
+                                 (second, dict(vout="1"), "NEEDS_STATE")]
+        assert inbox.get("obligation:" + first) == dict(created_at=1, deadline=30, origins=dict(local=30))
+        assert inbox.get("obligation:" + second) == dict(created_at=10, deadline=40, origins=dict(local=40))
+
+        inbox.status(second, "COMPLETED")
+        third = log.detect_need(dict(vout="2"), "NEEDS_STATE", 30, 60, True)
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            log.drain()
+        assert inbox.get("obligation:" + third) is None
+        assert len(log.events("NEED_DETECTED")) == 3
+    finally:
+        inbox.close()
+
+
 @pytest.mark.parametrize('depth',[0,1,99,100,101,150])
 def test_retained_fork_depth_survives_competing_evm_anchor(tmp_path,depth):
     b=box(tmp_path);log=Log(b);core=Core();base=core.extend(None,1851,'11');a=core.extend(base,150,'22')

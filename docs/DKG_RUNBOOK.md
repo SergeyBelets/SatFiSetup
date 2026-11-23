@@ -9,15 +9,17 @@ Never use the artificial EVM identities from tests outside an isolated local nod
 
 ```
 python3.11 -m venv .venv
-.venv/bin/pip install -r signer-agent/requirements.lock
-.venv/bin/pip install --no-deps -e './signer-agent[test]'
+.venv/bin/pip install --require-hashes --only-binary :all: -r signer-agent/requirements.lock
+.venv/bin/pip install --no-deps --no-build-isolation -e './signer-agent[test]'
 source .venv/bin/activate
-cargo build --locked --manifest-path frost-crypto/Cargo.toml
+cargo +1.89.0 build --locked --manifest-path frost-crypto/Cargo.toml
 forge build --root web3
 python ops/generate_abis.py --check
 ```
 
-Install Foundry 1.8.5 and Bitcoin Core 30.3 on PATH. To run all implemented integration
+Install Rust 1.89.0, Foundry 1.8.5 and Bitcoin Core 30.3 on PATH. Use the
+[participant host build](CROSS_PLATFORM_QUICKSTART.md) for a signer with a pinned
+native binary. To run the local integration
 checks with disposable Anvil/regtest nodes:
 
 ```

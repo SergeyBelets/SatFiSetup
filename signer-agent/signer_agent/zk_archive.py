@@ -68,25 +68,40 @@ class ArchiveStore:
                 (state[7],canonical(state),digest(b'SATOSHIFI_ARCHIVE_V1\0'+canonical(state).encode()),canonical(dict(initial=True))))
         elif v['state']!=state:raise ValueError('ZK_ARCHIVE_STATE_MISMATCH')
         return Ref(self,state[7])
-    def promote(self,before,after,delta,evidence):
+    def check_promotion(self, before, after, delta):
+        """Check the exact transition that would be admitted after publication."""
         parent=self.version(before[7])
         if not parent or parent['state']!=before:raise ValueError('ZK_ARCHIVE_PARENT_REQUIRED')
-        raw=b''.join(bytes.fromhex(h) for h in delta)
-        if any(len(bytes.fromhex(h))!=80 for h in delta) or not delta or len(delta)>64:raise ValueError('ZK_ARCHIVE_DELTA')
+        if not delta or len(delta)>64:raise ValueError('ZK_ARCHIVE_DELTA')
+        headers = [bytes.fromhex(header) for header in delta]
+        if any(len(header) != 80 for header in headers):
+            raise ValueError('ZK_ARCHIVE_DELTA')
         count=parent['count']+len(delta)
         if count>self.max_headers or count+1!=int(after[11]):raise ValueError('ZK_ARCHIVE_LIMIT_OR_COUNT')
+        raw = b''.join(headers)
         chunk=digest(raw);chain=digest(bytes.fromhex(parent['chain'])+bytes.fromhex(chunk)+canonical(after).encode())
         old=self.version(after[7])
         if old:
             if old['state']!=after or old['chain']!=chain:raise ValueError('ZK_ARCHIVE_CONFLICT')
-            return Ref(self,after[7])
         size=self.db.execute('SELECT COALESCE(SUM(length(data)),0) FROM chunks').fetchone()[0]
-        if size+len(raw)>self.max_bytes:raise ValueError('ZK_ARCHIVE_DISK_BUDGET')
+        stored = self.db.execute('SELECT data FROM chunks WHERE id=?', (chunk,)).fetchone()
+        if stored is not None and bytes(stored[0]) != raw:
+            raise ValueError('ZK_ARCHIVE_CHUNK_CORRUPT')
+        if old and stored is None:
+            raise ValueError('ZK_ARCHIVE_CHUNK_MISSING')
+        if not old and size + (len(raw) if stored is None else 0) > self.max_bytes:
+            raise ValueError('ZK_ARCHIVE_DISK_BUDGET')
+        return headers, raw, count, chunk, chain, old is not None
+
+    def promote(self,before,after,delta,evidence):
         self.db.execute('BEGIN IMMEDIATE')
         try:
-            self.db.execute('INSERT OR IGNORE INTO chunks VALUES(?,?)',(chunk,raw))
-            for h in delta:self.db.execute('INSERT OR IGNORE INTO members VALUES(?,?)',(chunk,header_hash(bytes.fromhex(h))[::-1].hex()))
-            self.db.execute('INSERT INTO versions VALUES(?,?,?,?,?,?,?)',(after[7],before[7],chunk,canonical(after),count,chain,canonical(evidence)))
+            headers, raw, count, chunk, chain, known = self.check_promotion(before, after, delta)
+            if not known:
+                self.db.execute('INSERT OR IGNORE INTO chunks VALUES(?,?)',(chunk,raw))
+                for header in headers:
+                    self.db.execute('INSERT OR IGNORE INTO members VALUES(?,?)',(chunk,header_hash(header)[::-1].hex()))
+                self.db.execute('INSERT INTO versions VALUES(?,?,?,?,?,?,?)',(after[7],before[7],chunk,canonical(after),count,chain,canonical(evidence)))
             self.db.commit()
         except BaseException:self.db.rollback();raise
         return Ref(self,after[7])
@@ -143,18 +158,31 @@ class ArchiveStore:
             if temporary.exists():temporary.unlink()
         self.db.execute("INSERT INTO meta VALUES('stream',?) ON CONFLICT(key) DO UPDATE SET body=excluded.body",(canonical(dict(id=target['id'],chain=target['chain'],count=count)),))
         return dict(path=str(path),count=count,state=target['state'])
-    def backup(self,destination):
+    def backup(self,destination,*,max_file_bytes=None):
         destination=Path(destination)
         if destination.exists():raise ValueError('ZK_ARCHIVE_BACKUP_EXISTS')
+        if max_file_bytes is None:
+            max_file_bytes = self.max_bytes
+        pages = self.db.execute('PRAGMA page_count').fetchone()[0]
+        page_size = self.db.execute('PRAGMA page_size').fetchone()[0]
+        if pages * page_size > max_file_bytes:
+            raise ValueError('ZK_ARCHIVE_BACKUP_LIMIT')
         fd=os.open(destination,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600);os.close(fd)
-        out=sqlite3.connect(destination)
-        try:self.db.backup(out)
-        finally:out.close()
-        with destination.open('rb') as f:os.fsync(f.fileno())
-        fd=os.open(destination.parent,os.O_RDONLY)
-        try:os.fsync(fd)
-        finally:os.close(fd)
-        with destination.open('rb') as f:checksum=hashlib.file_digest(f,'sha256').hexdigest()
+        try:
+            out=sqlite3.connect(destination)
+            try:self.db.backup(out)
+            finally:out.close()
+            if destination.stat().st_size > max_file_bytes:
+                raise ValueError('ZK_ARCHIVE_BACKUP_LIMIT')
+            with destination.open('rb') as f:
+                os.fsync(f.fileno())
+                checksum=hashlib.file_digest(f,'sha256').hexdigest()
+            fd=os.open(destination.parent,os.O_RDONLY)
+            try:os.fsync(fd)
+            finally:os.close(fd)
+        except BaseException:
+            destination.unlink(missing_ok=True)
+            raise
         return dict(status='BACKUP_SAVED',sha256=checksum)
     def import_verified(self,other,state):
         # Caller MUST native-replay other against the current confirmed state.

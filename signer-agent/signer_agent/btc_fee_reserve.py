@@ -10,6 +10,7 @@ from urllib.parse import quote
 from eth_abi import encode
 from eth_utils import keccak
 from web3 import Web3
+from .evm_rpc import evm_web3
 from .bootstrap import artifact
 from .bitcoin_trust import checked_runtime
 from .contract_provenance import prove_creation
@@ -60,7 +61,7 @@ def load_config(path):
 
 class Inspector:
     def __init__(self,c,w3=None,bitcoin=None):
-        self.c=c;self.w3=w3 or Web3(Web3.HTTPProvider(c['evm_rpc'],request_kwargs={'timeout':30}))
+        self.c=c;self.w3=w3 or evm_web3(c['evm_rpc'], timeout=30)
         if bitcoin is None:
             from .bitcoin_rpc import BitcoinRPC
             bitcoin=BitcoinRPC(c['bitcoin_rpc'],c['bitcoin_cookie'],c['bitcoin_network'],c['bitcoin_policy'])

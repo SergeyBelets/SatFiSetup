@@ -4,11 +4,17 @@ import re
 ROLES = ("governance", "mining", "federation_share", "confederation_share")
 
 
+def require_literal(value, code="BOOTSTRAP_LITERAL_REQUIRED"):
+    if not isinstance(value, str) or value.startswith("$"):
+        raise ValueError(code)
+
+
 def token(value):
     if (not isinstance(value, dict) or set(value) != {"name", "symbol"}
             or not all(isinstance(v, str) for v in value.values())):
         raise ValueError("TOKEN_METADATA_SCHEMA")
     name, symbol = value["name"], value["symbol"]
+    require_literal(name, "TOKEN_METADATA_VALUE")
     if (not name or name != name.strip() or not name.isprintable()
             or len(name.encode("utf-8")) > 128
             or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}", symbol) is None):
@@ -37,6 +43,9 @@ def resolve(profile):
     if shared is not None:
         defaults["governance"] = shared
     result = validate(profile["token_metadata"]) if "token_metadata" in profile else defaults
+    if legacy_overrides:
+        for value in result["governance"].values():
+            require_literal(value, "TOKEN_METADATA_VALUE")
     if shared is not None and result["governance"] != shared:
         raise ValueError("TOKEN_METADATA_SHARED_CONFLICT")
     if "onboarding" in profile or "token_metadata" in profile:
@@ -58,9 +67,12 @@ def check(w3, address, role, profile, at):
 
 def review_intent(w3, intent, bundle, at):
     """Supplement normal provenance/authority review on every supported network."""
+    from .bootstrap_formation_signing import review_intent as review_formation
+
+    formation_reviewed = review_formation(w3, intent, bundle, at)
     invite = bundle.get("onboarding", {}).get("invitation", {})
     if "token_metadata" not in invite:
-        return
+        return formation_reviewed
     from .bootstrap import artifact
     from .bitcoin_trust import checked_runtime
     kind = intent["artifact"]
@@ -81,18 +93,19 @@ def review_intent(w3, intent, bundle, at):
             raise ValueError("TOKEN_METADATA_POOL_BINDING")
         check(w3, mp.address, "mining", invite, at)
     if kind in ("SimpleMultiPool", "ConfederationMultiPool", "ConfederationPoolV2"):
-        target = contract(intent["target"], kind)
-        role, child_kind = {
-            "SimpleMultiPool": ("federation_share", "MultiPoolShareToken"),
-            "ConfederationMultiPool": ("confederation_share", "ConfederationToken"),
-            "ConfederationPoolV2": ("confederation_share", "ConfederationShareV2"),
-        }[kind]
-        shares = contract(read(target, "shareToken"), child_kind)
-        check(w3, shares.address, role, invite, at)
+        if not formation_reviewed:
+            target = contract(intent["target"], kind)
+            role, child_kind = {
+                "SimpleMultiPool": ("federation_share", "MultiPoolShareToken"),
+                "ConfederationMultiPool": ("confederation_share", "ConfederationToken"),
+                "ConfederationPoolV2": ("confederation_share", "ConfederationShareV2"),
+            }[kind]
+            shares = contract(read(target, "shareToken"), child_kind)
+            check(w3, shares.address, role, invite, at)
         if intent.get("hash_method") == "getAddPoolOperationHash":
             mp = contract(intent["hash_args"][0], "PoolMpToken")
             mining(read(mp, "poolDAO"))
-    elif kind == "ConfederationBitcoinReserve":
+    elif kind == "ConfederationBitcoinReserve" and not formation_reviewed:
         mining(intent["target"])
     elif kind == "MiningPoolV1":
         mining(intent["target"])
@@ -100,7 +113,7 @@ def review_intent(w3, intent, bundle, at):
         mining(read(contract(intent["target"], kind), "pool"))
     elif kind == "BitcoinDepositRegistry" and intent.get("hash_method") == "getRegisterOperationHash":
         mining(intent["hash_args"][0])
-    elif kind == "GovernanceRegistry":
+    elif kind == "GovernanceRegistry" and not formation_reviewed:
         registry = contract(intent["target"], kind)
         factory = contract(read(registry, "factory"), "FederationFactory")
         fed = read(factory, "getFederation", invite["federation_id"])
@@ -111,6 +124,7 @@ def review_intent(w3, intent, bundle, at):
         converter = contract(read(pipeline, "converter"), "FundedFeeConverter")
         mp = contract(read(converter, "inputToken"), "PoolMpToken")
         mining(read(mp, "poolDAO"))
+    return formation_reviewed
 
 
 def guard_signing_session(client, session):
@@ -123,7 +137,8 @@ def guard_signing_session(client, session):
         raise ValueError("TOKEN_METADATA_OPERATION_MISMATCH")
     from .evm_network import read_block
     invite = bundle["onboarding"]["invitation"]
-    anchor = read_block(client.w3, int(invite["evm_confirmations"]))
+    local_depth = getattr(getattr(client, "config", None), "confirmations", 1)
+    anchor = read_block(client.w3, max(int(invite.get("evm_confirmations", "1")), int(local_depth)))
     review_intent(client.w3, intent, bundle, anchor.number)
     if client.w3.eth.get_block(anchor.number).hash != anchor.hash:
         raise ValueError("EVM_SIGNING_SNAPSHOT_REORG")

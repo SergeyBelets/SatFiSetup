@@ -29,7 +29,7 @@ from .frost_math import (
     signature_share,
     verify_signature_share,
 )
-from .secure_state import SecureState
+from .secure_state import SecureState, requires_independent_nonce_ledger
 from .participant_errors import participant_failure
 from .safe_errors import emit_debug
 
@@ -62,11 +62,16 @@ class SigningService:
         config: Config,
         client: Optional[CoordinatorClient] = None,
         state: Optional[SecureState] = None,
+        *,
+        reviewed_session_id: Optional[int] = None,
     ):
         config.validate(require_signing=True)
         self.config = config
         self.client = client or CoordinatorClient(config)
-        self.state = state or SecureState(config.state_path, config.state_key)
+        self.reviewed_session_id = reviewed_session_id
+        self.state = state or SecureState(config.state_path, config.state_key, nonce_ledger=config.nonce_ledger)
+        if config.nonce_ledger is not None:
+            self.state.require_nonce_ledger(expected_path=config.nonce_ledger)
         self.signing_share = parse_signing_share(config.signing_share_hex)
         self.public_key_share = scalar_base_mult(self.signing_share)
 
@@ -107,6 +112,12 @@ class SigningService:
             return terminal
         if session.purpose == PURPOSE_DKG:
             return ActionResult(session.session_id, "skipped", "DKG is not a signing request")
+        chain_id = self.client.chain_id
+        if chain_id != 31337 and self.reviewed_session_id != session.session_id:
+            raise ValueError("PUBLIC_EVM_TYPED_SIGNING_REQUIRED")
+        graph = getattr(self.client, "bitcoin_graph", {})
+        if requires_independent_nonce_ledger(chain_id, graph.get("bitcoin_network")):
+            self.state.require_nonce_ledger(expected_path=self.config.nonce_ledger)
         for name in SIGNING_GUARDS:
             guard = getattr(self.client, name, None)
             if guard is not None:
@@ -210,6 +221,7 @@ class SigningService:
         if stored and stored.get("status") == "nonce-created":
             if stored.get("message_hash") != session.message_hash.hex():
                 return ActionResult(session.session_id, "blocked", "stored nonce belongs to another message hash")
+            self.state.assert_unspent(key)
             nonces = NoncePair(int(stored["hiding"], 16), int(stored["binding"], 16))
         elif stored:
             return ActionResult(session.session_id, "blocked", "nonce already spent; start a new session")
@@ -291,12 +303,14 @@ class SigningService:
         )
         # Secret scalar arithmetic lives in the pinned local Rust adapter.
         self._guard_bitcoin(session)
-        share = int(crypto.call(
-            "evm_share_v1", share="%064x" % self.signing_share,
-            hiding="%064x" % nonces.hiding, binding="%064x" % nonces.binding,
-            rho="%064x" % rho, lagrange="%064x" % lagrange, challenge="%064x" % challenge,
-            negate_nonce=nonce_negated,
-        )["share"], 16)
+        graph = getattr(self.client, "bitcoin_graph", {})
+        with crypto.require_pin(requires_independent_nonce_ledger(self.client.chain_id, graph.get("bitcoin_network"))):
+            share = int(crypto.call(
+                "evm_share_v1", share="%064x" % self.signing_share,
+                hiding="%064x" % nonces.hiding, binding="%064x" % nonces.binding,
+                rho="%064x" % rho, lagrange="%064x" % lagrange, challenge="%064x" % challenge,
+                negate_nonce=nonce_negated,
+            )["share"], 16)
         nonce_point = participant_nonce(
             nonces.hiding_point, nonces.binding_point, rho, negate=nonce_negated
         )

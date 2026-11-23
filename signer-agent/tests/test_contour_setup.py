@@ -23,7 +23,7 @@ from test_zk_bootstrap import zk_invite,profile
 def bootstrap(tmp_path):
     runner,identity=bootstrap_fixture(tmp_path,2)
     runner.w3.eth.block_number=100
-    runner.profile['steps'].append(dict(id='dependent',kind='deploy'))
+    runner.profile['steps'].append(dict(id='dependent',kind='deploy',artifact='Fixture'))
     # These are explicit graph/provenance fixtures; actual envelopes and original
     # sequential/parallel engines plus global nonce journal remain real.
     wc=worker_config(tmp_path);c=dict(identity_file=identity,max_tx_gas='50000',
@@ -56,7 +56,7 @@ def test_bootstrap_runner_advances_one_original_group_then_dependent_unit(tmp_pa
 @pytest.mark.parametrize('group',[False,True])
 def test_bootstrap_unsigned_interruption_holds_original_unit(tmp_path,group):
     e=bootstrap(tmp_path);runner=e[0]
-    if not group:runner.profile['steps']=[dict(id='single',kind='deploy')]
+    if not group:runner.profile['steps']=[dict(id='single',kind='deploy',artifact='Fixture')]
     original=runner.build_transaction
     runner.build_transaction=lambda *a:(_ for _ in ()).throw(RuntimeError('unsigned fixture interruption'))
     with pytest.raises(RuntimeError,match='unsigned fixture'):call_boot(e,'run')
@@ -96,7 +96,7 @@ def test_bootstrap_original_signed_reservation_is_recovered_without_new_build(tm
         runner.profile['steps']=runner.profile['steps'][:2]
         for step in runner.profile['steps']:
             del step['parallel_group'];step.update(create_group='circular',gas='100000')
-    else:runner.profile['steps']=[dict(id='single',kind='deploy')]
+    else:runner.profile['steps']=[dict(id='single',kind='deploy',artifact='Fixture')]
     original=Journal.update
     def update(journal,key,status,result):
         if journal.path==runner.journal.path and status=='SIGNED':raise RuntimeError('signed bytes retained globally')

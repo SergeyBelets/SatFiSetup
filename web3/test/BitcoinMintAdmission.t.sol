@@ -69,7 +69,25 @@ contract MintAdmissionDepositFixture {
     address public addressRegistry;
     FROSTAuthorization public authorization;
     address public spv;
+    mapping(bytes32 => bool) public consumed;
+    mapping(bytes32 => bool) public walletOutput;
+    mapping(address => bytes32) public poolScripts;
+
     constructor(FROSTAuthorization auth, address spv_) { authorization = auth; spv = spv_; }
+
+    function recordConsumed(bytes32 outpoint) external { consumed[outpoint] = true; }
+    function recordWalletOutput(bytes32 outpoint) external { walletOutput[outpoint] = true; }
+    function fixtureRegister(address pool, bytes32 scriptHash) external { poolScripts[pool] = scriptHash; }
+
+    // Proof and canonical UTXO validation belong to the deposit registry suite.
+    function consume(bytes calldata raw, uint32 vout, bytes32, bytes32[] calldata, uint256)
+        external returns (uint64)
+    {
+        bytes32 outpoint = keccak256(abi.encode(BitcoinTxParser.txId(raw), vout));
+        require(!consumed[outpoint], "already consumed");
+        consumed[outpoint] = true;
+        return 1_000;
+    }
 }
 
 contract MintAdmissionPoolFixture is MiningPoolV1 {
@@ -119,6 +137,7 @@ contract BitcoinMintAdmissionTest is Test {
         MintAdmissionDepositFixture deposits = new MintAdmissionDepositFixture(authorization, address(dkg));
         pool = MintAdmissionPoolFixture(deployCode("BitcoinMintAdmission.t.sol:MintAdmissionPoolFixture",
             abi.encode(address(deposits), address(escrow))));
+        deposits.fixtureRegister(address(pool), keccak256(pool.payoutScript()));
         admission = _deployAdmission(pool, ALICE);
         bytes32 bind = pool.getSetMintAdmissionOperationHash(address(admission));
         authorization.fixtureApprove(bind, address(pool));
@@ -136,10 +155,24 @@ contract BitcoinMintAdmissionTest is Test {
     }
 
     function _open(bytes32 txid) internal returns (uint256) {
+        return _openAt(txid, VOUT);
+    }
+
+    function _openAt(bytes32 txid, uint32 vout) internal returns (uint256) {
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         uint256 position = pool.nonce();
         vm.prank(ALICE);
-        return admission.openMint(txid, VOUT, recipients, amounts, deadline, position);
+        return admission.openMint(txid, vout, recipients, amounts, deadline, position);
+    }
+
+    function _mintRaw() internal view returns (bytes memory) {
+        return abi.encodePacked(hex"0200000001", bytes32(0), hex"ffffffff00ffffffff01e80300000000000022",
+            pool.payoutScript(), hex"00000000");
+    }
+
+    function _mint(bytes memory raw, bytes32 op) internal {
+        (address[] memory recipients, uint256[] memory amounts) = _terms();
+        pool.mintFromProof(raw, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, op);
     }
 
     function _claim() internal view returns (bytes32) { return admission.getClaimId(TXID, VOUT); }
@@ -235,13 +268,16 @@ contract BitcoinMintAdmissionTest is Test {
 
     function testNewClaimRequiresFutureDeadlineAndBoundedDistribution() public {
         (address[] memory recipients, uint256[] memory amounts) = _terms();
-        vm.prank(ALICE); vm.expectRevert("deadline");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintDeadlineInvalid.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, uint64(block.timestamp), 0);
+        uint64 tooLong = uint64(block.timestamp + admission.MAX_MINT_WINDOW() + 1);
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintDeadlineInvalid.selector);
+        admission.openMint(TXID, VOUT, recipients, amounts, tooLong, 0);
         recipients = new address[](0); amounts = new uint256[](0);
-        vm.prank(ALICE); vm.expectRevert("distribution");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.InvalidMintDistribution.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline, 0);
         recipients = new address[](65); amounts = new uint256[](65);
-        vm.prank(ALICE); vm.expectRevert("distribution");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.InvalidMintDistribution.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline, 0);
         assertEq(coordinator.nextSessionId(), 0);
     }
@@ -275,7 +311,7 @@ contract BitcoinMintAdmissionTest is Test {
 
     function testDifferentClientsCannotOpenDifferentClaimsAtSamePoolNonce() public {
         uint256 session = _open(TXID);
-        _openFailure(bytes32(uint256(2)), "slot busy");
+        _openFailure(bytes32(uint256(2)), abi.encodeWithSelector(BitcoinMintAdmission.MintSlotBusy.selector));
         assertEq(coordinator.nextSessionId(), session);
         (,,,, uint64 absentDeadline, uint256 absentCount,) = admission.getClaim(admission.getClaimId(bytes32(uint256(2)), VOUT));
         assertEq(absentDeadline, 0); assertEq(absentCount, 0);
@@ -286,13 +322,13 @@ contract BitcoinMintAdmissionTest is Test {
         uint256 session = _open(TXID);
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         recipients[0] = BOB;
-        vm.prank(ALICE); vm.expectRevert("claim terms");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintClaimTermsMismatch.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline, 0);
         recipients[0] = RECIPIENT; ++amounts[0];
-        vm.prank(BOB); vm.expectRevert("claim terms");
+        vm.prank(BOB); vm.expectRevert(BitcoinMintAdmission.MintClaimTermsMismatch.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline, 0);
         --amounts[0];
-        vm.prank(ALICE); vm.expectRevert("claim terms");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintClaimTermsMismatch.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline + 1, 0);
         _assertClaim(1, session); assertEq(coordinator.nextSessionId(), session);
     }
@@ -300,7 +336,7 @@ contract BitcoinMintAdmissionTest is Test {
     function testChangedExpectedNonceRejectsBeforeOpeningSession() public {
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         pool.fixtureSetNonce(1);
-        vm.prank(ALICE); vm.expectRevert("nonce changed");
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintNonceChanged.selector);
         admission.openMint(TXID, VOUT, recipients, amounts, deadline, 0);
         assertEq(coordinator.nextSessionId(), 0);
     }
@@ -312,12 +348,13 @@ contract BitcoinMintAdmissionTest is Test {
         vm.prank(BOB); admission.retire(session);
         assertEq(uint256(_sessionWord(session, 10)), 3);
         assertFalse(admission.active(session)); assertEq(admission.slotSession(0), 0);
+        assertEq(pool.nonce(), 1);
         vm.prank(CAROL); admission.retire(session); // lost retirement receipt
-        _retryFailure(session, "deadline");
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintDeadlineInvalid.selector));
         _assertClaim(1, session);
         (address[] memory recipients, uint256[] memory amounts) = _terms();
-        vm.prank(ALICE); vm.expectRevert("claim terms");
-        admission.openMint(TXID, VOUT, recipients, amounts, deadline + 1 hours, 0);
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.MintClaimTermsMismatch.selector);
+        admission.openMint(TXID, VOUT, recipients, amounts, deadline + 1 hours, 1);
     }
 
     function testLiveOpenSessionCannotBeRetiredAndOriginalDeadlineOverridesAdminExtension() public {
@@ -330,11 +367,11 @@ contract BitcoinMintAdmissionTest is Test {
         _assertClaim(1, session);
     }
 
-    function testSyntheticFinalizedObservationIsRetainedAfterDeadline() public {
+    function testSyntheticFinalizedObservationIsRetainedThroughDeadline() public {
         uint256 session = _open(TXID);
         _fixtureFinalizedObservation(session);
-        vm.warp(deadline + 1);
-        vm.prank(BOB); vm.expectRevert("executable authorization"); admission.retire(session);
+        vm.warp(deadline);
+        vm.prank(BOB); vm.expectRevert(BitcoinMintAdmission.AdmissionAuthorizationStillExecutable.selector); admission.retire(session);
         assertTrue(admission.active(session)); assertEq(_retry(session), session);
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         vm.prank(CAROL);
@@ -342,19 +379,132 @@ contract BitcoinMintAdmissionTest is Test {
         _assertClaim(1, session);
     }
 
-    function testSyntheticApprovedOperationPreventsReleaseAndDuplicatePaidStart() public {
+    function testExpiredOpenWithApprovalAbortsSessionAndFencesApproval() public {
         uint256 session = _open(TXID);
         (, bytes32 op,,,) = admission.attempts(session);
         authorization.fixtureApprove(op, address(pool));
         vm.warp(deadline + 1);
-        vm.prank(BOB); vm.expectRevert("executable authorization"); admission.retire(session);
+        vm.prank(BOB); admission.retire(session);
+        assertEq(admission.slotSession(0), 0);
+        assertEq(pool.nonce(), 1);
+        assertEq(uint256(_sessionWord(session, 10)), 3);
+        assertTrue(authorization.isOperationApproved(op, address(pool)));
+    }
+
+    function testRetirementWinsSameBlockRaceAgainstProofMint() public {
+        bytes memory raw = _mintRaw();
+        uint256 session = _openAt(sha256(abi.encodePacked(sha256(raw))), 0);
+        _fixtureFinalizedObservation(session);
+        (, bytes32 op,,,) = admission.attempts(session);
+        authorization.fixtureApprove(op, address(pool));
+        vm.warp(deadline + 1);
+        vm.prank(BOB); admission.retire(session);
+        vm.expectRevert(bytes("hash")); _mint(raw, op);
+        assertEq(pool.nonce(), 1);
+        assertEq(pool.mpToken().totalSupply(), 0);
+        assertEq(admission.operatorNonce(), 0);
+        deadline += 1 hours;
+        uint256 unrelated = _open(TXID);
+        vm.prank(CAROL); admission.retire(session);
+        assertEq(pool.nonce(), 1);
+        assertEq(admission.slotSession(1), unrelated);
+    }
+
+    function testProofMintWinsSameBlockRaceAgainstRetirement() public {
+        bytes memory raw = _mintRaw();
+        uint256 session = _openAt(sha256(abi.encodePacked(sha256(raw))), 0);
+        _fixtureFinalizedObservation(session);
+        (, bytes32 op,,,) = admission.attempts(session);
+        authorization.fixtureApprove(op, address(pool));
+        vm.warp(deadline + 1);
+        _mint(raw, op);
+        vm.prank(BOB); admission.retire(session);
+        assertEq(pool.nonce(), 1);
+        assertEq(pool.mpToken().balanceOf(RECIPIENT), 1_000 * 1e10);
+        assertEq(admission.slotSession(0), 0);
+        assertTrue(authorization.executedOperations(op));
+    }
+
+    function testOnlyAdmissionCanAdvanceAnExactMintNonce() public {
+        vm.prank(ALICE); vm.expectRevert("mint expiry");
+        pool.expireMintNonce(0);
+        vm.prank(address(admission)); vm.expectRevert("mint expiry");
+        pool.expireMintNonce(1);
+        assertEq(pool.nonce(), 0);
+    }
+
+    function testRenewalRequiresOperatorRetirementAndNewNonceButPreservesTerms() public {
+        uint256 previous = _open(TXID);
+        bytes32 claim = _claim();
+        (, bytes32 oldOp,,,) = admission.attempts(previous);
+        uint64 fresh = deadline + 1 hours;
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.RenewalUnavailable.selector);
+        admission.renewMint(claim, 0, previous, fresh, 0, 0);
+        vm.warp(deadline + 1);
+        vm.prank(BOB); admission.retire(previous);
+        vm.prank(BOB); vm.expectRevert(BitcoinMintAdmission.MintOperatorOrNonceMismatch.selector);
+        admission.renewMint(claim, 1, previous, fresh, 0, 0);
+        vm.prank(ALICE);
+        uint256 current = admission.renewMint(claim, 1, previous, fresh, 0, 0);
+        (bytes32 currentClaim, bytes32 currentOp, uint256 currentNonce, uint64 currentDeadline,) = admission.attempts(current);
+        assertEq(currentClaim, claim);
+        assertEq(currentNonce, 1);
+        assertEq(currentDeadline, fresh);
+        assertNotEq(currentOp, oldOp);
+        _assertClaim(2, current);
+        vm.prank(ALICE); vm.expectRevert(BitcoinMintAdmission.RenewalUnavailable.selector);
+        admission.renewMint(claim, 1, previous, fresh, 0, 0);
+    }
+
+    function testFinalizedConsumedOutputReleasesOnlyItsOwnSlotAtCurrentNonce() public {
+        uint256 session = _open(TXID);
+        _fixtureFinalizedObservation(session);
+        (, bytes32 op,,,) = admission.attempts(session);
+        authorization.fixtureApprove(op, address(pool));
+
+        bytes32 outpoint = keccak256(abi.encode(TXID, VOUT));
+        MintAdmissionDepositFixture(address(pool.deposits())).recordConsumed(outpoint);
+        assertFalse(admission.active(session));
+        assertEq(pool.nonce(), 0);
+        vm.prank(BOB);
+        admission.retire(session);
+        assertEq(admission.slotSession(0), 0);
+        assertTrue(authorization.approvedOperations(op));
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointRecorded.selector));
+        _openFailure(TXID, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointRecorded.selector));
+
+        uint256 next = _open(bytes32(uint256(99)));
+        vm.prank(CAROL);
+        admission.retire(session);
+        assertEq(admission.slotSession(0), next);
+        assertTrue(admission.active(next));
+        _assertClaim(1, session);
+    }
+
+    function testWalletOutputIsIneligibleBeforeAndAfterAdmission() public {
+        MintAdmissionDepositFixture deposits = MintAdmissionDepositFixture(address(pool.deposits()));
+        bytes32 other = bytes32(uint256(2));
+        deposits.recordWalletOutput(keccak256(abi.encode(other, VOUT)));
+        _openFailure(other, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointRecorded.selector));
+        assertEq(coordinator.nextSessionId(), 0);
+
+        uint256 session = _open(TXID);
+        deposits.recordWalletOutput(keccak256(abi.encode(TXID, VOUT)));
+        vm.prank(address(0xBAD)); vm.expectRevert("participant");
+        admission.retire(session);
         assertEq(admission.slotSession(0), session);
+        assertFalse(admission.active(session));
+
+        vm.prank(BOB);
+        admission.retire(session);
+        assertEq(admission.slotSession(0), 0);
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointRecorded.selector));
     }
 
     function testPreviouslyApprovedExactOperationDoesNotOpenAnotherSession() public {
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         authorization.fixtureApprove(pool.getMintOperationHash(TXID, VOUT, recipients, amounts), address(pool));
-        _openFailure(TXID, "operation approved");
+        _openFailure(TXID, abi.encodeWithSelector(BitcoinMintAdmission.MintOperationApproved.selector));
         assertEq(coordinator.nextSessionId(), 0);
         (,,,, uint64 originalDeadline,,) = admission.getClaim(_claim());
         assertEq(originalDeadline, 0);
@@ -405,7 +555,7 @@ contract BitcoinMintAdmissionTest is Test {
         uint256 first = _open(TXID);
         coordinator.abortSession(first, "unit cancellation");
         uint256 second = _retry(first);
-        _retryFailure(first, "attempt changed");
+        _retryFailure(first, abi.encodeWithSelector(BitcoinMintAdmission.MintAttemptChanged.selector));
         assertEq(coordinator.nextSessionId(), second); _assertClaim(2, second);
     }
 
@@ -416,7 +566,7 @@ contract BitcoinMintAdmissionTest is Test {
             session = _retry(session);
         }
         pool.fixtureSetNonce(admission.MAX_ATTEMPTS());
-        _retryFailure(session, "attempt limit");
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintAttemptLimit.selector));
         _assertClaim(admission.MAX_ATTEMPTS(), session);
         assertEq(coordinator.nextSessionId(), session);
     }
@@ -427,8 +577,8 @@ contract BitcoinMintAdmissionTest is Test {
         pool.fixtureCompletedAllocation(TXID, VOUT, recipients, amounts);
         assertEq(pool.mintedAllocations(keccak256(abi.encode(TXID, VOUT))), keccak256(abi.encode(recipients, amounts)));
         vm.prank(BOB); admission.retire(session);
-        _retryFailure(session, "outpoint minted");
-        _openFailure(TXID, "outpoint minted");
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointMinted.selector));
+        _openFailure(TXID, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointMinted.selector));
         _assertClaim(1, session);
         assertTrue(_open(bytes32(uint256(99))) > session);
     }
@@ -438,7 +588,7 @@ contract BitcoinMintAdmissionTest is Test {
         (address[] memory recipients, uint256[] memory amounts) = _terms();
         recipients[0] = BOB;
         pool.fixtureCompletedAllocation(TXID, VOUT, recipients, amounts);
-        _retryFailure(session, "outpoint minted");
+        _retryFailure(session, abi.encodeWithSelector(BitcoinMintAdmission.MintOutpointMinted.selector));
         _assertClaim(1, session);
     }
 
@@ -472,7 +622,7 @@ contract BitcoinMintAdmissionTest is Test {
         coordinator.abortSession(first, "unit transfer cancellation");
         vm.prank(CAROL); admission.retireOperatorTransfer(first);
         assertEq(admission.latestOperatorTransferSession(0), first);
-        vm.prank(CAROL); vm.expectRevert("attempt changed");
+        vm.prank(CAROL); vm.expectRevert(BitcoinMintAdmission.MintAttemptChanged.selector);
         admission.openOperatorTransfer(BOB, deadline, 0, 0);
         vm.prank(BOB);
         uint256 second = admission.openOperatorTransfer(BOB, deadline, 0, first);
@@ -490,7 +640,7 @@ contract BitcoinMintAdmissionTest is Test {
         uint256 session = admission.openOperatorTransfer(BOB, deadline, 0, 0);
         _fixtureFinalizedObservation(session);
         vm.warp(deadline + 1);
-        vm.prank(CAROL); vm.expectRevert("executable authorization"); admission.retireOperatorTransfer(session);
+        vm.prank(CAROL); vm.expectRevert(BitcoinMintAdmission.AdmissionAuthorizationStillExecutable.selector); admission.retireOperatorTransfer(session);
         assertTrue(admission.activeOperatorTransfer(session));
         bytes32 op = admission.getTransferOperatorOperationHash(BOB);
         authorization.fixtureApprove(op, address(admission));
@@ -508,7 +658,7 @@ contract BitcoinMintAdmissionTest is Test {
         authorization.fixtureApprove(op, address(admission));
         admission.transferOperator(BOB, op);
         uint256 count = coordinator.nextSessionId();
-        vm.prank(CAROL); vm.expectRevert("operator nonce changed");
+        vm.prank(CAROL); vm.expectRevert(BitcoinMintAdmission.OperatorNonceChanged.selector);
         admission.openOperatorTransfer(ALICE, deadline, 0, 0);
         assertEq(coordinator.nextSessionId(), count); assertEq(pool.nonce(), 0);
     }

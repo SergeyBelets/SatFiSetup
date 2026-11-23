@@ -42,10 +42,10 @@
     },
     "/readiness": {
       "get": {
-        "summary": "Verify deployment receipts, bytecode and configured constructor/role checks",
+        "summary": "Recent verification of deployment receipts, runtime code and configured binding checks",
         "responses": {
           "200": {
-            "description": "Public state; monetary integers are decimal strings"
+            "description": "Readiness with age_seconds per deployment. Verification is reused for up to 15 seconds."
           },
           "401": {
             "description": "Missing authentication"

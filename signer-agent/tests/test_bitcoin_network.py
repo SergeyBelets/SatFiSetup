@@ -353,7 +353,6 @@ def test_cli_checkpoint_outputs_exact_review_candidate_without_files_or_transact
 
 def test_cli_mainnet_relay_uses_shared_durable_sender_and_reports_in_progress(monkeypatch, tmp_path, capsys):
     from signer_agent import bitcoin_cli
-    import web3
     core = Core(); relay = Relay(core); relay.address = "0x" + "11" * 20; p = policy(); batches = []
     identity = str(tmp_path / "private-identity")
     relay.address = "0x" + "11" * 20
@@ -361,10 +360,7 @@ def test_cli_mainnet_relay_uses_shared_durable_sender_and_reports_in_progress(mo
     core.check_network = lambda: check_core(core, "mainnet", p, now=core.now)
     monkeypatch.setattr(bitcoin_cli, "BitcoinRPC", lambda *a, **k: core)
     monkeypatch.setattr(bitcoin_cli, "_checked_mainnet_relay", lambda *a: relay)
-    class W3:
-        HTTPProvider = staticmethod(lambda url: url)
-        def __init__(self, provider): self.eth = SimpleNamespace(chain_id=11155111)
-    monkeypatch.setattr(web3, "Web3", W3)
+    monkeypatch.setattr(bitcoin_cli, "evm_web3", lambda _: SimpleNamespace(eth=SimpleNamespace(chain_id=11155111)))
     def durable_sender(actual_identity, w3, address, actual_policy, depth):
         assert actual_identity == identity and address == relay.address
         assert actual_policy == p and depth == 1 and w3.eth.chain_id == 11155111
@@ -490,7 +486,6 @@ def test_low_level_mainnet_settlement_cannot_bypass_guard(lowlevel_settlement, f
 @pytest.mark.parametrize('reorg', [False, True])
 def test_low_level_mainnet_settlement_refreshes_proof_before_burn(monkeypatch, tmp_path, capsys, reorg):
     from signer_agent import bitcoin_cli
-    import web3
     observations = []; applied = []
     proof = dict(raw='00', txid='11' * 32, block_hash='22' * 32, siblings=[], index='0', confirmations='6')
     def observation(*args):
@@ -500,10 +495,8 @@ def test_low_level_mainnet_settlement_refreshes_proof_before_burn(monkeypatch, t
     monkeypatch.setattr(bitcoin_cli, '_mainnet_settlement_observation', observation)
     monkeypatch.setattr(bitcoin_cli, 'BitcoinRPC', lambda *a, **kw: SimpleNamespace(check_network=lambda: None))
     monkeypatch.setattr(bitcoin_cli, 'artifact', lambda name: {'abi': []})
-    class W3:
-        HTTPProvider = staticmethod(lambda url: url)
-        def __init__(self, provider): self.eth = SimpleNamespace(chain_id=11155111, contract=lambda **kw: object())
-    monkeypatch.setattr(web3, 'Web3', W3)
+    w3 = SimpleNamespace(eth=SimpleNamespace(chain_id=11155111, contract=lambda **kw: object()))
+    monkeypatch.setattr(bitcoin_cli, 'evm_web3', lambda _: w3)
     class Durable:
         def __init__(self, profile, state): pass
         def apply(self, identity): applied.append(True); return {'status': 'VERIFIED'}

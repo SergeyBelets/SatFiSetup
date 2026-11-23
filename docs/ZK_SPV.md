@@ -269,7 +269,7 @@ prover, лицензирование, обязательства живого de
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install -r signer-agent/requirements.lock
+.venv/bin/python -m pip install --require-hashes --only-binary :all: -r signer-agent/requirements.lock
 PYTHONPATH=signer-agent .venv/bin/python -m pytest signer-agent/tests tests/zkspv -q
 cargo test --locked --manifest-path frost-crypto/Cargo.toml
 forge build --root web3 --sizes

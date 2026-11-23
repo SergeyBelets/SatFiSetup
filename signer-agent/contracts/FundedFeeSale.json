@@ -599,6 +599,22 @@
   },
   {
     "type": "error",
+    "name": "EscrowShortfall",
+    "inputs": [
+      {
+        "name": "held",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "escrowed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InsufficientInventory",
     "inputs": []
   },

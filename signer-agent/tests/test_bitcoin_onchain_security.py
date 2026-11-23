@@ -86,13 +86,20 @@ def test_malformed_public_bitcoin_packet_rejected(kind, value):
         crypto.call("inspect_bitcoin_packet", kind=kind, value=value)
 
 
-@pytest.fixture
-def bitcoin_signer_boundary(tmp_path, monkeypatch):
+@pytest.fixture(params=[False, True])
+def bitcoin_signer_boundary(tmp_path, monkeypatch, request):
     """Isolate durable export ordering from RPC and curve arithmetic tests."""
     from signer_agent import bitcoin_trust, bitcoin_worker
 
-    state = SecureState(str(tmp_path / "btc.enc"), "synthetic-boundary-state-key")
-    manifest = SimpleNamespace(context=b"a" * 32, threshold=2, participants=["A", "B"])
+    independent = None
+    if request.param:
+        volume = tmp_path / "ledger"
+        volume.mkdir(mode=0o700)
+        independent = volume / "btc.sqlite"
+    state = SecureState(tmp_path / "local" / "btc.enc", "synthetic-boundary-state-key", nonce_ledger=independent)
+    if independent is not None:
+        state.initialize_nonce_ledger()
+    manifest = SimpleNamespace(chain_id=31337, context=b"a" * 32, threshold=2, participants=["A", "B"])
     key = dict(index=1, result=dict(signing_share="c1" * 32, key_package="c2" * 70))
     plan = dict(network="regtest", batch_registry="test-registry", batch_id="bb" * 32)
     generated = dict(nonces="d1" * 140, commitments="d2" * 71)
@@ -120,7 +127,7 @@ def bitcoin_signer_boundary(tmp_path, monkeypatch):
     commitment = step("btc-commit")
     plan["commitments"] = [{"1": commitment["values"][0], "2": "d3" * 71}]
     sid = "btc:" + manifest.context.hex() + ":" + plan["batch_id"] + ":0"
-    return SimpleNamespace(state=state, key=key, plan=plan, step=step, sid=sid,
+    return SimpleNamespace(state=state, key=key, plan=plan, step=step, sid=sid, independent=independent,
                            calls=calls, generated=generated, commitment=commitment)
 
 
@@ -139,8 +146,8 @@ def test_bitcoin_export_contains_only_public_values_and_retries_do_not_sign_agai
     stored = signer.state.get(signer.sid)
     assert "nonces" not in stored
     signer.state.assert_spent(signer.sid, stored["transcript"])
-    (signer.state.path.parent / "btc.enc.spent.sqlite").unlink()
-    with pytest.raises(RuntimeError, match="NONCE_JOURNAL_MISSING"):
+    (signer.independent or signer.state.path.parent / "btc.enc.spent.sqlite").unlink()
+    with pytest.raises(RuntimeError, match="NONCE_LEDGER_MISSING" if signer.independent else "NONCE_JOURNAL_MISSING"):
         signer.step("btc-sign")
     assert signer.calls == ["nonce", "sign"]
 
@@ -310,7 +317,8 @@ def test_secure_state_rechecks_directory_permissions_and_restricts_existing_inod
             pytest.fail("shared-writable lock acquired")
 
 
-def test_evm_authorization_cached_retry_requires_nonce_journal(tmp_path, monkeypatch):
+@pytest.mark.parametrize("guarded", [False, True])
+def test_evm_authorization_cached_retry_requires_nonce_journal(tmp_path, monkeypatch, guarded):
     import test_signing_service as fixture
     from signer_agent.service import SigningService
 
@@ -327,15 +335,15 @@ def test_evm_authorization_cached_retry_requires_nonce_journal(tmp_path, monkeyp
     monkeypatch.setattr(SigningService, "approve", remember)
     monkeypatch.setattr(fixture.FakeClient, "submit_signature_share", network_failure)
     with pytest.raises(RuntimeError, match="SIMULATED_NETWORK_FAILURE"):
-        fixture.test_two_round_approval_can_resume_across_runs(tmp_path, False)
+        fixture.test_two_round_approval_can_resume_across_runs(tmp_path, False, guarded)
     service = captured["service"]
-    os.unlink(str(service.state.path) + ".spent.sqlite")
+    os.unlink(service.config.nonce_ledger if guarded else str(service.state.path) + ".spent.sqlite")
 
     def must_not_publish(*args):
         pytest.fail("cached share published without original nonce journal")
 
     monkeypatch.setattr(fixture.FakeClient, "submit_signature_share", must_not_publish)
-    with pytest.raises(RuntimeError, match="NONCE_JOURNAL_MISSING"):
+    with pytest.raises(RuntimeError, match="NONCE_LEDGER_MISSING" if guarded else "NONCE_JOURNAL_MISSING"):
         service.approve(captured["session"])
 
 
@@ -453,6 +461,76 @@ def test_evm_reserve_review_rejects_missing_public_plan(bitcoin_reserve_intent):
         review_intent(item.intent, item.manifest, item.key, item.registry, None,
                       board_address="known-original-board")
     assert item.checked_terms == []
+
+
+@pytest.mark.parametrize("source", ["board", "file"])
+@pytest.mark.parametrize("chain,enrolled", [(1, True), (11155111, True), (11155111, False), (31337, True)])
+def test_evm_payment_approval_needs_plan_independent_of_intent_source(chain, enrolled, source):
+    from signer_agent.bitcoin_onchain_payment import APPROVAL_OPERATIONS
+    from signer_agent.participant_cli import _review_bitcoin_approval
+
+    args = SimpleNamespace(package="local.json" if source == "file" else None)
+    manifest = SimpleNamespace(chain_id=chain)
+    for artifact, helper in APPROVAL_OPERATIONS:
+        intent = dict(artifact=artifact, hash_method=helper)
+        with pytest.raises(ValueError, match="BTC_PUBLIC_PLAN_REQUIRED"):
+            _review_bitcoin_approval(intent, manifest, None, None, None, args, enrolled=enrolled)
+
+
+def test_only_isolated_legacy_rehearsal_can_use_payment_file_without_plan():
+    from signer_agent.participant_cli import _review_bitcoin_approval
+
+    intent = dict(artifact="BitcoinBatchRegistry", hash_method="operationHash")
+    manifest = SimpleNamespace(chain_id=31337)
+    assert _review_bitcoin_approval(intent, manifest, None, None, None,
+                                    SimpleNamespace(package="local.json"), enrolled=False) is None
+    with pytest.raises(ValueError, match="BTC_PUBLIC_PLAN_REQUIRED"):
+        _review_bitcoin_approval(intent, manifest, None, None, None,
+                                 SimpleNamespace(package=None), enrolled=False)
+
+
+def test_evm_payment_review_keeps_guard_for_private_work(bitcoin_reserve_intent, monkeypatch):
+    from signer_agent import bitcoin_onchain_payment as payment
+    from signer_agent.participant_cli import _review_bitcoin_approval
+
+    item = bitcoin_reserve_intent
+    original = payment.review_intent
+    attempts = []
+
+    def review(*args, **kwargs):
+        attempts.append(True)
+        if len(attempts) == 2:
+            raise ValueError("EVM_RPC_BEHIND")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(payment, "review_intent", review)
+    args = SimpleNamespace(package=None, board="known-original-board", bitcoin_rpc=None, bitcoin_cookie=None)
+    expected, guard = _review_bitcoin_approval(
+        item.intent, item.manifest, item.key, item.registry, None, args, enrolled=True,
+    )
+    assert expected == item.intent["operation_hash"].removeprefix("0x")
+    with pytest.raises(ValueError, match="EVM_RPC_BEHIND"):
+        guard()
+    assert len(item.checked_terms) == 1
+
+
+@pytest.mark.parametrize("action", ["btc-commit", "btc-sign"])
+@pytest.mark.parametrize("chain,network", [(1, "testnet4"), (11155111, "mainnet")])
+def test_btc_signer_stops_before_any_nonce_work_without_required_ledger(tmp_path, monkeypatch,
+                                                                        action, chain, network):
+    from signer_agent import bitcoin_trust, bitcoin_worker
+
+    state = SecureState(tmp_path / "btc.enc", "synthetic-boundary-state-key")
+    monkeypatch.setattr(bitcoin_trust, "require_registry",
+                        lambda *args: {"graph": {"bitcoin_network": network}})
+    monkeypatch.setattr(bitcoin_trust, "graph_network", lambda _graph: network)
+    monkeypatch.setattr(bitcoin_worker, "validate",
+                        lambda *args: pytest.fail("unbound role reached Bitcoin signing validation"))
+    with pytest.raises(RuntimeError, match="NONCE_LEDGER_NOT_BOUND_RECOVERY_REQUIRED"):
+        bitcoin_worker.sign_step(action, SimpleNamespace(chain_id=chain, context=b"a" * 32),
+                                 None, {"batch_registry": "fixture"}, None, state, None)
+    assert not state.path.exists()
+    assert not (tmp_path / "btc.enc.spent.sqlite").exists()
 
 
 @pytest.fixture
@@ -1039,23 +1117,32 @@ def cached_bitcoin_transport(public_bitcoin_plan, tmp_path, monkeypatch):
     monkeypatch.setattr(crypto, "call", public_only)
     board = SimpleNamespace(address=plan["signing_board"])
     publications = []
+    anchors = {}
     monkeypatch.setattr(transport, "checked_board", lambda *args: board)
     monkeypatch.setattr(transport, "load_plan", lambda *args: plan)
-    monkeypatch.setattr(transport, "collect", lambda *args: (commitments, [], [], []))
-    monkeypatch.setattr(transport, "publish_values", lambda *args: publications.append(args[-1]))
+    def collect(*args, block=None):
+        anchors["collect"] = block
+        return commitments, [], [], []
+
+    def publish(*args, packet_anchor=None):
+        anchors["publish"] = packet_anchor
+        publications.append(args[-1])
+
+    monkeypatch.setattr(transport, "collect", collect)
+    monkeypatch.setattr(transport, "publish_values", publish)
 
     def dispatch(action):
         args = SimpleNamespace(action=action, signing_board=board.address, batch=plan["batch_id"],
                                bitcoin_rpc="http://unused.invalid", bitcoin_cookie="/nonexistent-cookie")
         return transport.dispatch(args, manifest, key, registry, state)
 
-    def cached(action):
+    def cached(action, **kwargs):
         work = dict(plan, commitments=commitments) if action == "btc-sign" else plan
-        return transport.cached_transport_step(action, manifest, key, work, registry, state)
+        return transport.cached_transport_step(action, manifest, key, work, registry, state, **kwargs)
 
     return SimpleNamespace(manifest=manifest, plan=plan, key=key, state=state, sids=sids,
                            nonce_states=nonce_states, commitments=commitments, registry=registry,
-                           approved=approved, block=block, calls=calls, publications=publications,
+                           approved=approved, block=block, calls=calls, publications=publications, anchors=anchors,
                            dispatch=dispatch, cached=cached)
 
 
@@ -1074,6 +1161,60 @@ def test_fully_cached_transport_retry_needs_no_bitcoin_cookie_or_unspent_inputs(
     assert result["status"] == ("COMMITTED" if action == "btc-commit" else "SIGNED")
     assert [replay.state.get(sid) for sid in replay.sids] == before
     assert replay.calls.count("bitcoin_build") == 1
+    assert replay.anchors == ({
+        "collect": replay.block, "publish": replay.block,
+    } if action == "btc-sign" else {"collect": None, "publish": None})
+
+
+@pytest.mark.parametrize("height,hash_,error", [
+    (33, b"a" * 32, "EVM_REORG_RECOVERY_REQUIRED"),
+    (34, b"b" * 32, "EVM_RPC_BEHIND"),
+])
+def test_cached_sign_only_releases_share_for_original_packet_anchor(cached_bitcoin_transport, height, hash_, error):
+    replay = cached_bitcoin_transport
+    before = [replay.state.get(sid) for sid in replay.sids]
+    with pytest.raises(ValueError, match=error):
+        replay.cached("btc-sign", packet_anchor=SimpleNamespace(number=height, hash=hash_))
+    assert [replay.state.get(sid) for sid in replay.sids] == before
+    assert replay.calls == []
+    assert replay.publications == []
+
+
+def test_share_publication_rechecks_packet_anchor_after_custody_review(public_bitcoin_plan, monkeypatch):
+    from signer_agent import bitcoin_onchain as transport, bitcoin_onchain_payment as payment
+
+    manifest, plan = public_bitcoin_plan
+    original = AttributeDict(dict(number=33, hash=b"b" * 32, timestamp=1))
+    view = SimpleNamespace(block=original)
+    registry = SimpleNamespace(w3=SimpleNamespace(eth=SimpleNamespace(chain_id=31337,
+                                                                      get_block=lambda _: view.block)))
+    board = SimpleNamespace(address=plan["signing_board"], functions=SimpleNamespace(
+        packet=lambda *_: SimpleNamespace(call=lambda **_: b""),
+    ))
+    key = dict(index=1, participant=manifest.participants[0])
+    monkeypatch.setattr("signer_agent.btc_fee_reserve.guard", lambda *args, **kwargs: None)
+    monkeypatch.setattr(transport, "packet_payload", lambda *args: b"public-signature-share")
+
+    def review(*_):
+        view.block = AttributeDict(dict(original, hash=b"a" * 32))
+
+    monkeypatch.setattr(payment, "review_custody_outputs", review)
+    monkeypatch.setattr(transport, "send", lambda *args:
+                        pytest.fail("missing packet anchor reached transaction publication"))
+    with pytest.raises(ValueError, match="EVM_REORG_RECOVERY_REQUIRED"):
+        transport.publish_values(manifest, key, registry, board, plan, "share", ["01" * 32],
+                                 packet_anchor=original)
+
+
+@pytest.mark.parametrize("action", ["btc-commit", "btc-sign"])
+def test_mainnet_cached_transport_rejects_an_adjacent_nonce_ledger(cached_bitcoin_transport, action):
+    replay = cached_bitcoin_transport
+    replay.manifest.chain_id = 1
+    replay.registry.w3.eth.chain_id = 1
+    with pytest.raises(RuntimeError, match="NONCE_LEDGER_NOT_BOUND_RECOVERY_REQUIRED"):
+        replay.cached(action)
+    assert replay.calls == []
+    assert replay.publications == []
 
 
 def test_cached_commitment_can_resume_before_share_but_never_spends_nonce(cached_bitcoin_transport):
@@ -1103,14 +1244,14 @@ def test_partial_cached_share_still_requires_full_first_sign_validation(cached_b
     monkeypatch.setattr(bitcoin_onchain, "bitcoin_for_graph", lambda *args: object())
     checked = []
 
-    def first_sign_validation(*args):
-        checked.append(True)
+    def first_sign_validation(*args, packet_anchor):
+        checked.append(packet_anchor)
         raise ValueError(policy_error)
 
     monkeypatch.setattr(bitcoin_worker, "validate", first_sign_validation)
     with pytest.raises(ValueError, match=policy_error):
         replay.dispatch("btc-sign")
-    assert checked == [True]
+    assert checked == [replay.block]
     assert replay.calls == []
     assert replay.publications == []
     assert replay.state.get(sid) == replay.nonce_states[-1]

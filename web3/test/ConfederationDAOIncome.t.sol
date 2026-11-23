@@ -14,10 +14,11 @@ import {ConfederationShareV2Deployer} from "../contracts/src/federation/Confeder
 import {ConfederationShareV2} from "../contracts/src/tokens/ConfederationShareV2.sol";
 
 contract EconomyAsset is ERC20 {
-    uint256 public immutable tax;
+    uint256 public tax;
     constructor(uint256 tax_) ERC20("Test asset", "TEST") { tax = tax_; }
     function mint(address owner, uint256 amount) external { _mint(owner, amount); }
     function burn(address owner, uint256 amount) external { _burn(owner, amount); }
+    function setTax(uint256 tax_) external { tax = tax_; }
     function _update(address from, address to, uint256 value) internal override {
         if (from != address(0) && to != address(0) && tax != 0) {
             super._update(from, address(0), value * tax / 10_000);
@@ -43,6 +44,14 @@ contract EconomyApproval {
         delete targets[op];
         return true;
     }
+}
+
+contract EconomySettlementLifecycle {
+    mapping(address => uint256) public settlementDayLimit;
+
+    constructor(address pool) { settlementDayLimit[pool] = type(uint256).max; }
+
+    function deactivate(address pool) external { settlementDayLimit[pool] = block.timestamp / 1 days + 1; }
 }
 
 contract EconomyFeeManagerBinding {
@@ -76,6 +85,7 @@ contract ConfederationDAOIncomeTest is Test {
     EconomyAsset private stable;
     ConfederationDAOStake private staking;
     ConfederationDAOIncome private income;
+    EconomySettlementLifecycle private lifecycle;
     uint256 private day;
 
     function setUp() public {
@@ -92,7 +102,9 @@ contract ConfederationDAOIncomeTest is Test {
         stable = new EconomyAsset(500);
         staking = new ConfederationDAOStake(address(ulr), address(validator), 200_000 ether);
         CustodianDAODecisionBoard decisions = new CustodianDAODecisionBoard(address(staking), address(auth));
-        income = new ConfederationDAOIncome(address(this), address(share), address(auth), address(staking), address(decisions));
+        lifecycle = new EconomySettlementLifecycle(address(this));
+        income = new ConfederationDAOIncome(address(this), address(share), address(auth), address(staking),
+            address(decisions), address(lifecycle));
         bytes32 op = income.getAddStablecoinOperationHash(address(stable));
         _approve(op, address(income));
         income.addStablecoin(address(stable), op);
@@ -138,6 +150,123 @@ contract ConfederationDAOIncomeTest is Test {
         income.openDay(report, op);
     }
 
+    function _approveClosingRates(uint256 when, address[] memory assets, uint256[] memory rates)
+        private returns (bytes32 approval)
+    {
+        approval = income.getSetClosingRatesOperationHash(when, assets, rates);
+        _approve(approval, address(income));
+    }
+
+    function testDeactivationClosesPriorDaysAndPaysExistingDebtBeforeLateRewards() public {
+        _stake(ALICE, 100 ether);
+        _stake(BOB, 300 ether);
+        stable.setTax(0);
+        vm.warp((day + 1) * 1 days + 10);
+        _open(_report(day, 1 ether, 1 ether));
+        lifecycle.deactivate(address(this));
+        assertEq(income.settlementDayLimit(), day + 2);
+        income.processDay(1);
+
+        stable.mint(address(income), 10);
+        assertEq(income.sweep(address(stable)), 10);
+        vm.warp((day + 2) * 1 days);
+        stable.mint(address(income), 70);
+        assertEq(income.sweep(address(stable)), 70);
+        assertEq(income.dayIncome(day + 2, address(stable), ConfederationDAOIncome.Stream.Direct), 0);
+        assertEq(income.closingIncome(address(stable)), 70);
+        vm.expectRevert(ConfederationDAOIncome.InvalidDay.selector);
+        income.processClosingIncome(1);
+
+        ConfederationDAOIncome.ExpenseBatch memory batch;
+        batch.day = day + 1;
+        batch.evidenceHash = keccak256("cutoff expense");
+        batch.firstPosition = 1;
+        batch.lastPosition = 1;
+        batch.expenses = new ConfederationDAOIncome.Expense[](1);
+        batch.expenses[0] = ConfederationDAOIncome.Expense(PAYER, keccak256("cutoff receipt"), 60);
+        bytes32 approval = income.getStageExpensesOperationHash(batch);
+        _approve(approval, address(income));
+        income.stageExpenses(batch, approval);
+        _open(_report(day + 1, 1 ether, 1 ether));
+        income.processDay(1);
+        assertEq(income.reimbursement(PAYER, address(stable)), 10);
+        assertEq(income.debtHead(), 0);
+        assertEq(income.closingReward(address(stable)), 0);
+
+        uint256 future = day + 2;
+        vm.expectRevert(ConfederationDAOIncome.ClosingRatesRequired.selector);
+        income.processClosingIncome(1);
+        assertEq(income.closingIncome(address(stable)), 70);
+        address[] memory assets = income.rewardTokens();
+        uint256[] memory rates = new uint256[](2);
+        rates[0] = 1 ether;
+        rates[1] = 1 ether;
+        approval = _approveClosingRates(future, assets, rates);
+        income.setClosingRates(future, assets, rates, approval);
+
+        vm.warp((future + 1) * 1 days);
+        vm.expectRevert(ConfederationDAOIncome.ClosingRatesRequired.selector);
+        income.processClosingIncome(1);
+        ConfederationDAOIncome.DayReport memory tooLate = _report(future, 1 ether, 1 ether);
+        approval = income.getSettlementOperationHash(tooLate);
+        _approve(approval, address(income));
+        vm.expectRevert(ConfederationDAOIncome.InvalidDay.selector);
+        income.openDay(tooLate, approval);
+        assertEq(auth.targets(approval), address(income));
+        batch.day = future;
+        approval = income.getStageExpensesOperationHash(batch);
+        _approve(approval, address(income));
+        vm.expectRevert(ConfederationDAOIncome.InvalidDay.selector);
+        income.stageExpenses(batch, approval);
+        assertEq(auth.targets(approval), address(income));
+
+        rates[1] = 2 ether;
+        approval = _approveClosingRates(future, assets, rates);
+        vm.expectRevert(ConfederationDAOIncome.InvalidDay.selector);
+        income.setClosingRates(future, assets, rates, approval);
+        assertEq(auth.targets(approval), address(income));
+
+        address[] memory substituted = income.rewardTokens();
+        substituted[1] = address(ulr);
+        approval = _approveClosingRates(future + 1, substituted, rates);
+        vm.expectRevert(ConfederationDAOIncome.InvalidReport.selector);
+        income.setClosingRates(future + 1, substituted, rates, approval);
+        assertEq(auth.targets(approval), address(income));
+        approval = _approveClosingRates(future + 1, assets, rates);
+        income.setClosingRates(future + 1, assets, rates, approval);
+        assertEq(income.closingRatesDay(), future + 1);
+        rates[1] = 3 ether;
+        approval = _approveClosingRates(future + 1, assets, rates);
+        vm.expectRevert(ConfederationDAOIncome.InvalidDay.selector);
+        income.setClosingRates(future + 1, assets, rates, approval);
+
+        stable.mint(address(income), 50);
+        income.sweep(address(stable));
+        income.processClosingIncome(1);
+        assertEq(income.reimbursement(PAYER, address(stable)), 110);
+        assertEq(income.closingReward(address(stable)), 20);
+        assertEq(income.accountedBalance(address(stable)), 130);
+        vm.prank(ALICE);
+        assertEq(income.claimClosingReward(address(stable)), 5);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationDAOIncome.InvalidClaim.selector);
+        income.claimClosingReward(address(stable));
+
+        vm.warp((future + 2) * 1 days);
+        stable.mint(address(income), 20);
+        income.sweep(address(stable));
+        income.processClosingIncome(1);
+        vm.prank(ALICE);
+        assertEq(income.claimClosingReward(address(stable)), 5);
+        vm.prank(BOB);
+        assertEq(income.claimClosingReward(address(stable)), 30);
+        vm.prank(PAYER);
+        assertEq(income.claimReimbursement(address(stable)), 110);
+        assertEq(income.accountedBalance(address(stable)), 0);
+        assertEq(stable.balanceOf(address(income)), 0);
+        assertEq(income.nextSettlementDay(), future);
+    }
+
     function testTransferTaxDirectIncomeAndSeparateDayClaim() public {
         _stake(ALICE, 100 ether);
         _stake(BOB, 300 ether);
@@ -161,13 +290,94 @@ contract ConfederationDAOIncomeTest is Test {
         dates[0] = day;
         vm.prank(ALICE);
         assertEq(income.claim(address(share), dates), 25 ether);
+        vm.expectRevert(ConfederationDAOIncome.InvalidTransfer.selector);
+        vm.prank(ALICE);
+        income.claim(address(stable), dates);
+        assertFalse(income.claimed(ALICE, address(stable), day));
+        assertEq(income.accountedBalance(address(stable)), 95);
+        assertEq(stable.balanceOf(ALICE), 0);
+        stable.setTax(0);
         vm.prank(ALICE);
         assertEq(income.claim(address(stable), dates), 23);
+        assertEq(stable.balanceOf(ALICE), 23);
         vm.expectRevert(ConfederationDAOIncome.InvalidClaim.selector);
         vm.prank(ALICE);
         income.claim(address(share), dates);
         vm.prank(CAROL);
         assertEq(income.claim(address(share), dates), 0);
+    }
+
+    function testInexactReimbursementPreservesDebtUntilExactTransfer() public {
+        _stake(ALICE, 100 ether);
+        stable.mint(address(income), 100);
+        income.sweep(address(stable));
+        vm.warp(101 days);
+
+        ConfederationDAOIncome.DayReport memory report = _report(day, 1 ether, 1 ether);
+        report.expenses = new ConfederationDAOIncome.Expense[](1);
+        report.expenses[0] = ConfederationDAOIncome.Expense(PAYER, keccak256("exact reimbursement"), 60);
+        _open(report);
+        income.processDay(1);
+        assertEq(income.reimbursement(PAYER, address(stable)), 60);
+
+        vm.expectRevert(ConfederationDAOIncome.InvalidTransfer.selector);
+        vm.prank(PAYER);
+        income.claimReimbursement(address(stable));
+        assertEq(income.reimbursement(PAYER, address(stable)), 60);
+        assertEq(income.accountedBalance(address(stable)), 100);
+        assertEq(stable.balanceOf(PAYER), 0);
+
+        stable.setTax(0);
+        vm.prank(PAYER);
+        assertEq(income.claimReimbursement(address(stable)), 60);
+        assertEq(stable.balanceOf(PAYER), 60);
+        assertEq(income.reimbursement(PAYER, address(stable)), 0);
+        assertEq(income.accountedBalance(address(stable)), 40);
+    }
+
+    function testStableShortfallPausesSettlementAndClaimsUntilRecapitalized() public {
+        _stake(ALICE, 100 ether);
+        stable.setTax(0);
+        stable.mint(address(income), 100);
+        assertEq(income.sweep(address(stable)), 100);
+        stable.burn(address(income), 20);
+        bytes memory shortfall = abi.encodeWithSelector(ConfederationDAOIncome.AssetShortfall.selector,
+            address(stable), 80, 100);
+        vm.expectRevert(shortfall);
+        income.sweep(address(stable));
+
+        vm.warp(101 days);
+        ConfederationDAOIncome.DayReport memory report = _report(day, 1 ether, 1 ether);
+        bytes32 op = income.getSettlementOperationHash(report);
+        _approve(op, address(income));
+        vm.expectRevert(shortfall);
+        income.openDay(report, op);
+        assertEq(auth.targets(op), address(income));
+        assertFalse(income.processing());
+
+        stable.mint(address(income), 20);
+        assertEq(income.sweep(address(stable)), 0);
+        income.openDay(report, op);
+        stable.burn(address(income), 20);
+        vm.expectRevert(shortfall);
+        income.processDay(1);
+        assertEq(income.nextSettlementDay(), day);
+        assertTrue(income.processing());
+        stable.mint(address(income), 20);
+        income.processDay(1);
+
+        stable.burn(address(income), 20);
+        uint256[] memory dates = new uint256[](1);
+        dates[0] = day;
+        vm.expectRevert(shortfall);
+        vm.prank(ALICE);
+        income.claim(address(stable), dates);
+        assertFalse(income.claimed(ALICE, address(stable), day));
+        assertEq(income.accountedBalance(address(stable)), 100);
+        stable.mint(address(income), 20);
+        vm.prank(ALICE);
+        assertEq(income.claim(address(stable), dates), 100);
+        assertEq(income.accountedBalance(address(stable)), 0);
     }
 
     function testFIFOCarriesWeiAndUsesPaymentDayRate() public {
@@ -420,20 +630,38 @@ contract ConfederationDAOIncomeTest is Test {
         assertEq(staking.getDAOSigner(ALICE), delegate);
     }
 
-    function testPassQuoteBoundToBuyerAndSingleUse() public {
-        (address operator, uint256 key) = makeAddrAndKey("operator");
+    function _passSale(address operator)
+        private returns (ConfederationNFTPass sale, ConfederationNFTPass.Tariff memory tariff)
+    {
         EconomyFeeManagerBinding fee = new EconomyFeeManagerBinding(address(auth), address(validator));
-        ConfederationNFTPass sale = new ConfederationNFTPass("Pass", "PASS", address(income), address(fee), operator);
+        sale = new ConfederationNFTPass("Pass", "PASS", address(income), address(fee), operator);
         bytes32 op = income.getBindPassSaleOperationHash(address(sale));
         _approve(op, address(income));
         income.bindPassSale(address(sale), op);
-
-        ConfederationNFTPass.Tariff memory tariff = ConfederationNFTPass.Tariff(1 days, 10_000, 10 ether);
+        tariff = ConfederationNFTPass.Tariff(1 days, 10_000, 10 ether, 2 ether, uint64(block.timestamp + 3 hours));
         op = sale.getApproveTariffOperationHash(tariff);
         _approve(op, address(sale));
         sale.approveTariff(tariff, op);
+    }
+
+    function _signPrice(ConfederationNFTPass sale, ConfederationNFTPass.Quote memory quote, uint256 key)
+        private view returns (bytes memory)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, sale.priceDigest(quote));
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _setPriceControl(ConfederationNFTPass sale, address signer, bool paused) private {
+        bytes32 op = sale.getSetPriceControlOperationHash(signer, paused);
+        _approve(op, address(sale));
+        sale.setPriceControl(signer, paused, op);
+    }
+
+    function testPassQuoteBoundToBuyerAndSingleUse() public {
+        (address operator, uint256 key) = makeAddrAndKey("operator");
+        (ConfederationNFTPass sale, ConfederationNFTPass.Tariff memory tariff) = _passSale(operator);
         ConfederationNFTPass.Quote memory quote = ConfederationNFTPass.Quote(
-            keccak256(abi.encode(tariff)), ALICE, 2 ether, 8, uint64(block.timestamp + 1 hours));
+            keccak256(abi.encode(tariff)), ALICE, 2 ether, 8, uint64(block.timestamp + 1 hours), 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, sale.priceDigest(quote));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.prank(BOB);
@@ -462,5 +690,108 @@ contract ConfederationDAOIncomeTest is Test {
         vm.prank(ALICE);
         vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
         sale.buy(quote, abi.encodePacked(r, s, v));
+    }
+
+    function testPassPricingNeedsFrostAndCurrentCustodians() public {
+        (address operator,) = makeAddrAndKey("operator");
+        (ConfederationNFTPass sale,) = _passSale(operator);
+        address next = makeAddr("replacement-price-signer");
+        bytes32 op = sale.getSetPriceControlOperationHash(next, true);
+        auth.authorize(op, address(sale));
+        vm.prank(ALICE);
+        validator.registerCustodianSignature(op);
+        vm.expectRevert(ConfederationNFTPass.InvalidPriceControl.selector);
+        sale.setPriceControl(next, true, op);
+        vm.prank(BOB);
+        validator.registerCustodianSignature(op);
+
+        bytes32 noFrost = sale.getSetPriceControlOperationHash(next, false);
+        vm.prank(ALICE);
+        validator.registerCustodianSignature(noFrost);
+        vm.prank(BOB);
+        validator.registerCustodianSignature(noFrost);
+        vm.expectRevert(bytes("not authorized"));
+        sale.setPriceControl(next, false, noFrost);
+        vm.expectRevert(ConfederationNFTPass.InvalidPriceControl.selector);
+        sale.setPriceControl(next, false, op);
+
+        sale.setPriceControl(next, true, op);
+        assertEq(sale.priceSigner(), next);
+        assertEq(sale.initialPriceSigner(), operator);
+        assertEq(sale.priceEpoch(), 2);
+        assertTrue(sale.salesPaused());
+        vm.expectRevert(ConfederationNFTPass.InvalidPriceControl.selector);
+        sale.setPriceControl(next, true, op);
+    }
+
+    function testPauseResumeAndRotationRevokeQuotesAndKeepPassRights() public {
+        (address operator, uint256 key) = makeAddrAndKey("operator");
+        (address next, uint256 nextKey) = makeAddrAndKey("replacement-price-signer");
+        (ConfederationNFTPass sale, ConfederationNFTPass.Tariff memory tariff) = _passSale(operator);
+        ConfederationNFTPass.Quote memory quote = ConfederationNFTPass.Quote(
+            keccak256(abi.encode(tariff)), ALICE, 2 ether, 1, tariff.salesUntil, 1);
+        share.mint(ALICE, 4 ether);
+        vm.prank(ALICE);
+        share.approve(address(sale), 4 ether);
+        bytes memory signedQuote = _signPrice(sale, quote, key);
+        vm.prank(ALICE);
+        uint256 tokenId = sale.buy(quote, signedQuote);
+
+        quote.nonce = 2;
+        signedQuote = _signPrice(sale, quote, key);
+        _setPriceControl(sale, operator, true);
+        quote.priceEpoch = 2;
+        bytes memory signedWhilePaused = _signPrice(sale, quote, key);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedWhilePaused);
+
+        _setPriceControl(sale, operator, false);
+        assertEq(sale.priceEpoch(), 3);
+        quote.priceEpoch = 1;
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedQuote);
+        quote.priceEpoch = 3;
+        signedQuote = _signPrice(sale, quote, key);
+
+        _setPriceControl(sale, next, false);
+        assertEq(sale.priceEpoch(), 4);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedQuote);
+        quote.priceEpoch = 4;
+        signedQuote = _signPrice(sale, quote, key);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedQuote);
+
+        assertEq(sale.ownerOf(tokenId), ALICE);
+        assertEq(sale.previewDiscountFor(tokenId, ALICE, 10 ether), 10_000);
+        assertFalse(sale.usedQuote(ALICE, 2));
+        signedQuote = _signPrice(sale, quote, nextKey);
+        vm.prank(ALICE);
+        sale.buy(quote, signedQuote);
+        assertEq(income.dayIncome(day, address(share), ConfederationDAOIncome.Stream.Pass), 4 ether);
+    }
+
+    function testPassQuoteMustMeetFloorAndEndWithinSalesWindow() public {
+        (address operator, uint256 key) = makeAddrAndKey("operator");
+        (ConfederationNFTPass sale, ConfederationNFTPass.Tariff memory tariff) = _passSale(operator);
+        ConfederationNFTPass.Quote memory quote = ConfederationNFTPass.Quote(
+            keccak256(abi.encode(tariff)), ALICE, 2 ether - 1, 1, tariff.salesUntil, 1);
+        bytes memory signedQuote = _signPrice(sale, quote, key);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedQuote);
+
+        quote.price = 2 ether;
+        quote.expiresAt = tariff.salesUntil + 1;
+        signedQuote = _signPrice(sale, quote, key);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationNFTPass.InvalidQuote.selector);
+        sale.buy(quote, signedQuote);
+        assertFalse(sale.usedQuote(ALICE, 1));
+        assertEq(income.dayIncome(day, address(share), ConfederationDAOIncome.Stream.Pass), 0);
     }
 }

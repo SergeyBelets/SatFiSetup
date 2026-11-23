@@ -15,7 +15,8 @@ from web3 import Web3
 from web3.exceptions import TransactionNotFound, Web3RPCError
 
 from .operations import Journal
-from .evm_network import MAX_TRANSACTION_GAS, _limit
+from .evm_network import MAX_TRANSACTION_GAS, _limit, read_block, read_common_block, verify_anchor
+from .evm_rpc import evm_web3
 from .bootstrap_parallel import (observe, finish_group, operation_binding,
                                  recover_identity, restore_signed)
 
@@ -89,39 +90,44 @@ def simulate_group(w3, transactions, block):
             raise ValueError()
     except (KeyError, TypeError, ValueError):
         raise ValueError("CREATE_SIMULATION_REJECTED") from None
-    if w3.eth.get_block(block.number).hash != block.hash:
-        raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+    verify_anchor(w3, block.number, block.hash)
     return used
 
 
 def prepare_transactions(bootstrap, steps, account, nonce):
     w3 = bootstrap.w3
+    chain_id = w3.eth.chain_id
     # The withdrawal graph has circular immutable bindings. Simulate ordered
     # CREATEs in one RPC so Credits can inspect both earlier simulated runtimes.
-    if steps[0]["create_group"] != "withdrawal-fee-constructors" or w3.eth.chain_id not in (1, 11155111):
+    if steps[0]["create_group"] != "withdrawal-fee-constructors" or chain_id not in (1, 11155111):
         return [bootstrap.build_transaction(step, account, nonce + i) for i, step in enumerate(steps)]
-    block = w3.eth.get_block("latest")
-    if w3.eth.get_transaction_count(account.address, block.number) != nonce:
+    confirmations = bootstrap.evm_confirmations
+    alternate = os.environ.get("SATOSHIFI_CREATE_SIMULATION_RPC")
+    simulator = evm_web3(alternate, timeout=60) if alternate else w3
+    if alternate:
+        try:
+            block = read_common_block(w3, simulator, confirmations, chain_id)
+        except ValueError as error:
+            if str(error) == "EVM_RPC_WITNESS_MISMATCH":
+                raise ValueError("CREATE_SIMULATION_RPC_CHAIN_MISMATCH") from None
+            raise
+    else:
+        block = read_block(w3, confirmations)
+    if (w3.eth.get_transaction_count(account.address, block.number) != nonce
+            or alternate and simulator.eth.get_transaction_count(account.address, block.number) != nonce):
         raise ValueError("CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE")
-    glamsterdam = w3.eth.chain_id == 11155111 and block.timestamp >= 1791294816
+    glamsterdam = chain_id == 11155111 and block.timestamp >= 1791294816
     protocol_cap = min(int(block.gasLimit), 2**32 - 1 if glamsterdam else MAX_TRANSACTION_GAS)
-    cap = min(protocol_cap, _limit("SATOSHIFI_MAX_TX_GAS")) if glamsterdam or w3.eth.chain_id == 1 else protocol_cap
+    cap = min(protocol_cap, _limit("SATOSHIFI_MAX_TX_GAS")) if glamsterdam or chain_id == 1 else protocol_cap
     transactions = [bootstrap.build_transaction(step, account, nonce + i, simulation_gas=cap)
                     for i, step in enumerate(steps)]
-    simulator = w3
-    alternate = os.environ.get("SATOSHIFI_CREATE_SIMULATION_RPC")
-    if alternate:
-        simulator = Web3(Web3.HTTPProvider(alternate, request_kwargs={"timeout": 60}))
-        if (simulator.eth.chain_id != w3.eth.chain_id or simulator.eth.get_block(block.number).hash != block.hash):
-            raise ValueError("CREATE_SIMULATION_RPC_CHAIN_MISMATCH")
     used = simulate_group(simulator, transactions, block)
     for tx, gas in zip(transactions, used):
         tx["gas"] = max((gas * 130 + 99) // 100, gas + 125_000)
         if tx["gas"] > cap:
             raise ValueError("CREATE_SIMULATION_GAS_BUDGET")
     simulate_group(simulator, transactions, block)
-    if w3.eth.get_block(block.number).hash != block.hash:
-        raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+    verify_anchor(w3, block.number, block.hash)
     if w3.eth.get_transaction_count(account.address, "pending") != nonce:
         raise ValueError("CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE")
     return transactions
@@ -171,7 +177,13 @@ def apply_group(bootstrap, steps, account, identity, *, dry_run=False, verify=Fa
         if not any(signed):
             results = []
             with predicted(bootstrap, steps, account.address, nonce):
-                transactions = prepare_transactions(bootstrap, steps, account, nonce)
+                try:
+                    transactions = prepare_transactions(bootstrap, steps, account, nonce)
+                except ValueError as error:
+                    if str(error) != "CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE":
+                        raise
+                    return dict(status="AWAITING_EVM_RPC", step=first["id"], create_group=steps[0]["create_group"],
+                                reason=str(error))
                 for tx in transactions:
                     raw = bytes(account.sign_transaction(tx).raw_transaction)
                     results.append(dict(tx_hash=Web3.keccak(raw).hex(), raw_transaction=raw.hex(), nonce=str(tx["nonce"])))

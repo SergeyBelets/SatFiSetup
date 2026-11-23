@@ -262,7 +262,15 @@ contract CustodianDAODailySettlement is ReentrancyGuard {
     function claimLiquidityIncome() external nonReentrant returns (uint256 amount) {
         amount = lpClaimable[msg.sender];
         lpClaimable[msg.sender] = 0;
-        if (amount > 0) rewardToken.safeTransfer(msg.sender, amount);
+        if (amount > 0) {
+            uint256 beforeBalance = rewardToken.balanceOf(address(this));
+            uint256 beforeRecipient = rewardToken.balanceOf(msg.sender);
+            rewardToken.safeTransfer(msg.sender, amount);
+            if (
+                rewardToken.balanceOf(address(this)) != beforeBalance - amount
+                    || rewardToken.balanceOf(msg.sender) != beforeRecipient + amount
+            ) revert InvalidTransfer();
+        }
         emit LiquidityIncomeClaimed(msg.sender, amount);
     }
 

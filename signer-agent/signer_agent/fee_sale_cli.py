@@ -5,6 +5,7 @@ import json
 import re
 
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.logs import DISCARD
 
 from . import fee_sale_governance as policy
@@ -15,7 +16,7 @@ from .onboarding import read_public
 from .onchain_transport import can_publish_intent, ceremony_bundle
 from .operations import canonical
 from .safe_errors import DiagnosticArgumentParser
-from .ulr_treasury import intent_for, number, read
+from .ulr_treasury import contract, intent_for, number, read
 from .ulr_treasury_cli import _executor, _write
 
 
@@ -59,11 +60,16 @@ def _deployment(args, pin, bundle, ctx):
 
 def _status(args, pin, ctx):
     at, sale, source = ctx["block"], ctx["sale"], ctx["source"]
+    stablecoin = contract(sale.w3, "IERC20Metadata", pin["stablecoin"])
+    balance = read(stablecoin, at.number, "balanceOf", sale.address)
+    escrowed = read(sale, at.number, "stableEscrow")
     result = dict(status="FEE_SALE_STATUS", block=str(at.number), sale=sale.address, source=source.address,
+                  source_active=ctx["source_active"],
                   fee_token=pin["fee_token"], stablecoin=pin["stablecoin"], treasury=pin["treasury"],
                   authority=ctx["authority"].address, validator=ctx["validator"],
                   sell_bps=str(read(sale, at.number, "sellBps")), inventory=str(read(sale, at.number, "inventory")),
-                  stable_escrow=str(read(sale, at.number, "stableEscrow")),
+                  stable_escrow=str(escrowed), stable_balance=str(balance),
+                  stable_shortfall=str(max(0, escrowed - balance)),
                   operation_nonce=str(read(sale, at.number, "operationNonce")),
                   bid_count=str(read(sale, at.number, "bidCount")))
     if ctx["validator"] != policy.ZERO:
@@ -223,7 +229,17 @@ def _bid(w3, args, pin, ctx):
         return result
     if args.action == "cancel":
         _required(args, "bid")
-        return _transact(executor, args, sender, identifier, "target", "cancelBid", [number(args.bid)])
+        bid_id = number(args.bid)
+        result = _transact(executor, args, sender, identifier, "target", "cancelBid", [bid_id])
+        if result["status"] == "VERIFIED":
+            receipt = w3.eth.get_transaction_receipt(result["tx_hash"])
+            events = [row["args"] for row in sale.events.BidCancelled().process_receipt(receipt, errors=DISCARD)
+                      if row["address"] == sale.address]
+            if (len(events) != 1 or events[0]["id"] != bid_id or events[0]["buyer"] != sender
+                    or events[0]["stableAmount"] <= 0):
+                raise ValueError("FEE_SALE_BID_RECEIPT")
+            result.update(bid=str(bid_id), refunded_stable_amount=str(events[0]["stableAmount"]))
+        return result
     _required(args, "fee_amount", "stable_amount", "deadline")
     values = [number(args.fee_amount), number(args.stable_amount), number(args.deadline)]
     result = _transact(executor, args, sender, identifier, "target", "fundBid", values)
@@ -279,15 +295,18 @@ def main(argv=None):
     else:
         _required(args, "config")
         pin = policy.validate_pin(read_public(args.config))
-    w3 = Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 20}))
+    w3 = evm_web3(args.rpc, timeout=20)
     if str(w3.eth.chain_id) != pin["chain_id"]:
         raise ValueError("CHAIN_MISMATCH")
     at = read_block(w3, number(pin["confirmations"]))
-    bundle = ceremony_bundle(w3, pin["board"], pin["role"])
+    refund_context = args.action in ("status", "cancel")
+    options = {"legacy_dao_exit": True} if refund_context else {}
+    bundle = ceremony_bundle(w3, pin["board"], pin["role"], **options)
     if args.action in ("propose", "execute"):
         result = _governance(w3, args, pin, bundle, at)
     else:
-        ctx = policy.context(w3, bundle, pin, at.number, require_sale=args.action != "deploy-plan")
+        ctx = policy.context(w3, bundle, pin, at.number, require_sale=args.action != "deploy-plan",
+                             refund_context=refund_context)
         if args.action == "deploy-plan":
             result = _deployment(args, pin, bundle, ctx)
         elif args.action == "init":

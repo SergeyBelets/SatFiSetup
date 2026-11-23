@@ -7,6 +7,7 @@ import pytest
 from web3 import Web3
 
 from signer_agent.bootstrap import artifact, encode_args
+from signer_agent.bootstrap_formation import expected_formation
 from signer_agent.bootstrap_plan import build
 from signer_agent.bootstrap_system import bundle, manifest
 from signer_agent.onboarding import assemble, validate_invite, verify_profile, main
@@ -51,6 +52,17 @@ def test_signed_testnet_dkg_duration_is_configured_before_any_ceremony():
         build(dict(p, phase_duration="7200"))
 
 
+def test_federation_reservation_uses_the_signed_invitation_despite_local_extras():
+    invite = full_invite("31337", "regtest")
+    profile = assemble(invite, signed_enrollments(invite), "http://local.invalid")
+    changed = dict(profile, sessions=dict(invite["sessions"], evm_ceremony="ab" * 32),
+                   participants=list(reversed(invite["participants"])), threshold="2")
+    expected = {step["id"]: step for step in build(profile)["steps"]}
+    actual = {step["id"]: step for step in build(changed)["steps"]}
+    for key in ("reserve_federation_id", "reserve_confederation_id", "adopt_confederation"):
+        assert actual[key] == expected[key]
+
+
 
 @pytest.mark.parametrize("chain,network,backend", NETWORKS)
 @pytest.mark.parametrize("mode", ["create", "reuse"])
@@ -61,20 +73,27 @@ def test_full_graph_on_all_supported_network_pairs(chain, network, backend, mode
     p["onchain_board"] = address(90)
     steps = {s["id"]: s for s in build(p)["steps"]}
     order = list(steps)
-    assert order.index("federations") < order.index("reserve_federation_id") < order.index("adopt_federation")
-    reservation = steps["reserve_federation_id"]
-    assert reservation["contract"] == "federations" and reservation["method"] == "reserveFederationId"
-    assert reservation["args"] == [p["evm_ceremony"]["id"], invite["federation_id"]]
-    assert reservation["args"] == steps["adopt_federation"]["args"]
-    assert reservation["checks"] == [dict(contract="federations", method="reservedFederationSession",
-        args=[invite["federation_id"]], equals=p["evm_ceremony"]["id"])]
-    assert order.index("confederations") < order.index("reserve_confederation_id") < order.index("adopt_confederation")
-    reservation = steps["reserve_confederation_id"]
-    assert reservation["contract"] == "confederations" and reservation["method"] == "reserveConfederationId"
-    assert reservation["args"] == [p["conf_ceremony"]["id"], invite["confederation_id"]]
-    assert reservation["args"] == [steps["adopt_confederation"]["args"][0], steps["adopt_confederation"]["args"][-1]]
-    assert reservation["checks"] == [dict(contract="confederations", method="reservedConfederationSession",
-        args=[invite["confederation_id"]], equals=p["conf_ceremony"]["id"])]
+    formation = expected_formation(invite)
+    assert expected_formation(p) == formation
+    for kind in ("federation", "confederation"):
+        title = kind.capitalize()
+        target = kind + "s"
+        reserve = f"reserve_{kind}_id"
+        adoption = f"adopt_{kind}"
+        assert order.index(target) < order.index(reserve) < order.index(adoption)
+        reservation = steps[reserve]
+        terms = formation[kind]
+        session = Web3.to_hex(terms["session_id"])
+        digests = [Web3.to_hex(terms[key]) for key in ("formation_hash", "token_hash")]
+        assert reservation["contract"] == target and reservation["method"] == f"reserve{title}Id"
+        assert reservation["args"] == [session, terms["id"], *digests]
+        assert reservation["args"][:2] == [steps[adoption]["args"][0], steps[adoption]["args"][-1]]
+        assert reservation["checks"] == [
+            dict(contract=target, method=f"reserved{title}Session", args=[terms["id"]], equals=session),
+            dict(contract=target, method=f"reserved{title}Terms", args=[terms["id"]], equals=digests),
+        ]
+        assert steps[adoption]["checks"]
+        assert {"name", "symbol"} <= {c["method"] for c in steps[f"deploy_{kind}"]["checks"]}
     for name in ("family_root", "address_registry", "recipient_policy", "address_message_board", "incident_board",
                  "signing_board", "fee_reserve", "withdrawal_payments", "withdrawal_funding", "withdrawal_credits",
                  "ulr_treasury", "ulr_voting", "decisions", "fee_pipeline"):
@@ -255,9 +274,12 @@ def test_reusing_ulr_requires_explicit_existing_family_in_preparation(tmp_path):
     assert not output.exists()
 
 
-@pytest.mark.parametrize("example,backend", [("system-bootstrap-testnet.example.json", "relay"),
-    ("system-bootstrap-zk.example.json", "zk-state-v2")])
-def test_shipped_examples_match_the_current_family_build(example, backend):
+@pytest.mark.parametrize("example,network,backend", [
+    ("system-bootstrap-testnet.example.json", "testnet4", "relay"),
+    ("system-bootstrap-zk.example.json", "mainnet", "zk-state-v2"),
+    ("system-bootstrap-zk-testnet4.example.json", "testnet4", "zk-state-v2"),
+])
+def test_shipped_examples_match_the_current_family_build(example, network, backend):
     import hashlib
     from pathlib import Path
     from signer_agent.operations import canonical
@@ -268,6 +290,7 @@ def test_shipped_examples_match_the_current_family_build(example, backend):
         metadata = json.loads(metadata)
     expected = "0x" + hashlib.sha256(canonical({k: metadata[k] for k in ("compiler", "settings", "sources")}).encode()).hexdigest()
     assert policy["withdrawal_fee"]["derivation_source_hash"] == expected
-    p = full_invite(network="mainnet" if backend == "zk-state-v2" else "testnet4", backend=backend)
+    p = full_invite(network=network, backend=backend)
+    assert policy["withdrawal_fee"]["family_root"] == p["withdrawal_fee"]["family_root"]
     p.update(ulr=policy["ulr"], withdrawal_fee=policy["withdrawal_fee"])
     validate_invite(p)

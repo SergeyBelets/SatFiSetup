@@ -5,6 +5,10 @@ import "./IBitcoinAddressRegistry.sol";
 import "../core/BitcoinFundingParser.sol";
 import "./WithdrawalFeeTypes.sol";
 
+interface IDepositRecoveryBinding {
+    function recovery() external view returns (address);
+}
+
 /// @notice Common outpoint consumption for all deposit/reward modes in this deployment.
 contract BitcoinDepositRegistry {
     IPaymentSPV public immutable spv;
@@ -50,7 +54,9 @@ contract BitcoinDepositRegistry {
         _value(p.txid,vout,p.amount,p.scriptPubKey);walletOutput[key]=true;
     }
     mapping(bytes32 => bytes32) public backingScripts;
+    mapping(bytes32 => uint256) public backingByScript;
     mapping(address => bytes32) public poolScripts;
+    mapping(address => bytes32) public retiredPoolScripts;
     mapping(bytes32 => address) public scriptPools;
     mapping(bytes32 => bool) public consumed;
     IBitcoinAddressRegistry public addressRegistry;
@@ -61,6 +67,7 @@ contract BitcoinDepositRegistry {
     BackingOutpoint[] private backingOutpoints;
     mapping(bytes32 => uint256) private backingIndex;
     event AddressRegistryBound(address indexed registry);
+    event RecoveryScriptRegistered(address indexed pool, bytes32 indexed scriptHash);
 
     constructor(address relay, address auth, uint32 confirmations, address escrow) {
         require(escrow.code.length > 0, "escrow");
@@ -86,6 +93,26 @@ contract BitcoinDepositRegistry {
         nonce++;
         poolScripts[pool] = h;
         scriptPools[h] = pool;
+    }
+
+    /// @dev Reserve both the change-only successor and its separate sponsor namespace.
+    function registerRecoveryScript(address pool, bytes32 scriptHash, bytes32 sponsorHash) external {
+        require(msg.sender == spendRecorder && poolScripts[pool] != 0 && scriptHash != 0
+            && sponsorHash != 0 && sponsorHash != scriptHash
+            && scriptPools[scriptHash] == address(0) && feeScripts[scriptHash] == 0
+            && scriptPools[sponsorHash] == address(0) && feeScripts[sponsorHash] == 0, "recovery script");
+        scriptPools[scriptHash] = pool;
+        feeScripts[sponsorHash] = scriptHash;
+        emit RecoveryScriptRegistered(pool, scriptHash);
+    }
+
+    /// @dev The old namespace remains reserved for late paid obligations and historical change.
+    function activateRecoveryScript(address pool, bytes32 source, bytes32 successor) external {
+        require(msg.sender == IDepositRecoveryBinding(spendRecorder).recovery()
+            && source != 0 && source != successor && poolScripts[pool] == source && retiredPoolScripts[pool] == 0
+            && scriptPools[successor] == pool && backingByScript[source] == 0, "recovery activation");
+        retiredPoolScripts[pool] = source;
+        poolScripts[pool] = successor;
     }
 
     function getSetAddressRegistryOperationHash(address registry) public view returns (bytes32) {
@@ -124,6 +151,8 @@ contract BitcoinDepositRegistry {
     function _backing(bytes32 txid, uint32 vout, uint256 amount, bytes32 scriptHash) private {
         bytes32 key = keccak256(abi.encode(txid,vout)); uint256 old = backingSats[key];
         totalBackingSats = totalBackingSats - old + amount;
+        if (old != 0) backingByScript[backingScripts[key]] -= old;
+        if (amount != 0) backingByScript[scriptHash] += amount;
         if (old == 0 && amount != 0) {
             backingOutpoints.push(BackingOutpoint(txid,vout)); backingIndex[key] = backingOutpoints.length;
         } else if (old != 0 && amount == 0) {
@@ -144,6 +173,15 @@ contract BitcoinDepositRegistry {
 
     /// @notice Move outstanding principal to verified wallet change; miner fees cannot consume MP backing.
     function recordSpend(bytes calldata raw, uint256 burnedSats) external {
+        _recordSpend(raw, burnedSats, false, 0);
+    }
+
+    /// @notice Record a user-funded spend using the wallet outputs frozen by its escrow at bind.
+    function recordSpendWithChange(bytes calldata raw, uint256 burnedSats, uint32 changeOutputs) external {
+        _recordSpend(raw, burnedSats, true, changeOutputs);
+    }
+
+    function _recordSpend(bytes calldata raw, uint256 burnedSats, bool fixedChange, uint32 changeOutputs) private {
         require(msg.sender == spendRecorder, "recorder");
         (bytes32[] memory prev, uint32[] memory vouts) = BitcoinTxParser.parseAllInputs(raw);
         uint256 backing;
@@ -157,15 +195,16 @@ contract BitcoinDepositRegistry {
         uint256 remaining = backing - burnedSats;
         bytes32 txid = BitcoinTxParser.txId(raw);
         uint256 count = BitcoinTxParser.outputCount(raw);
-        require(count <= 32, "outputs");
+        require(count <= 32 && uint256(changeOutputs) >> count == 0, "outputs");
         for (uint32 i; i < count; i++) {
             (uint64 amount, bytes memory script) = BitcoinTxParser.outputAt(raw, i);
             _value(txid,i,amount,script);
-            if (scriptPools[keccak256(script)] != address(0)) {
+            bytes32 scriptHash = keccak256(script);
+            if (fixedChange ? changeOutputs & (uint32(1) << i) != 0 : scriptPools[scriptHash] != address(0)) {
                 bytes32 outputKey = keccak256(abi.encode(txid, i));
                 walletOutput[outputKey] = true;
                 uint256 assigned = amount < remaining ? amount : remaining;
-                _backing(txid,i,assigned,keccak256(script));
+                _backing(txid,i,assigned,scriptHash);
                 remaining -= assigned;
             }
         }
@@ -212,9 +251,11 @@ contract BitcoinDepositRegistry {
         );
         bytes memory script;
         (amount, script) = BitcoinTxParser.outputAt(raw, vout);
-        require(amount > 0 && keccak256(script) == poolScripts[msg.sender], "deposit output");
+        bytes32 scriptHash = keccak256(script);
+        require(amount > 0 && (scriptHash == poolScripts[msg.sender]
+            || !coinbase && scriptHash == retiredPoolScripts[msg.sender]), "deposit output");
         consumed[key] = true;
-        _backing(txid,vout,amount,keccak256(script));
+        _backing(txid,vout,amount,scriptHash);
         _value(txid,vout,amount,script);
     }
 
@@ -247,11 +288,12 @@ contract BitcoinDepositRegistry {
                 "transfer recycles backing");
         }
         (uint64 amount, bytes memory script) = BitcoinTxParser.outputAt(raw, vout);
-        require(keccak256(script) == poolScripts[msg.sender] && sats == amount,
+        bytes32 scriptHash = keccak256(script);
+        require((scriptHash == poolScripts[msg.sender] || scriptHash == retiredPoolScripts[msg.sender]) && sats == amount,
             "transfer output");
         consumed[key] = true;
         transferClaims[claim] = true;
-        _backing(txid, vout, sats, keccak256(script));
+        _backing(txid, vout, sats, scriptHash);
         _value(txid, vout, amount, script);
     }
 

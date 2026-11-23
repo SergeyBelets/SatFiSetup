@@ -44,7 +44,7 @@ The existing `CustodianValidator` supplies the current custodian set. `FROSTAuth
 
 `setDAOSigner` may select the owner's own address, a current custodian address, or another wallet that signs an EIP-712 `SignerConsent` message. Changing the signer does not move tokens or grant unstake/claim rights. A custodian-count vote resolves the signer from the custodian **principal**, never from the amount delegated by other users. One custodian principal and one signing wallet can each cast at most one vote per proposal.
 
-Claims use `claim(uint256[] days)` with strictly ascending days, at most 32 per transaction. `claimableReward(owner, days)` supports the same range for UI queries. Reward days become claimable only after a funded settlement. Small rounding remainders remain in reward escrow; they are not reassigned to another user.
+Claims use `claim(uint256[] days)` with strictly ascending days, at most 32 per transaction. `claimableReward(owner, days)` supports the same range for UI queries. Reward days become claimable only after a funded settlement. Reward and liquidity income claims check the exact debit and recipient credit. An inexact transfer reverts and preserves the claim. Small rounding remainders remain in reward escrow.
 
 ## Governance
 

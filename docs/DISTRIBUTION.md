@@ -75,7 +75,11 @@ python -m ops.package_distribution verify --archive /absolute/new/participant-so
 Внутри находятся явный список файлов и SHA256 каждого файла. Проверка запрещает
 proof-файлы, вложенные архивы, симлинки и изменения состава/байтов. Неизвестные
 новые untracked sources добавляются только явным `--extra-source`; проверьте их
-до выпуска. `source_revision` и `worktree_snapshot` не утверждают, что
+до выпуска. Для Testnet4 автоматически выбираются три точных имени
+публичных примеров. Конфиги с удалёнными RPC URL или URL с учётными данными
+отклоняются и при явном добавлении, и при проверке архива. Примеры используют
+символические подстановки или локальные RPC без учётных данных.
+`source_revision` и `worktree_snapshot` не утверждают, что
 незакоммиченные изменения уже прошли независимый review.
 
 `ops.prepare_release prepare` теперь по умолчанию создаёт такую поставку, без
@@ -144,7 +148,8 @@ proofs или старого SDK snapshot. В worker config укажите со�
 
 ## Рабочий переход у каждого участника
 
-У каждого свой identity, Core, worker config, каталог и budgets. Согласуйте
+При независимом расчёте на нескольких хостах у каждого worker свой identity,
+Core, конфигурация, каталог и бюджеты. Согласуйте
 chain ID, state contract, guest image и публичный before/after/journal одного
 перехода. Private input каждый получает из собственного Core/архива. Proof bytes
 разных запусков могут различаться; сравниваются проверенные публичные claims.
@@ -223,10 +228,17 @@ loop нужно явное `run --boundary all`; остальные участн
 
 ## Публичный архив перехода
 
+Создайте ZK state на EVM до первого расчёта. Возьмите подтверждённый
+`manifest.contracts.relay.address` при `AWAITING_BITCOIN_RELAY` с
+`bitcoin.reason=AWAITING_ZK_PROOF`. Рабочий конфиг требует реальный consumer.
+Для обычного нового CREATE выполните структурный `resume --defer-zk-freshness`
+и получите адреса consumers. `GRAPH_CONFIGURED_FRESHNESS_PENDING` оставляет
+денежный сценарий на паузе до Fresh. [Холодный старт](COLD_START.md#zk-первый-state-и-собственный-proof).
+
 На машине со своим worker и pinned native helper можно запустить отдельную
 подготовку. Она берёт запросы из локального inbox или heartbeat и фиксирует
-подготовленный переход. Для тяжёлого расчёта тот же оператор использует
-свой prover с закреплёнными инструментами и поручает ему сформировать архив.
+подготовленный переход. Для тяжёлого расчёта используйте мощный ПК с
+закреплённым локальным prover и экспортом ZIP.
 Если подготовка и расчёт идут на разных машинах, каждая готовит свой attempt
 из проверенных источников. ZIP служит проверке и не переносит полный witness
 или рабочее состояние prover.
@@ -234,16 +246,22 @@ loop нужно явное `run --boundary all`; остальные участн
 ```mermaid
 flowchart TD
     accTitle: Подготовка, proving и публичная проверка одного перехода
-    accDescr: Режим prepare готовит входы по локальным RPC. Prover рассчитывает seal и может отдать публичный ZIP. Получатель сверяет доказательство и EVM контекст, а публикация использует собственный результат publisher.
-    CORE["Свой архивный Bitcoin Core<br/>Закреплённый EVM state и policy"] --> PREP["Worker: run --boundary prepare<br/>Подготовить attempt и journal"]
+    accDescr: После CREATE берут фактический state из manifest. Если адресов consumers ещё нет, структурный resume с defer разворачивает их до proving. Затем prover вычисляет seal, а участники FROST проверяют ZIP через свои EVM RPC. Для Fresh publisher отправляет результат своего worker.
+    CREATE["CREATE state, adapter и verifier"] --> MAN["Фактический подтверждённый state<br/>Из partial manifest"]
+    MAN --> CONSUMERS{"Consumers уже развёрнуты?"}
+    CONSUMERS -->|"Нет"| DEFER["Структурный resume с defer<br/>Конфигурация есть, Fresh ожидается"]
+    CONSUMERS -->|"Да"| PREP
+    DEFER --> PREP["Worker: run --boundary prepare<br/>Подготовить attempt и journal"]
+    CORE["Свой архивный Core и signed policy"] --> PREP
     PREP --> PREVIEW["export-bundle --without-proof<br/>Manifest и journal"]
     PREP --> PROVE["Свой prover: run --boundary export<br/>STARK, succinct и Groth16"]
-    PROVE --> ZIP["Публичный ZIP<br/>Manifest, journal и seal"]
+    PROVE --> ZIP["Публичный ZIP для FROST review<br/>Manifest, journal и seal"]
     PREVIEW --> CHECK["Получатель: verify-bundle<br/>Проверить согласованный EVM граф"]
     ZIP --> CHECK
-    CHECK --> REVIEW["Read-only evidence для FROST review<br/>Состояние, свежесть и проверка seal"]
+    CHECK --> REVIEW["Подтверждённый EVM контекст<br/>Свежесть, проверка seal при наличии"]
     PROVE --> OWN["Свой local-result и origin record"]
     OWN --> PUB["Явный publish выбранного worker<br/>Повторная проверка актуальности"]
+    PUB --> FRESH["Достаточные переходы подтверждены, state Fresh<br/>Обычные resume и verify"]
 ```
 
 На машине с локально подготовленным attempt для разового вычисления и
@@ -280,7 +298,8 @@ frost-signer zk-worker verify-bundle --config "$REVIEW_CONFIG" \
 остаются в приватном worker directory.
 
 Для `REVIEW_CONFIG` достаточно JSON с полями `version: "1"`, `chain_id`,
-`evm_rpc`, `evm_confirmations`, `bitcoin_policy` и `zk_state`. Возьмите полную
+`evm_rpc`, `evm_confirmations`, `bitcoin_policy` и `zk_state`. Для проверки через
+два независимых RPC добавьте `evm_witness_rpc`. Возьмите полную
 политику из согласованного графа и свой EVM RPC, задайте файлу права `0600`.
 Для архива подготовки опустите `--require-proof`. Проверка работает через
 закреплённый EVM verifier без Bitcoin cookie, кошелька и prover.
@@ -296,6 +315,9 @@ state. При `onchain_halted=true` разберите остановку по �
 Она не выдаёт локальное происхождение чужому результату. До финансовой
 подписи сохраняются самостоятельные проверки FROST, включения транзакции,
 актуальности состояния и политики выбранного развёртывания.
+При одном расчёте публикует тот же worker на мощном ПК. Другой publisher
+использует собственный локальный proof. После Fresh завершите обычные
+`bootstrap resume` и `bootstrap verify` с исходным журналом оператора.
 [Режимы worker](ZK_SPV_WORKER.md#worker-modes-and-transition-archives).
 
 ## Собственный cache и восстановление

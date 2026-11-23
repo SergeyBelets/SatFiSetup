@@ -350,7 +350,12 @@ contract DeploymentFeeStagesTest is DeploymentStageFixture {
         bytes32 fedEpoch = keccak256("separate user federation DKG");
         _completeCeremony(fedEpoch, _founders(2), 2, keccak256("EVM_AUTH"), GX);
         vm.prank(broadcaster);
-        fed.reserveFederationId(fedEpoch, "paid-federation");
+        fed.reserveFederationId(
+            fedEpoch,
+            "paid-federation",
+            keccak256(abi.encode(_founders(2), uint256(2))),
+            keccak256(abi.encode("Paid federation", "PF"))
+        );
         uint256 payerBefore = token.balanceOf(address(0x100));
         vm.startPrank(address(0x100));
         fed.adoptFederationDKG(fedEpoch, "paid-federation");
@@ -363,7 +368,12 @@ contract DeploymentFeeStagesTest is DeploymentStageFixture {
         _completeCeremony(confEpoch, _roster(1, 1), 2, keccak256("EVM_AUTH"), GX);
         string[] memory ids = new string[](1); ids[0] = "paid-federation";
         vm.prank(broadcaster);
-        conf.reserveConfederationId(confEpoch, "paid-confederation");
+        conf.reserveConfederationId(
+            confEpoch,
+            "paid-confederation",
+            keccak256(abi.encode(uint8(0), ids, _custodians(1), uint256(2), uint256(1))),
+            keccak256(abi.encode("Paid confederation", "PC"))
+        );
         vm.startPrank(address(0x100));
         conf.adoptConfederationDKG(confEpoch, ids, _custodians(1), 2, 1, "paid-confederation");
         token.approve(address(conf), FEE);

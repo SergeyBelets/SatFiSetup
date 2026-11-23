@@ -94,6 +94,7 @@ def test_staged_report_binds_canonical_order_and_latest_seal(monkeypatch):
     observations = dict(
         nextSettlementDay=2, processing=False, MAX_EXPENSES=128, stagedExpenseCount=0, stagedExpensePosition=0,
         stagedExpenseCommitment=bytes(32), rewardTokens=[usd], dayIncome=0, expenseRecorded=False,
+        settlementDayLimit=2**256 - 1,
     )
     first, last = ["0x" + bytes([byte]).hex() * 32 for byte in (1, 2)]
 
@@ -132,3 +133,36 @@ def test_staged_report_binds_canonical_order_and_latest_seal(monkeypatch):
     _, seal = report.prepare(w3, address, normal, block)
     report.review(w3, seal, 1, block.number)
     assert seal["operation_hash"] != old_seal["operation_hash"]
+    observations["settlementDayLimit"] = 3
+    report.review(w3, seal, 1, block.number)
+    observations["settlementDayLimit"] = 2
+    with pytest.raises(ValueError, match="DAO_REPORT_DAY"):
+        report.review(w3, seal, 1, block.number)
+    with pytest.raises(ValueError, match="DAO_REPORT_DAY"):
+        report.review(w3, stage, 1, block.number)
+
+
+def test_closing_rate_review_requires_all_assets_current_utc_day_and_outstanding_debt(monkeypatch):
+    share, usd = [Web3.to_checksum_address(f"0x{i:040x}") for i in (1, 2)]
+    block = SimpleNamespace(number=19, timestamp=10 * 86400)
+    node = object()
+    state = dict(settlementDayLimit=8, nextSettlementDay=8, processing=False, debtHead=1, debtTail=3,
+                 closingRatesDay=9, rewardTokens=[share, usd])
+
+    def read(target, number, method):
+        assert target is node and number == block.number
+        return state[method]
+
+    monkeypatch.setattr(report, "_read", read)
+    exact = [10, [share, usd], [10**18, 2 * 10**18]]
+    report.validate_closing_rates(node, block, exact)
+    for supplied in ([9, *exact[1:]], [10, [usd, share], exact[2]], [10, exact[1], [1]],
+                     [10, exact[1], [0, 2]], [10, exact[1], [2**128, 2]]):
+        with pytest.raises(ValueError, match="CONFEDERATION_DAO_CLOSING_RATES"):
+            report.validate_closing_rates(node, block, supplied)
+    for key, value in (("closingRatesDay", 10), ("nextSettlementDay", 7), ("processing", True), ("debtHead", 3)):
+        original = state[key]
+        state[key] = value
+        with pytest.raises(ValueError, match="CONFEDERATION_DAO_CLOSING_RATES"):
+            report.validate_closing_rates(node, block, exact)
+        state[key] = original

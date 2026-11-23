@@ -21,6 +21,8 @@
 Там же описан скрытый локальный импорт своего EVM-ключа с проверкой адреса и
 правами файла `0600`. Не используйте публично известные Anvil-ключи.
 Подготовьте отдельный каталог участника с правами `0700`.
+Проверьте `native_frost_sha256` через `python ops/bootstrap_host.py check`.
+Mainnet требует локальный пин FROST-бинарника до передачи секретных данных.
 
 Каждый задаёт собственные локальные значения:
 
@@ -180,18 +182,27 @@ fingerprint и новые enrollment. Повтор с тем же journal про
 
 ## 4. Каждый друг обнаруживает приглашение и вступает
 
-Alice также выполняет эти действия как участник:
+Все участники, включая Alice, подготавливают журнал на независимом томе
+и конфиг HTTPS-якоря на отдельном хосте до первого enrollment. Пример
+включает защиту от общего отката локальных томов. Сохраните доступ к тем же
+файлам для повторов и работы подписанта.
+[Настройка независимого журнала](SIGNING_PROTOCOL.md#independent-nonce-ledger) ·
+[Подготовка HTTPS-якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
 
 ```sh
 frost-signer setup discover --operator "$ALICE" --rpc "$RPC"
 export BOARD='<board выбранного опубликованного приглашения>'
 export BOARD_BLOCK='<поле block выбранного результата discover>'
 export FINGERPRINT='<его проверенный fingerprint>'
+export NONCE_LEDGER_DIR='<абсолютный путь на отдельном томе>'
+export SATOSHIFI_NONCE_ANCHOR_CONFIG='<абсолютный путь к личному JSON с правами 0600>'
+install -d -m 700 "$NONCE_LEDGER_DIR"
 frost-signer setup join-chain --board "$BOARD" --rpc "$RPC" \
   --board-creation-block "$BOARD_BLOCK" \
   --accept-fingerprint "$FINGERPRINT" --identity-file "$IDENTITY" \
   --directory "$PARTICIPANT_DIR" \
-  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE"
+  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE" \
+  --nonce-ledger-dir "$NONCE_LEDGER_DIR" --nonce-anchor-config "$SATOSHIFI_NONCE_ANCHOR_CONFIG"
 frost-signer setup status --board "$BOARD" --rpc "$RPC" \
   --board-creation-block "$BOARD_BLOCK"
 ```

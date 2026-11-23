@@ -15,6 +15,7 @@
   "directory": "/REPLACE/private/spv-transport",
   "max_messages_per_poll": "16",
   "max_pending_messages": "4096",
+  "history_max_bytes": "134217728",
   "max_publish_attempts": "8",
   "retry_backoff_seconds": "60",
   "max_tx_gas": "2000000",

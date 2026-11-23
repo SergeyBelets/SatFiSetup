@@ -35,7 +35,7 @@ def dispatch(a,manifest,key,registry,state,graph,contracts,target,args,block):
     address.read(r,block.number,'requireCustody',generation);address.read(r,'latest','requireCustody',generation)
     trust_guard(manifest,registry,state,graph,mode='BASE_MINT')
     from .bitcoin_funding import consumer_readiness
-    readiness=consumer_readiness(a,graph,bitcoin,target,args)
+    readiness=consumer_readiness(a,graph,bitcoin,target,args,block)
     if readiness and readiness['status']!='READY':return dict(status='AWAITING_ZK_STATE',spv=readiness)
     deadline=decimal(str(a.deadline),positive=True)
     reference=admission.claim_id(target.address,*args[:2])
@@ -54,7 +54,8 @@ def dispatch(a,manifest,key,registry,state,graph,contracts,target,args,block):
     block,cg,_=review()
     with state.exclusive():
         claim=address.read(board,block.number,'getClaim',reference)
-        if claim[4] and (int(claim[4])!=deadline or int(address.read(board,block.number,'claimModes',reference))!=1
+        if claim[4] and (int(address.read(board,block.number,'attempts',claim[6])[3])!=deadline
+                or int(address.read(board,block.number,'claimModes',reference))!=1
                 or Bootstrap.wire(list(claim[:4]))!=Bootstrap.wire(args)):
             raise ValueError('BTC_MINT_ECONOMIC_INTENT_CHANGED')
         if a.action=='btc-mint-retry':

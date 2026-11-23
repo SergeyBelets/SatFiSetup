@@ -94,17 +94,8 @@ def prepare(tmp_path, monkeypatch):
             get_balance=lambda *_args, **_kwargs: 10**18,
             get_transaction_count=lambda *_: 211 if pending else 212))
 
-        class FixtureWeb3:
-            HTTPProvider = staticmethod(lambda *args, **kwargs: None)
-            keccak = staticmethod(Web3.keccak)
-            to_checksum_address = staticmethod(Web3.to_checksum_address)
-            to_hex = staticmethod(Web3.to_hex)
-
-            def __new__(cls, *args, **kwargs):
-                return w3
-
-        monkeypatch.setattr(legacy, "Web3", FixtureWeb3)
-        monkeypatch.setattr(bootstrap_replacement, "Web3", FixtureWeb3)
+        monkeypatch.setattr(legacy, "evm_web3", lambda *a, **kw: w3)
+        monkeypatch.setattr(bootstrap_replacement, "evm_web3", lambda *a, **kw: w3)
         monkeypatch.setattr(legacy, "artifact", lambda _: compiled)
         monkeypatch.setattr(bitcoin_trust, "artifact", lambda _: compiled)
         monkeypatch.setattr(finalization_recovery, "artifact", lambda _: compiled)

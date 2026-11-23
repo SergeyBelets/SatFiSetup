@@ -1,18 +1,13 @@
 """Preparation files may contain local RPC credentials; summaries must not."""
 import json
 from types import SimpleNamespace as NS
-from web3 import Web3
 from signer_agent import family_registry_cli as cli
 from test_family_registry_policy import family_policy,registered_env,delivery
 
 
 def test_enrollment_profile_is_private_and_stdout_has_no_rpc_credentials(family_policy,tmp_path,monkeypatch,capsys):
     f=family_policy
-    class W3:
-        HTTPProvider=staticmethod(lambda *args,**kwargs:None)
-        to_checksum_address=staticmethod(Web3.to_checksum_address)
-        def __new__(cls,*args,**kwargs):return f.e.w3
-    monkeypatch.setattr(cli,'Web3',W3)
+    monkeypatch.setattr(cli, 'evm_web3', lambda *a, **kw: f.e.w3)
     monkeypatch.setattr(cli,'origin',lambda *args:(NS(number=20),dict(onboarding=dict(invitation=dict(evm_confirmations='1'))),'fingerprint'))
     monkeypatch.setattr(cli,'Catalog',lambda **kwargs:NS())
     monkeypatch.setattr(cli.policy,'load_pin',lambda *args:f.p)

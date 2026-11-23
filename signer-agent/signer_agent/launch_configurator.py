@@ -10,7 +10,7 @@ import time
 
 from web3 import Web3
 from .launch_economics import DEFAULTS, economics, encoded, integer, units
-from .bootstrap_tokens import validate as token_metadata
+from .bootstrap_tokens import require_literal, validate as token_metadata
 from .launch_rpc import REMOTE_PROFILE, PreflightError, check_rpc
 from .operations import public_data
 from .safe_errors import DiagnosticArgumentParser, emit_debug
@@ -33,6 +33,7 @@ def defaults():
     return dict(version='1',ethereum_network='sepolia',bitcoin_network='testnet4',bitcoin_backend='relay',
         rpc_profile='manual',
         income_model='legacy',default_miner_fee_sats=None,
+        bitcoin_recovery=None,
         deployment_mode='create',deployment_id='project-v1',bitcoin_confirmations='6',evm_confirmations='1',
         evm_discovery_from_block=None,bitcoin_watch_start_height='0',
         token_metadata=names,economics=deepcopy(DEFAULTS),wrap_fee_bps='100',unwrap_fee_bps='100',
@@ -53,6 +54,7 @@ def validate(value,*,complete=False):
         c.setdefault('rpc_profile','manual')
         c.setdefault('income_model','legacy')
         c.setdefault('default_miner_fee_sats',None)
+        c.setdefault('bitcoin_recovery',None)
     if not isinstance(c,dict) or set(c)!=set(defaults()) or c['version']!='1':raise ValueError('LAUNCH_CONFIG_SCHEMA')
     if c['ethereum_network'] not in CHAINS or c['bitcoin_network'] not in ('mainnet','testnet4','regtest') or c['bitcoin_backend'] not in ('relay','zk-state-v2'):
         raise ValueError('LAUNCH_NETWORK_PAIR')
@@ -65,8 +67,14 @@ def validate(value,*,complete=False):
     if in_kind and c['default_miner_fee_sats'] is not None:
         integer(c['default_miner_fee_sats'], 1, 21_000_000 * 10**8)
     if c['deployment_mode'] not in ('create','reuse'):raise ValueError('LAUNCH_DEPLOYMENT_MODE')
-    if not isinstance(c['deployment_id'],str) or not c['deployment_id'].strip() or len(c['deployment_id'].encode())>128:raise ValueError('LAUNCH_DEPLOYMENT_ID')
+    require_literal(c['deployment_id'], 'LAUNCH_DEPLOYMENT_ID')
+    if not c['deployment_id'].strip() or len(c['deployment_id'].encode())>128:raise ValueError('LAUNCH_DEPLOYMENT_ID')
     integer(c['bitcoin_confirmations'],6,2**32-1)
+    if c['bitcoin_recovery'] is not None:
+        from .bitcoin_recovery_policy import validate as validate_recovery
+        if not in_kind:
+            raise ValueError('BTC_RECOVERY_NATIVE_S_ENROLLMENT')
+        validate_recovery(c['bitcoin_recovery'], payment_depth=int(c['bitcoin_confirmations']))
     integer(c['evm_confirmations'],12 if c['ethereum_network']=='mainnet' else 1,256)
     if c['evm_discovery_from_block'] is not None:
         try:
@@ -189,6 +197,8 @@ def build(value,output):
         up=write('ulr-policy.json',ulr);names=write('token-metadata.json',c['token_metadata'])
         custody=write('bitcoin-custody.json',dict(version='1',mode='custodians',threshold=c['custody_threshold'],sources=c['custody_sources']))
         selected_policy = ['--ulr-policy',up,'--token-metadata',names,'--bitcoin-custody-policy',custody]
+        if c['bitcoin_recovery'] is not None:
+            selected_policy += ['--bitcoin-recovery-policy',write('bitcoin-recovery.json',c['bitcoin_recovery'])]
         if not in_kind:
             args=[*selected_policy,'--qualification-report',c['qualification_report'],
                 '--service-policy',c['service_policy_file'],'--protocol-fee-cap-sats',c['protocol_fee_cap_sats'],

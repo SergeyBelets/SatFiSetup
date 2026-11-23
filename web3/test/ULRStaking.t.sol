@@ -20,6 +20,10 @@ contract ULRRewardTestToken is ERC20 {
         _mint(recipient, amount);
     }
 
+    function reduceBalance(address owner, uint256 amount) external {
+        _burn(owner, amount);
+    }
+
     function setTax(bool enabled) external {
         taxEnabled = enabled;
     }
@@ -116,6 +120,48 @@ contract ULRStakingTest is Test {
         assertEq(usd.balanceOf(bob), 900e6);
         assertEq(staking.rewardLiability(), 0);
         assertEq(ulr.balanceOf(address(staking)), staking.totalStaked());
+    }
+
+    function test_RewardDeficitDoesNotAdvanceClaimsOrBlockPrincipalWithdrawal() public {
+        _stake(alice, 100 ether);
+        _stake(bob, 100 ether);
+        _finishDay();
+        _fund(sourceA, 200e6);
+        usd.reduceBalance(address(staking), 20e6);
+
+        vm.expectRevert(ULRStaking.InsufficientRewardCoverage.selector);
+        _claim(alice);
+        assertEq(usd.balanceOf(alice), 0);
+        assertEq(staking.claimedReward(alice, day), 0);
+        assertEq(staking.rewardLiability(), 200e6);
+
+        uint256 principalBefore = ulr.balanceOf(alice);
+        vm.prank(alice);
+        staking.unstake(100 ether);
+        assertEq(ulr.balanceOf(alice), principalBefore + 100 ether);
+
+        vm.prank(sourceB);
+        usd.transfer(address(staking), 20e6);
+        assertEq(staking.dayReward(day), 200e6);
+        assertEq(_claim(alice), 100e6);
+        assertEq(_claim(bob), 100e6);
+        assertEq(staking.rewardLiability(), 0);
+    }
+
+    function test_RewardDeficitRejectsNewFundingAtomically() public {
+        _stake(alice, 100 ether);
+        _finishDay();
+        _fund(sourceA, 200e6);
+        usd.reduceBalance(address(staking), 20e6);
+        uint256 beforeBalance = usd.balanceOf(sourceB);
+
+        vm.expectRevert(ULRStaking.InsufficientRewardCoverage.selector);
+        _fund(sourceB, 100e6);
+        assertEq(staking.sourceDayFunding(day, sourceB), 0);
+        assertEq(staking.dayReward(day), 200e6);
+        assertEq(staking.rewardLiability(), 200e6);
+        assertEq(usd.balanceOf(sourceB), beforeBalance);
+        assertEq(usd.balanceOf(address(staking)), 180e6);
     }
 
     function test_LateSourceAndRepeatedTopUpsRemainClaimableAfterUnstake() public {

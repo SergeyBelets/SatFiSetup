@@ -3,6 +3,7 @@
 import json
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 from .bootstrap import Bootstrap, artifact, encode_args
 from .onboarding import read_private
 from .onchain_transport import board_at, assembled_profile
@@ -10,7 +11,7 @@ from .onchain_transport import board_at, assembled_profile
 
 ULR_METHODS = {
     'ULRCustodianSnapshots': {'getEnrollTreasuryOperationHash'},
-    'ULRConfederationTreasury': {'getSpendOperationHash'},
+    'ULRConfederationTreasury': {'getSpendOperationHash', 'getRecoverInactiveOperationHash'},
     'CustodianValidator': {'getBindCandidateStakingOperationHash','getAddCustodianOperationHash','getRemoveCustodianOperationHash'},
     'CustodianDAODecisionBoard': {'getCreateOperationHash'},
 }
@@ -32,13 +33,15 @@ def ulr_context(w3, intent, board_address, at, pin_file=None):
     reviewed=policy.review(w3,intent,bundle,at,pin)
     treasury=(reviewed['arguments'][2] if kind=='ULRCustodianSnapshots' else intent['target']
         if kind=='ULRConfederationTreasury' else intent['ulr_treasury'])
-    *_,conf=policy.treasury_context(w3,pin,treasury,at)
+    recovery = kind == 'ULRConfederationTreasury' and intent['hash_method'] == policy.INACTIVE_RECOVERY_METHOD
+    *_,conf=policy.treasury_context(w3,pin,treasury,at,require_active=not recovery,
+                                  legacy_factory=kind == 'ULRConfederationTreasury')
     if reviewed['authority']!=conf[7]:raise ValueError('ULR_SIGNING_AUTHORITY')
     return conf[7],conf[8],reviewed
 
 
 def approve(a):
-    w3 = Web3(Web3.HTTPProvider(a.rpc))
+    w3 = evm_web3(a.rpc)
     board = board_at(w3, a.board)
     profile = assembled_profile(w3, a.board)
     from .evm_network import read_block

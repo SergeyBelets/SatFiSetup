@@ -2,13 +2,24 @@
 
 В холодном старте и конфигураторе описаны источники USD для `create` и `reuse`.
 Отдельная схема показывает, где bootstrap выпускает TUSD и где оператор
-финансирует конвертер и APY переводом. В индексе собраны 75 схем на 37 страницах.
+финансирует конвертер и APY переводом. Актуальные Mermaid, SVG и PNG перечислены в индексе.
 [Холодный старт](COLD_START.md#2-что-подготовить-и-кому) ·
 [Подготовка TUSD](NETWORKS_AND_AUTOMATION.md#тестовый-usd-какие-режимы-и-как-настроить) ·
 [Индекс схем](DIAGRAMS.md).
 
 [Права в контрактах](CONTRACT_PERMISSIONS.md) описывают проверенные ограничения
 в графе ULR, NFT и Bitcoin и полномочия, остающиеся у оператора после запуска.
+
+## Текущий аудит безопасности и экономики
+
+| Язык | Отчёт |
+| --- | --- |
+| Русский | [Markdown](audit/SatoshiFi_security_audit_2026-11-23.md) · [PDF SmartState](../output/pdf/SatoshiFi_security_audit_2026-11-23.pdf) |
+| English | [Markdown](audit/SatoshiFi_security_audit_2026-11-23_EN.md) · [SmartState PDF](../output/pdf/SatoshiFi_security_audit_2026-11-23_EN.pdf) |
+
+PDF и экспорты схем публикуются в полном Git-репозитории. Для тестового запуска коллеги используют [исходную поставку](DISTRIBUTION.md).
+
+## Руководства и предыдущие проверки
 
 [Проверка границ подписи, proving и provenance от 12 ноября](SECURITY_LOGIC_REVIEW_2026_11_03.md#повторная-проверка-12-ноября-2026)
 описывает усиление confirmations без смены журнала, ограничения CUDA и
@@ -50,7 +61,7 @@ bootstrap для публичного Bitcoin и regtest разделены че
 дополнительный стартовый APY из собственного USD-бюджета.
 
 Для ZK с тестовыми BTC используйте новый [порядок Bitcoin testnet4 + Sepolia](ZK_TESTNET4_SEPOLIA.md):
-отдельные pinned guest/host, policy V2 и собственные proofs каждого участника.
+отдельные pinned guest/host, policy V2 и проверка рабочего proof для нового state.
 
 [Проверка логики и разграничения прав, 3 ноября 2026](SECURITY_LOGIC_REVIEW_2026_11_03.md):
 открытые находки Docker/API, риск времени казначейских выплат и локальные воспроизведения.
@@ -60,8 +71,10 @@ bootstrap для публичного Bitcoin и regtest разделены че
 bootstrap, общий root и новая конфедерация. [Общий runner тестов](SYSTEM_TEST_MODES.md).
 [Карта готовности, схем и входных данных](LAUNCH_READINESS.md) отличает готовые
 шаблоны от реальных bindings и личных данных будущего запуска.
-[Поставка участникам](DISTRIBUTION.md) исключает готовые ZK proofs: каждый сам
-считает рабочие переходы. [Linux/WSL2 x86-64 prover](ZK_PROVER_LINUX.md)
+[Поставка участникам](DISTRIBUTION.md) исключает готовые ZK proofs. Рабочий
+переход рассчитывает выбранный prover для развёрнутого state. Остальные
+участники проверяют публичный ZIP через собственные RPC или повторяют расчёт.
+[Linux/WSL2 x86-64 prover](ZK_PROVER_LINUX.md)
 использует отдельные pinned tools и bubblewrap/seccomp; macOS arm64 сохраняет
 прежний backend. Полный fresh-proof прогон и физический WSL2 пока не подтверждены.
 [Коллегам: начало тестов](PEER_TESTING.md) — короткий smoke без правки кода,
@@ -259,8 +272,9 @@ External issuer, proxy upgrade and oracle trust remain visible deployment assump
 public. Signing-state/nonce-journal rollback must not be treated as recovery.
 
 For deployment, the account that deploys each factory reserves its entity ID
-for the corresponding EVM_AUTH session. V1 adoption requires the reserved pair
-and the completed canonical DKG result. Subsequent approvals use exact target
+for an EVM_AUTH session and commits the formation and share-token metadata.
+Adoption checks the formation against the reservation and the canonical DKG
+result. Deployment checks the reserved token name and symbol. Subsequent approvals use exact target
 operation hashes, enforced signing sessions and independently verified bindings.
 [Factory deployment workflow](FEDERATION_CONFEDERATION_SETUP.md).
 The current three-friend custody profile requires only Bob/Carol for monetary

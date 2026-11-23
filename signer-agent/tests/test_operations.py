@@ -1,12 +1,12 @@
 import hashlib, json, threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from urllib.parse import quote
-from http.server import ThreadingHTTPServer
 import pytest
 from signer_agent.operations import Journal, OperationJournal, public_data
-from signer_agent.operational_api import handler
+from signer_agent.operational_api import OperationalHTTPServer, handler
 from signer_agent.bootstrap import encode_args
 
 
@@ -43,6 +43,59 @@ def test_journal_reads_each_view_in_one_connection(tmp_path, monkeypatch):
     assert len(opens) == 3
 
 
+def test_indexer_distinguishes_missing_blocks_and_bounds_confirmed_rollback(tmp_path):
+    from types import SimpleNamespace
+    from hexbytes import HexBytes
+    from web3.exceptions import BlockNotFound
+    from signer_agent.indexer import Indexer
+
+    journal = Journal(tmp_path / "index.sqlite")
+    headers = {height: HexBytes(bytes([height]) * 32) for height in range(1, 5)}
+
+    def get_block(height):
+        if height not in headers:
+            raise BlockNotFound("block temporarily unavailable")
+        return SimpleNamespace(number=height, hash=headers[height])
+
+    def get_logs(query):
+        # RPC observation must run outside the indexer's write transaction.
+        with journal.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+        height = query["fromBlock"]
+        digest = headers[height]
+        return [SimpleNamespace(blockHash=digest, transactionHash=digest, logIndex=0,
+                                address="0x" + "11" * 20, topics=[], data=HexBytes("0x"))]
+
+    eth = SimpleNamespace(chain_id=31337, block_number=4, get_block=get_block, get_logs=get_logs)
+    index = Indexer(SimpleNamespace(eth=eth), journal, 31337)
+
+    def canonical_heights():
+        with journal.db() as db:
+            return [row[0] for row in db.execute(
+                "SELECT height FROM indexed_logs WHERE canonical=1 ORDER BY height")]
+
+    assert index.poll([], 1, confirmations=1, limit=4)["checkpoint"] == "4"
+    eth.block_number = 3
+    assert index.poll([], 1, confirmations=1)["status"] == "AWAITING_EVM_RPC"
+    eth.block_number = 5
+    headers[5] = HexBytes(bytes([5]) * 32)
+    headers.pop(4)
+    assert index.poll([], 1, confirmations=1)["status"] == "AWAITING_EVM_RPC"
+    assert canonical_heights() == [1, 2, 3, 4]
+
+    for height in range(2, 5):
+        headers[height] = HexBytes(bytes([height + 32]) * 32)
+    assert index.poll([], 1, confirmations=1, limit=2) == {
+        "status": "RECOVERY_REQUIRED", "checkpoint": "2", "lag": "3",
+    }
+    assert canonical_heights() == [1, 2]
+    assert index.poll([], 1, confirmations=1, limit=2)["checkpoint"] == "2"
+    assert index.poll([], 1, confirmations=1, limit=4)["checkpoint"] == "5"
+    assert canonical_heights() == [1, 2, 3, 4, 5]
+    with journal.db() as db:
+        assert db.execute("SELECT COUNT(*) FROM indexed_logs WHERE canonical=0").fetchone()[0] == 3
+
+
 def test_api_has_roles_no_export_and_string_amounts(tmp_path):
     tokens = {"read": "reader", "write": "operator"}
     policy = {
@@ -62,7 +115,7 @@ def test_api_has_roles_no_export_and_string_amounts(tmp_path):
     }
     policy["actions"]["claim-other"] = dict(policy["actions"]["claim"], deployment="other")
     journal = Journal(tmp_path / "ops.sqlite")
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler(policy, journal))
+    server = OperationalHTTPServer(("127.0.0.1", 0), handler(policy, journal))
     worker = threading.Thread(target=server.serve_forever, daemon=True)
     worker.start()
 
@@ -138,6 +191,100 @@ def test_api_has_roles_no_export_and_string_amounts(tmp_path):
         worker.join()
 
 
+def test_http_request_input_uses_one_deadline_and_byte_budget(monkeypatch):
+    from types import SimpleNamespace as NS
+    from signer_agent import operational_api as api
+
+    now = [0]
+    monkeypatch.setattr(api, "monotonic", lambda: now[0])
+    monkeypatch.setattr(api, "HTTP_REQUEST_LIMIT", 4)
+    timeouts, sizes = [], []
+
+    def receive(buffer, size):
+        sizes.append(size)
+        buffer[:size] = b"x" * size
+        return size
+
+    reader = api.RequestInput(NS(settimeout=timeouts.append, recv_into=receive))
+    assert reader.readinto(bytearray(3)) == 3
+    now[0] = api.HTTP_REQUEST_READ_SECONDS - 1
+    assert reader.readinto(bytearray(3)) == 1
+    assert timeouts[2] == 1
+    assert sizes == [3, 1]
+    with pytest.raises(api.RequestLimitExceeded):
+        reader.readinto(bytearray(1))
+    reader = api.RequestInput(NS(settimeout=timeouts.append, recv_into=receive))
+    now[0] += api.HTTP_REQUEST_READ_SECONDS
+    with pytest.raises(TimeoutError):
+        reader.readinto(bytearray(1))
+    assert sizes == [3, 1]
+
+
+def test_http_server_rejects_work_above_connection_limit(tmp_path, monkeypatch):
+    from signer_agent import operational_api as api
+
+    monkeypatch.setattr(api, "HTTP_CONNECTION_LIMIT", 1)
+    entered, finished = threading.Event(), threading.Event()
+    journal = Journal(tmp_path / "ops.sqlite")
+
+    class FirstRequest(handler({"principals": []}, journal)):
+        def do_GET(self):
+            entered.set()
+            if finished.wait(timeout=3):
+                super().do_GET()
+
+    with OperationalHTTPServer(("127.0.0.1", 0), FirstRequest) as server:
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        url = f"http://127.0.0.1:{server.server_port}/health"
+
+        def status():
+            with urlopen(url, timeout=4) as response:
+                return response.status
+
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                response = pool.submit(status)
+                try:
+                    assert entered.wait(timeout=2)
+                    with pytest.raises(HTTPError) as overloaded:
+                        status()
+                    assert overloaded.value.code == 503
+                    assert overloaded.value.headers["Retry-After"] == "1"
+                    overloaded.value.close()
+                finally:
+                    finished.set()
+                assert response.result(timeout=2) == 200
+            assert server._connections.acquire(timeout=2)
+            server._connections.release()
+            assert status() == 200
+        finally:
+            server.shutdown()
+            worker.join()
+
+
+def test_http_post_validates_framing_before_preparing_an_operation(tmp_path):
+    from email.message import Message
+    from io import BytesIO
+
+    api = handler({"principals": []}, Journal(tmp_path / "ops.sqlite"))
+    request = api.__new__(api)
+    request.path = "/v1/operations"
+    request.role = lambda: "operator"
+    request.reply = lambda status, result: (status, result)
+    request.headers = Message()
+    request.headers.add_header("Content-Length", "10")
+    request.headers.add_header("Content-Length", "10")
+    assert request.do_POST() == (400, {"error": "REQUEST_BODY_FRAMING"})
+    del request.headers["Content-Length"]
+    request.headers.add_header("Transfer-Encoding", "chunked")
+    assert request.do_POST() == (400, {"error": "REQUEST_BODY_FRAMING"})
+    del request.headers["Transfer-Encoding"]
+    request.headers.add_header("Content-Length", "10")
+    request.rfile = BytesIO(b"{}")
+    assert request.do_POST() == (400, {"error": "INVALID_REQUEST"})
+
+
 def test_migrate_api_records_preserves_id_and_status_and_releases_old_key(tmp_path):
     journal = Journal(tmp_path / "ops.sqlite")
     key = "hidden:step"
@@ -207,6 +354,62 @@ def test_api_execution_uses_separate_state_and_legacy_retry_keeps_binding(tmp_pa
         execution_profile(journal, operation, base, {"staking": {"artifact": "Different"}})
 
 
+def test_api_signed_receipt_can_be_observed_without_bitcoin_or_signer(tmp_path, monkeypatch):
+    from types import SimpleNamespace as NS
+
+    from eth_account import Account
+    from hexbytes import HexBytes
+    from web3 import Web3
+
+    from signer_agent import operation_worker as worker
+
+    journal = Journal(tmp_path / "ops.sqlite")
+    requests = OperationJournal(journal.path)
+    spec = dict(artifact="ULRStaking", contract="staking", method="claim", deployment="base")
+    base = dict(deployment_id="base", mode="backed", chain_id="11155111",
+                bitcoin_network="testnet4", steps=[dict(kind="bitcoin_ready")])
+    journal.put("base", dict(profile=base))
+    recipient = "0x" + "11" * 20
+    code = bytes([0x60, 0])
+    contracts = dict(staking=dict(artifact="ULRStaking", address=recipient, runtime_hash=Web3.keccak(code).hex()))
+    journal.update("base", "VERIFIED", dict(contracts=contracts))
+    requests.put("op", dict(action="claim", args=[["100"]], spec=spec))
+    operation = requests.find("op", ["base"])
+    state, profile = worker.execution_profile(journal, operation, base, contracts)
+    execution = profile["deployment_id"]
+    step = profile["steps"][0]
+    source = Journal(state)
+    source.put(execution, dict(profile=profile, version="1"))
+    source.put(execution + ":execute", step)
+    calldata = Web3.keccak(text="claim(uint256[])")[:4] + Web3().codec.encode(["uint256[]"], [[100]])
+    signed = Account.create().sign_transaction(dict(to=recipient, data=calldata, value=0, nonce=4, gas=80_000,
+                                                    gasPrice=1, chainId=11155111))
+    source.update(execution + ":execute", "BROADCAST",
+                  dict(tx_hash=signed.hash.hex(), raw_transaction=signed.raw_transaction.hex(), nonce="4"))
+    checkpoint = HexBytes(bytes([9]) * 32)
+    receipt = NS(transactionHash=signed.hash, blockNumber=9, blockHash=checkpoint, status=1)
+    flags = dict(code=code, calldata=calldata)
+    http = NS(get_transaction_receipt=lambda _txid: receipt,
+              get_block=lambda h: NS(number=10 if h == "latest" else h, hash=checkpoint),
+              get_code=lambda _address, **_options: flags["code"], chain_id=11155111)
+    runner = NS(w3=NS(eth=http), evm_confirmations=2,
+                fn=lambda _step: NS(_encode_transaction_data=lambda: flags["calldata"]))
+    monkeypatch.setattr(worker, "Bootstrap", lambda got, db, *, evm_rpc_override: runner)
+
+    observed = worker.operation_receipt(journal, operation, "https://sepolia.invalid")
+    assert observed == dict(status="RECEIPT_CONFIRMED", tx_hash=signed.hash.hex(), block_number="9",
+                            block_hash=checkpoint.hex())
+    assert source.get(execution + ":execute")["status"] == "BROADCAST"
+    assert requests.get("op", deployments=["base"])["status"] == "PREPARED"
+    receipt.status = 0
+    assert worker.operation_receipt(journal, operation, None)["status"] == "RECEIPT_REVERTED"
+    receipt.blockNumber = 10
+    assert worker.operation_receipt(journal, operation, None)["status"] == "AWAITING_EVM_RECEIPT"
+    flags["calldata"] = calldata[:4]
+    with pytest.raises(ValueError, match="^EVM_SIGNED_TRANSACTION_BINDING$"):
+        worker.operation_receipt(journal, operation, None)
+
+
 def test_secret_and_amount_policy():
     with pytest.raises(ValueError):
         public_data({"nested": {"private_key": "x"}})
@@ -215,6 +418,208 @@ def test_secret_and_amount_policy():
     assert encode_args(
         [{"type": "uint256"}, {"type": "uint256[]"}], ["123", ["456"]]
     ) == [123, [456]]
+
+
+@pytest.mark.parametrize("difference", [None, "method", "deployment"])
+def test_worker_rechecks_policy_after_building_unsigned_transaction(tmp_path, monkeypatch, difference):
+    from signer_agent import operation_worker as worker
+
+    spec = dict(artifact="ULRStaking", contract="staking", method="claim", deployment="visible")
+    operation = dict(request=dict(action="claim", args=[["100"]], spec=spec))
+    policy = dict(deployments=["visible"], actions={"claim": spec})
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(json.dumps(policy))
+    assert worker.require_current_policy(policy_path, operation) is None
+    tx = {"nonce": 3}
+
+    def build(*_a):
+        # Policy changed during the RPC work to estimate gas.
+        if difference == "method":
+            policy["actions"]["claim"] = dict(spec, method="newMethod")
+        elif difference == "deployment":
+            policy["deployments"].clear()
+        policy_path.write_text(json.dumps(policy))
+        return tx
+
+    monkeypatch.setattr(worker.Bootstrap, "build_transaction", build)
+    runner = worker.OperationBootstrap.__new__(worker.OperationBootstrap)
+    runner.operation, runner.policy_path = operation, policy_path
+    runner.contracts = {"staking": {"artifact": "ULRStaking"}}
+    step = {"contract": "staking", "method": "claim"}
+    if difference:
+        with pytest.raises(ValueError, match="^ACTION_NOT_ALLOWED$"):
+            runner.build_transaction(step, object(), 3)
+    else:
+        assert runner.build_transaction(step, object(), 3) is tx
+
+
+@pytest.mark.parametrize("backend", ["relay", "zk-state-v2"])
+def test_ops_readiness_and_worker_use_same_local_core_without_persisting_connection(tmp_path, monkeypatch, backend):
+    from types import SimpleNamespace as NS
+    from signer_agent import operational_api as api, operation_worker as worker
+
+    journal = Journal(tmp_path / "ops.sqlite")
+    requests = OperationJournal(journal.path)
+    deployment = "backed"
+    policy = dict(backend=backend)
+    profile = dict(deployment_id=deployment, chain_id="11155111", bitcoin_network="testnet4",
+                   bitcoin_policy=policy, steps=[dict(kind="bitcoin_ready")])
+    journal.put(deployment, dict(profile=profile))
+    spec = dict(artifact="ULRStaking", contract="staking", method="claim", deployment=deployment)
+    settle = dict(artifact="BitcoinWithdrawalEscrow", contract="escrow", method="settle",
+                  deployment=deployment, evm_graph_only=True)
+    requests.put("op", dict(action="claim", args=[["100"]], spec=spec))
+    requests.put("btc-op", dict(action="settle", args=[], spec=settle))
+    policy_file = tmp_path / "policy.json"
+    policy_file.write_text(json.dumps(dict(deployments=[deployment], actions={"claim": spec, "settle": settle})))
+    local = dict(evm_rpc="https://alternate.invalid/rpc", bitcoin_rpc="https://core.invalid/private",
+                 bitcoin_cookie="/local/auth")
+    assert not any(value in str(journal.get(deployment)) for value in local.values())
+
+    core = object()
+    made = []
+    status = {"ready": True, "evm_ready": True, "anchor_matches": True, "runtime_hash": "0x" + "01" * 32}
+    def client(rpc, cookie, network, configured):
+        assert (rpc, cookie, network, configured) == (local["bitcoin_rpc"], local["bitcoin_cookie"], "testnet4", policy)
+        made.append(core)
+        return core
+    monkeypatch.setattr(api, "BitcoinRPC", client)
+    contract = dict(artifact="ULRStaking", address="0x" + "02" * 20, runtime_hash="0x" + "01" * 32)
+
+    def bootstrap(current, state, *, bitcoin, evm_rpc_override):
+        assert (current, state, evm_rpc_override) == (profile, journal.path, local["evm_rpc"])
+
+        def verify(*, verify, evm_graph_only=False):
+            assert verify
+            if evm_graph_only:
+                assert bitcoin is None
+                outcome = "EVM_GRAPH_VERIFIED" if status["evm_ready"] else "INCOMPLETE"
+            else:
+                assert bitcoin is core
+                outcome = "VERIFIED" if status["ready"] else "AWAITING_BITCOIN_RELAY"
+            return dict(status=outcome,
+                        manifest=dict(contracts={"staking": contract, "escrow": {"artifact": settle["artifact"]}}))
+
+        number, digest = 6, b"\xa1" * 32
+        def block(tag):
+            return NS(number=number, hash=digest if tag == "latest" or status["anchor_matches"] else b"\xcc" * 32)
+
+        fn = NS(abi={"stateMutability": "view"}, call=lambda **_kw: 42)
+        return NS(apply=verify, fn=lambda _spec: fn, resolve=lambda value: value, wire=str,
+                  evm_confirmations=1, w3=NS(eth=NS(chain_id=11155111, get_block=block)))
+
+    monkeypatch.setattr(api, "Bootstrap", bootstrap)
+    def runtime(_w3, address, artifact, block):
+        assert (address, artifact, block) == (contract["address"], "ULRStaking", 6)
+        return status["runtime_hash"]
+
+    monkeypatch.setattr(worker, "checked_runtime", runtime)
+
+    with pytest.raises(ValueError, match="^MAINNET_CORE_REQUIRED$"):
+        api.deployment_runner(profile, journal)
+    read_policy = dict(deployments=[deployment], views={"stake": dict(spec, method="totalStaked")})
+    view = api.read_view(read_policy, journal, "stake", **local)
+    assert view["value"] == "42"
+    assert not any(value in str(view) for value in local.values())
+
+    clock = [100]
+    monkeypatch.setattr(api, "monotonic", lambda: clock[0])
+    request_handler = api.handler(read_policy, journal, **local)
+    request = request_handler.__new__(request_handler)
+    request.role = lambda: "reader"
+    request.path = "/readiness"
+    request.reply = lambda code, body: (code, body)
+    assert request.do_GET() == (200, dict(status="READY", checks=[dict(deployment=deployment, ready=True, age_seconds=0)]))
+    clock[0] += 3
+    request.path = "/v1/views/stake"
+    code, view = request.do_GET()
+    assert code == 200 and view["deployment_check_age_seconds"] == 3
+    assert made == [core] * 2
+    status["ready"] = False
+    clock[0] += api.READINESS_TTL_SECONDS
+    request.path = "/readiness"
+    assert request.do_GET() == (503, dict(status="NOT_READY", checks=[dict(deployment=deployment, ready=False, age_seconds=0)]))
+
+    def operation_bootstrap(operation_profile, _state, **options):
+        assert not status["ready"]
+        assert operation_profile["steps"] == [dict(id="execute", kind="call",
+            contract="staking", method="claim", args=[["100"]])]
+        assert options["evm_rpc_override"] == local["evm_rpc"]
+        return NS(apply_confirmed=lambda _identity: dict(status="VERIFIED"))
+    monkeypatch.setattr(worker, "OperationBootstrap", operation_bootstrap)
+    args = NS(id="btc-op", policy=policy_file, rpc=local["evm_rpc"], bitcoin_rpc=local["bitcoin_rpc"],
+               bitcoin_cookie=local["bitcoin_cookie"], dry_run=False, identity_file="identity")
+    with pytest.raises(ValueError, match="^DEPLOYMENT_NOT_READY$"):
+        worker.execute(journal, requests, args, [deployment])
+    assert requests.get("btc-op", deployments=[deployment])["status"] == "PREPARED"
+
+    args.id, args.bitcoin_rpc, args.bitcoin_cookie = "op", None, None
+    status["evm_ready"] = False
+    with pytest.raises(ValueError, match="^DEPLOYMENT_NOT_READY$"):
+        worker.execute(journal, requests, args, [deployment])
+    status["evm_ready"] = True
+    status["runtime_hash"] = "0x" + "03" * 32
+    with pytest.raises(ValueError, match="^CODE_HASH_MISMATCH$"):
+        worker.execute(journal, requests, args, [deployment])
+    status["runtime_hash"] = contract["runtime_hash"]
+    status["anchor_matches"] = False
+    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+        worker.execute(journal, requests, args, [deployment])
+    assert requests.get("op", deployments=[deployment])["status"] == "PREPARED"
+    status["anchor_matches"] = True
+    assert worker.execute(journal, requests, args, [deployment]) == dict(status="VERIFIED")
+    assert made == [core] * 4
+    assert journal.get(deployment)["request"]["profile"] == profile
+    assert not any(value in str(requests.get("op", deployments=[deployment])) for value in local.values())
+
+
+@pytest.mark.parametrize("kind,method", [("ULRStaking", "stake"), ("BitcoinMintAdmission", "openMint")])
+def test_operations_require_current_artifact_for_new_non_exit_signing(monkeypatch, kind, method):
+    from signer_agent import operation_worker as worker
+
+    instance = worker.OperationBootstrap.__new__(worker.OperationBootstrap)
+    instance.contracts = {"target": dict(artifact=kind, artifact_hash="archive-pin")}
+    instance.operation, instance.policy_path = {}, "policy"
+    checked = []
+    monkeypatch.setattr(worker, "pinned_artifact", lambda item: (None, True))
+    monkeypatch.setattr(worker, "require_current_policy", lambda *args: checked.append("policy"))
+    monkeypatch.setattr(worker.Bootstrap, "build_transaction", lambda *args: checked.append("build"))
+
+    with pytest.raises(ValueError, match="^API_LEGACY_ARTIFACT_EXIT_ONLY$"):
+        instance.build_transaction(dict(contract="target", method=method), None, 1)
+    assert checked == []
+    if kind == "ULRStaking":
+        instance.build_transaction(dict(contract="target", method="unstake"), None, 1)
+        assert checked == ["build", "policy"]
+
+
+def test_evm_graph_review_preserves_bitcoin_checkpoints_and_rechecks_evm(monkeypatch, tmp_path):
+    from types import SimpleNamespace as NS
+    from signer_agent import bootstrap
+
+    btc = dict(id="bitcoin_ready", kind="bitcoin_ready")
+    binding = dict(id="bind", kind="call")
+    profile = dict(deployment_id="backed", mode="backed", chain_id="11155111", bitcoin_network="testnet4",
+                   evm_rpc="https://alternate.invalid/rpc", steps=[btc, binding])
+    monkeypatch.setattr(bootstrap, "evm_web3", lambda *_args, **_kw: NS(eth=NS(chain_id=11155111)))
+    b = bootstrap.Bootstrap(profile, tmp_path / "ops.sqlite")
+    b.journal.put("backed:bitcoin_ready", btc)
+    b.journal.update("backed:bitcoin_ready", "AWAITING_BITCOIN_RELAY", {"depth": "0"})
+    saved_bitcoin = b.journal.get("backed:bitcoin_ready")
+    saved_deployment = b.journal.get("backed")
+    assert b.apply(verify=True, evm_graph_only=True) == dict(status="INCOMPLETE", step="bind")
+    checks = []
+    monkeypatch.setattr(b, "verify_checks", lambda step, receipt: checks.append((step, receipt)))
+    monkeypatch.setattr(b, "verify_receipt", lambda result: ("verified", result["tx_hash"]))
+    b.journal.update("backed:bind", "CONFIRMED", {"tx_hash": "receipt"})
+    assert b.apply(verify=True, evm_graph_only=True)["status"] == "EVM_GRAPH_VERIFIED"
+    assert checks == [(binding, ("verified", "receipt"))]
+    assert b.journal.get("backed:bitcoin_ready") == saved_bitcoin
+    assert b.journal.get("backed") == saved_deployment
+    with pytest.raises(ValueError, match="^MAINNET_CORE_REQUIRED$"):
+        b.apply(verify=True)
+    with pytest.raises(ValueError, match="^API_EVM_GRAPH_VERIFY_ONLY$"):
+        b.apply(evm_graph_only=True)
 
 
 def test_bootstrap_rejects_mainnet_before_rpc_or_identity(tmp_path):

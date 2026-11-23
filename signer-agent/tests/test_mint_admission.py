@@ -28,7 +28,8 @@ def env(tmp_path, monkeypatch):
             dkgId=b"d" * 32, resultHash=b"r" * 32, operator=names["operator"], operatorNonce=0,
             operatorTransferSession=7, latestOperatorTransferSession=7, operatorTransferRetired=False,
             activeOperatorTransfer=True, slotSession=7, active=True, claimModes=0),
-        pool=dict(authorization=names["auth"], mintAdmission=names["board"], nonce=4, mintProofVersion=1),
+        pool=dict(authorization=names["auth"], mintAdmission=names["board"], nonce=4, mintProofVersion=1,
+                  custodyTransfer=address(0)),
         auth=dict(coordinator=names["coordinator"], dkgId=b"d" * 32, resultHash=b"r" * 32),
         coordinator=dict(sessionDKGId=b"d" * 32, sessionDKGResult=b"r" * 32),
     )
@@ -68,8 +69,8 @@ def env(tmp_path, monkeypatch):
     contracts = {name: SimpleNamespace(address=where, functions=Functions(name)) for name, where in names.items()}
     w3 = SimpleNamespace(eth=SimpleNamespace(chain_id=31337, get_block=block,
         contract=lambda address, **_:next(c for c in contracts.values() if c.address == address)))
-    monkeypatch.setattr(admission, "checked_runtime", lambda *args:None)
-    monkeypatch.setattr(admission, "prove_creation", lambda *args:view.origins.append(args))
+    monkeypatch.setattr(admission, "checked_runtime", lambda *args, **kwargs:None)
+    monkeypatch.setattr(admission, "prove_creation", lambda *args, **kwargs:view.origins.append(args))
     def context():
         return dict(board=contracts["board"], pool=contracts["pool"], authorization=contracts["auth"],
             coordinator=contracts["coordinator"], anchor=block(123), dkg_id=b"d" * 32, result_hash=b"r" * 32)
@@ -109,6 +110,196 @@ def test_canonical_source_and_all_reads_use_same_snapshot(env):
     assert record["intent"]["mint_admission"] == env.names["board"]
     assert set(env.view.reads) == {123}
     assert [args[2] for args in env.view.origins] == ["BitcoinMintAdmission", "MiningPoolV1", "DKGAuthorization", "FROSTCoordinator"]
+
+
+def test_recovery_mint_reviews_public_ingress_wallet_after_rotation(env, monkeypatch):
+    from signer_agent import bitcoin_trust
+
+    original_id, active_id = b"o" * 32, b"n" * 32
+    context = env.context()
+    members = [env.names["operator"], env.names["next"]]
+    invite = dict(version="6", bitcoin_network="regtest", evm_confirmations="1",
+                  sessions=dict(btc_ceremony=original_id.hex(), conf_ceremony=context["dkg_id"].hex()),
+                  bitcoin_recovery={"height": "900"}, participants=[address(30), *members],
+                  bitcoin_custody={"mode": "custodians", "threshold": "2"})
+    escrow, batches, registry = (SimpleNamespace(address=address(i)) for i in (21, 22, 23))
+    nodes = {node.address: node for node in (escrow, batches, registry)}
+    reads = {
+        (context["pool"].address, "escrow"): escrow.address,
+        (context["authorization"].address, "registry"): registry.address,
+        (escrow.address, "batches"): batches.address,
+        (batches.address, "initialWalletId"): original_id,
+        (batches.address, "walletId"): active_id,
+        (registry.address, "getCompletedResult", original_id): [b"c" * 32, b"r" * 32, 1, b"b" * 32,
+                                                                 b"k" * 32, members, 2],
+    }
+    context["pool"].w3 = env.w3
+
+    def read(node, number, method, *args):
+        assert number == 123
+        return reads[(node.address, method, *args)]
+
+    def inspect(manifest, key, reg, target, **options):
+        assert manifest.session_id == original_id and manifest.participants == tuple(members)
+        assert reg.w3 is env.w3 and target == batches.address
+        assert key == {"result_hash": (b"r" * 32).hex(), "result": {"group": "02" + (b"k" * 32).hex()}}
+        assert options["public_wallet"] is True and options["bitcoin_recovery"] == invite["bitcoin_recovery"]
+        return {"graph": "verified"}
+
+    monkeypatch.setattr(admission, "_contract", lambda w3, address, kind, block: nodes[address])
+    monkeypatch.setattr(admission, "_read", read)
+    monkeypatch.setattr(bitcoin_trust, "inspect_registry", inspect)
+    assert admission._base_signing_graph(dict(role="conf_ceremony", registry=registry.address,
+        onboarding={"invitation": invite}), context) == "verified"
+
+
+def test_renewed_deadline_does_not_change_persisted_claim_economics(env):
+    initial = env.record()
+    first = sdk.remember(env.state, env.registry, initial)
+    renewed = dict(initial, intent=dict(initial["intent"], session="8", deadline="2000", admission_nonce="5"),
+                   deadline=2000, nonce=5)
+    second = sdk.remember(env.state, env.registry, renewed)
+    assert env.state.get(first)["intent"]["deadline"] == "1000"
+    assert env.state.get(second)["intent"]["deadline"] == "2000"
+    assert sdk.remember(env.state, env.registry, renewed) == second
+
+
+def test_base_mint_requires_local_core_before_signing(env):
+    client = SimpleNamespace(w3=env.w3, address=env.names["coordinator"], _read_snapshot=env.block(123))
+    session = SimpleNamespace(origin_contract=env.names["pool"], session_id=7, message_hash=env.digest())
+    with pytest.raises(ValueError, match="BTC_MINT_FUNDING_REVIEW_REQUIRED"):
+        admission.guard_signing_session(client, session)
+
+
+def test_base_mint_rechecks_slot_after_local_funding(env, monkeypatch):
+    client = SimpleNamespace(w3=env.w3, address=env.names["coordinator"], _read_snapshot=env.block(123),
+                             check_read_snapshot=lambda: None)
+    session = SimpleNamespace(origin_contract=env.names["pool"], session_id=7, message_hash=env.digest())
+    calls = []
+
+    def review(client_arg, record):
+        assert client_arg is client
+        assert record["arguments"] == env.arguments
+        calls.append(record["claim_id"])
+
+    monkeypatch.setattr(admission, "_review_base_funding", review)
+    admission.guard_signing_session(client, session)
+    assert calls == [env.reference.hex()]
+
+    def review_during_slot_change(*args):
+        review(*args)
+        env.data["board"]["slotSession"] = 8
+
+    monkeypatch.setattr(admission, "_review_base_funding", review_during_slot_change)
+    with pytest.raises(ValueError, match="BTC_MINT_ADMISSION_NOT_ACTIVE"):
+        admission.guard_signing_session(client, session)
+
+
+@pytest.mark.parametrize("amount, gateway_kind, source_funding, error", [
+    (1, None, False, None),
+    (2, None, False, "BTC_MINT_PROOF_OR_ALLOCATION"),
+    (1, "BitcoinCustodyTransfer", False, None),
+    (1, "BitcoinCustodyTransfer", True, "SMP1_CUSTODY_SOURCE"),
+    (1, "BitcoinCustodyTransferV2", False, None),
+    (1, "BitcoinCustodyTransferV2", True, "SMP1_CUSTODY_SOURCE"),
+])
+def test_base_mint_simulates_exact_registry_and_gateway_claim(env, monkeypatch, amount, gateway_kind, source_funding, error):
+    from signer_agent import bitcoin_trust
+
+    record = env.record()
+    record["context"]["pool"].w3 = env.w3
+    addresses = dict(escrow=address(80), deposits=address(81), batches=address(82), relay=address(83),
+                     authorization=env.names["auth"])
+    env.data["pool"].update({name: addresses[name] for name in ("escrow", "deposits")})
+    graph = dict(evm_dkg_id=record["context"]["dkg_id"].hex(), contracts={
+        name: dict(address=where, artifact=name) for name, where in addresses.items()
+    })
+    calls = []
+    proof = [b"public", 0, b"b" * 32, [], 0, *env.arguments[2:]]
+    bitcoin = object()
+
+    def proof_review(args, core, contracts, pool, claim, block):
+        assert core is bitcoin and args.txid == env.arguments[0][::-1].hex()
+        assert pool is record["context"]["pool"] and claim == env.arguments and block.number == 123
+        assert set(contracts) == {"batches", "deposits", "relay"}
+        calls.append("core")
+        return proof
+
+    def consume(*args):
+        assert list(args) == proof[:5]
+        def call(options, *, block_identifier):
+            assert options == {"from": env.names["pool"]}
+            assert block_identifier == 123
+            calls.append("registry")
+            return amount
+        return SimpleNamespace(call=call)
+
+    nodes = {name: SimpleNamespace(functions=SimpleNamespace(consume=consume)) for name in addresses}
+    if gateway_kind:
+        env.data["pool"]["custodyTransfer"] = address(84)
+        if gateway_kind == "BitcoinCustodyTransferV2":
+            record["context"]["pool_kind"] = "ConfederationBitcoinReserve"
+
+        def funding(raw):
+            assert raw == proof[0]
+
+            def call(*, block_identifier):
+                assert block_identifier == 123
+                calls.append("gateway")
+                return source_funding
+
+            return SimpleNamespace(call=call)
+
+        nodes[gateway_kind] = SimpleNamespace(functions=SimpleNamespace(
+            mining=lambda: SimpleNamespace(call=lambda **_: env.names["pool"]), isSourceFunding=funding))
+    monkeypatch.setattr(admission, "_base_signing_graph", lambda *_: graph)
+    monkeypatch.setattr(admission, "_contract", lambda _w3, _where, name, _block: nodes[name])
+    monkeypatch.setattr(bitcoin_trust, "bitcoin_for_graph", lambda *_: bitcoin)
+    monkeypatch.setattr(bitcoin_funding, "_mint_proof", proof_review)
+    client = SimpleNamespace(w3=env.w3, base_mint_funding=({}, "rpc", "cookie"))
+    if error is None:
+        admission._review_base_funding(client, record)
+    else:
+        with pytest.raises(ValueError, match=error):
+            admission._review_base_funding(client, record)
+    assert calls == ["core"] + (["gateway"] if gateway_kind else []) + ([] if source_funding else ["registry"])
+
+
+@pytest.mark.parametrize("accepted", [False, True])
+def test_base_mint_reads_historical_gateway_only_after_enrolled_binding(env, monkeypatch, accepted):
+    from signer_agent import custody_network
+
+    context = env.record()["context"]
+    raw, op = b"public", b"h" * 32
+    gateway = env.contracts["next"]
+    env.data["pool"].update(custodyTransfer=gateway.address, getSetCustodyTransferOperationHash=op)
+    env.data["next"] = dict(mining=env.names["pool"])
+    checks = []
+
+    def exact_runtime(*args):
+        assert args == (env.w3, gateway.address, "BitcoinCustodyTransfer", 123)
+        raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+
+    def enrolled(*args):
+        assert args == (env.w3, gateway, "BitcoinCustodyTransfer", env.contracts["pool"], op, 123)
+        checks.append("enrolled")
+        if not accepted:
+            raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+
+    def funding(data):
+        assert data == raw
+        checks.append("source")
+        return SimpleNamespace(call=lambda **_: False)
+
+    monkeypatch.setattr(admission, "_contract", exact_runtime)
+    monkeypatch.setattr(custody_network, "require_enrolled_legacy", enrolled)
+    monkeypatch.setattr(gateway.functions, "isSourceFunding", funding)
+    if accepted:
+        admission._review_mint_source(env.w3, context, raw)
+    else:
+        with pytest.raises(ValueError, match="BITCOIN_CUSTODY_GATEWAY_BINDING"):
+            admission._review_mint_source(env.w3, context, raw)
+    assert checks == (["enrolled", "source"] if accepted else ["enrolled"])
 
 
 @pytest.mark.parametrize("attack", [None, "message", "missing_enrollment", "sources"])
@@ -247,7 +438,7 @@ def test_service_guard_precedes_any_private_work():
     def guard(_):
         touched.append("guard")
         raise ValueError("BTC_MINT_ADMISSION_NOT_ACTIVE")
-    service.client = SimpleNamespace(guard_mint_session=guard)
+    service.client = SimpleNamespace(chain_id=31337, guard_mint_session=guard)
     session = SimpleNamespace(state=1, purpose=1)
     with pytest.raises(ValueError, match="BTC_MINT_ADMISSION_NOT_ACTIVE"):
         service._approve_locked(session)

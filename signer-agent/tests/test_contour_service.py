@@ -59,7 +59,7 @@ def service(pipeline,request,monkeypatch):
             allowed_consumers=c['allowed_consumers'],allowed_service_identities=[peer_account.address],
             treasury=Web3.to_checksum_address('0x'+'99'*20),treasury_epoch='1',roster_hash='bb'*32,
             tariff_version='1',tariff_hash='cc'*32,max_service_fee_wei='100',**policy))
-    e.worker.inbox=Inbox(c);e.worker.archive_ref=lambda state:[]
+    e.worker.inbox=Inbox(c)
     e.clock=1500000000;e.block_hash=b'h'*32;e.packets={};e.routes={};e.messages={};e.effects=[];e.signed={}
     e.msg_crash=None;e.gas_crash=None;e.gas_action=None;e.allow_request=True;e.allow_service=True;e.gas_sends=0;e.gas_recovers=0
     e.jobs={};e.paid=set();e.permission={};e.generation=1;e.tariff=1;e.balance=10**20

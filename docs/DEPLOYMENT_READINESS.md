@@ -108,9 +108,10 @@ acquire these changes from refreshed ABI files.
 ## V1 lifecycle update — 16 October 2026
 
 The earlier bootstrap order above describes the legacy ABI. New deployments
-create each ceremony with `createCeremony` and reserve each factory ID for its
-EVM_AUTH session. After the all-N V1 result completes, the plan adopts the
-reserved pair and deploys DKGAuthorization. [Current bootstrap](BOOTSTRAP.md).
+create each ceremony with `createCeremony` and reserve each factory ID with
+its EVM_AUTH session, formation hash and token metadata hash. After the
+all-N V1 result completes, the factory checks the formation at adoption and
+the metadata at deployment. [Current bootstrap](BOOTSTRAP.md).
 
 The current code connects proof-only issuance, actual S/MP escrow, exact Bitcoin
 payment proof and burn, explicit fee conversion/allocation, and funded DAO

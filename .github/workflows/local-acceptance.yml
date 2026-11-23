@@ -30,7 +30,7 @@ jobs:
           rustup default 1.89.0
           python -m venv .venv
           .venv/bin/python ops/bootstrap_host.py build
-          .venv/bin/python -m pip install -e './signer-agent[test,evm-test]'
+          .venv/bin/python -m pip install --no-build-isolation -e './signer-agent[test,evm-test]'
           .venv/bin/python ops/bootstrap_host.py check --role signer
           cargo +1.89.0 test --locked --manifest-path frost-crypto/Cargo.toml
           .venv/bin/python ops/check_contract_sizes.py --output "$RUNNER_TEMP/contract-sizes.json"

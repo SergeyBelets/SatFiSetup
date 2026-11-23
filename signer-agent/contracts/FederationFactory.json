@@ -522,6 +522,16 @@
         "name": "federationId",
         "type": "string",
         "internalType": "string"
+      },
+      {
+        "name": "formationHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "tokenHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -545,6 +555,53 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "reservedFederationTerms",
+    "inputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "formationHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "tokenHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "transferFederationReservation",
+    "inputs": [
+      {
+        "name": "federationId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "previous",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "replacement",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -646,6 +703,31 @@
       },
       {
         "name": "sessionId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FederationReservationTransferred",
+    "inputs": [
+      {
+        "name": "federationId",
+        "type": "string",
+        "indexed": true,
+        "internalType": "string"
+      },
+      {
+        "name": "previous",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "replacement",
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"

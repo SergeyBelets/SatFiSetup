@@ -4,6 +4,7 @@ These tests never contact a live RPC or sign/broadcast a transaction. Mainnet
 chain data below is a deliberately local model for fail-closed boundaries.
 """
 from copy import deepcopy
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -124,6 +125,33 @@ def test_v5_join_requires_own_checked_core_before_secret_files(tmp_path, monkeyp
     assert not destination.exists()
 
 
+def test_v5_join_requires_independent_ledger_before_creating_roles(tmp_path, monkeypatch):
+    from signer_agent.onboarding import password_file
+    from signer_agent.secure_state import SecureState
+
+    invitation = ethereum_invitation()
+    accepted = fingerprint(invitation)
+    monkeypatch.setattr("signer_agent.bitcoin_network.check_core", lambda *_: None)
+    identity = tmp_path / "identity.json"
+    destination = tmp_path / "participant"
+    with pytest.raises(ValueError, match="MAINNET_NONCE_LEDGER_REQUIRED"):
+        join(invitation, accepted, identity, destination, bitcoin=object())
+    assert not destination.exists()
+    identity.write_text(json.dumps({"private_key": f"{1:064x}"}))
+    identity.chmod(0o600)
+    ledger = tmp_path / "volume"
+    ledger.mkdir(mode=0o700)
+    enrolled = join(invitation, accepted, identity, destination, bitcoin=object(), nonce_ledger_dir=ledger)
+    assert str(ledger) not in json.dumps(enrolled)
+    password = password_file(destination / "password")
+    for role in ("evm_ceremony", "conf_ceremony", "btc_ceremony"):
+        path = destination / (role + ".enc")
+        state = SecureState(path, password)
+        state.require_nonce_ledger()
+        if role != "btc_ceremony":
+            assert state.evm_nonce_ledger(SecureState(str(path) + ".signing", password))
+
+
 def test_chain1_paid_plan_orders_payer_authorization_before_one_shot_fees():
     profile = ethereum_profile()
     before = deepcopy(profile)
@@ -233,7 +261,7 @@ def test_test_evm_depth_semantics_do_not_require_finalized_rpc(chain, depth):
     assert "finalized" not in calls
 
 
-def _project_graph(monkeypatch, factory="federations"):
+def _project_graph(monkeypatch, factory="federations", *, native=False):
     """Model public getters; verify the exact expected constructor arguments."""
     from signer_agent import ethereum_intents as review
     from signer_agent.bootstrap import artifact, encode_args
@@ -241,6 +269,17 @@ def _project_graph(monkeypatch, factory="federations"):
     from web3 import Web3
 
     invite = ethereum_invitation()
+    if native:
+        from signer_agent.bootstrap_tokens import resolve
+
+        invite.pop("btc_usd_feed")
+        custody_threshold = str(len(invite["participants"]) - 1)
+        invite.update(version="6", wrap_staker_bps="0", deploy_staker_bps="0", dao_use_reserve=False,
+            min_custodians=custody_threshold,
+            bitcoin_custody=dict(version="1", mode="custodians", threshold=custody_threshold, sources=[]),
+            ulr=dict(version="3", mode="create", bitcoin_backend="relay",
+                     candidate_threshold_wei=str(200_000 * 10**18), default_miner_fee_sats="100"))
+        invite["token_metadata"] = resolve(invite)
     reward_code = b"reviewed non-test external reward token"
     invite["reward_token"]["runtime_hash"] = Web3.to_hex(Web3.keccak(reward_code))
     profile = assemble(invite, signed_enrollments(invite), "http://local.invalid")
@@ -248,7 +287,8 @@ def _project_graph(monkeypatch, factory="federations"):
     deployments = [step for step in plan["steps"] if step["kind"] == "deploy"]
     addresses = {step["id"]: address(100 + index) for index, step in enumerate(deployments)}
     addresses["usd"] = invite["reward_token"]["address"]
-    addresses["feed"] = invite["btc_usd_feed"]["address"]
+    if "btc_usd_feed" in invite:
+        addresses["feed"] = invite["btc_usd_feed"]["address"]
     group = bytes.fromhex("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
     values = dict(addresses, project_group="0x" + group.hex())
     constructors, kinds, getters, proofs = {}, {}, {}, []
@@ -348,6 +388,16 @@ def test_project_payer_proves_entire_pre_dao_graph_with_exact_constructors(monke
         assert {"ConfederationFactory", "ConfederationDeployer", "MultiPoolDeployer",
                 "ConfederationTokenDeployer", "FROSTCustodianDeployer"} <= names
     assert not {"BitcoinBatchRegistry", "CustodianValidator", "MiningPoolV1"} & names
+
+
+def test_project_payer_pins_enrolled_v3_deployer_artifacts(monkeypatch):
+    review, w3, intent, bundle, addresses, getters, proofs = _project_graph(monkeypatch, "confederations", native=True)
+    assert review.review_project_payer(w3, intent, bundle, 80) is True
+    kinds = {kind for _, kind, _ in proofs}
+    assert {"ConfederationPoolV2Deployer", "ConfederationShareV2Deployer"} <= kinds
+    getters[addresses["confederation_deployer"]]["multiPoolDeployer"] = addresses["simple_leaf"]
+    with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD_MISMATCH"):
+        review.review_project_payer(w3, intent, bundle, 80)
 
 
 @pytest.mark.parametrize("target,method,value", [
@@ -563,7 +613,7 @@ def test_v5_mailbox_reads_enrolled_depth_even_when_discovery_default_is_newer(mo
 
 
 def test_v5_manifest_anchors_registry_and_reads_to_enrolled_finalized_depth(monkeypatch):
-    from signer_agent import onboarding, bootstrap, onchain_transport
+    from signer_agent import onboarding, onchain_transport
     from web3 import Web3
     invitation = ethereum_invitation()
     invitation["evm_confirmations"] = "256"
@@ -584,12 +634,11 @@ def test_v5_manifest_anchors_registry_and_reads_to_enrolled_finalized_depth(monk
     registry.read = lambda name: int(invitation["phase_duration"])
     monkeypatch.setattr(onboarding, "Registry", lambda *args: registry)
     monkeypatch.setattr(onchain_transport, "registry_at", lambda w3, a, block: checks.append(block.number))
-    monkeypatch.setattr(bootstrap, "artifact", lambda kind: dict(deployedBytecode=dict(object="01")))
     deployment = dict(contracts=dict(dkg=dict(address=address(60), runtime_hash=Web3.keccak(b"\x01").hex())))
     bundle = onboarding.make_manifest(profile, deployment, "evm_ceremony", "http://local.invalid")
     assert bundle["anchor"] == dict(number="145", hash=blocks[145].hash.hex())
     assert checks == [145, address(60)]
-    assert code_reads == [145, 145]
+    assert code_reads == [145]
 
 
 def test_v5_ceremony_bundle_uses_finalized_registry_binding_and_anchor(monkeypatch):

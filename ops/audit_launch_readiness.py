@@ -109,7 +109,7 @@ def check_examples():
         configs.append(dict(file=str(path.relative_to(ROOT)), version=value.get('version'),
             sha256=sha(path), kind='public template; live bindings must be supplied'))
     with tempfile.TemporaryDirectory(prefix='launch-profiles-') as directory:
-        for name, ulr in [('testnet','create'),('zk','zk')]:
+        for name, ulr in [('testnet','create'),('zk','zk'),('zk-testnet4','zk')]:
             output = Path(directory)/(name+'.json')
             args = ['--ulr-policy',str(ROOT/f'config/ulr-bootstrap-{ulr}.example.json'),
                 '--bitcoin-custody-policy',str(ROOT/'config/bitcoin-custody.example.json'),
@@ -123,7 +123,7 @@ def check_examples():
     load_pin(ROOT/'config/ulr-treasury.example.json')
     suite = read_json(ROOT/'config/zkspv-contour-suite.example.json')
     for job in suite['jobs']: validate_spec(job['spec'])
-    return dict(json_count=len(configs), inventory=configs, full_system_examples_reproduced=2,
+    return dict(json_count=len(configs), inventory=configs, full_system_examples_reproduced=3,
         ulr_pin_structure='PASS; example addresses are not live bindings',
         contour_job_specs_validated=len(suite['jobs']), runtime_inputs='operator configuration required')
 

@@ -4,7 +4,6 @@ import json
 from types import SimpleNamespace
 
 import pytest
-import web3
 
 from signer_agent.bitcoin_rpc import BitcoinRPCError
 from signer_agent.bitcoin_worker import BitcoinWorker
@@ -230,13 +229,7 @@ def test_standalone_recovery_checks_relay_identity_but_not_freshness(worker, mon
     policy_file.write_text('{"network":"mainnet"}')
     monkeypatch.setattr(bitcoin_cli, "validate_policy", lambda value, **_: value)
     monkeypatch.setattr(bitcoin_cli, "BitcoinRPC", lambda *_, **__: worker.rpc)
-    class ChainView:
-        HTTPProvider = staticmethod(lambda _: None)
-
-        def __init__(self, _provider):
-            self.eth = SimpleNamespace(chain_id=1)
-
-    monkeypatch.setattr(web3, "Web3", ChainView)
+    monkeypatch.setattr(bitcoin_cli, "evm_web3", lambda _: SimpleNamespace(eth=SimpleNamespace(chain_id=1)))
     pins = []
     monkeypatch.setattr(bitcoin_cli, "_checked_mainnet_relay", lambda _, address, policy: pins.append((address, policy)))
     monkeypatch.setattr(bitcoin_cli, "_inspect_mainnet_relay", lambda *args: pytest.fail("recovery requires no relay catch-up"))

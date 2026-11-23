@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 import "./MiningPoolV1.sol";
+import {BitcoinCustodyNetwork} from "./BitcoinCustodyNetwork.sol";
 import "./ConfederationMultiPool.sol";
 
 /// @notice Burn source MP by an exact BTC payment before issuing locally backed CS.
@@ -30,6 +31,7 @@ contract BitcoinCustodyTransfer is ReentrancyGuard {
     MiningPoolV1 public immutable mining;
     ConfederationMultiPool public immutable pool;
     bytes public destinationScript;
+    bytes32 public immutable bitcoinGenesis;
     Source[] private sources;
     mapping(uint256 => Transfer) public transfers;
     uint256 public nextId;
@@ -44,9 +46,11 @@ contract BitcoinCustodyTransfer is ReentrancyGuard {
         require(address(pool.withdrawalEscrow()) == address(mining.escrow())
             && address(pool.frostMultisig()) == address(mining.authorization()), "transfer destination graph");
         destinationScript = mining.payoutScript();
+        bitcoinGenesis = BitcoinCustodyNetwork.genesis(address(mining.escrow().spv()));
         require(sources_.length <= 16, "transfer source limit");
         for (uint256 i; i < sources_.length; ++i) {
             _checkSource(sources_[i]);
+            BitcoinCustodyNetwork.requireMatch(address(BitcoinWithdrawalEscrow(sources_[i].escrow).spv()), bitcoinGenesis);
             for (uint256 j; j < i; ++j)
                 require(sources_[i].token != sources_[j].token, "duplicate transfer source");
             sources.push(sources_[i]);

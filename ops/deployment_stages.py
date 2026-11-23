@@ -25,6 +25,7 @@ from urllib.parse import parse_qsl, unquote, urlsplit, urlunsplit
 
 from eth_account import Account
 from web3 import Web3
+from signer_agent.evm_rpc import evm_web3
 from web3.exceptions import ContractLogicError, TransactionNotFound
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -790,7 +791,7 @@ def reconcile(w3, state, confirmations):
 
 
 def connect_rpc(url):
-    return Web3(Web3.HTTPProvider(url))
+    return evm_web3(url)
 
 
 def signing_key():

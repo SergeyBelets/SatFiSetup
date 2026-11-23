@@ -30,6 +30,19 @@
   },
   {
     "type": "function",
+    "name": "MAX_MINT_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_RECIPIENTS",
     "inputs": [],
     "outputs": [
@@ -778,6 +791,50 @@
   },
   {
     "type": "function",
+    "name": "renewMint",
+    "inputs": [
+      {
+        "name": "claimId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "expectedNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "previous",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "cg",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "dg",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "resultHash",
     "inputs": [],
     "outputs": [
@@ -1087,5 +1144,125 @@
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AdmissionAuthorizationStillExecutable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AdmissionNonceRegression",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAdmissionSessionState",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMintDistribution",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMintOperatorOrDeadline",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMintRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNextOperator",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintAttemptChanged",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintAttemptLimit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintClaimTermsMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintDeadlineInvalid",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintNonceChanged",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintOperationApproved",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintOperatorOrNonceMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintOutpointMinted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintOutpointRecorded",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintProfileOrNonceMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintRetryRequired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintSlotBusy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OperatorNonceChanged",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OperatorTransferSlotBusy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RenewalUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnknownMintClaim",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnknownMintSession",
+    "inputs": []
   }
 ]

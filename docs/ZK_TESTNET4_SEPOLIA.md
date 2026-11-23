@@ -14,8 +14,9 @@
 Этот профиль использует настоящие тестовые BTC сети **testnet4** и ETH Sepolia
 (`11155111`). Relay и ZK выбираются до enrollment. Для ZK добавлены отдельный
 фиксированный guest, native witness host, state и SPV adapter; mainnet guest
-не принимает testnet4. Готовых рабочих proofs в поставке нет: каждый участник
-сам вычисляет их из своего Core и локального archive.
+не принимает testnet4. Поставка содержит исходники и параметры сборки.
+Prover вычисляет рабочий proof из собственного Core и локального архива.
+Участник FROST может проверить отдельный публичный ZIP по своему Sepolia RPC.
 
 Проверено локально: сборка guest с независимым совпадением image ID, native
 проверка исторических заголовков через retarget, согласованность Rust/Solidity,
@@ -58,7 +59,8 @@ python ops/generate_abis.py --check --zk
 повторите сборку из текущих исходников. Preflight проверяет артефакты state
 и verifier, чтобы устаревший `out` не запускал тесты с прежней сборкой.
 
-Соберите **testnet4** host в отдельном новом каталоге. `LOCAL`, `CITREA_SOURCE`
+На машине подготовки или proving соберите **testnet4** witness host в отдельном
+новом каталоге. `LOCAL`, `CITREA_SOURCE`
 и `CITREA_ARCHIVE` — абсолютные локальные пути. Получение архива и его точный
 SHA256 описаны в [порядке подготовки sources](DISTRIBUTION.md#сборка-на-каждом-хосте).
 
@@ -77,9 +79,9 @@ python -m ops.zkspv.worker_build --bitcoin-network testnet4 \
 export SATOHSI_ZK_TESTNET4_WORKER_HOST="$LOCAL/testnet4-native-target/release/satoshifi-testnet4-zk-worker-host"
 ```
 
-В worker укажите `binary` и `binary_sha256` **из собственной** сборки. Бинарник
+В worker укажите `host_binary` и `host_sha256` **из собственной** сборки. Бинарник
 macOS не передаётся Linux-участнику. R0BF в поставке — общий код программы,
-не receipt; его пересборка для каждого proof не нужна. Локальные proving tools
+не receipt. Локальные proving tools на машине расчёта
 R0VM 3.1.0, bridge, wrapper и pinned Groth16 Docker image устанавливаются по
 [Linux/WSL2 prover](ZK_PROVER_LINUX.md) либо macOS-разделу [поставки](DISTRIBUTION.md).
 Проверка `zk_prover_platform --full` обязательна до запуска proof. Нужны свободный
@@ -166,9 +168,9 @@ export BITCOIN_POLICY="$LOCAL/testnet4-policy-v2.json"
 `--bitcoin-policy "$BITCOIN_POLICY"` и выбранный `--system-policy`. Согласуйте
 один `CONFEDERATION_ID`, имена, roster, threshold, genesis/checkpoint, image,
 Fresh bounds и внешние USD token/runtime/decimals. Каждому нужен Sepolia ETH
-до enrollment/DKG; оператору дополнительно нужен ETH на deployments. Конвертер
-заранее финансируется выбранным тестовым USD в указанных decimals. Казначейство
-и staking платят этот единый USD, не BTC.
+до enrollment/DKG; оператору дополнительно нужен ETH на deployments. Для
+прежнего профиля заранее внесите выбранный тестовый USD в конвертер. В V3
+согласуйте расчётный USD, а DAO учитывает реальные S и стейблкоины.
 
 Включите имеющуюся `--pause-for-funding`, проверьте подтверждённые ETH-балансы,
 затем снимите её `--funding-complete`. После выпуска governance bootstrap
@@ -180,9 +182,18 @@ Fresh bounds и внешние USD token/runtime/decimals. Каждому нуж
 
 ## 4. Initial state, собственные proofs и Fresh barrier
 
-Обычный `bootstrap resume` остановится на `AWAITING_BITCOIN_RELAY` /
-`AWAITING_ZK_PROOF`: один checkpoint ещё не Fresh. Для конфигурации consumers и
-heartbeat до первого proof доступен явный этап:
+После enrolment и DKG обычный `bootstrap resume` выполняет CREATE state и
+останавливается на `status=AWAITING_BITCOIN_RELAY`,
+`bitcoin.reason=AWAITING_ZK_PROOF`. Один checkpoint ещё не Fresh.
+Сохраните partial manifest. Его `contracts.relay.address` — фактический
+testnet4 state для конфигураций worker и проверки ZIP. Сверьте также
+`spv_guard` и `zk_verifier` с подтверждённым развёртыванием через свой RPC.
+Worker привязывает journal к этому адресу, chain ID, checkpoint и before state.
+
+Текущий worker требует хотя бы один реальный consumer в `allowed_consumers`
+даже при включённом heartbeat. В обычном новом CREATE они появляются после
+Bitcoin-барьера, поэтому разверните их через явный структурный этап. Если
+проверенные consumers уже есть, используйте их адреса.
 
 ```sh
 frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$BOOTSTRAP_STATE" \
@@ -192,20 +203,21 @@ frost-signer bootstrap resume --deployment "$DEPLOYMENT_ID" --state "$BOOTSTRAP_
 
 Повторяйте с тем же журналом по мере подтверждения транзакций и отдельных
 funding/distribution пауз. Результат `GRAPH_CONFIGURED_FRESHNESS_PENDING`
-не разрешает денежные операции и не означает VERIFIED. Отдельный `verify`
-не принимает этот флаг. В manifest `relay` — новый testnet4 state,
-`spv_guard` — его testnet4 adapter, `zk_verifier` — созданный state verifier.
-Ручные подмены адресов/bytecode запрещены.
+означает, что структурный граф развёрнут и ещё ждёт Fresh. После проверки
+адресов переходите к proving. Денежный сценарий начинайте после обычного
+`verify`, который выполняется без этого флага.
 
-Каждый создаёт свой worker JSON на основе
+На машине подготовки или proving создайте приватный worker JSON на основе
 [zkspv-testnet4-worker.example.json](../config/zkspv-testnet4-worker.example.json):
 полный enrolled policy, chain `11155111`, RPC/confirmations, свой identity,
 локальный binary/hash, state, consumer allowlist, бюджеты и private directory.
-Все `REPLACE` поля требуют заполнения. Этот шаблон version 2 включает собственное
-финансирование и initial/continuous heartbeat. Для durable transport/archive и
+Все `REPLACE` поля требуют заполнения. Этот шаблон version 2 включает
+confederation service и initial/continuous heartbeat. Для durable transport/archive и
 полного contour используйте расширенную схему [worker](ZK_SPV_WORKER.md), сохраняя
 новый testnet4 policy/host. Не копируйте чьи-либо proof caches или приватные каталоги.
-В конфедерационном service-режиме задайте явное собственное финансирование.
+Для publish в конфедерационном service-режиме задайте явное собственное
+финансирование. Получателю ZIP достаточно своего `REVIEW_CONFIG` с
+подтверждённым state и полной политикой. [Роли и состав ZIP](DISTRIBUTION.md#публичный-архив-перехода).
 
 ```sh
 chmod 600 "$WORKER_CONFIG"
@@ -214,13 +226,15 @@ frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary prepare --once
 frost-signer zk-worker run --config "$WORKER_CONFIG" --boundary export --bundle-file "$PUBLIC_BUNDLE"
 # Участник FROST проверяет ZIP через свой Sepolia RPC.
 frost-signer zk-worker verify-bundle --config "$REVIEW_CONFIG" --bundle-file "$PUBLIC_BUNDLE" --require-proof
-# Только выбранный publisher на машине со своим локальным proof.
+# Отдельный publish выбранным worker, у которого есть свой локальный proof.
 frost-signer zk-worker publish --config "$WORKER_CONFIG"
 ```
 
-Для catch-up нужны повторные переходы не более 64 headers. Между checkpoint и
-tip может быть до 2115 блоков: каждый переход рассчитывается отдельно.
-Повторяйте prepare/prove/publish, проверяя статус и Core, пока useful update не
+При выборе checkpoint по примеру до вершины может оставаться до 2115 блоков.
+На момент запуска разрыв может вырасти. Для catch-up нужны переходы не более
+64 headers, каждый рассчитывается отдельно. При варианте одного расчёта
+публикует worker, который выполнил proving на мощном ПК. Другой publisher
+считает свой proof. Повторяйте prepare/prove/publish, проверяя статус и Core, пока useful update не
 догонит tip и не станет Fresh. Продолжайте heartbeat/worker во время денежных
 тестов: при истечении age/tip bounds система закрывается. Не увеличивайте лимиты
 ради обхода медленного proving. При конкурентной публикации worker перечитывает
@@ -240,18 +254,20 @@ state/Core и требует replay при изменении предыдуще
 с тем же testnet4 policy и Sepolia graph:
 
 1. Получите подтверждённые testnet4 UTXO, сформируйте SMP1 deposit для собственного
-   федерационного BTC-ключа, дождитесь глубины, вычислите свои ZK-переходы и
+   федерационного BTC-ключа, дождитесь глубины, обновите state и выполните
    materialize header. FROST-одобрение и SPV inclusion необходимы для mint MP.
-2. Перенесите BTC федерации на BTC-ключ кастодианов конфедерации. Проведите
-   исходный settlement на нужной глубине и проверьте сжигание MP. Выполните
-   `finalize` с доказательством точного выхода назначения. V3 выпускает
-   S напрямую, прежний профиль выпускает cBTC через локальный MP.
+2. До допуска источника подтвердите testnet4 на обеих сторонах. Перенос
+   поддерживает relay и ZK в одной сети. Запишите `net_shares` и
+   `protocol_fee_s` заявки V3 до подписания. Перенесите BTC на ключ кастодианов
+   и проверьте погашение MP после исходного settlement на нужной глубине.
+   Выполните `finalize` с доказательством точного выхода. V3 выпускает
+   зафиксированный S напрямую, прежний профиль выпускает cBTC через локальный MP.
 3. Для V3 сверьте номинал принятого выхода с приростом резерва и суммарным
    выпуском S получателю и DAO. Создайте заявку погашения S и план v5,
    выполните reserve/bind, независимую проверку и Bitcoin FROST-подпись
    кастодианов.
-4. После broadcast и confirmations вычислите свои proofs, materialize header и
-   выполните SPV settlement. Сверьте выплату в testBTC, комиссию майнерам,
+4. После broadcast и confirmations publisher обновляет state своим proof.
+   Затем выполните materialize header и SPV settlement. Сверьте выплату в testBTC, комиссию майнерам,
    сдачу и уменьшение резерва. Проверьте перевод комиссии протокола в S
    в DAO и идемпотентность расчёта. В прежнем профиле проверьте его fee reserve
    и изменения treasury.
@@ -274,13 +290,17 @@ flowchart TD
   LOCAL --> GATE["Приёмка ZK<br/>Свой свежий proof в выбранном тестовом графе"]
   POLICY["Sepolia + testnet4 policy V2"] --> RPC["Каждый проверяет Sepolia RPC<br/>и архивный Core testnet4"]
   RPC --> DKG["Свой enrollment / раздельные DKG"]
-  DKG --> STATE["Новый testnet4 state и adapter<br/>Verifier 3.1.0"]
-  RPC --> OWN["Выбранный prover готовит свой witness<br/>STARK → Groth16"]
-  STATE --> OWN
-  GATE --> OWN
-  OWN -.-> REVIEW["Публичный ZIP перехода<br/>Участники сверяют через свой Sepolia RPC"]
-  OWN --> ACCEPT["Один publisher<br/>Seal 0xe71e6620 → Fresh → materialize"]
-  ACCEPT --> MP["Депозит федерации и выпуск MP"]
+  DKG --> STATE["CREATE: testnet4 state, adapter и verifier 3.1.0"]
+  STATE --> MAN["Подтверждённый state из partial manifest"]
+  MAN --> C{"Consumers уже есть?"}
+  C -->|"Нет"| DEFER["Resume с defer<br/>Структурный граф, Fresh ещё ожидается"]
+  C -->|"Да"| OWN
+  DEFER --> OWN["Мощный ПК: подготовка, proving и экспорт ZIP"]
+  GATE -.-> OWN
+  OWN -.-> REVIEW["FROST review: verify-bundle<br/>Свой подтверждённый Sepolia RPC"]
+  OWN --> ACCEPT["Отдельный publish своего proof, затем Fresh"]
+  ACCEPT --> RESUME["Resume и verify без defer"]
+  RESUME --> MP["Свежий state и materialize header<br/>Депозит федерации и выпуск MP"]
   MP --> TRANSFER["BTC под ключ конфедерации и сжигание MP"]
   TRANSFER --> ISSUE["SPV точного выхода и выпуск S под принятый резерв"]
   ISSUE --> EXIT["План v5 и FROST кастодианов<br/>Выплата, miner fee, сдача и скидка NFT"]

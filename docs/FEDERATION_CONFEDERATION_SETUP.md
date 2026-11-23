@@ -2,7 +2,7 @@
 
 [Схемы: SVG/PNG и hashes текущих Mermaid-исходников](DIAGRAMS.md).
 
-Актуализация: 5 ноября 2026. [Холодный старт](COLD_START.md) ·
+Актуализация 23 ноября 2026. [Холодный старт](COLD_START.md) ·
 [Конфигуратор](LAUNCH_CONFIGURATOR.md) · [NFT скидок](NFT_CONFIGURATION.md) ·
 [FROST и ZK](FROST_ZK_LIFECYCLE.md).
 
@@ -46,8 +46,9 @@ frost-signer setup inspect --invite "$LOCAL/launch-v1/invitation.json"
 
 Произвольные `nft_*` или `federation_ids` поля в этот JSON добавлять нельзя:
 schema проверяет точный набор ключей. `custody_sources` заполняется публичными
-descriptors по [custody runbook](BITCOIN_CUSTODY_TRANSFER.md); пустой список
-допускает прямые депозиты, но не обмен внешнего MP. Начальные metadata кастодианов
+descriptors по [custody runbook](BITCOIN_CUSTODY_TRANSFER.md). Сеть исходного
+и целевого SPV должна совпадать. Relay и ZK можно сочетать в одной сети.
+Пустой список допускает прямые депозиты без внешних MP. Начальные metadata кастодианов
 план генерирует как `custodian-N`, pubkey `0x02`, `isInstitutional=true`.
 Эти поля не являются проверкой лицензии, личности или реальной BTC public share;
 рабочие Bitcoin public shares получаются в отдельном DKG.
@@ -99,9 +100,9 @@ stake-голоса также не повышают число custodian approva
 | Действие | Фактическая граница разрешения |
 | --- | --- |
 | Публикация/присоединение V6 | Своя EVM identity, проверенный fingerprint и provenance |
-| Резервирование ID федерации или конфедерации | `feeSetupAuthority()` соответствующей factory один раз связывает ID с конкретной DKG |
-| V1 factory adoption | Закреплённая пара ID и DKG, completed EVM_AUTH на **каноническом registry** этой factory, допустимый инициатор и проверка roster/threshold |
-| `deployFederation` / `deployConfederation` | Deployment initiator либо разрешённый участник; complete DKG, одноразовость и deployment fee policy |
+| Резервирование ID федерации или конфедерации | `feeSetupAuthority()` связывает ID с конкретной DKG, хешем состава и хешем метаданных токена |
+| V1 factory adoption | Резервация, совпадение состава, completed EVM_AUTH на **каноническом registry** и допустимый инициатор |
+| `deployFederation` / `deployConfederation` | Инициатор или разрешённый участник, завершённая DKG, совпадение имени и символа токена и deployment fee policy |
 | Изменения fee manager, pool bindings, deactivation | Target-bound FROST approval; у confederation также требуемые custodian approvals |
 | Управляемые NFT create/mint | Fee manager исполняет точный FROST-approved вызов, в conf также custodian minimum; issuer/admin/usage остаются у manager |
 
@@ -124,8 +125,9 @@ Local/Sepolia могут использовать явный integration fee exe
 2. Новая группа выбирает новый deployment ID, свои identity/roster и пороги,
    сети, имена MP/FS/CS, treasury reserve/bps и funding. Общие governance,
    USD, staking thresholds и startup parameters должны совпасть с reuse policy.
-3. Каждый готовит хост/Core; при ZK каждый готовит свой prover. Повторно
-   участвующий человек сохраняет исходную identity/EOA journals, но заводит
+3. Каждый готовит хост/Core. При ZK согласуйте prover, publisher и проверку
+   публичного ZIP. Повторно участвующий человек сохраняет исходную
+   identity/EOA journals, но заводит
    отдельный participant directory для нового invitation и DKG.
 4. Оператор проходит wizard в режиме `reuse`, задаёт файлы reuse/root policy,
    проверяет bundle и публикует новое invitation. Все независимо review/join.
@@ -161,27 +163,32 @@ Factory поддерживает много федераций, но у `configu
 
 | Шаг | Контракт / обязательное условие |
 | --- | --- |
-| `reserveFederationId(sessionId,newFederationId)` | Адрес из `feeSetupAuthority()` закрепляет ID за конкретной DKG в этой factory. Это можно сделать до завершения DKG. |
+| `reserveFederationId(sessionId,newFederationId,formationHash,tokenHash)` | Адрес из `feeSetupAuthority()` закрепляет сессию, состав и метаданные токена. Это можно сделать до завершения DKG. |
 | Новая federation ceremony | Completed `EVM_AUTH` в DKG registry этой factory. На новом реестре создаёт `ceremonyRegistrar` или назначенный им создатель на этот ID |
-| `adoptFederationDKG(sessionId,newFederationId)` | Точное совпадение с резервом, неиспользованный session, вызывающий участник результата |
+| `adoptFederationDKG(sessionId,newFederationId)` | ID, сессия и хеш упорядоченного roster с порогом совпадают с резервом. Вызывающий входит в результат. |
 | Deployment fee | Проверить configured policy; при платном пути allowance в правильном reward asset |
-| `deployFederation(sessionId,shareName,shareSymbol)` | Инициатор/участник, тот же completed result, повторный deploy отклоняется |
+| `deployFederation(sessionId,shareName,shareSymbol)` | Инициатор или участник передаёт имя и символ из резервации. Выпуск выполняется один раз. |
 | Проверка результата | `getFederation(newId)`, authorization/result/roster, shares, pool, активность и provenance |
 | Подключение возможностей | Fee manager/NFT, Bitcoin graph, pools, canonical-root admission и сервисы — отдельные действия, не следствие одной factory записи |
 
-Сверьте `reservedFederationSession(newFederationId)` перед adoption. Повтор
-резервирования той же пары допустим. Подменить session или закрепить за ним
-второй ID нельзя. Если зарезервированная церемония прервана, согласуйте новый
-ID и новый session. Полный bootstrap резервирует пару из приглашения сам.
+Сверьте `reservedFederationSession(newFederationId)` и
+`reservedFederationTerms(newFederationId)` перед adoption. Повтор требует
+того же ID, session и двух хешей. Для прерванной церемонии с ещё не
+использованным ID можно перенести эту резервацию на новую сессию с теми же
+условиями. [Восстановление резервации](RECOVERY.md#unused-factory-id-recovery).
+Полный bootstrap строит резервацию из приглашения.
 
 Для ручного расширения передайте согласованные значения администратору factory.
 `FACTORY_ACCOUNT` обозначает его локальную зашифрованную учётную запись Foundry.
 
 ```bash
 cast call "$FEDERATION_FACTORY" 'feeSetupAuthority()(address)' --rpc-url "$RPC"
-cast send "$FEDERATION_FACTORY" 'reserveFederationId(bytes32,string)' \
-  "$DKG_SESSION_ID" "$FEDERATION_ID" --rpc-url "$RPC" --account "$FACTORY_ACCOUNT"
+cast send "$FEDERATION_FACTORY" 'reserveFederationId(bytes32,string,bytes32,bytes32)' \
+  "$DKG_SESSION_ID" "$FEDERATION_ID" "$FED_FORMATION_HASH" "$FED_TOKEN_HASH" \
+  --rpc-url "$RPC" --account "$FACTORY_ACCOUNT"
 cast call "$FEDERATION_FACTORY" 'reservedFederationSession(string)(bytes32)' \
+  "$FEDERATION_ID" --rpc-url "$RPC"
+cast call "$FEDERATION_FACTORY" 'reservedFederationTerms(string)(bytes32,bytes32)' \
   "$FEDERATION_ID" --rpc-url "$RPC"
 ```
 
@@ -196,28 +203,64 @@ completed DKG и не добавляет сам по себе 70%-огранич
 
 ## 7. Дополнительная конфедерация на существующей factory
 
-Согласуйте ID новой конфедерации и её EVM_AUTH session ID. Адрес из
-`feeSetupAuthority()` общей `ConfederationFactory` закрепляет эту пару.
-Это можно сделать до завершения DKG. Bitcoin DKG проходит отдельно.
+Согласуйте ID новой конфедерации, её EVM_AUTH session ID, режим, список
+федераций, записи кастодианов, оба порога и метаданные долевого токена.
+Адрес из `feeSetupAuthority()` закрепляет их в общей `ConfederationFactory`.
+Резервацию можно записать до завершения EVM_AUTH. Bitcoin DKG проходит отдельно.
 
 ```bash
 cast call "$CONFEDERATION_FACTORY" 'feeSetupAuthority()(address)' --rpc-url "$RPC"
-cast send "$CONFEDERATION_FACTORY" 'reserveConfederationId(bytes32,string)' \
-  "$CONF_EVM_SESSION_ID" "$CONFEDERATION_ID" --rpc-url "$RPC" --account "$FACTORY_ACCOUNT"
+cast send "$CONFEDERATION_FACTORY" 'reserveConfederationId(bytes32,string,bytes32,bytes32)' \
+  "$CONF_EVM_SESSION_ID" "$CONFEDERATION_ID" "$CONF_FORMATION_HASH" "$CONF_TOKEN_HASH" \
+  --rpc-url "$RPC" --account "$FACTORY_ACCOUNT"
 cast call "$CONFEDERATION_FACTORY" 'reservedConfederationSession(string)(bytes32)' \
+  "$CONFEDERATION_ID" --rpc-url "$RPC"
+cast call "$CONFEDERATION_FACTORY" 'reservedConfederationTerms(string)(bytes32,bytes32)' \
   "$CONFEDERATION_ID" --rpc-url "$RPC"
 ```
 
-Дождитесь согласованной глубины подтверждений и сверьте пару. Она обязательна
+Дождитесь согласованной глубины подтверждений и сверьте сессию и оба хеша.
+Резервация обязательна
 для `adoptConfederationDKG`, `adoptConfederationFromFederation` и
 `adoptCustodianConfederationDKG`. После adoption инициатор или участник
-выполняет `deployConfederation` с действующей fee policy. Полный bootstrap
-сам резервирует пару из приглашения и проверяет её при `resume`.
+выполняет `deployConfederation` с согласованным именем и символом и действующей
+fee policy. Bootstrap проверяет резервацию, исходный состав и метаданные
+выпущенного токена при `resume` и `verify`.
 
-Повтор той же пары допустим. При прерванной зарезервированной церемонии
-согласуйте новый ID и session. Legacy `initiateConfederation` на local/Sepolia
+Точный повтор резервации допустим. Для зарегистрированного `Failed` или
+`Aborted` до adoption можно сохранить ID и оба хеша, переназначив
+резервацию на новую DKG. [Команды переноса](RECOVERY.md#unused-factory-id-recovery).
+Legacy `initiateConfederation` на local/Sepolia
 доступен адресу из `feeSetupAuthority()` для свободных ID и отклоняет
 зарезервированные сессии. Обновлённое правило действует на новой factory.
+
+### Формат хешей резервации
+
+Каждое значение вычисляйте как `keccak256(abi.encode(...))` из согласованных
+данных. Типы и порядок аргументов приведены ниже. Для массивов сохраняйте
+порядок приглашения. Имя и символ кодируются как согласованные строки UTF-8.
+
+| Переменная | Аргументы ABI |
+| --- | --- |
+| `FED_FORMATION_HASH` | `address[] members, uint256 threshold` |
+| `CONF_FORMATION_HASH` | `uint8 mode, string[] federationIds, (string,address,bytes,bool)[] custodians, uint256 totalThreshold, uint256 minCustodians` |
+| `FED_TOKEN_HASH`, `CONF_TOKEN_HASH` | `string name, string symbol` соответствующего ERC-20 |
+
+Кортеж кастодиана содержит в порядке ABI `custodianId`, `signerAddress`,
+`custodianPubkey`, `isInstitutional`. Для обычного `adoptConfederationDKG`
+режим равен 0, для `adoptConfederationFromFederation` режим равен 1 и список
+содержит один ID. Для `adoptCustodianConfederationDKG` режим равен 2.
+[Функции вычисления хешей в SDK](../signer-agent/signer_agent/bootstrap_formation.py).
+
+### Новая DKG для неиспользованного ID
+
+Если прежняя V6 DKG получила подтверждённый `Aborted` или `Failed`,
+`setup reservation-invite` создаёт отдельное приглашение с прежними
+условиями. После enrollment `setup reservation-ceremony` создаёт только
+нужную роль в исходном реестре, сверяет оба хеша и показывает точный вызов
+adoption. Для custodian-only используется `adoptCustodianConfederationDKG`
+и тот же порядок кастодианов. Деплой токена использует исходные имя и символ.
+[Порядок и команды переноса](RECOVERY.md#unused-factory-id-recovery).
 
 ### Несколько федераций в конфедерации
 
@@ -241,11 +284,14 @@ flowchart TD
     Q{"Что добавляем?"} -->|"Независимую полную группу"| R["Новый V6 launch, mode reuse<br/>Новые ID, factory graph и три DKG"]
     R --> P["Проверить shared governance/USD/staking<br/>Исходный root quorum одобряет новый registry"]
     P --> V["Своя казна, wallet и verify<br/>Без повторного governance mint"]
-    Q -->|"Только federation на общей factory"| F["Закрепить ID за новой EVM_AUTH DKG<br/>После завершения: adoptFederationDKG и deployFederation"]
+    Q -->|"Только federation на общей factory"| F["Закрепить ID, EVM_AUTH, состав и имя токена<br/>Сверить состав при adoption и метаданные при deploy"]
     F --> X["Отдельно подключить fees, NFT и Bitcoin graph"]
-    Q -->|"Новая conf на общей factory"| C["Закрепить ID за confederation EVM_AUTH<br/>Сверить source federations и roster"]
-    C --> A["Завершить custody DKG<br/>Adoption только с закреплённой парой"]
-    A --> N["Deploy новой conf и явный asset handover<br/>Старые обязательства сохраняются"]
+    Q -->|"Новая conf на общей factory"| C["Закрепить ID, EVM_AUTH и оба хеша<br/>Состав включает режим, федерации и записи кастодианов"]
+    C --> A["Завершить EVM_AUTH<br/>Factory сверяет условия формирования"]
+    A --> N["Проверить имя и символ до выпуска<br/>Выполнить явный перенос активов"]
+    F -->|"DKG окончательно остановлена до adoption"| T["После подтверждённого Failed или Aborted<br/>Перенести только сессию резервации"]
+    C -->|"DKG окончательно остановлена до adoption"| T
+    T --> G["Завершить новую DKG<br/>Adoption и deploy сохраняют согласованные условия"]
 ```
 
 ## 8. Источники и границы

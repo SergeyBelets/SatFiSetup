@@ -35,7 +35,7 @@ def verifier_env(monkeypatch):
         if kind=='FROSTCoordinator' and data.strict_constructor and args!=[verifier]:raise ValueError('CONTRACT_CREATION_ARGUMENTS_MISMATCH')
         return dict(method='direct')
     monkeypatch.setattr(contract_provenance,'prove_creation',prove)
-    client=NS(w3=w3,address=coordinator,_read_snapshot=blocks[7],check_read_snapshot=lambda:None)
+    client=NS(w3=w3,chain_id=w3.eth.chain_id,address=coordinator,_read_snapshot=blocks[7],check_read_snapshot=lambda:None)
     client.guard_verifier=lambda session:CoordinatorClient.guard_verifier(client,session)
     session=NS(state=1,purpose=1,verifier_override=ZERO)
     return NS(client=client,session=session,data=data,coordinator=coordinator,verifier=verifier,clone=clone)
@@ -65,7 +65,8 @@ def test_verifier_substitution_is_rejected_before_any_nonce_or_private_math(veri
     with pytest.raises(ValueError,match=error):service._approve_locked(e.session)
 
 
-@pytest.mark.parametrize('guard',['guard_verifier','guard_gas_session','guard_ulr_treasury_session','guard_token_metadata_session','guard_custody_session','guard_nft_session'])
+@pytest.mark.parametrize('guard', ['guard_verifier', 'guard_gas_session', 'guard_bitcoin_session',
+    'guard_ulr_treasury_session', 'guard_token_metadata_session', 'guard_custody_session', 'guard_nft_session'])
 @pytest.mark.parametrize('phase',['initial','new_nonce','recovered_nonce','new_share','cached_share'])
 def test_every_private_boundary_rechecks_treasury_and_verifier(monkeypatch,guard,phase):
     sender=addr(10);participants=[sender];nonces=NoncePair(7,11)
@@ -182,7 +183,7 @@ def test_treasury_substitution_with_self_consistent_hash_stops_before_signing(ul
     monkeypatch.setattr(policy,'read',read)
     intent=policy.intent_for(e.w3,target,kind,helper,args,e.auth.address,'conf_ceremony',5,ulr_treasury=e.treasury.address)
     session=NS(state=1,purpose=1,origin_contract=target.address,message_hash=policy.digest(intent['operation_hash']))
-    client=NS(guard_ulr_treasury_session=lambda _:policy.review(e.w3,intent,e.bundle,5,e.pin))
+    client=NS(chain_id=e.w3.eth.chain_id,guard_ulr_treasury_session=lambda _:policy.review(e.w3,intent,e.bundle,5,e.pin))
     service=object.__new__(SigningService);service.client=client
     monkeypatch.setattr(signing,'random_nonce_pair',lambda:pytest.fail('substituted treasury reached nonce generation'))
     monkeypatch.setattr(signing.crypto,'call',lambda *a,**kw:pytest.fail('substituted treasury reached private signing'))

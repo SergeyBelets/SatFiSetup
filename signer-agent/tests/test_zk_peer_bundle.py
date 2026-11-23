@@ -146,6 +146,47 @@ def test_preparation_export_and_verification_do_not_use_identity(local, scope, t
         bundle.verify_bundle(peer, path, require_proof=True)
 
 
+@pytest.mark.parametrize("scenario", ["consistent", "state", "proof", "anchor"])
+def test_witness_pins_same_confirmed_block_and_repeats_proof_verification(scope, tmp_path, monkeypatch, scenario):
+    config, _ = scope
+    config = dict(config, evm_rpc="https://first.example.test/secret",
+                  evm_witness_rpc="https://second.example.test/secret")
+    path = tmp_path / "proved.zip"
+    write_bundle(path, scope)
+    primary, first_calls = reviewer(monkeypatch, config)
+    primary_binding = bundle.inspect_binding
+    witness, second_calls = reviewer(monkeypatch, config, commitment=AFTER if scenario == "state" else BEFORE,
+                                     fail_proof=scenario == "proof")
+    witness_binding = bundle.inspect_binding
+
+    def get_block(tip, fork=False):
+        def block(number):
+            if number == "latest":
+                number = tip
+            if number == "finalized":
+                number = 100
+            return SimpleNamespace(number=number, hash=bytes(32) if fork else BLOCK_HASH)
+        return block
+
+    primary.w3.eth.get_block = get_block(120)
+    witness.w3.eth.get_block = get_block(100 + int(config["evm_confirmations"]) - 1, scenario == "anchor")
+    monkeypatch.setattr(bundle, "witness_web3", lambda c, *, timeout: witness.w3)
+    monkeypatch.setattr(bundle, "inspect_binding", lambda w3, *a:
+                        (primary_binding if w3 is primary.w3 else witness_binding)(w3, *a))
+    if scenario != "consistent":
+        reason = "ZK_PEER_BUNDLE_PROOF_INVALID" if scenario == "proof" else "EVM_RPC_WITNESS_MISMATCH"
+        with pytest.raises(ValueError, match=f"^{reason}$"):
+            bundle.verify_bundle(primary, path, require_proof=True)
+        assert bool(first_calls) == bool(second_calls) == (scenario != "anchor")
+    else:
+        review = bundle.verify_bundle(primary, path, require_proof=True)
+        assert review["proof_verified"] and review["independent_rpc_confirmed"]
+        assert review["evm_block_number"] == 100
+        assert review["onchain_state_relation"] == "MATCHES_PREDECESSOR"
+        assert first_calls == second_calls and len(first_calls) == 1
+        assert "secret" not in json.dumps(review)
+
+
 def test_exact_local_proof_can_be_exported_after_attempt_is_cleared(local, scope, tmp_path, monkeypatch):
     writer, base, records = local
     config, journal = scope

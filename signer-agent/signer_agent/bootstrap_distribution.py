@@ -1,7 +1,7 @@
 """Manual ULR distribution after mint/import and before ULR authorization sessions."""
 import hashlib
 import re
-from .evm_network import read_block
+from .evm_network import read_block, verify_anchor
 from .operations import canonical
 from .ulr_treasury import MIN_ULR, SUPPLY
 
@@ -26,7 +26,7 @@ def validate_release(bootstrap,account,release,accepted,readonly):
 
 def snapshot(bootstrap,step):
     b=bootstrap;w3=b.w3
-    block=read_block(w3,int(b.profile.get('evm_confirmations','12' if w3.eth.chain_id==1 else '1')))
+    block=read_block(w3,b.evm_confirmations)
     token=b.contract(step['token']);staking=b.contract(step['staking'])
     def read(c,at,name,*args):return getattr(c.functions,name)(*args).call(block_identifier=at)
     if (read(token,block.number,'totalSupply')!=SUPPLY or read(token,block.number,'decimals')!=18
@@ -60,9 +60,8 @@ def checkpoint(bootstrap,step,entry,account,*,release=False,accepted=None,readon
     if entry['status']=='RECOVERY_REQUIRED':raise ValueError('PRIOR_TRANSACTION_RECOVERY_REQUIRED')
     if entry['status']=='CONFIRMED':
         anchor=saved['read_anchor']
-        safe=read_block(w3,int(bootstrap.profile.get('evm_confirmations','12' if w3.eth.chain_id==1 else '1')))
-        if int(anchor['number'])>safe.number or w3.eth.get_block(int(anchor['number'])).hash.hex()!=anchor['hash']:
-            raise ValueError('EVM_REORG_RECOVERY_REQUIRED')
+        safe=read_block(w3,bootstrap.evm_confirmations)
+        verify_anchor(w3,int(anchor['number']),anchor['hash'],safe=safe)
         if release and accepted!=saved['distribution']['fingerprint']:
             raise ValueError('ULR_DISTRIBUTION_CHANGED')
         return None

@@ -18,6 +18,8 @@ from signer_agent.dkg_protocol import Manifest
 from signer_agent.operations import Journal, canonical
 
 ORIGINAL_AUTHORITY_CONTEXT = policy.authority_context
+ORIGINAL_TREASURY_CONTEXT = policy.treasury_context
+ORIGINAL_PROVEN = policy.proven
 
 
 def addr(n):
@@ -101,6 +103,195 @@ def prepare(env):
     intent = policy.intent_for(env.w3, env.registry, "ULRCustodianSnapshots", "getPublishDayOperationHash",
         args, env.auth.address, "conf_ceremony", 5, ulr_snapshot_inputs=deepcopy(env.inputs))
     return args, evidence, intent
+
+
+@pytest.fixture
+def inactive_recovery(env, monkeypatch):
+    treasury = env.treasury
+    treasury.abi = artifact("ULRConfederationTreasury")["abi"]
+    usd = SimpleNamespace(address=addr(8))
+    env.objects[usd.address] = usd
+    original_read = policy.read
+    original_context = policy.treasury_context
+    factory = env.objects[addr(4)]
+    conf = original_read(factory, 5, "getConfederation", "A")
+    conf[-1] = False
+    env.view.balance = 2_000_000
+    env.view.enrollment = treasury.address
+    env.view.receipt = bytes(32)
+    env.view.recovery_build = True
+
+    def read(node, at, method, *args):
+        if method == policy.INACTIVE_RECOVERY_METHOD:
+            return Web3.keccak(env.w3.codec.encode(["address", "uint256", "uint256", "uint256"], [*args, env.view.nonce]))
+        if method == "rewardToken":
+            return usd.address
+        if method == "balanceOf" and node == usd:
+            assert args == (treasury.address,)
+            return env.view.balance
+        if method == "treasuries":
+            env.view.calls.append((node.address, at, method, args))
+            return env.view.enrollment
+        if method == "operationTargets":
+            return treasury.address
+        if method == "inactiveRecoveryReceipts":
+            return env.view.receipt
+        if method == "isOperationApproved":
+            return True
+        return original_read(node, at, method, *args)
+
+    def context(w3, pin, target, at, *, require_active=True, legacy_factory=False):
+        if require_active and not conf[-1]:
+            raise ValueError("ULR_CONFEDERATION_BINDING")
+        return original_context(w3, pin, target, at)
+
+    monkeypatch.setattr(policy, "read", read)
+    monkeypatch.setattr(policy, "treasury_context", context)
+    monkeypatch.setattr(policy, "runtime_artifact", lambda *_: ("fixture", {} if env.view.recovery_build
+                                                               else {"legacy_reference": "ULRConfederationTreasuryV2"}))
+    values = [env.owners[0], 1_000_000, env.blocks[5].timestamp + 100]
+    intent = policy.intent_for(env.w3, treasury, "ULRConfederationTreasury", policy.INACTIVE_RECOVERY_METHOD,
+                               values, env.auth.address, "conf_ceremony", 5)
+    return SimpleNamespace(env=env, values=values, intent=intent, conf=conf)
+
+
+def test_review_inactive_recovery_is_scoped_and_exact(inactive_recovery):
+    c = inactive_recovery
+    reviewed = policy.review(c.env.w3, c.intent, c.env.bundle, 5, c.env.pin)
+    assert reviewed["arguments"] == c.values
+    assert reviewed["target"].address == c.env.treasury.address
+    c.env.view.nonce = 1
+    with pytest.raises(ValueError, match="ULR_OPERATION_HASH"):
+        policy.review(c.env.w3, c.intent, c.env.bundle, 5, c.env.pin)
+
+    c.env.view.complete = True
+    c.env.view.receipt = Web3.keccak(c.env.w3.codec.encode(["address", "uint256", "uint256"], c.values))
+    assert policy.review(c.env.w3, c.intent, c.env.bundle, 5, c.env.pin)["complete"]
+    changed = dict(c.intent, hash_args=[addr(977), *c.intent["hash_args"][1:]])
+    with pytest.raises(ValueError, match="ULR_RECOVERY_RECEIPT"):
+        policy.review(c.env.w3, changed, c.env.bundle, 5, c.env.pin)
+
+
+@pytest.mark.parametrize("case,error", [
+    ("active", "ULR_RECOVERY_REQUIRES_INACTIVE"), ("legacy", "ULR_TREASURY_RECOVERY_UNSUPPORTED"),
+    ("not_enrolled", "ULR_TREASURY_NOT_ENROLLED"), ("too_much", "ULR_RECOVERY_AMOUNT"),
+    ("expired", "ULR_RECOVERY_EXPIRED"), ("wrong_group", "ULR_SPEND_POLICY"),
+])
+def test_review_rejects_nonrecoverable_treasury_intent(inactive_recovery, case, error):
+    c = inactive_recovery
+    if case == "active":
+        c.conf[-1] = True
+    elif case == "legacy":
+        c.env.view.recovery_build = False
+    elif case == "not_enrolled":
+        c.env.view.enrollment = addr(999)
+    elif case == "too_much":
+        c.env.view.balance = 1
+    elif case == "expired":
+        c.env.blocks[5].timestamp += 101
+    elif case == "wrong_group":
+        c.env.bundle["role"] = "evm_ceremony"
+    with pytest.raises(ValueError, match=error):
+        policy.review(c.env.w3, c.intent, c.env.bundle, 5, c.env.pin)
+
+
+def test_inactive_recovery_can_be_prepared_approved_and_simulated(inactive_recovery, cli_env,
+                                                                monkeypatch, tmp_path, capsys):
+    from signer_agent import custodian_cli, onchain_transport
+
+    c = inactive_recovery
+    bundle_file, intent_file = tmp_path / "bundle.json", tmp_path / "intent.json"
+    bundle_file.write_text(json.dumps(c.env.bundle))
+    common = ["--rpc", "unused", "--config", "unused", "--bundle", str(bundle_file), "--intent", str(intent_file)]
+    assert cli_env.cli.main(["recover-inactive-prepare", *common, "--treasury", c.env.treasury.address,
+                             "--recipient", c.values[0], "--amount", str(c.values[1]),
+                             "--deadline", str(c.values[2])]) == 0
+    assert json.loads(intent_file.read_text()) == c.intent
+    assert json.loads(capsys.readouterr().out)["status"] == "PREPARED"
+
+    monkeypatch.setattr(onchain_transport, "ceremony_bundle", lambda *_: c.env.bundle)
+    authority, validator, reviewed = custodian_cli.ulr_context(c.env.w3, c.intent, addr(99), 5, "unused")
+    assert (authority, validator) == (c.env.auth.address, c.conf[8])
+    assert reviewed["arguments"] == c.values
+
+    read = policy.read
+    monkeypatch.setattr(policy, "read", lambda node, at, method, *args: True if method == "isOperationApproved"
+                        else read(node, at, method, *args))
+    assert cli_env.cli.main(["execute", *common, "--sender", c.values[0]]) == 0
+    assert cli_env.calls[0][:4] == ("target", "recoverInactive",
+                                   [*c.values, policy.digest(c.intent["operation_hash"])], False)
+    assert json.loads(capsys.readouterr().out)["status"] == "SIMULATED"
+
+
+@pytest.mark.parametrize("registered,active,legacy", [
+    (3, True, False), (0, True, False), (999, True, False), (3, False, False), (3, True, True),
+])
+def test_status_reports_exact_enrollment_at_confirmed_scope(
+    inactive_recovery, cli_env, capsys, registered, active, legacy,
+):
+    c = inactive_recovery
+    c.conf[-1] = active
+    c.env.view.enrollment = addr(registered)
+    c.env.view.recovery_build = not legacy
+    assert cli_env.cli.main(["status", "--rpc", "unused", "--config", "unused",
+                             "--treasury", c.env.treasury.address]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["treasury"] == c.env.treasury.address
+    assert result["active"] is active
+    assert result["enrolled"] is (c.env.view.enrollment == c.env.treasury.address)
+    assert result["inactive_recovery_supported"] is not legacy
+    assert (c.env.registry.address, 5, "treasuries", (c.env.view.scope,)) in c.env.view.calls
+    assert not cli_env.calls
+
+
+def test_status_rejects_code_and_enrollment_reads_from_reorganized_block(
+    inactive_recovery, cli_env, monkeypatch,
+):
+    c = inactive_recovery
+    monkeypatch.setattr(c.env.w3.eth, "get_block", lambda _: SimpleNamespace(hash=b"new"))
+    with pytest.raises(ValueError, match="EVM_REORG_RECOVERY_REQUIRED"):
+        cli_env.cli.main(["status", "--rpc", "unused", "--config", "unused",
+                          "--treasury", c.env.treasury.address])
+
+
+def test_existing_enrolled_treasury_can_read_exact_previous_factory(env, monkeypatch):
+    factory = env.objects[addr(4)]
+    read, proven = policy.read, policy.proven
+    values = dict(factory=factory.address, confederationId="A", snapshots=env.registry.address,
+                  reserveFloor=1000, payoutBps=9000, staking=env.staking.address, rewardToken=addr(5))
+    view = dict(legacy=True, enrolled=True)
+    proofs = []
+
+    def read_bound(node, at, method, *args):
+        if method == "treasuries" and not view["enrolled"]:
+            return addr(0)
+        return values[method] if method in values else read(node, at, method, *args)
+
+    def known_build(w3, kind, target, at, args=None):
+        if kind == "ConfederationFactory":
+            raise ValueError("BTC_CONTRACT_BUILD_MISMATCH")
+        return proven(w3, kind, target, at, args)
+
+    def prove(w3, target, kind, args, at, **options):
+        assert (target, kind, at, options) == (factory.address, "ConfederationFactory", 5, {"legacy_ulr_factory": True})
+        proofs.append(target)
+        return {"method": "direct"}
+
+    monkeypatch.setattr(policy, "read", read_bound)
+    monkeypatch.setattr(policy, "proven", known_build)
+    monkeypatch.setattr(policy, "prove_creation", prove)
+    monkeypatch.setattr(policy, "recovery_supported", lambda *_: not view["legacy"])
+    args = [env.w3, env.pin, env.treasury.address, 5]
+    with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD_MISMATCH"):
+        ORIGINAL_TREASURY_CONTEXT(*args)
+    assert ORIGINAL_TREASURY_CONTEXT(*args, legacy_factory=True)[3] == factory
+    assert proofs == [factory.address]
+    for field in ("enrolled", "legacy"):
+        view[field] = False
+        with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD_MISMATCH"):
+            ORIGINAL_TREASURY_CONTEXT(*args, legacy_factory=True)
+        view[field] = True
+    assert proofs == [factory.address]
 
 
 @pytest.mark.parametrize("count", [51, 65, 300])
@@ -232,6 +423,16 @@ def test_calldata_floor_over_network_limit_is_rejected(env):
     args = [(101, 3, b"a" * 32, b"e" * 32), owners, [100] * len(owners), allocations]
     with pytest.raises(ValueError, match="ULR_SNAPSHOT_TRANSACTION_GAS"):
         policy.snapshot_calldata_limit(env.w3, env.registry, args, b"o" * 32, 5)
+
+
+def test_mainnet_snapshot_calldata_floor_must_leave_the_sdk_gas_margin():
+    registry = SimpleNamespace(encode_abi=lambda *_a, **_kw: "0x" + "ff" * 340_000)
+    eth = SimpleNamespace(chain_id=31337, get_block=lambda _: SimpleNamespace(gasLimit=2**24))
+    w3 = SimpleNamespace(eth=eth)
+    policy.snapshot_calldata_limit(w3, registry, [], b"o" * 32, 5)
+    eth.chain_id = 1
+    with pytest.raises(ValueError, match="^ULR_SNAPSHOT_TRANSACTION_GAS$"):
+        policy.snapshot_calldata_limit(w3, registry, [], b"o" * 32, 5)
 
 
 def test_known_treasury_cannot_be_omitted_from_global_active_inventory(env):
@@ -470,11 +671,7 @@ def test_new_treasury_session_without_explicit_local_pin_cannot_sign(env, monkey
 @pytest.fixture
 def cli_env(env, monkeypatch):
     from signer_agent import ulr_treasury_cli as cli
-    class Web3Fixture(Web3):
-        def __new__(cls, *args, **kwargs):
-            return env.w3
-        HTTPProvider = staticmethod(lambda *args, **kwargs: None)
-    monkeypatch.setattr(cli, "Web3", Web3Fixture)
+    monkeypatch.setattr(cli, "evm_web3", lambda *a, **kw: env.w3)
     monkeypatch.setattr(cli, "read_block", lambda *_: env.blocks[5])
     monkeypatch.setattr(policy, "load_pin", lambda *_: env.pin)
     calls = []
@@ -734,7 +931,7 @@ def test_claim_does_not_depend_on_active_confederation_or_snapshot_authority(cli
     original = policy.read
     monkeypatch.setattr(policy, "read", lambda target, at, method, *args: addr(5) if method == "rewardToken"
                         else original(target, at, method, *args))
-    monkeypatch.setattr(policy, "proven", lambda *_: c.env.staking)
+    monkeypatch.setattr(policy, "proven", lambda *_, **__: c.env.staking)
     def unavailable(*_): raise AssertionError("claim must not consult governance")
     monkeypatch.setattr(policy, "configuration", unavailable)
     monkeypatch.setattr(policy, "treasury_context", unavailable)
@@ -748,7 +945,7 @@ def test_owner_staking_actions_need_no_snapshot_or_active_confederation(cli_env,
     c = cli_env
     monkeypatch.setattr(policy, "read", lambda target, at, method, *args: addr(5) if method == "rewardToken"
                         else addr(4) if method == "stakeToken" else None)
-    monkeypatch.setattr(policy, "proven", lambda *args: c.env.staking)
+    monkeypatch.setattr(policy, "proven", lambda *_, **__: c.env.staking)
     def unavailable(*args): raise AssertionError("owner operation must not consult governance")
     monkeypatch.setattr(policy, "configuration", unavailable)
     monkeypatch.setattr(policy, "treasury_context", unavailable)
@@ -769,7 +966,7 @@ def test_zero_stake_or_unstake_is_rejected_before_transaction(cli_env, monkeypat
     original = policy.read
     monkeypatch.setattr(policy, "read", lambda target, at, method, *args: addr(5) if method == "rewardToken"
                         else original(target, at, method, *args))
-    monkeypatch.setattr(policy, "proven", lambda *args: c.env.staking)
+    monkeypatch.setattr(policy, "proven", lambda *_, **__: c.env.staking)
     with pytest.raises(ValueError, match="POSITIVE_AMOUNT_REQUIRED"):
         c.cli.main([action, "--rpc", "unused", "--config", "unused", "--amount", "0", "--sender", c.env.owners[0]])
     assert not c.calls
@@ -777,7 +974,7 @@ def test_zero_stake_or_unstake_is_rejected_before_transaction(cli_env, monkeypat
 
 def test_owner_wallet_can_read_by_owner_without_a_signing_identity(cli_env, monkeypatch, capsys):
     c = cli_env
-    monkeypatch.setattr(policy, "proven", lambda *args: c.env.staking)
+    monkeypatch.setattr(policy, "proven", lambda *_, **__: c.env.staking)
     def read(target, at, method, *args):
         return {"CUSTODIAN_THRESHOLD":200000*10**18,"minimumStakeAmount":1,"stakeToken": addr(4), "rewardToken": addr(5), "balanceOf": 100, "stakedBalance": 200, "allowance": 300}[method]
     monkeypatch.setattr(policy, "read", read)
@@ -785,4 +982,77 @@ def test_owner_wallet_can_read_by_owner_without_a_signing_identity(cli_env, monk
     result = json.loads(capsys.readouterr().out)
     assert result["owner"] == c.env.owners[0]
     assert [result[k] for k in ("balance", "staked", "allowance")] == ["100", "200", "300"]
+    assert not c.calls
+
+
+@pytest.fixture
+def previous_staking_cli(cli_env, monkeypatch):
+    from eth_abi import encode
+    from web3.datastructures import AttributeDict
+    from signer_agent import bitcoin_trust
+    from test_contract_provenance import History
+
+    env = cli_env.env
+    previous = bitcoin_trust.previous_artifact("ULRStaking")
+    current = deepcopy(previous)
+    current["deployedBytecode"]["object"] += "00"
+    monkeypatch.setattr(bitcoin_trust, "artifact", lambda _: current)
+    token, usd, threshold, minimum = addr(5), addr(8), 200_000 * 10**18, 10**18
+    values = {"stakeToken": token, "rewardToken": usd, "CUSTODIAN_THRESHOLD": threshold,
+              "minimumStakeAmount": minimum, "balanceOf": 100, "stakedBalance": 200, "allowance": 300}
+    history = History()
+    history.contracts[env.staking.address] = (
+        4, bytes.fromhex(previous["deployedBytecode"]["object"].removeprefix("0x")))
+    initcode = bytes.fromhex(previous["bytecode"]["object"].removeprefix("0x"))
+    tx, _ = history.transaction(4, to=None, deployed=env.staking.address, input_data=initcode + encode(
+        ["address", "address", "uint256", "uint256"], [token, usd, threshold, minimum]))
+
+    original_get_block = env.w3.eth.get_block
+    env.w3.eth.get_block = lambda number, full_transactions=False: (
+        AttributeDict(history.get_block(number)) if number == 4 else original_get_block(number))
+    env.w3.eth.get_code = history.w3.eth.get_code
+    env.w3.eth.get_transaction_receipt = history.w3.eth.get_transaction_receipt
+    monkeypatch.setattr(policy, "read", lambda target, at, method, *args: values[method])
+    monkeypatch.setattr(policy, "proven", ORIGINAL_PROVEN)
+    return cli_env, tx
+
+
+@pytest.mark.parametrize("action,arguments", [
+    ("wallet", ["--owner"]), ("claim", ["--days", "101", "--sender"]),
+    ("unstake", ["--amount", "100", "--sender"]),
+])
+def test_previous_staking_allows_owner_exits_and_read(previous_staking_cli, capsys, action, arguments):
+    c, _ = previous_staking_cli
+    c.cli.main([action, "--rpc", "unused", "--config", "unused", *arguments, c.env.owners[0]])
+    result = json.loads(capsys.readouterr().out)
+    if action == "wallet":
+        assert result["staked"] == "200" and not c.calls
+    else:
+        assert result["status"] == "SIMULATED"
+        assert c.calls[0][1] == action
+
+
+@pytest.mark.parametrize("action", ["stake", "approve"])
+def test_previous_staking_rejects_new_deposits_and_approvals(previous_staking_cli, action):
+    c, _ = previous_staking_cli
+    with pytest.raises(ValueError, match="^BTC_CONTRACT_BUILD_MISMATCH$"):
+        c.cli.main([action, "--rpc", "unused", "--config", "unused", "--amount", "100", "--sender", c.env.owners[0]])
+    assert not c.calls
+
+
+def test_previous_staking_rejects_unproven_constructor_before_exit(previous_staking_cli):
+    c, tx = previous_staking_cli
+    tx["input"] += b"\0"
+    with pytest.raises(ValueError, match="^BTC_CONSTRUCTOR_INPUT_MISMATCH$"):
+        c.cli.main(["unstake", "--rpc", "unused", "--config", "unused", "--amount", "100", "--sender", c.env.owners[0]])
+    assert not c.calls
+
+
+def test_previous_staking_rechecks_the_selected_block_before_exit(previous_staking_cli):
+    c, _ = previous_staking_cli
+    get_block = c.env.w3.eth.get_block
+    c.env.w3.eth.get_block = lambda number, **options: (
+        SimpleNamespace(hash=b"replacement".ljust(32, b"\0")) if number == 5 else get_block(number, **options))
+    with pytest.raises(ValueError, match="^EVM_REORG_RECOVERY_REQUIRED$"):
+        c.cli.main(["claim", "--rpc", "unused", "--config", "unused", "--days", "101", "--sender", c.env.owners[0]])
     assert not c.calls

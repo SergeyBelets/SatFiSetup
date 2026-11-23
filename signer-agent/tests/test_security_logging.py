@@ -71,7 +71,7 @@ def test_all_legacy_command_boundaries_redact_rpc_errors(
     monkeypatch, capsys, caplog, arguments
 ):
     service = SimpleNamespace(
-        pending=fail, client=SimpleNamespace(relay_authorization=fail, session=fail)
+        pending=fail, client=SimpleNamespace(chain_id=31337, relay_authorization=fail, session=fail)
     )
     monkeypatch.setattr(
         cli.Config, "from_env", lambda: SimpleNamespace(poll_interval=1, auto_sign=True)
@@ -90,11 +90,25 @@ def test_session_failure_never_logs_exception_traceback(monkeypatch, capsys, cap
 
 
 def test_decision_failure_is_caught_after_session_lookup(monkeypatch, capsys, caplog):
-    service = SimpleNamespace(pending=lambda _: [object()], approve=fail)
+    service = SimpleNamespace(pending=lambda _: [object()], approve=fail, client=SimpleNamespace(chain_id=31337))
     monkeypatch.setattr(cli.Config, "from_env", lambda: object())
     monkeypatch.setattr(cli, "SigningService", lambda _: service)
     assert cli.main(["decide", "1", "approve"]) == 2
     assert_redacted(capsys, caplog)
+
+
+@pytest.mark.parametrize("chain", [1, 11155111])
+@pytest.mark.parametrize("command", [["run-once", "--approve-all"], ["run-once"],
+                                      ["watch"], ["decide", "1", "approve"]])
+def test_legacy_public_signer_stops_before_fetching_any_approval_session(monkeypatch, capsys, chain, command):
+    def unreachable(*_args):
+        pytest.fail("legacy public signer reached a signing session")
+
+    service = SimpleNamespace(pending=unreachable, client=SimpleNamespace(chain_id=chain))
+    monkeypatch.setattr(cli.Config, "from_env", lambda: SimpleNamespace(auto_sign=True))
+    monkeypatch.setattr(cli, "SigningService", lambda _: service)
+    assert cli.main(command) == 2
+    assert "PUBLIC_EVM_TYPED_SIGNING_REQUIRED" in capsys.readouterr().err
 
 
 def test_debug_does_not_enable_http_transport_logging(monkeypatch):

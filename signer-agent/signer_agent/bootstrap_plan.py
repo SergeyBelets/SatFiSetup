@@ -10,9 +10,24 @@ from .bitcoin_network import is_public_network, relay_artifact
 ZERO = "0x" + "00" * 20
 
 
+def spv_payment_deployment(confederation_id, *, historical=True):
+    name = "spv_payment_registry"
+    checks = [dict(contract=name, method=method, args=[], equals=expected) for method, expected in (
+        ("factory", "$confederations"), ("confederationId", confederation_id),
+        ("stateView", "$spv_service_view"), ("state", "$relay"),
+        ("adapter", "$spv_guard"), ("authorization", "$conf_auth"), ("enabled", False),
+    )]
+    if historical:
+        checks[-1]["at_receipt"] = True
+    return dict(id=name, kind="deploy", artifact="SPVServicePaymentRegistry",
+                args=["$confederations", confederation_id, "$spv_service_view"], outputs=[], checks=checks)
+
+
 def build(config):
     p = dict(config)
-    from .bootstrap_tokens import resolve
+    from .bootstrap import Bootstrap
+    from .bootstrap_formation import expected_formation
+    from .bootstrap_tokens import require_literal, resolve
     names = resolve(p)
     required = (
         "evm_ceremony",
@@ -28,6 +43,8 @@ def build(config):
     missing = [k for k in required if k not in p]
     if missing:
         raise ValueError("MISSING_PUBLIC_BOOTSTRAP_INPUTS: " + ",".join(missing))
+    for key in ("deployment_id", "federation_id", "confederation_id"):
+        require_literal(p.get(key))
     public_bitcoin = is_public_network(p.get("bitcoin_network"))
     ethereum = p.get("chain_id") == "1"
     mainnet = public_bitcoin or ethereum  # Backed economic components, independent of BTC network.
@@ -46,6 +63,9 @@ def build(config):
     if "withdrawal_fee" in p:
         from .bootstrap_withdrawal_fee import validate
         validate(p["withdrawal_fee"])
+    from .bitcoin_recovery_policy import (ARTIFACT as RECOVERY_ARTIFACT, FACTORY_ARTIFACT,
+        SUCCESSOR_DKG, constructor_args as recovery_args, enrolled_policy)
+    recovery = enrolled_policy(p)
     if mainnet:
         validate_mainnet_policy(p, "INVALID_EXPLICIT_PARAMETER: ")
         contracts = dict(p.get("contracts", {}))
@@ -64,6 +84,7 @@ def build(config):
 
     # An enrolled local profile has the same signed-input boundary as a profile
     # fetched from a board. Routing alone remains participant-local.
+    invitation = None
     if "onboarding" in p or p.get("onchain_board"):
         from .onboarding import verify_profile
 
@@ -122,6 +143,9 @@ def build(config):
         or bitcoin.threshold != threshold
     ):
         raise ValueError("BOOTSTRAP_BITCOIN_ROSTER_THRESHOLD")
+    formation = expected_formation(invitation if invitation is not None else p)
+    federation_terms = formation["federation"]
+    confederation_terms = formation["confederation"]
 
     from .bootstrap_confederation_dao import enabled as confederation_dao_enabled
     in_kind = confederation_dao_enabled(p)
@@ -155,7 +179,6 @@ def build(config):
         "MainnetSPVGuard": [("relay", 0), ("maxTipAgeSeconds", 1)],
         "ZkSPVServiceStateView": [("state", 0)],
         "ZkTestnet4SPVServiceStateView": [("state", 0)],
-        "SPVServicePaymentRegistry": [("factory", 0), ("confederationId", 1), ("stateView", 2)],
         "SPVMessageBoard": [("factory", 0), ("confederationId", 1), ("stateView", 2)],
         "BitcoinWithdrawalEscrow": [("batches", 0), ("spv", 1), ("depth", 2), ("minP2WPKHSats", 3), ("minP2TRSats", 4)],
         "CallbackPoolRegistry": [("escrow", 0), ("authorization", 1), ("simpleDeployer", 2), ("confederationDeployer", 3)],
@@ -212,8 +235,9 @@ def build(config):
         bindings.update(ConfederationPoolV2Deployer=bindings["MultiPoolDeployer"],
             BitcoinWithdrawalEscrowV2=bindings["BitcoinWithdrawalEscrow"] + [("defaultMinerFeeLimitSats", 5)],
             ConfederationDAOStake=[("stakeToken", 0), ("custodianValidator", 1), ("CUSTODIAN_THRESHOLD", 2)],
-            ConfederationDAOIncome=[("pool", 0), ("shareToken", 1), ("authorization", 2), ("staking", 3), ("decisions", 4)],
-            ConfederationNFTPass=[("name", 0), ("symbol", 1), ("income", 2), ("priceSigner", 4)],
+            ConfederationDAOIncome=[("pool", 0), ("shareToken", 1), ("authorization", 2), ("staking", 3),
+                                     ("decisions", 4), ("factory", 5)],
+            ConfederationNFTPass=[("name", 0), ("symbol", 1), ("income", 2), ("initialPriceSigner", 4)],
             ConfederationBitcoinReserve=[("poolId", 0), ("deposits", 1), ("escrow", 2), ("confederationPool", 3)],
             BitcoinSigningBoard=[("batchRegistry", 0), ("maxPacketBytes", 1)])
 
@@ -361,9 +385,22 @@ def build(config):
         call(name, target, method, execute_args + ["$" + op])
 
     deploy("verifier", "FROSTVerifier")
-    deploy("dkg", "DKGCoordinator")
-    for step in steps[-2:]:
-        step["parallel_group"] = "base-contracts"
+    successor_dkg = recovery.get(SUCCESSOR_DKG) if recovery else None
+    if successor_dkg is None:
+        deploy("dkg", "DKGCoordinator")
+        for step in steps[-2:]:
+            step["parallel_group"] = "base-contracts"
+    else:
+        from .bootstrap import artifact, artifact_fingerprint
+        compiled = artifact("DKGCoordinator")
+        spec = dict(address=successor_dkg["registry"], artifact="DKGCoordinator",
+                    artifact_hash=artifact_fingerprint(compiled),
+                    runtime_hash=Web3.keccak(hexstr=compiled["deployedBytecode"]["object"]).hex())
+        contracts = dict(p.get("contracts", {}))
+        if contracts.get("dkg", spec) != spec:
+            raise ValueError("BTC_RECOVERY_SUCCESSOR_DKG")
+        contracts["dkg"] = spec
+        p["contracts"] = contracts
     deploy("coordinator", "FROSTCoordinator", "$verifier")
     call(
         "bind_dkg",
@@ -394,7 +431,7 @@ def build(config):
         )
         call("bind_intent_coordinator","onchain_board","bindIntentCoordinator",["$coordinator"],
              checks=[dict(contract="onchain_board",method="intentCoordinator",args=[],equals="$coordinator")])
-    if not ethereum and p.get("phase_duration", "3600") != "3600":
+    if successor_dkg is None and not ethereum and p.get("phase_duration", "3600") != "3600":
         from .onboarding import validate_phase_duration
         duration = p["phase_duration"]
         validate_phase_duration(str(p["chain_id"]), duration)
@@ -477,12 +514,16 @@ def build(config):
         "$federation_deployer",
         "$coordinator",
     )
-    call(
-        "reserve_federation_id", "federations", "reserveFederationId",
-        [p["evm_ceremony"]["id"], p["federation_id"]],
-        checks=[dict(contract="federations", method="reservedFederationSession",
-            args=[p["federation_id"]], equals=p["evm_ceremony"]["id"])],
-    )
+    def reserve(kind, target, step, terms):
+        identifier = terms["id"]
+        session = Bootstrap.wire(terms["session_id"])
+        digests = Bootstrap.wire([terms["formation_hash"], terms["token_hash"]])
+        call(step, target, f"reserve{kind}Id", [session, identifier, *digests], checks=[
+            dict(contract=target, method=f"reserved{kind}Session", args=[identifier], equals=session),
+            dict(contract=target, method=f"reserved{kind}Terms", args=[identifier], equals=digests),
+        ])
+
+    reserve("Federation", "federations", "reserve_federation_id", federation_terms)
     deploy(
         "confederations",
         "ConfederationFactory",
@@ -491,12 +532,7 @@ def build(config):
         "$confederation_deployer",
         "$coordinator",
     )
-    call(
-        "reserve_confederation_id", "confederations", "reserveConfederationId",
-        [p["conf_ceremony"]["id"], p["confederation_id"]],
-        checks=[dict(contract="confederations", method="reservedConfederationSession",
-            args=[p["confederation_id"]], equals=p["conf_ceremony"]["id"])],
-    )
+    reserve("Confederation", "confederations", "reserve_confederation_id", confederation_terms)
     for parent, child in [
         ("simple_leaf", "auth_leaf"),
         ("simple_leaf", "share_leaf"),
@@ -522,6 +558,33 @@ def build(config):
             ],
         )
         steps[-1]["parallel_group"] = "factory-permissions"
+    # The ZK state contract depends only on the enrolled Bitcoin policy (its
+    # confederation ID comes from the invitation), not on any DKG key. Deploying
+    # it before the DKG waits lets workers catch up to the Bitcoin tip while the
+    # ceremonies run. Consumers, views and the Fresh barrier stay after DKG.
+    from .zk_spv import is_zk, constructor_args as zk_constructor_args, checkpoint_descriptor
+    zk = is_zk(p.get("bitcoin_policy"))
+    if zk:
+        if p["bitcoin_network"] not in ("mainnet","testnet4"):
+            raise ValueError("ZK_PROFILE_UNSUPPORTED")
+        from .bootstrap import Bootstrap
+        from .zk_profiles import profile as zk_profile
+        selected=zk_profile(p['bitcoin_policy'])
+        args = zk_constructor_args(p["bitcoin_policy"])
+        deploy("relay", selected['state'], *Bootstrap.wire(args), outputs=[
+            output("spv_guard", "relay", "adapter", [], [], selected['adapter']),
+            output("zk_verifier", "relay", "verifier", [], [], "RiscZeroGroth16Verifier"),
+        ])
+        steps[-1]["checks"] = [
+            dict(contract="relay", method=method, args=[], equals=Bootstrap.wire(value))
+            for method, value in (
+                ("confederationId", args[0][0]), ("programImageId", args[0][1]),
+                ("RELAY_PROFILE", args[0][2]), ("maxStateAge", args[0][3]),
+                ("maxTipLag", args[0][4]), ("baselineMaxTipAge", args[0][5]),
+                ("checkpointDescriptor", checkpoint_descriptor(p["bitcoin_policy"])),
+            )
+        ] + [dict(contract="spv_guard", method="state", args=[], equals="$relay"),
+             dict(contract="spv_guard", method="testHelpersEnabled", args=[], equals=False)]
     # Factory construction can overlap participant work; no key-dependent
     # constructor or authorization runs until all three results are finalized.
     steps.extend(ceremony_waits)
@@ -558,6 +621,8 @@ def build(config):
         "federations",
         "adoptFederationDKG",
         [p["evm_ceremony"]["id"], fed],
+        checks=[dict(contract="federations", method="getFederation", args=[fed], indices=[0, 1, 2],
+                     equals=[fed, federation_terms["members"], str(federation_terms["threshold"])])],
     )
     if ethereum:
         call("reset_federation_fee_allowance", "usd", "approve", ["$federations", "0"])
@@ -586,22 +651,28 @@ def build(config):
     if ethereum:
         steps[-1]["checks"] = [dict(contract="usd", method="allowance",
             args=[p["operator"], "$federations"], equals="0", at_receipt=True)]
-    if "token_metadata" in p:
-        steps[-1].setdefault("checks", []).extend(dict(contract="fed_shares", method=key, args=[], equals=value)
-            for key, value in names["federation_share"].items())
-    custodians = p["conf_ceremony"]["participants"] if custody_only else p["conf_ceremony"]["participants"][1:]
-    members = [[f"custodian-{i}", a, "0x02", True] for i, a in enumerate(custodians)]
+    steps[-1]["checks"].extend(dict(contract="fed_shares", method=key, args=[], equals=value)
+        for key, value in names["federation_share"].items())
+    members = Bootstrap.wire(confederation_terms["custodians"])
     call(
         "adopt_confederation",
         "confederations",
         "adoptCustodianConfederationDKG" if custody_only else "adoptConfederationDKG",
         [
             p["conf_ceremony"]["id"],
-            [fed],
+            confederation_terms["federation_ids"],
             members,
             p["conf_ceremony"]["threshold"],
             p["min_custodians"],
             conf,
+        ],
+        checks=[
+            dict(contract="confederations", method="getConfederation", args=[conf], indices=[0, 1, 4, 5],
+                 equals=[conf, confederation_terms["federation_ids"], str(confederation_terms["threshold"]),
+                         str(confederation_terms["min_custodians"])]),
+            dict(contract="confederations", method="getCustodianMembers", args=[conf], equals=members),
+            dict(contract="confederations", method="getFederationMembers", args=[conf],
+                 equals=[[fed, federation_terms["members"][0], "$fed_shares"]]),
         ],
     )
     if ethereum:
@@ -625,7 +696,7 @@ def build(config):
                 ("conf_auth", "frostMultisig", "DKGAuthorization"),
                 ("conf_pool", "multiPool", pool_kind),
                 ("validator", "custodianValidator", "CustodianValidator"),
-                *([("conf_shares", "shareToken", share_kind)] if "token_metadata" in p else []),
+                ("conf_shares", "shareToken", share_kind),
             ]
         ],
     )
@@ -635,41 +706,16 @@ def build(config):
     if "token_metadata" in p:
         steps[-1].setdefault("checks", []).extend(dict(contract="conf_shares", method=key, args=[], equals=value)
             for key, value in names["confederation_share"].items())
-    from .zk_spv import is_zk, constructor_args as zk_constructor_args, checkpoint_descriptor
-    zk = is_zk(p.get("bitcoin_policy"))
     if zk:
-        if p["bitcoin_network"] not in ("mainnet","testnet4"):
-            raise ValueError("ZK_PROFILE_UNSUPPORTED")
-        from .bootstrap import Bootstrap
         from .zk_profiles import profile as zk_profile
         selected=zk_profile(p['bitcoin_policy'])
-        args = zk_constructor_args(p["bitcoin_policy"])
-        deploy("relay", selected['state'], *Bootstrap.wire(args), outputs=[
-            output("spv_guard", "relay", "adapter", [], [], selected['adapter']),
-            output("zk_verifier", "relay", "verifier", [], [], "RiscZeroGroth16Verifier"),
-        ])
-        steps[-1]["checks"] = [
-            dict(contract="relay", method=method, args=[], equals=Bootstrap.wire(value))
-            for method, value in (
-                ("confederationId", args[0][0]), ("programImageId", args[0][1]),
-                ("RELAY_PROFILE", args[0][2]), ("maxStateAge", args[0][3]),
-                ("maxTipLag", args[0][4]), ("baselineMaxTipAge", args[0][5]),
-                ("checkpointDescriptor", checkpoint_descriptor(p["bitcoin_policy"])),
-            )
-        ] + [dict(contract="spv_guard", method="state", args=[], equals="$relay"),
-             dict(contract="spv_guard", method="testHelpersEnabled", args=[], equals=False)]
-        # Read-only binding and inactive payment entry exist before the Fresh
+        # The state contract, its adapter and verifier were deployed before the
+        # DKG waits; read-only binding and inactive payment entry exist before the Fresh
         # barrier, so funding the first update cannot depend on a future mint.
         # Activation/payees/tariff still require explicit enrolled FROST review.
         deploy("spv_service_view", selected["view"], "$relay")
         steps[-1]["checks"].append(dict(contract="spv_service_view", method="adapter", args=[], equals="$spv_guard"))
-        deploy("spv_payment_registry", "SPVServicePaymentRegistry", "$confederations", conf, "$spv_service_view")
-        steps[-1]["checks"].extend([
-            dict(contract="spv_payment_registry", method="state", args=[], equals="$relay"),
-            dict(contract="spv_payment_registry", method="adapter", args=[], equals="$spv_guard"),
-            dict(contract="spv_payment_registry", method="authorization", args=[], equals="$conf_auth"),
-            dict(contract="spv_payment_registry", method="enabled", args=[], equals=False),
-        ])
+        steps.append(spv_payment_deployment(conf))
         deploy("spv_message_board", "SPVMessageBoard", "$confederations", conf, "$spv_service_view")
     elif public_bitcoin:
         from .bitcoin_network import relay_constructor_args
@@ -700,7 +746,9 @@ def build(config):
     escrow_args = ["$batches", spv, p["bitcoin_confirmations"], p["min_p2wpkh_sats"], p["min_p2tr_sats"]]
     if in_kind:
         escrow_args.append(p["ulr"]["default_miner_fee_sats"])
-    deploy("escrow", "BitcoinWithdrawalEscrowV2" if in_kind else "BitcoinWithdrawalEscrow", *escrow_args)
+    deploy("escrow", "BitcoinWithdrawalEscrowV2" if in_kind else "BitcoinWithdrawalEscrow", *escrow_args,
+           outputs=[output("withdrawal_recovery_factory", "escrow", "recoveryFactory", art=FACTORY_ARTIFACT)]
+           if recovery else None)
     deploy("callback_registry", "CallbackPoolRegistry", "$escrow", "$conf_auth", "$simple_leaf", "$conf_pool_leaf")
     approve(
         "bind_callback_registry",
@@ -741,7 +789,8 @@ def build(config):
                 "requireLocalCustody", ["$conf_pool"])
     if in_kind:
         deploy("mining", "ConfederationBitcoinReserve", p.get("pool_id", "integration-pool"), "$deposits", "$escrow", "$conf_pool",
-               outputs=[output("payout_script", "mining", "payoutScript")])
+               outputs=[output("payout_script", "mining", "payoutScript")] + (
+                   [output("recovery_source_hash", "mining", "payoutScriptHash")] if recovery else []))
     else:
         deploy(
         "mining",
@@ -781,6 +830,15 @@ def build(config):
         ["$mining", "$payout_script"],
     )
     from .bootstrap_custody import extend as extend_custody
+    if recovery:
+        args = recovery_args(recovery, "$escrow", "$mining", "$recovery_source_hash")[1:]
+        call("deploy_withdrawal_recovery", "withdrawal_recovery_factory", "deployRecovery", args,
+             outputs=[output("withdrawal_recovery", "withdrawal_recovery_factory", "policyFor", args,
+                             art=RECOVERY_ARTIFACT)])
+        approve("bind_withdrawal_recovery", "escrow", "getSetRecoveryOperationHash", ["$withdrawal_recovery"],
+                "setRecovery", ["$withdrawal_recovery"])
+        steps[-1]["checks"].append(
+            dict(contract="escrow", method="recovery", args=[], equals="$withdrawal_recovery"))
     extend_custody(p, deploy, approve)
     if in_kind:
         approve("bind_bitcoin_reserve", "conf_pool", "getBindBitcoinReserveOperationHash", ["$mining"],

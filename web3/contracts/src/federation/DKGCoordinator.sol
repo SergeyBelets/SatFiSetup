@@ -42,6 +42,7 @@ contract DKGCoordinator is IDKGCoordinator {
     error LegacyOnly();
     error InvalidBatch();
     error UnauthorizedCeremonyCreator();
+    error InvalidReservationTransfer();
 
     /// @notice Set the test deployment's phase window before its first V1 ceremony.
     function configureIntegrationPhaseDuration(uint64 duration) external {
@@ -167,6 +168,32 @@ contract DKGCoordinator is IDKGCoordinator {
         if(!sessions[id].isCompleted || ceremonies[id].resultHash==0) revert DKGNotComplete();
         Ceremony storage c=ceremonies[id]; DKGSession storage s=sessions[id];
         return(c.contextHash,c.resultHash,c.epoch,c.purpose,s.groupPublicKey,s.participants,s.threshold);
+    }
+
+    /// @notice Check that both ceremonies are V1 EVM_AUTH with identical ordered signing terms.
+    /// @dev A deadline alone does not terminate the previous ceremony.
+    function requireReservationTransfer(bytes32 previous, bytes32 replacement) external view {
+        bytes32 purpose = keccak256("EVM_AUTH");
+        Ceremony storage previousCeremony = ceremonies[previous];
+        Ceremony storage replacementCeremony = ceremonies[replacement];
+        if (previousCeremony.contextHash == 0 || previousCeremony.purpose != purpose
+            || replacementCeremony.contextHash == 0 || replacementCeremony.purpose != purpose) {
+            revert InvalidReservationTransfer();
+        }
+
+        DKGSession storage from = sessions[previous];
+        DKGSession storage to = sessions[replacement];
+        if (from.isCompleted || (from.currentPhase != DKGPhase.Failed && from.currentPhase != DKGPhase.Aborted)
+            || to.currentPhase < DKGPhase.CommitmentsPhase || to.currentPhase > DKGPhase.Completed
+            || to.isCompleted != (to.currentPhase == DKGPhase.Completed)
+            || (!to.isCompleted && block.timestamp > to.phaseDeadline)
+            || from.threshold != to.threshold || from.participants.length != to.participants.length) {
+            revert InvalidReservationTransfer();
+        }
+
+        for (uint256 i; i < from.participants.length; ++i) {
+            if (from.participants[i] != to.participants[i]) revert InvalidReservationTransfer();
+        }
     }
 
     // ======== CONSTANTS ========

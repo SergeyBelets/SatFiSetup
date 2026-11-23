@@ -6,6 +6,7 @@ from datetime import date, timedelta
 
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 
 from .bootstrap import Bootstrap, artifact
 from .onboarding import read_private, read_public, write_public
@@ -102,7 +103,7 @@ class DAOClient:
         # Match the existing reviewed durable executor's supported environments.
         if str(chain_id) not in ("1", "31337", "11155111"):
             raise ValueError("INTEGRATION_NETWORK_NOT_ALLOWED")
-        self.w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 20}))
+        self.w3 = evm_web3(rpc, timeout=20)
         if self.w3.eth.chain_id != int(chain_id):
             raise ValueError("CHAIN_MISMATCH")
         from .evm_network import read_block
@@ -518,7 +519,19 @@ class DAOClient:
             )
         else:
             profile = saved["request"]["profile"]
-        result = Bootstrap(profile, state).apply_confirmed(identity)
+        try:
+            result = Bootstrap(
+                profile,
+                state,
+                evm_rpc_override=self.w3.provider.endpoint_uri,
+                evm_confirmation_floor=int(self.config["confirmations"]),
+            ).apply_confirmed(identity)
+        except ValueError as error:
+            if str(error) != "EVM_RPC_BEHIND":
+                raise
+            # Preserve the saved operation and its receipt/nonce anchors while
+            # the currently selected provider catches up.
+            return dict(status="AWAITING_EVM_RPC", reason="EVM_RPC_BEHIND", id=operation_id)
         tx = journal.get(prefix + ":send")
         public = dict(
             status=result["status"],

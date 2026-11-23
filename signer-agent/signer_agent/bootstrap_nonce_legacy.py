@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from eth_abi.exceptions import DecodingError
 from hexbytes import HexBytes
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import MismatchedABI
 
 from .bitcoin_trust import runtime_artifact
@@ -118,7 +119,7 @@ def bind_legacy_nonce(identity, source_journal, rpc, tx_hash):
         legacy = set(saved) == LEGACY_FIELDS
         if saved.get("tx_hash") != tx_hash or "replacement_root" in saved:
             raise ValueError("EVM_SIGNED_TRANSACTION_BINDING")
-        w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 20}))
+        w3 = evm_web3(rpc, timeout=20)
         chain = w3.eth.chain_id
         if chain not in (1, 31337, 11155111) or saved.get("chain_id") != str(chain):
             raise ValueError("CHAIN_MISMATCH")

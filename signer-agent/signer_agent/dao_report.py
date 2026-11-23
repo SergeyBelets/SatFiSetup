@@ -5,6 +5,7 @@ BTC TVL/liquidity inputs remain explicit signed accounting assertions, not SPV c
 import hashlib, json
 from pathlib import Path
 from web3 import Web3
+from .evm_rpc import evm_web3
 from .safe_errors import DiagnosticArgumentParser
 from .bootstrap import artifact
 from .operations import canonical, public_data
@@ -102,7 +103,7 @@ def main(argv):
     a = p.parse_args(argv)
     if a.stage_expenses and not a.in_kind:
         p.error("--stage-expenses requires --in-kind")
-    w3 = Web3(Web3.HTTPProvider(a.rpc))
+    w3 = evm_web3(a.rpc)
     address = Web3.to_checksum_address(a.settlement)
     inputs = json.loads(Path(a.inputs).read_text())
     if a.in_kind:

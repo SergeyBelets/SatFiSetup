@@ -614,6 +614,9 @@ def test_first_dkg_then_bitcoin_payments_without_file_exchange(tmp_path, record_
     paid_block = btc.call("getrawtransaction", payments[-1]["txid"], True)["blockhash"]
     btc.call("invalidateblock", paid_block)
     try:
+        assert bitcoin(1, "btc-status")["status"] == "OBSERVATION_UNAVAILABLE"
+        # A replacement at the payment height establishes a conflicting hash.
+        btc.call("generatetoaddress", 1, mining_address)
         assert bitcoin(1, "btc-status")["status"] == "RECOVERY_REQUIRED"
         for action in ("btc-commit", "btc-sign", "btc-broadcast"):
             with pytest.raises(AssertionError, match="PAYMENTS_PAUSED_FOR_RECOVERY"):

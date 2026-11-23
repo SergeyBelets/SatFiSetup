@@ -51,8 +51,10 @@ common Bitcoin infrastructure and the optional older DAO branch; the latter
 is not the economic route selected by the ULR profile.
 
 The current `bitcoin_custody.mode=custodians` profile has separate confederation
-EVM and Bitcoin DKG epochs, both excluding federation representatives. A Bitcoin
-handover between independent graphs is explicit and precedes cBTC issuance.
+EVM and Bitcoin DKG epochs, both excluding federation representatives. Before
+source admission, the gateway checks that the source and destination SPV
+backends use the same Bitcoin network. The Bitcoin handover precedes issuance
+of S in V3 and cBTC in the earlier local-MP profile.
 See [custody roles, transfer and recovery](BITCOIN_CUSTODY_TRANSFER.md) and the
 [4 November native DKG/Core acceptance](../ops/artifacts/custody-transfer-20261104/README.md).
 Current [diagram index, SVG/PNG exports and source hashes](DIAGRAMS.md)
@@ -84,10 +86,10 @@ flowchart TD
   FIN["Ethereum chain 1<br/>At least 12 confirmations AND finalized state"]
   R["DKGCoordinator<br/>Completed result, ordered roster, threshold and purpose"]
   FE["Federation EVM_AUTH<br/>Representative and custodians"]
-  FF["FederationFactory<br/>Deployer reserves federation ID for its EVM_AUTH<br/>Adoption checks the pair"]
+  FF["FederationFactory<br/>Reservation ties ID to EVM_AUTH, roster and share-token metadata"]
   FA["Federation authorization<br/>Independent of confederation money"]
   E["Confederation EVM_AUTH<br/>Custodians only"]
-  CF["ConfederationFactory<br/>Deployer reserves confederation ID for its EVM_AUTH<br/>All three adoption methods check the pair"]
+  CF["ConfederationFactory<br/>Reservation ties ID to EVM_AUTH, formation and share-token metadata"]
   W["Confederation BTC_SPEND<br/>Separate key; same custodian roster and threshold"]
   A["Confederation DKGAuthorization<br/>Immutable custodian epoch and result"]
   C["FROSTCoordinator + FROSTVerifier<br/>Enforced target-bound signing session"]
@@ -194,10 +196,11 @@ different creator's session or preallocate future ids before that binding.
 
 ## Federation and confederation deployment
 
-Each factory's deployer reserves the entity ID for its EVM_AUTH session.
-An eligible caller can adopt after the canonical DKG completes and the pair
-matches the reservation. Final deployment uses `deployFederation(...)` or
-`deployConfederation(...)`. Legacy initiation is restricted to the factory
+Each factory's deployer reserves the entity ID for its EVM_AUTH session
+and commits the formation and share-token metadata. An eligible caller
+can adopt when the canonical DKG completes and the formation matches the
+reservation. `deployFederation(...)` and `deployConfederation(...)` verify
+the token name and symbol before issuing shares. Legacy initiation is restricted to the factory
 deployer on EVM chain IDs 31337 and 11155111. Legacy deployment is restricted
 to those chains. The coordinator and verifier are fixed by the factory.
 
@@ -210,9 +213,8 @@ intent review and custodian approvals remain explicit.
 Controlled orchestrators and leaf deployers create the pool, share token,
 authorization and fee contracts. The confederation additionally has a
 `CustodianValidator`. Separate token/authorization leaves keep embedded creation
-code within EVM size limits; all constructor arguments also count toward the
-initcode limit. [Current sizes](CONTRACT_SIZE_AND_DEPLOYMENT.md) leave only
-6 bytes of runtime headroom in `MultiPoolDeployer` in the 4 November custody build.
+code within EVM size limits. Constructor arguments count toward the initcode
+limit. [Current and historical sizes](CONTRACT_SIZE_AND_DEPLOYMENT.md).
 
 The DKG registrar controls ceremony creation. Factory reservation is a separate
 action and does not confer membership in the reserved session.
@@ -244,10 +246,10 @@ flowchart TD
   P2["prepare_payer: second factory<br/>Sign new nonce and hash, then execute_payer"]
   FE["fees<br/>One-time paid configuration; positive amount on chain 1"]
   EX["Explicit exemption<br/>Only EVM 31337 or 11155111; zero router and amount"]
-  I["Factory deployer reserves ID for the user EVM_AUTH session"]
+  I["Factory deployer reserves ID, EVM_AUTH session, formation and token metadata"]
   K["Completed user EVM_AUTH result"]
-  A["Adopt the reserved pair"]
-  U["Deploy pool graph<br/>Exact token allowance on the paid path"]
+  A["Adopt after checking the reserved formation"]
+  U["Deploy pool graph with the reserved token metadata<br/>Exact token allowance on the paid path"]
   DAO["Confederation DAO and Bitcoin graph<br/>Register and verify all bindings"]
   B --> K
   B --> F
@@ -363,7 +365,8 @@ uses the immutable `BitcoinCustodyTransfer` gateway. It
 locks source MP, requests a source Bitcoin payment to the destination script,
 waits for source settlement/burn, and verifies the exact destination output at
 the enrolled SPV depth. Only then does it mint internal local MP and deposit it
-for the fixed cBTC recipient. Both graphs use the same EVM chain. Their Bitcoin
+for the fixed cBTC recipient. Both graphs use the same EVM chain and Bitcoin
+network. Their Bitcoin
 keys, escrow and deposit registries are distinct. An unaccepted transfer output
 is protected from treasury spending; ordinary mint cannot bypass the handover.
 See the [transfer sequence and state machine](BITCOIN_CUSTODY_TRANSFER.md).

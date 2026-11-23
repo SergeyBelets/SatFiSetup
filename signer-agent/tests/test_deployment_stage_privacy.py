@@ -111,10 +111,11 @@ def test_shared_writable_manifest_parent_is_rejected_before_private_files(runner
 def test_unowned_directory_is_rejected_without_changing_its_permissions(runner, monkeypatch, tmp_path):
     target = tmp_path / "existing"
     target.mkdir(mode=0o755)
-    monkeypatch.setattr(runner.os, "fstat", lambda descriptor: SimpleNamespace(
-        st_mode=stat.S_IFDIR | 0o755, st_uid=os.getuid() + 1))
-    with pytest.raises(runner.DeploymentError, match="UNSAFE_DEPLOYMENT_PRIVATE_DIRECTORY"):
-        runner.private_directory(target)
+    with monkeypatch.context() as patch:
+        patch.setattr(runner.os, "fstat", lambda descriptor: SimpleNamespace(
+            st_mode=stat.S_IFDIR | 0o755, st_uid=os.getuid() + 1))
+        with pytest.raises(runner.DeploymentError, match="UNSAFE_DEPLOYMENT_PRIVATE_DIRECTORY"):
+            runner.private_directory(target)
     assert target.stat().st_mode & 0o777 == 0o755
 
 

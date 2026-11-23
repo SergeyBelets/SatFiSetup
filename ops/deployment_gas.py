@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "signer-agent"))
 
 from web3 import Web3
+from signer_agent.evm_rpc import evm_web3
 from signer_agent.evm_network import MAX_TRANSACTION_GAS, read_block
 from signer_agent.participant_errors import participant_exception_code
 
@@ -60,7 +61,7 @@ def main(argv=None):
     if not args.rpc:
         p.error("--rpc or ETH_RPC_URL is required")
     try:
-        result = report(Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 30})),
+        result = report(evm_web3(args.rpc, timeout=30),
             json.loads(Path(args.manifest).read_text()))
     except Exception as error:
         fixed = {"DEPLOYMENT_GAS_RECEIPT_UNCONFIRMED", "DEPLOYMENT_GAS_RECEIPT_INVALID"}

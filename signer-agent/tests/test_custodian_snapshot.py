@@ -60,12 +60,7 @@ def approval(monkeypatch):
         contract=contract, get_code=get_code,
         get_block=lambda number: SimpleNamespace(number=number, hash=b'b' * 32 if fixture.changed else anchor.hash)))
     fixture.w3 = w3
-    class W3:
-        HTTPProvider = staticmethod(lambda url: url)
-        keccak = staticmethod(Web3.keccak)
-        def __new__(cls, provider):
-            return w3
-    monkeypatch.setattr(custodian_cli, 'Web3', W3)
+    monkeypatch.setattr(custodian_cli, 'evm_web3', lambda *a, **kw: w3)
     monkeypatch.setattr(custodian_cli, 'board_at', lambda *args: contract('board'))
     monkeypatch.setattr(custodian_cli, 'assembled_profile', lambda *args: profile)
     def read_block(actual, depth):

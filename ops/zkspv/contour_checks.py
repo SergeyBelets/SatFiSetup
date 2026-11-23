@@ -198,14 +198,14 @@ def main(argv=None):
     artifacts=ctx['prior'].get('artifacts',{})
     if artifacts:
         from .contour import relative_file
-        from web3 import Web3
         from signer_agent.evm_network import read_block
+        from signer_agent.evm_rpc import evm_web3
         if len(artifacts)!=1:raise ValueError('CONTOUR_SCENARIO_CHECK')
         name,h=next(iter(artifacts.items()));out=relative_file(Path(ctx['directory']),name)
         if sha(out)!=h:raise ValueError('CONTOUR_SCENARIO_CHECK')
         observed=json.loads(read_private(out,max_bytes=1024**2))
         if observed.get('config_sha256')!=digest(c) or observed.get('inputs_sha256')!=digest(data):raise ValueError('CONTOUR_SCENARIO_SCOPE')
-        w3=Web3(Web3.HTTPProvider(wc['evm_rpc'],request_kwargs={'timeout':30}));b=read_block(w3,int(wc['evm_confirmations']))
+        w3=evm_web3(wc['evm_rpc'], timeout=30);b=read_block(w3,int(wc['evm_confirmations']))
         if str(w3.eth.chain_id)!=wc['chain_id']:raise ValueError('CONTOUR_SCENARIO_SCOPE')
         for row in observed['assertions']:
             a=row['anchor']

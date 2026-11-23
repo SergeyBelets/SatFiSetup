@@ -59,6 +59,13 @@ def test_init_refuses_overwrite_and_incomplete_draft_cannot_build(tmp_path):
     assert not (tmp_path/'out').exists()
 
 
+def test_ambiguous_deployment_id_is_rejected_before_creating_output(tmp_path):
+    output = tmp_path / "output"
+    with pytest.raises(ValueError, match="^LAUNCH_DEPLOYMENT_ID$"):
+        c.build(dict(complete(), deployment_id="$factory"), output)
+    assert not output.exists()
+
+
 @pytest.mark.parametrize('startup',[False,True])
 def test_build_custom_invitation_and_constructor_plan(tmp_path,startup):
     v=complete()

@@ -418,8 +418,7 @@ class Fleet:
 def signer_enrollment(state,context,*,binding=None):
     """An encrypted-state rollback must not erase the independently retained service guard."""
     marker=state.get('btc-epoch-service:'+context)
-    path=getattr(state,'path',None)
-    if not marker and binding is None and (path is None or not Path(str(path)+'.spent.sqlite').exists()):return None
+    if not marker and binding is None and not state.has_nonce_journal():return None
     with state._journal() as db:
         db.execute('CREATE TABLE IF NOT EXISTS epoch_service_binding(context TEXT PRIMARY KEY,body TEXT)')
         row=db.execute('SELECT body FROM epoch_service_binding WHERE context=?',(context,)).fetchone()

@@ -35,7 +35,7 @@ def test_create_preflight_keeps_amsterdam_state_gas_and_enforces_local_cap(monke
     steps = [{"create_group": "withdrawal-fee-constructors"}] * 3
     def build(step, account, nonce, *, simulation_gas):
         return dict(nonce=nonce, gas=simulation_gas, to=b"")
-    bootstrap = SimpleNamespace(w3=w3, build_transaction=build)
+    bootstrap = SimpleNamespace(w3=w3, evm_confirmations=1, build_transaction=build)
     monkeypatch.delenv("SATOSHIFI_CREATE_SIMULATION_RPC", raising=False)
     monkeypatch.setenv("SATOSHIFI_MAX_TX_GAS", "60000000")
     result = prepare_transactions(bootstrap, steps, account, 212)
@@ -44,6 +44,61 @@ def test_create_preflight_keeps_amsterdam_state_gas_and_enforces_local_cap(monke
     monkeypatch.setenv("SATOSHIFI_MAX_TX_GAS", "40000000")
     with pytest.raises(ValueError, match="CREATE_SIMULATION_GAS_BUDGET"):
         prepare_transactions(bootstrap, steps, account, 212)
+
+
+@pytest.mark.parametrize("case", ["matched", "fork", "simulator_nonce", "pending_nonce"])
+def test_create_simulation_uses_common_confirmed_height(case, monkeypatch):
+    from signer_agent import bootstrap_create
+
+    common = 96
+    sent = []
+    reviewed = []
+    nonce = 212
+    account = SimpleNamespace(address="0x" + "11" * 20)
+    steps = [{"create_group": "withdrawal-fee-constructors"}]
+
+    def endpoint(label, tip):
+        def block(tag):
+            number = tip if tag == "latest" else tag
+            assert number <= tip
+            digest = b"\xff" * 32 if label == "alternate" and case == "fork" else number.to_bytes(32, "big")
+            return SimpleNamespace(number=number, hash=HexBytes(digest), timestamp=1, gasLimit=30_000_000)
+
+        def count(_account, tag):
+            reviewed.append((label, tag))
+            if label == "alternate" and case == "simulator_nonce":
+                return nonce - 1
+            if tag == "pending" and case == "pending_nonce":
+                return nonce + 1
+            return nonce
+
+        def rpc(method, params):
+            assert label == "alternate" and method == "eth_simulateV1"
+            sent.append(params[1])
+            return {"result": [{"calls": [{"gasUsed": "0x100000", "status": "0x1"}]}]}
+
+        return SimpleNamespace(
+            eth=SimpleNamespace(chain_id=11155111, get_block=block, get_transaction_count=count),
+            provider=SimpleNamespace(make_request=rpc),
+        )
+
+    primary, alternate = endpoint("primary", 100), endpoint("alternate", 99)
+    bootstrap = SimpleNamespace(w3=primary, evm_confirmations=4,
+        build_transaction=lambda step, account, nonce, *, simulation_gas:
+            dict(nonce=nonce, gas=simulation_gas, to=b""))
+    monkeypatch.setenv("SATOSHIFI_CREATE_SIMULATION_RPC", "https://alternate.invalid")
+    monkeypatch.setattr(bootstrap_create, "evm_web3", lambda *_a, **_kw: alternate)
+    if case == "matched":
+        assert len(prepare_transactions(bootstrap, steps, account, nonce)) == 1
+    else:
+        error = "CREATE_SIMULATION_RPC_CHAIN_MISMATCH" if case == "fork" else "CREATE_SIMULATION_WAIT_FOR_PRIOR_NONCE"
+        with pytest.raises(ValueError, match=error):
+            prepare_transactions(bootstrap, steps, account, nonce)
+    assert sent == ([] if case in ("fork", "simulator_nonce") else [hex(common), hex(common)])
+    if case != "fork":
+        assert reviewed[:2] == [("primary", common), ("alternate", common)]
+    if sent:
+        assert reviewed[-1] == ("primary", "pending")
 
 
 @pytest.fixture

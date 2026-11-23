@@ -138,6 +138,12 @@ canonical Solidity verifier and independent libsecp256k1 consumers.
 Each phase uses the enrolled chain policy: 24 hours on Ethereum chain 1,
 one hour on Anvil/Sepolia. Timeout fails V1 rather than accepting a reduced
 roster. Any participant can abort before completion. Completed/Failed/Aborted are terminal.
+If a V1 phase expires, `advancePhase` records `Failed` in a separate transaction.
+The factories use `requireReservationTransfer(previous, replacement)` to check
+the registry state before moving an unused ID. The old V1 EVM_AUTH ceremony
+must have recorded `Failed` or `Aborted`. The replacement has the same ordered
+roster and threshold, a distinct session ID and a live phase or completed result.
+[Confirmed recovery and operator command](RECOVERY.md#unused-factory-id-recovery).
 The registry validates point format, immutable message hashes and unanimous attestations;
 it does not perform polynomial VSS verification on-chain. Every local participant checks
 all published public shares against its own verified library output before attesting.

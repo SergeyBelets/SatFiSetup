@@ -10,6 +10,7 @@ from .bootstrap import Bootstrap, artifact
 from .bitcoin_network import (checkpoint_policy, header_hash, inspect_relay,
                               relay_constructor_args, sync_relay, validate_policy, is_public_network, relay_artifact)
 from .evm_network import read_block
+from .evm_rpc import evm_web3
 
 
 def _profile(a, contracts, steps, deployment, policy):
@@ -127,6 +128,12 @@ def main(argv):
     if argv and argv[0] == "withdrawal":
         from .withdrawal_user_cli import main as withdrawal_main
         return withdrawal_main(argv[1:])
+    if argv and argv[0] == "recovery":
+        from .bitcoin_recovery_cli import main as recovery_main
+        return recovery_main(argv[1:])
+    if argv and argv[0] == "cpfp-payout":
+        from .bitcoin_payout_package import main as payout_package_main
+        return payout_package_main(argv[1:])
     if argv and argv[0]=='withdrawal-fee':
         from .withdrawal_fee_cli import main as personal_main
         return personal_main(argv[1:])
@@ -192,10 +199,9 @@ def main(argv):
         # This is the explicit operator API, not a substitute for participant approval.
         # Mainnet participants use dkg btc-broadcast with the pinned complete graph.
         if policy:
-            from web3 import Web3
             if not a.rpc or not a.relay:
                 p.error("mainnet broadcast/confirm requires --rpc and --relay")
-            w3 = Web3(Web3.HTTPProvider(a.rpc))
+            w3 = evm_web3(a.rpc)
             if w3.eth.chain_id != int(a.chain_id):
                 raise ValueError("CHAIN_MISMATCH")
             relay = _checked_mainnet_relay(w3, a.relay, policy)
@@ -205,11 +211,9 @@ def main(argv):
         result = (worker.broadcast(a.batch, json.loads(Path(a.signed).read_text()), a.replaces)
                   if a.action == "broadcast" else worker.confirmation(a.batch, recover=a.action == "recover"))
     else:
-        from web3 import Web3
-
         if not a.rpc or not a.identity_file:
             p.error("relay/settle requires --rpc and --identity-file")
-        w3 = Web3(Web3.HTTPProvider(a.rpc))
+        w3 = evm_web3(a.rpc)
         if w3.eth.chain_id != int(a.chain_id):
             raise ValueError("CHAIN_MISMATCH")
         if a.action == "settle":

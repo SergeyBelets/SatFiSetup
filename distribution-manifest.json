@@ -77,6 +77,94 @@
       "reason": "local_evidence_or_old_package"
     },
     {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_4.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_4.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_5.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_5.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CROSS_PLATFORM_QUICKSTART_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_CROSS_PLATFORM_QUICKSTART_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_SIGNING_PROTOCOL_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_SIGNING_PROTOCOL_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_ZK_SPV_WORKER_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/docs_ZK_SPV_WORKER_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_4.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_5.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CROSS_PLATFORM_QUICKSTART_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_OPERATIONAL_API_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_OPERATIONAL_API_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_SIGNING_PROTOCOL_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/audit-remediations-20261123/diagrams/png/docs_ZK_SPV_WORKER_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
       "path": "ops/artifacts/baseline-forge.txt",
       "reason": "local_evidence_or_old_package"
     },
@@ -130,6 +218,46 @@
     },
     {
       "path": "ops/artifacts/bitcoin-onchain-validation-20261018.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_3.png",
       "reason": "local_evidence_or_old_package"
     },
     {
@@ -6245,6 +6373,46 @@
       "reason": "local_evidence_or_old_package"
     },
     {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_RECOVERY_md_7.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_RECOVERY_md_7.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_SIGNING_PROTOCOL_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_SIGNING_PROTOCOL_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_ULR_TREASURIES_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/docs_ULR_TREASURIES_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_RECOVERY_md_7.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_SIGNING_PROTOCOL_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_ULR_TREASURIES_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
       "path": "ops/artifacts/mainnet-contract-sizes-20261018.json",
       "reason": "local_evidence_or_old_package"
     },
@@ -6254,6 +6422,74 @@
     },
     {
       "path": "ops/artifacts/mainnet-doctor-tests-20261018.xml",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn04-20261123/diagrams/docs_BITCOIN_CUSTODY_TRANSFER_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn04-20261123/diagrams/docs_BITCOIN_CUSTODY_TRANSFER_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn04-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn04-20261123/diagrams/png/docs_BITCOIN_CUSTODY_TRANSFER_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_LAUNCH_CONFIGURATOR_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/docs_LAUNCH_CONFIGURATOR_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_ARCHITECTURE_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_ARCHITECTURE_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_LAUNCH_CONFIGURATOR_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn07-20261123/diagrams/docs_FEDERATION_CONFEDERATION_SETUP_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn07-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/mainnet-mn07-20261123/diagrams/png/docs_FEDERATION_CONFEDERATION_SETUP_md_1.png",
       "reason": "local_evidence_or_old_package"
     },
     {
@@ -7697,6 +7933,126 @@
       "reason": "local_evidence_or_old_package"
     },
     {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_RECOVERY_md_8.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/docs_RECOVERY_md_8.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-rr-20261123/diagrams/png/docs_RECOVERY_md_8.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf01-03-20261122/diagrams/docs_ULR_TREASURIES_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf01-03-20261122/diagrams/docs_ULR_TREASURIES_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf01-03-20261122/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf01-03-20261122/diagrams/png/docs_ULR_TREASURIES_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_FEE_FLOW_md_4.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_FEE_FLOW_md_4.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_RECOVERY_md_6.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_RECOVERY_md_6.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_WITHDRAWAL_FEE_SUBSIDY_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_WITHDRAWAL_FEE_SUBSIDY_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_ZK_SPV_WORKER_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/docs_ZK_SPV_WORKER_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_FEE_FLOW_md_4.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_RECOVERY_md_6.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_WITHDRAWAL_FEE_SUBSIDY_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_ZK_SPV_WORKER_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
       "path": "ops/artifacts/security-validation-20261018.json",
       "reason": "local_evidence_or_old_package"
     },
@@ -8498,6 +8854,106 @@
     },
     {
       "path": "ops/artifacts/zk-linux-port-20261103/validation.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_COLD_START_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_COLD_START_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_DISTRIBUTION_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_DISTRIBUTION_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_FROST_ZK_LIFECYCLE_md_3.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_FROST_ZK_LIFECYCLE_md_3.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_LAUNCH_READINESS_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_LAUNCH_READINESS_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_10.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_10.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_11.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_11.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_2.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_2.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_TESTNET4_SEPOLIA_md_1.mmd",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_TESTNET4_SEPOLIA_md_1.svg",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/manifest.json",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_COLD_START_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_DISTRIBUTION_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_FROST_ZK_LIFECYCLE_md_3.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_LAUNCH_READINESS_md_1.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_10.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_11.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_2.png",
+      "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_TESTNET4_SEPOLIA_md_1.png",
       "reason": "local_evidence_or_old_package"
     },
     {
@@ -10547,6 +11003,14 @@
     {
       "path": "ops/artifacts/zkspv/worker-integration/worker-contour-tests.xml",
       "reason": "local_evidence_or_old_package"
+    },
+    {
+      "path": "output/pdf/SatoshiFi_security_audit_2026-11-23.pdf",
+      "reason": "not_protocol_source"
+    },
+    {
+      "path": "output/pdf/SatoshiFi_security_audit_2026-11-23_EN.pdf",
+      "reason": "not_protocol_source"
     },
     {
       "path": "rust/zkspv/checkpoint-policy/evidence/debug.log",
@@ -14503,12 +14967,12 @@
       "sha256": "53507e71995d0e76d29d6dd897d0bcc3f069fd81f03cb431d7342bdfcc0d5345"
     },
     ".gitattributes": {
-      "bytes": 251,
-      "sha256": "f763718ae551da2b0151baa5874f2e57b5b4d6ddf559c87fef510cfa353c2475"
+      "bytes": 264,
+      "sha256": "11a88f453d2c1266ff3e1134afc9d6d0b45a3a45f62bc68526674e068e87477c"
     },
     ".github/workflows/local-acceptance.yml": {
-      "bytes": 2909,
-      "sha256": "0d6abbb65e1042d1fc04105c24a80f961373548b3b94923e2867822de678912a"
+      "bytes": 2930,
+      "sha256": "52d167f03d2928482db1ac511a07e746d41a19c35977bf8372bc5b2e6f53ad41"
     },
     ".gitignore": {
       "bytes": 969,
@@ -14587,8 +15051,8 @@
       "sha256": "ba741b75393c466ca46303f53c3f053e81c9077f5b19c3e40e7f66ed5471e6a1"
     },
     "config/spv-transport.example.json": {
-      "bytes": 909,
-      "sha256": "b1e80bfaeedaa9f60106c494df2081dfeb150f10c743b1576e25f6f36af52886"
+      "bytes": 945,
+      "sha256": "2b1e940603fe2e53c8794d5e2c417f1c6fa9534de12b5e4d6c8516fdf909045c"
     },
     "config/spv-withdrawal-fee-transport.example.json": {
       "bytes": 1232,
@@ -14596,15 +15060,15 @@
     },
     "config/system-bootstrap-testnet.example.json": {
       "bytes": 1260,
-      "sha256": "c2828fef1ac84c1b2847d126f5ef427a3484244bd05bdc1b86c0b763976a2a25"
+      "sha256": "1e111b0f3d8b5763e82b593115912268368ec217dd889d68222c2e905efef199"
     },
     "config/system-bootstrap-zk-testnet4.example.json": {
       "bytes": 1266,
-      "sha256": "f341b2491c4ad35a6aa876593e5712de0fdc7d10e79f131802a771fe0a1775ad"
+      "sha256": "71efd438e82ddf50db6fada5da8066065cd493a134f092edfdaf32720b7326cd"
     },
     "config/system-bootstrap-zk.example.json": {
       "bytes": 1266,
-      "sha256": "f341b2491c4ad35a6aa876593e5712de0fdc7d10e79f131802a771fe0a1775ad"
+      "sha256": "71efd438e82ddf50db6fada5da8066065cd493a134f092edfdaf32720b7326cd"
     },
     "config/token-metadata.example.json": {
       "bytes": 337,
@@ -14647,8 +15111,8 @@
       "sha256": "8a98d7352cc172308d186e4b46a2aadabba626edc556f68e9fede91599c48f6b"
     },
     "config/zkspv-address-worker.example.json": {
-      "bytes": 2112,
-      "sha256": "85179eb0ca9fec19391687bfd1720bc8f700ae3bb42582b68356abaf7597760a"
+      "bytes": 2148,
+      "sha256": "a2088b0c0c875d412472aed38ae1255da4c1c489ff7d555a85e4a5b78aa2e41f"
     },
     "config/zkspv-contour-address-mint.example.json": {
       "bytes": 683,
@@ -14707,20 +15171,20 @@
       "sha256": "67dfe097bf16cb7b634f4bf993140fc2bd68c129609f01136f8fba499ffcc13e"
     },
     "config/zkspv-observed-worker.example.json": {
-      "bytes": 2536,
-      "sha256": "601b21fa90e3d5fa9d0cf209b09b95847c258f5ce87bfcb6197a2b9942be91c6"
+      "bytes": 2572,
+      "sha256": "9d964e191f8f1521e0903f4be56180c4e0d37e79e75663d6ceb96e587f736997"
     },
     "config/zkspv-testnet4-worker.example.json": {
-      "bytes": 4135,
-      "sha256": "ba22bc98fb3db4a6892933df12dc7b20db05e91f13502fbdd0b394b9af6b8acf"
+      "bytes": 4171,
+      "sha256": "5d8fbbeae04e287ae5903d50681ea6a7e6c58f801052498ae759378f6ffcf511"
     },
     "config/zkspv-withdrawal-fee-worker.example.json": {
-      "bytes": 2275,
-      "sha256": "752f10db4ef3278a34c18d9c2b489680dea1a66f799aab9def6d2c4e74d3accb"
+      "bytes": 2311,
+      "sha256": "375e00ab206c24166a79b42ed0a7ea1832be3dbdad6119a26512354047335672"
     },
     "config/zkspv-worker.example.json": {
-      "bytes": 1952,
-      "sha256": "25a0a5180f8251b08a06103348c54eaeaeb35e558d70d8882cf7e7d4f9b9c2a7"
+      "bytes": 1988,
+      "sha256": "fed096ff76adb05613bca83d5f0fcbdc3fb8bdb40f7d5fba4924aaec34ddd622"
     },
     "config/zkspv.example.json": {
       "bytes": 884,
@@ -14731,8 +15195,8 @@
       "sha256": "8b92ca5183ab2c8c117b7c245d92911edf57732452addcdacfe8f3e505b0576e"
     },
     "docs/ADDRESS_DEPOSIT_REGISTRY.md": {
-      "bytes": 26969,
-      "sha256": "3edcd322354b1f8aaf01a86271b92cc5789b2d4b89c265fec5be7e7cac1ac99a"
+      "bytes": 27117,
+      "sha256": "06f1c0b955cac34092f35c2067c55aad8436f55a3f22eaa218374e0d78801659"
     },
     "docs/ADDRESS_REGISTRATION.md": {
       "bytes": 8749,
@@ -14747,12 +15211,12 @@
       "sha256": "110f966ba7285090146f0e657df334a5e207040b8dbbfda42984023106758c48"
     },
     "docs/API.md": {
-      "bytes": 44911,
-      "sha256": "abafe4e766df911ad3cdcde1be9af329f807e1bb137c8aae42eb0bb1f1bbf6c7"
+      "bytes": 46266,
+      "sha256": "f5580ad42a031468710a28e7ba8d2c6cf6e9785810c1367c06c5c0e65a28b6a3"
     },
     "docs/ARCHITECTURE.md": {
-      "bytes": 35092,
-      "sha256": "c901962b71ba5da9ea2f0d1346f6341f60f6f2d942aabb33d36b46e712da65fb"
+      "bytes": 35266,
+      "sha256": "32ce280e00d70c339de281b248fc5053c7374cf80f40be059a36fdc5136ed5cf"
     },
     "docs/BITCOIN_ADDRESS_SIGNING.md": {
       "bytes": 9303,
@@ -14763,8 +15227,8 @@
       "sha256": "c98fc3ee22251dfbe40c3828f2696b54128cf2b2bdf0b6c5b806f91d69f1656f"
     },
     "docs/BITCOIN_CUSTODY_TRANSFER.md": {
-      "bytes": 33489,
-      "sha256": "4605c93c67dd967bc6774d2a084797220a7ab7d06994873170f68385a539a59f"
+      "bytes": 40502,
+      "sha256": "e845f5d33167d675ee658f819fb2fa4354a1ae1e5d49b4cb5f9a34a52d14734f"
     },
     "docs/BITCOIN_EPOCH_SERVICE.md": {
       "bytes": 10373,
@@ -14783,28 +15247,28 @@
       "sha256": "6d6cdb705b00c068fd4b2f01fa1478b595b346d9ba3ca60e65c8570ec5a94f52"
     },
     "docs/BITCOIN_MAINNET_RUNBOOK.md": {
-      "bytes": 24171,
-      "sha256": "ed96d058d81ca21eed8f3fd0e3eba081a27d279827ec4a451950cd95679e42af"
+      "bytes": 24959,
+      "sha256": "22fdc6caf02798ebf421e46d59d0dea5a290b3f2ffa6d41bd9e4949fa8c03adc"
     },
     "docs/BITCOIN_MAINNET_SECURITY_REVIEW.md": {
       "bytes": 18407,
       "sha256": "a4266f7d43111f9dd2aba2a8b25adce73887eccf93ff6af964e2879a94c1590a"
     },
     "docs/BITCOIN_MINT_ADMISSION.md": {
-      "bytes": 10917,
-      "sha256": "bc58790ad6eacf6537d4e374a263915d513deb3a15515c86c474e9d5ec50afec"
+      "bytes": 14673,
+      "sha256": "bb82a8153ff5b8b97ccc34a2bc1b683d76dcb0cc8f2706b5dc2456fad21cfee9"
     },
     "docs/BITCOIN_MINT_AND_TREASURY.md": {
-      "bytes": 30068,
-      "sha256": "9a2de48e7083dedc7e5bdb9ca22b6cc417bf65b7592e9a54773c0327f12f4d5e"
+      "bytes": 31124,
+      "sha256": "d085138eb4052b6939bef6828a1949159ea2c0b44baefdcacd0e9c0e87f25362"
     },
     "docs/BITCOIN_ONCHAIN_ACCEPTANCE.md": {
       "bytes": 10976,
       "sha256": "6c2b1900049165576cf6ef9c65467b0b1c2240f9ccc09c242dcae449a70f82bd"
     },
     "docs/BITCOIN_ONCHAIN_RUNBOOK.md": {
-      "bytes": 30515,
-      "sha256": "e03a6e721585767a61c936e9d123127786d1daec525eb3c1d4bc2446631eec62"
+      "bytes": 37089,
+      "sha256": "66a253a8ffbd573d8908a3dafe9385322fcf26c6874e05681983a82b0a2865f9"
     },
     "docs/BITCOIN_ONCHAIN_SECURITY_REVIEW.md": {
       "bytes": 26190,
@@ -14815,100 +15279,104 @@
       "sha256": "175987e37b116ae67f506ebab78b585da559a8a4f16f0f7d4753091e1a26c186"
     },
     "docs/BITCOIN_WITHDRAWALS.md": {
-      "bytes": 15322,
-      "sha256": "c27594356dd866f217f90ff322fa3569653b01fc7d2c3104f1404548046177b0"
+      "bytes": 18780,
+      "sha256": "6a32f95de11303ad0be2d4870210678fdcf78e8612c6a5ffe428b23552bf8359"
+    },
+    "docs/BITCOIN_WITHDRAWAL_RECOVERY.md": {
+      "bytes": 27443,
+      "sha256": "e53b036529cfa330c6d1b44b4baf92ccf3567a3edc2b0f3003f81f452af38a2e"
     },
     "docs/BOOTSTRAP.md": {
-      "bytes": 29726,
-      "sha256": "6284f5db04997c2fab6444da6769db9e9cfbcf5594faece63fee645d8a4b624a"
+      "bytes": 30810,
+      "sha256": "a54f596ac233e4d41f8b10bfcc738c410acf6bc31138b62d075b35163672f26e"
     },
     "docs/BTC_FEE_RESERVE.md": {
       "bytes": 12650,
       "sha256": "2edaabce90167e31c534da97e515b6b54cb02a83a2c08db86760d293d87f1765"
     },
     "docs/CALLBACK_POOL_ADMISSION.md": {
-      "bytes": 4834,
-      "sha256": "412a4ca9ba821e0923899870e1837b1935b9c9808de780ac3eeb907ad989d966"
+      "bytes": 4918,
+      "sha256": "1fc0ba74fc92aabd8d75e4d9f487badb9ebcd27645648d4efef450087a1ff8f9"
     },
     "docs/COLD_START.md": {
-      "bytes": 79437,
-      "sha256": "a495f47db4e80f72d922b72239d549d27bc7a2ba01c88eb035567c7abe348cfd"
+      "bytes": 89584,
+      "sha256": "379ab19671d2c55fd9a7c02e953c67d6116eb3b4be3280c6ab519b03598723e8"
     },
     "docs/CONFEDERATION_DAO_IN_KIND.md": {
-      "bytes": 37147,
-      "sha256": "6b62f444d4eca73bacfbc278bab4ec10131f3f4a5ca568e289465a5c0bb2561e"
+      "bytes": 64725,
+      "sha256": "e480d5e8ce154f79fec057f12763e918a3c7a1a51824d75256c70e54ae903dab"
     },
     "docs/CONFIGURATION.md": {
       "bytes": 18816,
       "sha256": "6ae5274db43ce668050948a0653bbf67ec2087891d0976af36571ba655d6e2e7"
     },
     "docs/CONTRACT_PERMISSIONS.md": {
-      "bytes": 18177,
-      "sha256": "9ebd6875c69d206f0e6b3f0f8a1b47c54187f74f68ca41174eaddf51bb3a4fe7"
+      "bytes": 22917,
+      "sha256": "ee30282bfa4a1d19bbc249cfb48d2df7c7bb479de5ad8f9553b775832ebda9aa"
     },
     "docs/CONTRACT_PROVENANCE.md": {
       "bytes": 16111,
       "sha256": "836c55a4bbb0faf6654813ded4efd1ace6b57d13b3a414c9159cc40c573e7547"
     },
     "docs/CONTRACT_SIZE_AND_DEPLOYMENT.md": {
-      "bytes": 18205,
-      "sha256": "21281f414826968927ab4166ff087845c5aba6d80964bb828ba397633261abc3"
+      "bytes": 20162,
+      "sha256": "a2fb3ce4410da7535de746a8d3cf8b69ef5edc75260f147b8154f100ea384897"
     },
     "docs/CROSS_PLATFORM_QUICKSTART.md": {
-      "bytes": 51671,
-      "sha256": "043b34bd7dcfdd2288b76f25d6472147a9dded79a1722fafcdbe53414046f608"
+      "bytes": 55490,
+      "sha256": "2f86c08a046047130237cd4a48db1eb0cc81321f1b669d4d214110de69e0b59b"
     },
     "docs/CUSTODIAN_DAO.md": {
-      "bytes": 24833,
-      "sha256": "a622818766ee6824ed94ee56357e549983041b89d0b52a84cba7f845bdb98649"
+      "bytes": 24924,
+      "sha256": "e87fd238cd31356f533ac3f632bac9dbe61791e15138759bc61e683e1d846fee"
     },
     "docs/CUSTODIAN_DAO_REVIEW.md": {
       "bytes": 10940,
       "sha256": "60819bfad928cb0539b8a02d554a7cf5338e376ae2dee0de4b291abd021b71cf"
     },
     "docs/DAO_CLI.md": {
-      "bytes": 32467,
-      "sha256": "e03d147c2e76a7ef8fb9ab9dcd9b44f33724c8af209602ea7dad7f11205497ab"
+      "bytes": 32525,
+      "sha256": "edd850be6c879d0b8ffe45da60bd75a9c8184aa1c68e99dbb64855c70efbc526"
     },
     "docs/DEPENDENCY_SECURITY_2026_10_17.md": {
       "bytes": 10766,
       "sha256": "fc136a91391db6c5a89f3173623bb1a51f5575853e3e0163636f869483840729"
     },
     "docs/DEPLOYMENT_READINESS.md": {
-      "bytes": 12512,
-      "sha256": "b9f624ec8b33b2327050657fa86e2c025f7f5142dd44ccb7e0fead7057e3b5fe"
+      "bytes": 12566,
+      "sha256": "16323c613b6630ebf216fb6e71c66461ec5bc6fdedf943d222b6cf914ed563e8"
     },
     "docs/DEPOSIT_DERIVATION_INPUTS.md": {
       "bytes": 6196,
       "sha256": "78a0d980472afd28d885b6cfd585e850a3fe186fe1444b8e7b4d81b323257921"
     },
     "docs/DIAGRAMS.md": {
-      "bytes": 34075,
-      "sha256": "8ae93db3cf1b721a15d618c7a81a09be0114c4535582e14b9a973568759a1e0f"
+      "bytes": 44620,
+      "sha256": "46c9a3c9651e8875af16fb70d574007a1ddc2ed7f2c2a6512339899127f84d55"
     },
     "docs/DISTRIBUTION.md": {
-      "bytes": 29251,
-      "sha256": "eeffa9414afc15e466457a21ecb6b0dcd8f88b4edf007807987c075834fd2e30"
+      "bytes": 31480,
+      "sha256": "9289083a72c3020bb4ee8df264245efcda7812d6284fb92a6c789cfbd303d90b"
     },
     "docs/DKG_PROTOCOL_V1.md": {
-      "bytes": 10692,
-      "sha256": "295d28e6774471b09a90a617f6d42a35bd562dd84118f013cc9278cc5466f555"
+      "bytes": 11173,
+      "sha256": "43f504a00d0317b1d63e0c60cc790fc60e7dc132f67470bd2007795ab7ddec9f"
     },
     "docs/DKG_RUNBOOK.md": {
-      "bytes": 5462,
-      "sha256": "27e367caccb802e61790eebc11c115daedb4c898081f9d875e2870e609ee5880"
+      "bytes": 5640,
+      "sha256": "24fb7ceb3b869b73ac76c0f5db553501a5a1f96c31bd6184b85910a564210b3c"
     },
     "docs/ETHEREUM_MAINNET_ACCEPTANCE.md": {
       "bytes": 10583,
       "sha256": "61cb0ec29af3c9a37096c8c267cf439e8f2c6fa19f66094fc71dc7f77bd9033d"
     },
     "docs/ETHEREUM_MAINNET_RUNBOOK.md": {
-      "bytes": 34708,
-      "sha256": "07ea81fe807e24e9f6c7afd4fd5d0bb23a97bac8bb48ad098bfd90fa6a1498ab"
+      "bytes": 35835,
+      "sha256": "682dee3b38cbe6357236fb352e7250131a7cafbe3c329a5d64f9dfc292cb7728"
     },
     "docs/FEDERATION_CONFEDERATION_SETUP.md": {
-      "bytes": 22047,
-      "sha256": "88eab7daadff8b8eb48ce3fd0391930eaaf07f8a48ea560f63d5e29ed20de27d"
+      "bytes": 26012,
+      "sha256": "4e5141083b4240d1225f69be9349422a2e4788ec25ae8673dd9d051129e104aa"
     },
     "docs/FEDERATION_SECURITY_AUDIT.md": {
       "bytes": 10034,
@@ -14919,36 +15387,36 @@
       "sha256": "527839bc4b549ab33e31cfa5531cc99002e8f7834a9fc223a69540160b167a7a"
     },
     "docs/FEE_FLOW.md": {
-      "bytes": 27360,
-      "sha256": "f0a2d153c1ada0d84f8c966489b133bc46dd59d16c01b14a79560f72eb4501af"
+      "bytes": 28665,
+      "sha256": "5693d094e0cc13ff892b2f73827dc99d9b9535394b6aea2916b8189807eadb23"
     },
     "docs/FIRST_DKG_ONCHAIN.md": {
-      "bytes": 44424,
-      "sha256": "710c7fd192a488fc24b67aaa7ed84d092f3072d566c36e8bd3fa54d3bd88fa7b"
+      "bytes": 45320,
+      "sha256": "6dd64361ad379d44347c3c5727422387a29e4f31338496e6e7028187b2f01de5"
     },
     "docs/FROST.md": {
       "bytes": 9129,
       "sha256": "f58a4608e5055010e79fb373067125b14daa632c31d5319b4ffda9e620bca13e"
     },
     "docs/FROST_ZK_LIFECYCLE.md": {
-      "bytes": 34166,
-      "sha256": "e9d0b752d91178f80f0ce3fcb589fa193f188516626af25c6cffb3108b8d8de5"
+      "bytes": 35511,
+      "sha256": "f899ff3591b16ffade7f09cbb174b2bbb37593cd44e61ef6209abda5ad53ab82"
     },
     "docs/LAUNCH_CONFIGURATOR.md": {
-      "bytes": 32801,
-      "sha256": "280ca1edfe4db2fc58aa5f90dbbe3cdbaf94addbc09e76a328b70e3332cb853c"
+      "bytes": 34336,
+      "sha256": "0b77e8716ea736210c6e7a07ca19dd655e38ef69c999a36d7cac534268e0499a"
     },
     "docs/LAUNCH_MATHEMATICS.md": {
-      "bytes": 32799,
-      "sha256": "a714daa228f686a515e04c9d1af0479210b08c39bef007e063db2e29a92d19af"
+      "bytes": 33067,
+      "sha256": "5e9f11a95492375805fd310cd8628ba045c5d4e6ad8fc59240c737cbe8479922"
     },
     "docs/LAUNCH_READINESS.md": {
-      "bytes": 41532,
-      "sha256": "01e10f86aac3979cadfc120b5e748c2e33ffc283ed0887d46dcdb6d8a3f2883c"
+      "bytes": 45635,
+      "sha256": "b8c82d7406984c593bf8cd35c5ef8e300cc37ed3e653a73440510cfe60d96690"
     },
     "docs/MAINNET_RELAY.md": {
-      "bytes": 17035,
-      "sha256": "77673f018294dcdd1d69ce397a544d7e6001128cecfa36d53cf33934856bb2c1"
+      "bytes": 17027,
+      "sha256": "7694e0707b71b4c3ae4c43b6815de2005ed1937b2d1514128fcd1f53f80b93f5"
     },
     "docs/MIGRATION.md": {
       "bytes": 7011,
@@ -14959,12 +15427,12 @@
       "sha256": "fd71407267b1e3dd98b00e482c93bd6652588b5c612eba1544c8d17dce483a56"
     },
     "docs/NFT_CONFIGURATION.md": {
-      "bytes": 21041,
-      "sha256": "f9bdff7ab77782b409c03bf7b009ec6d85aa934247c2b6984c93e530d8a20815"
+      "bytes": 21760,
+      "sha256": "8cca0d2fd936d66db6dd243112b0e690b61a061d6f62f770c47d3e415c1d3de4"
     },
     "docs/OPERATIONAL_API.md": {
-      "bytes": 10830,
-      "sha256": "2d5ed3cfb9d4b713541c236102638a5939a3c2746d6345417b0cc39b17455137"
+      "bytes": 16520,
+      "sha256": "4e6b3a60da82dc831cc487742cd4295ee720f9dbb178b595312693a1b244b143"
     },
     "docs/OPERATIONS_REVIEW_2026_10_26.md": {
       "bytes": 22203,
@@ -14975,56 +15443,56 @@
       "sha256": "5c2222767ec2d34dd82f4a3598a463dd5ef708748f1b0c27a71d7119089a2d19"
     },
     "docs/PEER_TESTING.md": {
-      "bytes": 33603,
-      "sha256": "ab1d4fea0b3441541ebb9bb865127bbd6a73b496b4aa5bbb98c7bfcec0f20227"
+      "bytes": 33624,
+      "sha256": "0a276150c85bf5ac0d865a160c9610fb708bc403f29ab0209c4bb0294b4bd6de"
     },
     "docs/PRODUCTION_PREPARATION.md": {
-      "bytes": 14444,
-      "sha256": "1b55e79d59b28e5c59ee67b0095f490ed0238bc6e4f9e8758d4800da01062765"
+      "bytes": 15609,
+      "sha256": "e92c9255d06043cb174e809e05c9cb23c43ee1b37f1117f37c1cbceddcfeb055"
     },
     "docs/README.md": {
-      "bytes": 24581,
-      "sha256": "87ee37fada0795f4393c29668faeaf5193885641d958db7625746152758478b6"
+      "bytes": 25621,
+      "sha256": "62a6a4bd5cdb3b00bf89a138c87eb1ab5db7918041533816669bc236146a5f75"
     },
     "docs/RECOVERY.md": {
-      "bytes": 23902,
-      "sha256": "ca123b2a1406a5d0e100ec72a3729e0b997f4e38fb2b234af54e8e77e0dd69b5"
+      "bytes": 45002,
+      "sha256": "b93b065d53d09c1eaa62dd57457ffb366cce93c805b7adb5802a1713b6d89218"
     },
     "docs/RELAY_KEEPER_AND_GAS.md": {
-      "bytes": 16002,
-      "sha256": "dabdd4ef375ec4e3a85153d4bb7ae6d2909149c03527d748505a91dacf94ef72"
+      "bytes": 16057,
+      "sha256": "d366521372c93ca20b62b425f6bad77353d424d7809f44dc142d5b8a6ffc9da1"
     },
     "docs/SECURITY_LOGIC_REVIEW_2026_11_03.md": {
       "bytes": 27784,
       "sha256": "98d3b6c62c7f6c4fcfd49bbf46ea6ced662d9c8584892b5c4c75da01fa446fcf"
     },
     "docs/SIGNING_PROTOCOL.md": {
-      "bytes": 7678,
-      "sha256": "39417669c75a995fe80f6ba65424fff2e472d03662845b6fb75227d0bcfb7a94"
+      "bytes": 15329,
+      "sha256": "2b90433481df77a15645d79299710abfc645bb7bb68bfc53f82717bf347b4c7b"
     },
     "docs/SPV_AUTOMATION_ARCHIVE.md": {
-      "bytes": 10663,
-      "sha256": "9863a329e15204af030d5b6818ad8b2fd03f2690f2b7254a6e9d05879875936b"
+      "bytes": 10886,
+      "sha256": "7d16fede86098d3b09de592bd3fa6f0739f1d90f0d36d42126bd78c9f6aea1e1"
     },
     "docs/SPV_ENCRYPTED_TRANSPORT.md": {
-      "bytes": 13726,
-      "sha256": "8e5ffcf7275e9325566ca126d923011bf4313bb59e31cec8dd526a81e2f7fe13"
+      "bytes": 15095,
+      "sha256": "597701533aca648aa385ed176771e29bb6e9a67185383ac6d8318a0a8a83b480"
     },
     "docs/SPV_GAS_TREASURY.md": {
       "bytes": 28078,
       "sha256": "433cdb87c70f6830e024a382acb9600d17a60e40c882064926f3492afd4d7fb9"
     },
     "docs/STAGED_DEPLOYMENT.md": {
-      "bytes": 67885,
-      "sha256": "283ebc79fd66db0c7d51c56c217f32d0d43f1b6b372efa47354c694195de0773"
+      "bytes": 67846,
+      "sha256": "315d0ea8018a8754e4552a686b668716dad12498f86ab9872a0c94450cb43ae9"
     },
     "docs/STRICT_REVIEW_2026_10_05.md": {
       "bytes": 21757,
       "sha256": "667206e35577c2bf2e12270c39af5bfeb9ea4961a90418b69228963cf345eff9"
     },
     "docs/SYSTEM_TEST_MODES.md": {
-      "bytes": 24177,
-      "sha256": "dc277366ea3868e6a5330fc215ece6c4e41871f7d4d4cd43629fd9439f6e533d"
+      "bytes": 26633,
+      "sha256": "497db886e61ad96705880f102b7837626c211f5762a90377209e78f3e8b6fb9e"
     },
     "docs/TOKENS.md": {
       "bytes": 31395,
@@ -15035,20 +15503,20 @@
       "sha256": "55c81d30babc2230fcb7f005d26a3aede555caa02ea84291441da94e5ff02303"
     },
     "docs/ULR_BOOTSTRAP.md": {
-      "bytes": 35355,
-      "sha256": "581817cb7ff5446ee743db05da8964af52b5f89061d4eacaafac5970767d8833"
+      "bytes": 36187,
+      "sha256": "692d46dcafb2b24fb581343dfdcca92abb17ed544a0cf16d311bd80e8357e49f"
     },
     "docs/ULR_CANDIDATES_AND_VOTING.md": {
       "bytes": 21277,
       "sha256": "04d651d7ba4b910f5083484e2d44c7c353c83f5efe346a8f94b0e4bb03270a33"
     },
     "docs/ULR_STAKING.md": {
-      "bytes": 16846,
-      "sha256": "a5168caf5dbd6b704c285cd41d4334a734d9733d0e7dc2f0a3e8dbb1ac254666"
+      "bytes": 18192,
+      "sha256": "e8b754b741edd0ab43c94f8d82e65fe7a88470ca4ba7f3e64e0ab7065385c81a"
     },
     "docs/ULR_TREASURIES.md": {
-      "bytes": 35740,
-      "sha256": "6e7ac57a1a1f78377c156332e1a899f0da421d9146f812c2bf457ef1bc6e8116"
+      "bytes": 44574,
+      "sha256": "11d9b01d40eaeea460a530458a72c59a3fadec4c3cf002be4ef788c58f18aafd"
     },
     "docs/UPGRADE_REVIEW_2026_10_18.md": {
       "bytes": 24341,
@@ -15059,12 +15527,12 @@
       "sha256": "73b1cce7575c7056de7ed6c28543883f475fc19c303effc70d55a242f8708a70"
     },
     "docs/WITHDRAWAL_FEE_SUBSIDY.md": {
-      "bytes": 20703,
-      "sha256": "5351d883470074a0a7406f5f859c8ce89901a2599673bc8033072bec536fc927"
+      "bytes": 21004,
+      "sha256": "bb4866eff3fbe1f817f2742df23eabc8df7513e13677367a597aa3f5690665a5"
     },
     "docs/ZKSPV_CONTOUR.md": {
-      "bytes": 55004,
-      "sha256": "c69e91c448e145781f53c6c03914389b6927c0ed9d63c1c0bc85126e5ed9bfd2"
+      "bytes": 55389,
+      "sha256": "a3e80ec6e15f416258e46ffde913f104ec588e5885b3e2d7ff7dbcfaed43e417"
     },
     "docs/ZKSPV_FUNCTIONAL_COVERAGE.md": {
       "bytes": 13531,
@@ -15087,16 +15555,16 @@
       "sha256": "78b1d7c551ffa4d79d4918914e00e806698cc1b6938a81ecdfb6c667cb7b5c20"
     },
     "docs/ZK_SPV.md": {
-      "bytes": 42195,
-      "sha256": "1a9d250426cf8fd346e280c39c7266f58fe196fb3dadf53f7be9cc9c1c76074d"
+      "bytes": 42232,
+      "sha256": "13f516e9108847ef7a39d05164bfd2c0c29042a6775726ae36038ac5e4f601a8"
     },
     "docs/ZK_SPV_ARCHITECTURE.md": {
-      "bytes": 43937,
-      "sha256": "bee20c6f4e19a7265855fbb36a58532612c6694a1dd750b18df3a7fd00f1b817"
+      "bytes": 44466,
+      "sha256": "57738598b6163c783657ee62117ea9bd048d5e5b5eb188ca71543a7a4c7c3171"
     },
     "docs/ZK_SPV_BOOTSTRAP.md": {
-      "bytes": 12491,
-      "sha256": "0117548cc5b918161370be0b2aed98f18e86a832190a34d9f3b73b87e8448111"
+      "bytes": 13407,
+      "sha256": "658fec5f49c63f61726b0ebf4059792b1913a1ba3354927be5018a5b4c5bbda6"
     },
     "docs/ZK_SPV_MIGRATION.md": {
       "bytes": 7368,
@@ -15107,16 +15575,24 @@
       "sha256": "2cdff9445edde0625824e25ab7a4e10fa754a45e4db8c81cb0454ff0bcbaa7f2"
     },
     "docs/ZK_SPV_WORKER.md": {
-      "bytes": 24680,
-      "sha256": "d4a950c9fc5947fc8bb192c5989e2fad3b9c8a733672357c9d691eef051d6827"
+      "bytes": 31810,
+      "sha256": "726b3cc06170a3867693ed58fa1c5622225446c48097999fb1f2a35e06041cce"
     },
     "docs/ZK_TESTNET4_SEPOLIA.md": {
-      "bytes": 22003,
-      "sha256": "78ce0c394f7483419e3b9febc9249f0a3e155ca7843352ba3dcda001c544e8d4"
+      "bytes": 24160,
+      "sha256": "c30a6930087d0ec25bdf315862968597f1d9d877d430fff48786c2e040c8ef38"
+    },
+    "docs/audit/SatoshiFi_security_audit_2026-11-23.md": {
+      "bytes": 109496,
+      "sha256": "c9392fae225839e32a83f31b92cc94d42dadf5673060c03ac5dc2204619e0834"
+    },
+    "docs/audit/SatoshiFi_security_audit_2026-11-23_EN.md": {
+      "bytes": 78200,
+      "sha256": "19ca86686ee68b576f5aa47d9f7461ac603cf73646f924cd4297ab82eef63a74"
     },
     "docs/openapi.json": {
-      "bytes": 8431,
-      "sha256": "388208e3171867c9faf9f01e726f25e4c2f64a2eabc78a52bfed81ec8f7f8464"
+      "bytes": 8478,
+      "sha256": "0a6f01989744f6c6191df4e093cad9c21445ef606319500d76d9712cefababc0"
     },
     "frost-crypto/.gitignore": {
       "bytes": 9,
@@ -15138,6 +15614,10 @@
       "bytes": 5411,
       "sha256": "ed2cde9a82efa22aa891a16c096590f28eb2b59844049faa0a7f6eef6b586d79"
     },
+    "frost-crypto/src/bitcoin_recovery.rs": {
+      "bytes": 22811,
+      "sha256": "3d7d6f6dc9fe7242d4a4d96b506b7e5a8aadc1f16d6c7502dd9714e4b9919e1c"
+    },
     "frost-crypto/src/deposit_derivation.rs": {
       "bytes": 10588,
       "sha256": "14bb3691d24659418982e1b52903cd8c233b1fdd88731c120ac8d2aa910e4347"
@@ -15147,8 +15627,8 @@
       "sha256": "954e9f65d086c9979cd6d1032d529aee7d39a27c13ad51aa1e97021c60ad47c1"
     },
     "frost-crypto/src/main.rs": {
-      "bytes": 19043,
-      "sha256": "144d2de20bf32833ec8dc75133bf5f157fbadeefab8aa183d2ab2e337618c0f7"
+      "bytes": 20741,
+      "sha256": "648339cff4b7d9ae648dcf9f269f9b1b506546b2be1ae48540b836de61bed74b"
     },
     "frost-crypto/src/smp1_psbt.rs": {
       "bytes": 10115,
@@ -15179,52 +15659,56 @@
       "sha256": "889347901279e470360a839b7b2e91ff01ab1090fc951807d64090e9fe667ef9"
     },
     "ops/audit_launch_readiness.py": {
-      "bytes": 11927,
-      "sha256": "a6c4ed12ba54dcd9e1d2c4300f32a4b899183ed9bb6c42ca6b5016ee5b51d32c"
+      "bytes": 11948,
+      "sha256": "c153a12f490a20202d7051b83a0cb19fe29e1a831590e27a8cfdd0aa16a45f50"
     },
     "ops/audit_zkspv_documentation.py": {
       "bytes": 8996,
       "sha256": "21d1d966c4f1e353ea9adbb3701c74d545bcdf046cec605ef2a684ec28b946e9"
     },
     "ops/bootstrap_host.py": {
-      "bytes": 7846,
-      "sha256": "ca3c53376fcd0d35194cf171fe985ea91657c20f018806c9faa0eeb7c71a9ea4"
+      "bytes": 9074,
+      "sha256": "5b63c19923c7ad8d2585c169e085f9d7ea6b88ec5cbdbe1569159f1037b8cffe"
+    },
+    "ops/check_bitcoin_custody_spv_pins.py": {
+      "bytes": 2577,
+      "sha256": "8c861543f24f480c0d2fed7463b65fb304c3b2835f3e458cf3b3b5964d550b53"
     },
     "ops/check_continuity_interfaces.cjs": {
       "bytes": 2186,
-      "sha256": "18adfd29a2ff20fd5cc2c8d5d813ee7add7040e52e987e73ea0fb70b914cdde8"
+      "sha256": "f91031d9c3040908bf426a3b5a05ea4d3ca3b8823d1f0e4a5c3cbecf2a46a1ac"
     },
     "ops/check_contract_sizes.py": {
-      "bytes": 2473,
-      "sha256": "d10753cc94e61d4077c5fec216ecbad520364a5b1075b0de6872d8fc29ecef48"
+      "bytes": 3097,
+      "sha256": "a2fc875695150cf79f682c9bba1e51c13efa00d80d8278c16e47323fb874bd3c"
     },
     "ops/check_launch_math.py": {
       "bytes": 3668,
       "sha256": "32d70af72781cfce62120326f518cb6e1a97a0a7202a7b5f89cba5bc88a0b7ad"
     },
     "ops/compile_continuity.cjs": {
-      "bytes": 5154,
-      "sha256": "d146ee08ad52af77e84ab39bd33bdef98520a31d4e491b8a82b61ac435edec3b"
+      "bytes": 5170,
+      "sha256": "ce805ec940ef397776345b88ddf02ac150be1f4bf5a492fbfecd301e3c552867"
     },
     "ops/deployment_gas.py": {
-      "bytes": 3711,
-      "sha256": "6c56681c74edb6db22fa6c2f7c4ce623df2a8618f9d5ddd7d470b60dc41c715b"
+      "bytes": 3718,
+      "sha256": "55532bc6f0940cbc134bd07afbf70eccf93af963b6fab3da43032612df92a985"
     },
     "ops/deployment_stages.py": {
-      "bytes": 61379,
-      "sha256": "64a61072f89544a17f8151274192ed92662ff9abf4a48098e429e9dd9529a4ca"
+      "bytes": 61406,
+      "sha256": "b11c4670056038e5d016b81cc6b9c8b88fa65d0c0057b42d6f8fd898520c4e3b"
     },
     "ops/ethereum_rpc_budget.py": {
       "bytes": 8089,
       "sha256": "380335a3fb9cf2ff4d6f059a538a27cfab31aacd799f4c71e4e40aa8fb7898f4"
     },
     "ops/generate_abis.py": {
-      "bytes": 4773,
-      "sha256": "a85da85b7ac6bb43ab94a53f31747deae0b72bc8b767ad5438e575383e5a0ca2"
+      "bytes": 4825,
+      "sha256": "61c1264f92bd36b730c9e0337a17aec7acf106e7f48194a38ae2f2d0fe3a015f"
     },
     "ops/generate_fee_runtime_hashes.py": {
-      "bytes": 1349,
-      "sha256": "2b3cb2ff136aad6a1a4bcfb61923dd89bd8102d9297de8e272a7e70fcd018bd0"
+      "bytes": 1445,
+      "sha256": "10eed7fd0f9ac31baf559f3752a63dc60e0eb023e88690b0cba91a85d53082d2"
     },
     "ops/local_acceptance.py": {
       "bytes": 12456,
@@ -15235,8 +15719,8 @@
       "sha256": "7025addf87551296d43e807227601cadec8aef5a75af4253fbbbaac29ad1c54b"
     },
     "ops/package_distribution.py": {
-      "bytes": 16444,
-      "sha256": "17ef9e98e082032ff64b6d8c97f95522f7803c7dd35832ae08d8d87ec42f2583"
+      "bytes": 21647,
+      "sha256": "331bbc2de4df6e626d379c1ce260d0f263dfadef37363882814287f1a4891e42"
     },
     "ops/prepare_release.py": {
       "bytes": 27272,
@@ -15251,8 +15735,8 @@
       "sha256": "f3178a701108ef72afb5e64f2c084b6f060e2f61969fa09d01b2aa1bea5ed638"
     },
     "ops/system_modes.py": {
-      "bytes": 19515,
-      "sha256": "c8ba1cf802b2dba4287e873e212d23b51e88f05a5241e09610eec241294f57c7"
+      "bytes": 20885,
+      "sha256": "706a8d686714237715b6dc2b1049173b1f6aa862ec38a5b070d1956ddd4474bb"
     },
     "ops/verify_mainnet_headers.py": {
       "bytes": 10356,
@@ -15339,8 +15823,8 @@
       "sha256": "a7fb0caf7a6a67d258fe2555ea5fce5dac579d3621012cf269ab15c00ffe5e98"
     },
     "ops/zkspv/contour_checks.py": {
-      "bytes": 14747,
-      "sha256": "90c1951b1e8916e385e1d5dbb7c5c3027f92d8b1566565a93d41090a65068656"
+      "bytes": 14734,
+      "sha256": "1e13b8b0258f6c82f178d4a4524ad67369717a656b169f95e936beddb1f1684f"
     },
     "ops/zkspv/contour_driver.py": {
       "bytes": 2174,
@@ -16475,8 +16959,8 @@
       "sha256": "bc4ec9a8047d15069bf57d6a5d08cb856a32a3da94057ab91bd8477ee9934f5d"
     },
     "rust/zkspv/state-adapter/foundry.toml": {
-      "bytes": 574,
-      "sha256": "b7d9959aa8940f040c8bfdab9c2de9c6f8aa7234b9a1350064389150e34e2845"
+      "bytes": 1339,
+      "sha256": "55e80abb3cb9a1674ada424b564598f13eca5c865a321a3e8f9b8de8f88de3b9"
     },
     "rust/zkspv/state-adapter/generate_vectors.py": {
       "bytes": 1043,
@@ -16490,6 +16974,10 @@
       "bytes": 9661,
       "sha256": "99676e5d38d2ac295932a8173bc45dbd4f6c9e81c2b50ba7cbd0c45e3fc2cf5a"
     },
+    "rust/zkspv/state-adapter/recovery-test/BitcoinWithdrawalRecovery.t.sol": {
+      "bytes": 6745,
+      "sha256": "36491b789e81955a1e3e040b16cc50f96c57e4b3311232145c20134a69e42ad2"
+    },
     "rust/zkspv/state-adapter/report.json": {
       "bytes": 49619,
       "sha256": "24b1cf9b3e2717dcf0ed4318761658bafe3e5e39c211f198a86519208f5096e4"
@@ -16501,6 +16989,10 @@
     "rust/zkspv/state-adapter/src/bin/state_vectors.rs": {
       "bytes": 4067,
       "sha256": "beba5bea4ac63e9d95f830bdb4adc12b6054620a181c2f0d9a079f6afc6951b2"
+    },
+    "rust/zkspv/state-adapter/test/BitcoinCustodyNetwork.t.sol": {
+      "bytes": 4920,
+      "sha256": "82ae8ca57b5859b249ea14f33c6dc350194b9e35de4a7ed32db35518002c770f"
     },
     "rust/zkspv/state-adapter/test/StateAdapter.t.sol": {
       "bytes": 16721,
@@ -16894,17 +17386,33 @@
       "bytes": 30658,
       "sha256": "6c14bd73f6e75a256279953eb79dc6f2ea4e41a9ad60d87cd0ca1c8c4a1e6171"
     },
+    "security_best_practices_report_20261122.md": {
+      "bytes": 32198,
+      "sha256": "763be0c478bf17aa0a4f11feb41c439819f71ef1a11ee69557c834171960b403"
+    },
+    "security_execution_liveness_review_20261123.md": {
+      "bytes": 35015,
+      "sha256": "491707b1bd5e9cb641bbf2aad5f5aec037626aa08f17b2d5e6d6e39256822b1f"
+    },
+    "security_mainnet_review_20261122.md": {
+      "bytes": 40978,
+      "sha256": "043c1bd3609f2cbaf05140250177b3faf94cf23ff897b0f8a9d6fdec56ac7408"
+    },
+    "security_repository_recheck_20261123.md": {
+      "bytes": 35735,
+      "sha256": "a1d5ea39f2f01421f30b1b61afdbc68114499299a82881df1ada9c8db259eea4"
+    },
     "signer-agent/.env.example": {
-      "bytes": 960,
-      "sha256": "a3755d932777d68d23cd6b8a193f428d5f4bc4e3782bf33a179d2c384185030f"
+      "bytes": 1094,
+      "sha256": "569a3f9a67bad72c86073239f3513fb2d4c8bdba7db3cf4744a033832ef21bd9"
     },
     "signer-agent/.gitignore": {
       "bytes": 58,
       "sha256": "5c5dd88b933bbd8ca8c258cb199c16979006ace4c768e6bed1afddce3c24b33d"
     },
     "signer-agent/README.md": {
-      "bytes": 20456,
-      "sha256": "2426c8e39782a45b298c01b2add89432891ac25115f7861da3e61b5a62c03415"
+      "bytes": 20714,
+      "sha256": "209c8569f3f908add628294c124135991ca7b5fcf65b57a007d187d3307bff77"
     },
     "signer-agent/contracts/BitcoinAddressMessageBoard.json": {
       "bytes": 10270,
@@ -16915,20 +17423,20 @@
       "sha256": "17a2c54334bffac8e2280979fe3625c73ea868e803c092a37780d1b19e645c3b"
     },
     "signer-agent/contracts/BitcoinBatchRegistry.json": {
-      "bytes": 10679,
-      "sha256": "0847b25d5c53067456b24e225d4499b503564e68219f5c04403576b744e9729b"
+      "bytes": 12873,
+      "sha256": "e9bdb6d5b0a560412f2610f67bdede23af2eaf028bc537e50e114296c65f6287"
     },
     "signer-agent/contracts/BitcoinCustodyTransfer.json": {
-      "bytes": 9402,
-      "sha256": "9a329920628d39dc126a00c663c61f192d831dabd42b7cdeafbeb7d3228864f2"
+      "bytes": 10020,
+      "sha256": "19923fd17d2d5b609a2124cd82abefb06a2160f9275d3f01b101df3acd14a517"
     },
     "signer-agent/contracts/BitcoinDepositDerivation.json": {
       "bytes": 2904,
       "sha256": "d626e61e9ea26655157d02a3bc971da316dcf6cf8cb0d0a6715243eb4ff3615d"
     },
     "signer-agent/contracts/BitcoinDepositRegistry.json": {
-      "bytes": 15875,
-      "sha256": "e2659f24afe7b5d7dd6b725b6d8b957667231aad9a8651a98ec0d68d4e44a51b"
+      "bytes": 18312,
+      "sha256": "6d68eb02b59a4d88c868722d7b4c353784476f642c3fc155fc764d7c20bbd861"
     },
     "signer-agent/contracts/BitcoinFeeFundingVerifier.json": {
       "bytes": 1625,
@@ -16955,8 +17463,16 @@
       "sha256": "2df636265cb64da0c37e4324276ea827f33dbf33c1c30db552731c824a1e1150"
     },
     "signer-agent/contracts/BitcoinMintAdmission.json": {
-      "bytes": 21923,
-      "sha256": "aa2a473da389ec7d136fd86c82744cb2783dba0f8775937ff063930674e1092f"
+      "bytes": 25039,
+      "sha256": "c4e7fd0c0e4a4ddc86c1874bf228207dcda2d2f3ecc289c4b92c447f81bd46a2"
+    },
+    "signer-agent/contracts/BitcoinMintAdmissionPreviousBuild.json": {
+      "bytes": 211810,
+      "sha256": "5c3ddcd358985c0301ecb5dab3730d75d7904d1a9b44ac561d962c87dfdadcd5"
+    },
+    "signer-agent/contracts/BitcoinMintAdmissionRetirementV1.json": {
+      "bytes": 215303,
+      "sha256": "e143acbc1b617333c5e1f28d93023ab4e17fa1b36884588f0895e8d88477bc62"
     },
     "signer-agent/contracts/BitcoinSigningBoard.json": {
       "bytes": 9688,
@@ -16974,17 +17490,49 @@
       "bytes": 2988,
       "sha256": "d8225b47c86f7d04b813ae2a30e36b39bbab42cd75e63380d16f2cdee6d71f1c"
     },
+    "signer-agent/contracts/ConfederationBitcoinReserveCustodyLegacy2630366.json": {
+      "bytes": 69700,
+      "sha256": "ac65308df57b52c58312abb8b2f53345ab464d1aa2dcf268bb076debc24ac916"
+    },
+    "signer-agent/contracts/ConfederationBitcoinReservePreviousBuild.json": {
+      "bytes": 198320,
+      "sha256": "a8b16ca1f44431e934375f6c84c59de42f2ce1bf937961b7123f0209978c80a0"
+    },
+    "signer-agent/contracts/ConfederationDAOIncomeExitLegacy2630366.json": {
+      "bytes": 57846,
+      "sha256": "97c71c58b841aa04c32d4ce8d80e1e227b292bc32c970557ca25f8f1d42070ec"
+    },
+    "signer-agent/contracts/ConfederationDAOStakeExitLegacy2630366.json": {
+      "bytes": 14856,
+      "sha256": "c4bdc478b73928d02d7ffcea98016a4b62e25a3023d9e1960d15122b2f6d8896"
+    },
     "signer-agent/contracts/ConfederationFactory.json": {
-      "bytes": 28472,
-      "sha256": "f787a9de6c784224c044ae262d4fcbe5a9f9970ae4a26dbd41646175fafd3fa8"
+      "bytes": 30868,
+      "sha256": "8e6b1f05ac68ace8fd665ada9ff7d0e0da09e2bca617a475fc67e2aa3dafb5a3"
+    },
+    "signer-agent/contracts/ConfederationFactoryULRLegacy2630366.json": {
+      "bytes": 96144,
+      "sha256": "34899687468685bf8050fab7934694577b354055579b31364b51a296ab99a130"
     },
     "signer-agent/contracts/ConfederationGasTreasury.json": {
       "bytes": 5975,
       "sha256": "b7be000243c81ff1d2e91c4eb2ea326c9b289e86eb87613e7bc576531b7309fd"
     },
     "signer-agent/contracts/ConfederationMultiPool.json": {
-      "bytes": 31167,
-      "sha256": "0d32da18229917fc6cbf9e265a8c68e2814064f24ab76ac1944a634e918f7019"
+      "bytes": 31345,
+      "sha256": "e6005b611da11cfe1c8feeaa6ba96b05913169b96cd86f27d15c3368cfba5f0c"
+    },
+    "signer-agent/contracts/ConfederationPoolV2CustodyLegacy2630366.json": {
+      "bytes": 65659,
+      "sha256": "900fca239d0caa45e1089ce9b9b2655108851a0d12efd379e4832d179cfa0935"
+    },
+    "signer-agent/contracts/ConfederationPoolV2DeployerCustodyLegacy2630366.json": {
+      "bytes": 76245,
+      "sha256": "04df04f81d10a50548abcf1d5fb0db0161137049f30bdf47c3020c34d50a7d6b"
+    },
+    "signer-agent/contracts/ConfederationShareV2ExitLegacy2630366.json": {
+      "bytes": 11115,
+      "sha256": "45e6f280b0fcfaf3822577605a1b5189894d1c15ef97416153234e4d6fd8b87c"
     },
     "signer-agent/contracts/ConfederationToken.json": {
       "bytes": 16819,
@@ -17018,9 +17566,17 @@
       "bytes": 14459,
       "sha256": "bc14c787d8f1fea9e50c86106e5be912aa1c0efd76f115246b0615d19857b9ce"
     },
+    "signer-agent/contracts/CustodianDAOTokenExitLegacy2630366.json": {
+      "bytes": 3239,
+      "sha256": "f5e1f122cec96d43a18a55c9ebb705b0e453b226e96712f71ffbc2505d38ebbe"
+    },
     "signer-agent/contracts/CustodianValidator.json": {
       "bytes": 12003,
       "sha256": "52afe2eb64f4d3142699e9aa3fbfff4b65b16ba02b6aecfcb056df305b760978"
+    },
+    "signer-agent/contracts/CustodianValidatorExitLegacy2630366.json": {
+      "bytes": 11253,
+      "sha256": "fc485f7933711a952ca5dd9782952741d2ce6286a572eddbe2a7067f45c9bdf9"
     },
     "signer-agent/contracts/DAOMockFeed.json": {
       "bytes": 1907,
@@ -17034,41 +17590,77 @@
       "bytes": 9435,
       "sha256": "7558b83b6a4137741d5739f91e14eece11e6cfeee83ed018655f9ebfde82047f"
     },
+    "signer-agent/contracts/DKGAuthorizationExitLegacy2630366.json": {
+      "bytes": 20893,
+      "sha256": "55d69689e4bfdf84c7da6f60ea39d19fac684128257299db1c92c8b5170bf1a0"
+    },
     "signer-agent/contracts/DKGCoordinator.json": {
-      "bytes": 28027,
-      "sha256": "e62addeab22c5e31fe663f1a2cace9908cb181224ce6775521b77f45bbaf853e"
+      "bytes": 28477,
+      "sha256": "c098899e712683b78028b6810007922349891b7f1fa231a7083539fa1228e56d"
+    },
+    "signer-agent/contracts/DKGCoordinatorExitLegacy2630366.json": {
+      "bytes": 68784,
+      "sha256": "dfa127fbf5125ce4b1f43c994cdea0be6a3a04fc7b56b8f9f4a38fb56933b768"
     },
     "signer-agent/contracts/DKGOnchainBoard.json": {
       "bytes": 12324,
       "sha256": "dfdd8ab02e702294b1c0240ed7f7490a01f7b323c5e9114bb435a7bf1e0db400"
     },
+    "signer-agent/contracts/DKGOnchainBoardExitLegacy2630366.json": {
+      "bytes": 30278,
+      "sha256": "06baf4668ae48213a6f71d8c022718b32ef193d01f6fb13e0393715d88ec3469"
+    },
+    "signer-agent/contracts/FROSTAuthorizationDeployerExitLegacy2630366.json": {
+      "bytes": 49764,
+      "sha256": "ad592ebcdcc1432709e0368d8aac42603bdb6f5e59ccbe14152d9221c659388d"
+    },
     "signer-agent/contracts/FROSTCoordinator.json": {
       "bytes": 41095,
       "sha256": "7f37c342b626560cf75d2cb9b8cc783e46fbf5cb8d5c81c3ea6d0169d7d87bdd"
     },
+    "signer-agent/contracts/FROSTCoordinatorExitLegacy2630366.json": {
+      "bytes": 95294,
+      "sha256": "2e07ad3f34e7ab5aea4a7e209611bab4d7e9038109f42c7d968f58d5261e0750"
+    },
+    "signer-agent/contracts/FROSTCustodianDeployerExitLegacy2630366.json": {
+      "bytes": 76525,
+      "sha256": "6f39af32c19b2a592f226aafa02651fe6d0cad33d669870f04aa4c8ad3fd8645"
+    },
+    "signer-agent/contracts/FROSTVerifierExitLegacy2630366.json": {
+      "bytes": 13856,
+      "sha256": "56c533fc595b31e5e58917927cc08044ac07e0127de3379fe42446634e424014"
+    },
     "signer-agent/contracts/FederationFactory.json": {
-      "bytes": 14033,
-      "sha256": "0b7ca8fa4b088e3e0ec9c16902956459f6426765e54931250e7d28be2d18e032"
+      "bytes": 15711,
+      "sha256": "6197dad9e8b168c966aef65849546b403024dd407b7a81f4cc90f0345c0e0190"
+    },
+    "signer-agent/contracts/FederationFactoryExitLegacy2630366.json": {
+      "bytes": 48043,
+      "sha256": "ef26556cbfca77439d67a7e88e69af0d82bae9a8e744ecf763f2d35dfe264f53"
     },
     "signer-agent/contracts/FederationFeeManager.json": {
-      "bytes": 26646,
-      "sha256": "de9aee0c56eef03176e87e8174a25565d1e9abafe6befb8537ed84d5518c7f14"
+      "bytes": 27752,
+      "sha256": "864362877cf00eb8a3d7ef4cf6d6a26dadf85eb42dafc5ceea4e8702764f5a8f"
     },
     "signer-agent/contracts/FederationGovernance.json": {
       "bytes": 17354,
       "sha256": "e2cc95e093d0e4d014339c6ec23f67390b437b840e4be2c0ae0714b4861891e3"
     },
     "signer-agent/contracts/FederationNFTModifier.json": {
-      "bytes": 18862,
-      "sha256": "2969973283823a6bb6e423bd4ee3192209c2461bc87380c0529164e3515178c0"
+      "bytes": 20389,
+      "sha256": "ed4637c2c2d3289356a294d1b28582cffd22ee0b9d09eb66fbe168ba860e6f76"
     },
     "signer-agent/contracts/FundedFeeConverter.json": {
       "bytes": 2845,
       "sha256": "0f8e5735ec226e6ed102d75b7633e2b56a0c7f4ee49928d4035c08eb3542f4f1"
     },
     "signer-agent/contracts/FundedFeeSale.json": {
-      "bytes": 12233,
-      "sha256": "44a7cb125af602d37712e72d9b303c9e212e955aae1779fe3bd4d5bacb393775"
+      "bytes": 12523,
+      "sha256": "ceeac53b8dba11ad7a7f6a85e7fbdda69fbb521f6f830080aec5f61c6d8966e5"
+    },
+    "signer-agent/contracts/FundedFeeSaleExitLegacy2630366.json": {
+      "bytes": 33541,
+      "sha256": "a1feabdd1f14aabcbc52b07af54fd561a26199168905fc57f7172a1e07f85cb2"
     },
     "signer-agent/contracts/GovernanceRegistry.json": {
       "bytes": 1666,
@@ -17083,8 +17675,12 @@
       "sha256": "ab886b0942aaad1fe5bffdba3f367d7e13374f83612f189dd13edcda188b110a"
     },
     "signer-agent/contracts/MiningPoolV1.json": {
-      "bytes": 17765,
-      "sha256": "4ac1bc393ddd29cd6096d76aca287b601830969b8432327808eb77c97349dd9e"
+      "bytes": 18483,
+      "sha256": "c0ec95629d354886249b71a7ba7159a92067d74883b361f4a662ccbea0c29b68"
+    },
+    "signer-agent/contracts/MiningPoolV1PreviousBuild.json": {
+      "bytes": 192027,
+      "sha256": "21e66eadcf3b65853170a54a4e498dfd7f98a3b09a1d6d3888db76d54c62bd5e"
     },
     "signer-agent/contracts/MultiPoolDeployer.json": {
       "bytes": 4686,
@@ -17138,13 +17734,17 @@
       "bytes": 8313,
       "sha256": "b8d5332b505d548feb5925f1f317deb5d141ad76f017afaadfd5e815d5d9b95f"
     },
+    "signer-agent/contracts/SimpleMultiPoolExitLegacy2630366.json": {
+      "bytes": 46633,
+      "sha256": "12489eaa18ffcbf7329c61144ea8b49f59ecb914278f0c12d69f5e9572c84be3"
+    },
     "signer-agent/contracts/Testnet4HeaderRelay.json": {
       "bytes": 10362,
       "sha256": "d2905c1151995bfcb09c3150f0a05065e9ca969e7a13b9eb2b893f9467468938"
     },
     "signer-agent/contracts/ULRConfederationTreasury.json": {
-      "bytes": 10090,
-      "sha256": "7d28eb544d255d460e27843c99af12235cd1836ef8ca7eb150419d5472a64150"
+      "bytes": 12073,
+      "sha256": "9f415e2fd56908328c5adc1d7d617ff34035d28f59af810fb709fb4093738729"
     },
     "signer-agent/contracts/ULRConfederationTreasuryLegacy.json": {
       "bytes": 37090,
@@ -17153,6 +17753,10 @@
     "signer-agent/contracts/ULRConfederationTreasuryV1.json": {
       "bytes": 37285,
       "sha256": "933e7aa42eac27d14f35e77a92f89415c002cada7bf8ff5fe1c2ed3537cc0c7b"
+    },
+    "signer-agent/contracts/ULRConfederationTreasuryV2.json": {
+      "bytes": 37267,
+      "sha256": "570aeef8ba61e3a9ee60767d53543bbea66d31718a43e3d401aa63a4d2675414"
     },
     "signer-agent/contracts/ULRConfederationVoting.json": {
       "bytes": 2146,
@@ -17167,8 +17771,12 @@
       "sha256": "8fa41cd3bd5899592bad4fa8d8024273feacd2b9443a1ef3130c8a975731ed70"
     },
     "signer-agent/contracts/ULRStaking.json": {
-      "bytes": 16348,
-      "sha256": "e6a828b8d8be082bfdcf6769f8e734abe8ee67877b3deee6024b6bb9eccd9e5f"
+      "bytes": 16437,
+      "sha256": "74f57a2155810204fdb45bc12518231bdc1eba73a6149dcc6292529a5765dc4a"
+    },
+    "signer-agent/contracts/ULRStakingPreviousBuild.json": {
+      "bytes": 103757,
+      "sha256": "b7770e2e655e96da11c691a01d962327655fef5b5fd8b78fb119ca3200493ff4"
     },
     "signer-agent/contracts/ULRStartupRewards.json": {
       "bytes": 5487,
@@ -17219,8 +17827,8 @@
       "sha256": "7c0672d67320467056a65e4d1f67e2c908745bcfcffb8bfbd37b0de7074eda06"
     },
     "signer-agent/requirements.lock": {
-      "bytes": 924,
-      "sha256": "a5d285ddd34951257aa4cc8506107a1fee143a6748463bac3e8cae0e3a2e2d20"
+      "bytes": 165321,
+      "sha256": "1adb48245aa50358e7057eaa22b78b271c391de81fdb217a84a4116c40f99f91"
     },
     "signer-agent/signer_agent/__init__.py": {
       "bytes": 60,
@@ -17231,8 +17839,8 @@
       "sha256": "67bedc8033593cc13a0055c0a45e9b40a8c9514e70d3361a6d29759b6ade9aab"
     },
     "signer-agent/signer_agent/address_mint.py": {
-      "bytes": 23029,
-      "sha256": "241548dc7d6a3e6fa93b2991c35c741fbf75e080f5c9a4c9c3fd6f45eeb587a7"
+      "bytes": 23323,
+      "sha256": "8d213a4f687d209b8e62dbfa71a63bcd0c9fd1fabad4991f25067b395921a2fb"
     },
     "signer-agent/signer_agent/address_registration.py": {
       "bytes": 15194,
@@ -17259,24 +17867,24 @@
       "sha256": "2bd958ed5b7677f0450e75726e94521d9317c470c637c2191d9cc37001fd2c97"
     },
     "signer-agent/signer_agent/address_transport.py": {
-      "bytes": 49207,
-      "sha256": "6a9a30c9d5d4fc367091e9267991ab4da88b4e22892596836c97a63bd6c43e2f"
+      "bytes": 49204,
+      "sha256": "b81b0e0b79dfd1cc334bd04fa3b6dafe83e9c680cfd9f0fbe45155f84090b430"
     },
     "signer-agent/signer_agent/address_watch.py": {
       "bytes": 25339,
       "sha256": "789492e1402ade8cb5946c1fb76d9ce510d44ad7ebf4df2c9c0db26a4757556b"
     },
     "signer-agent/signer_agent/bitcoin_cli.py": {
-      "bytes": 14644,
-      "sha256": "2dbc69fd3b2a0c070192c0be67e9e77cde59df081275d3c1b86824380b70dfa1"
+      "bytes": 14880,
+      "sha256": "5c310f6a8af503a620ca3d62866a7e7b9fbaf0cf6d60328d49e4ed837329194c"
     },
     "signer-agent/signer_agent/bitcoin_continuity.py": {
       "bytes": 23700,
       "sha256": "05c5e3cb509e3f0ed486c993007d5cc9fa6b8efaf70ff6549abed436e0a49280"
     },
     "signer-agent/signer_agent/bitcoin_funding.py": {
-      "bytes": 22821,
-      "sha256": "fc62cb213181b9239bb6cd3ecbf58464b0c4cfe359c3e131e9f13384b8b8c0a2"
+      "bytes": 24193,
+      "sha256": "afcb09cd8f4bea863489628361962c702fcb4c84598c9d3eaff8eddc6fa65240"
     },
     "signer-agent/signer_agent/bitcoin_input_keys.py": {
       "bytes": 14704,
@@ -17291,104 +17899,128 @@
       "sha256": "97a26be2dc4408cd58f7c8a01fade4a8b2b9ed46817d22a68fc6817430619ae5"
     },
     "signer-agent/signer_agent/bitcoin_onchain.py": {
-      "bytes": 43424,
-      "sha256": "01f57da62b86c78995971d6854032f077d27aa29e5ab2082e7983980cdfb302b"
+      "bytes": 47104,
+      "sha256": "aac5716571384e326f7cf7087423f9dfed2164c3bbf9692c1015f290be280f49"
     },
     "signer-agent/signer_agent/bitcoin_onchain_payment.py": {
-      "bytes": 46631,
-      "sha256": "b15f49f0233ac435f745ebed9fc3ad5a120a32941d9de06d0edd6c2b67b5eb6f"
+      "bytes": 58398,
+      "sha256": "f50b592ae401d5241dc26c3071c966c5523601e319f7aa8d7ab3e5e8bc6d4738"
     },
     "signer-agent/signer_agent/bitcoin_onchain_plan.py": {
       "bytes": 6349,
       "sha256": "0ec8c5fbf6bcfcfbfc3fbf236edea2c1d365ba36981eddb5847f25956748c033"
     },
+    "signer-agent/signer_agent/bitcoin_payout_package.py": {
+      "bytes": 6445,
+      "sha256": "dbfdd6ace8009b1fbf2c19eefa723a109c7c8925bd6b6f7b8ce91e07380caa41"
+    },
     "signer-agent/signer_agent/bitcoin_proofs.py": {
       "bytes": 1226,
       "sha256": "66a04aee5993bdaf1af4b9f96948e0b58cdd182df0ec50cabf0189255d37bca6"
     },
+    "signer-agent/signer_agent/bitcoin_recovery_cli.py": {
+      "bytes": 24802,
+      "sha256": "91d3eb1dc5cc1c0c80e3ddbed5a6c75b82b64bfe9b8856733d5f7c7ee16130b6"
+    },
+    "signer-agent/signer_agent/bitcoin_recovery_policy.py": {
+      "bytes": 6904,
+      "sha256": "de44cb6ea979c6024c31a260ce9563a19cec7bf361eb81f0d230eb3b0bec0f87"
+    },
     "signer-agent/signer_agent/bitcoin_rpc.py": {
-      "bytes": 13334,
-      "sha256": "fff689c4292c6ae657f2e9ddff56046f15d9a830fc86d47cf1c67cc1caca1d4c"
+      "bytes": 13887,
+      "sha256": "d1040c70a0249b8b83d21ddd1768a74ecaace560c955b9da38aab9a0b8fb9366"
+    },
+    "signer-agent/signer_agent/bitcoin_successor_ceremony.py": {
+      "bytes": 6128,
+      "sha256": "82973609b0498b6806f8be61b502b00852d189583b46134249a6d2c76717cb6f"
     },
     "signer-agent/signer_agent/bitcoin_trust.py": {
-      "bytes": 26374,
-      "sha256": "53c5ef468c560e787e9d7860d478dc49414fa9d5ca55a582b4adba6f9976add8"
+      "bytes": 35066,
+      "sha256": "70eb8c6611d18e095c7c50e3527c1afcdd88a91598b51c1b90bf9589c7aa9d0b"
     },
     "signer-agent/signer_agent/bitcoin_worker.py": {
-      "bytes": 32215,
-      "sha256": "125164320fb11e3500f713b7e5c9402f0738a9b396ab5ca703f53aa397932035"
+      "bytes": 45956,
+      "sha256": "90db617278802ee98a1598756cf6c5c26d7e390161c91c704ee3c170c71b362a"
     },
     "signer-agent/signer_agent/board_intents.py": {
       "bytes": 2776,
       "sha256": "0006271b5fc8b6b67bd526b829565f1cf3ef2882cd697517d64a11798e744b9d"
     },
     "signer-agent/signer_agent/bootstrap.py": {
-      "bytes": 56556,
-      "sha256": "87f6ddccc6aa9b950da27f77e0a4cfe493d84df1c397268ac045393a40690457"
+      "bytes": 64601,
+      "sha256": "f222df36c28fbda679caa51bc6d3fd541bc09ffa864ef819cb1679e9dffe2b54"
     },
     "signer-agent/signer_agent/bootstrap_confederation_dao.py": {
-      "bytes": 16945,
-      "sha256": "51fd65abd81a18a71add8a3e0c02f61230eb7bf9b45e0632aa89bb5416300180"
+      "bytes": 19019,
+      "sha256": "d30471c03321d13c1703ffaceb12c436585e9d3867304bbcca94c9761694133d"
     },
     "signer-agent/signer_agent/bootstrap_create.py": {
-      "bytes": 11056,
-      "sha256": "772be244d3daba188b94666544ae281444ed5d810f7974a8c33b9b8e7e3ada19"
+      "bytes": 11590,
+      "sha256": "11949a3b16e96f658b2ccf7592fb45955d8edbfd108d13a56d95398206b2f87d"
     },
     "signer-agent/signer_agent/bootstrap_custody.py": {
-      "bytes": 15630,
-      "sha256": "03137345f48ca221b2311cff655d37bb90d42bf15e57d29659bc2353b3b99fbf"
+      "bytes": 16027,
+      "sha256": "d7c73122a1fa1d86d816447df439b29486f80b4c884f56616b0c14a7302cf81d"
     },
     "signer-agent/signer_agent/bootstrap_distribution.py": {
-      "bytes": 4997,
-      "sha256": "32a37e3cba7408a42acab7f663378a6a90fecf003c77d6627f9324bd060e52ab"
+      "bytes": 4797,
+      "sha256": "5f6dd204f88ecb2d00f90f448d9eead869c97a207f0b0a0c2730536c64f58c9d"
+    },
+    "signer-agent/signer_agent/bootstrap_formation.py": {
+      "bytes": 2736,
+      "sha256": "ec067cc2744acaaa2706e2bd580572e309b3f75512a914dde82e6490eb94fcc0"
+    },
+    "signer-agent/signer_agent/bootstrap_formation_signing.py": {
+      "bytes": 11716,
+      "sha256": "1636dc3f789c7e2b35c8b171cf9dabb76ae7d575ae7093c184438a0fc8a106a7"
     },
     "signer-agent/signer_agent/bootstrap_funding.py": {
-      "bytes": 4855,
-      "sha256": "cc374726c2bda746aae4c0d0a2519430fd706d2e1f54370eff70d63da4dd7db1"
+      "bytes": 4799,
+      "sha256": "75e9ddfab2088552e9cdb8e4f1c5159c4e9538644354e9f44611aa3431d74687"
     },
     "signer-agent/signer_agent/bootstrap_native_s.py": {
-      "bytes": 7725,
-      "sha256": "2c20a4edae7d4d601ca859d0a9ce0302a1c885919715b7975a51766ced93bd36"
+      "bytes": 11431,
+      "sha256": "c70357e4a88b812e634a2a4eef6fea3a5b35423e29568422ba07212df285f0f0"
     },
     "signer-agent/signer_agent/bootstrap_nonce_close.py": {
       "bytes": 8787,
       "sha256": "130f8bb6b9ad32c4bb07476bc60ebb08f6983530ac81785b8ecb2903447ce314"
     },
     "signer-agent/signer_agent/bootstrap_nonce_legacy.py": {
-      "bytes": 6995,
-      "sha256": "7bfcf88b092e3fae08732773a55593991f63bd96d3f5e1c0932cbcd1b668acf3"
+      "bytes": 6990,
+      "sha256": "aea9d996f34acb0cc6557248081fae6f541c63c61c27b8c9ae9680dc902d15b5"
     },
     "signer-agent/signer_agent/bootstrap_parallel.py": {
-      "bytes": 25866,
-      "sha256": "cf0597543c336c6265a7fd57f5da1b81955e33b8bd9fd663e2119c3a6f86cbe4"
+      "bytes": 27306,
+      "sha256": "6cbd5d85766376e4507b674a17364240c36de6e16a20abbb34400a70a48c802b"
     },
     "signer-agent/signer_agent/bootstrap_plan.py": {
-      "bytes": 39462,
-      "sha256": "c1a8704af974a26298ed860ffb9e3e5334886c9d244b0326d7307d9ebbd1ff2a"
+      "bytes": 43068,
+      "sha256": "382880c83993b4b093762a42c94666b682fd7108915dd2fafda1b6199d085b27"
     },
     "signer-agent/signer_agent/bootstrap_policy.py": {
       "bytes": 6315,
       "sha256": "e79203bebd1dca8a974324a3849bf9d1385c9ccccde8194cfe4fd191a42c283e"
     },
     "signer-agent/signer_agent/bootstrap_recovery.py": {
-      "bytes": 24521,
-      "sha256": "b050817899be2c4cf7c482cecb1223b16897bdcfbbe0215d54c0d391d82688d7"
+      "bytes": 24516,
+      "sha256": "c82a3f5c9f67da6202ba0a34695ded85f3aacd95c433e5f6d01405fde19c5c13"
     },
     "signer-agent/signer_agent/bootstrap_replacement.py": {
-      "bytes": 19166,
-      "sha256": "f044e7afe32f300f3795d7ecab4ad03e26e63f80d95158f5f41bb418fb2a7135"
+      "bytes": 24573,
+      "sha256": "8b58b96c3f215075234f0a4180a0fe962994ce395eda23447e82688e39a218d7"
     },
     "signer-agent/signer_agent/bootstrap_system.py": {
       "bytes": 7785,
       "sha256": "ec391fb59e17b21e55c4094ac3664d519e1f73c8dc254d6efb91e86d52783963"
     },
     "signer-agent/signer_agent/bootstrap_tokens.py": {
-      "bytes": 6356,
-      "sha256": "30e9839972a300ff1763f4a7c62f82e3dbe0a07e35d6fb229c7ae76fe4dc3202"
+      "bytes": 7125,
+      "sha256": "e79d2ef11f56a3b0fe00e91c6ead118c2cd6f780b903c859c8b39bffc495de1a"
     },
     "signer-agent/signer_agent/bootstrap_ulr.py": {
-      "bytes": 20049,
-      "sha256": "3c0be2cf20380e3b0e240029bc052bd82746d9d488a3da53da83c46dd465b7f0"
+      "bytes": 20388,
+      "sha256": "92e832b4cd36fc2fec5470effcc037011eca69fc23ab0c469f68883ff906de6e"
     },
     "signer-agent/signer_agent/bootstrap_withdrawal_fee.py": {
       "bytes": 14202,
@@ -17407,32 +18039,32 @@
       "sha256": "b83f62515c66f537d42c1044d5199faf09ad51e3801082b4d19c154355ac562a"
     },
     "signer-agent/signer_agent/btc_fee_reserve.py": {
-      "bytes": 35478,
-      "sha256": "bb0aa8ed6a54d943ceaabedcb8d225928599d93e7ac7c61e14625d27441f83c4"
+      "bytes": 35475,
+      "sha256": "f2ff3edd99ca131a499ac5442b967ec8f4f994508112fef837a36cb435f2a7d6"
     },
     "signer-agent/signer_agent/callback_admission.py": {
       "bytes": 6813,
       "sha256": "75edad718da8f50459bfe448473c4ce9f6061883643dad47ce6effe09c0f0e3b"
     },
     "signer-agent/signer_agent/cli.py": {
-      "bytes": 15036,
-      "sha256": "f000cbcf55d1dd2efa755620d6781310ccb43f738845c988f89d8faa5e583e59"
+      "bytes": 15622,
+      "sha256": "9a49156ba30048eaae71be38a3c1862036ec04051270b9d131d49ae20834ea9d"
     },
     "signer-agent/signer_agent/confederation_dao_cli.py": {
-      "bytes": 20110,
-      "sha256": "ee880f0848b1de98ebe9395a5910c47f135eca0862a4830cb770ccc640a14fd1"
+      "bytes": 44250,
+      "sha256": "7584617795b8f08bc72dc2e5efcb6e896fa6b1a547dacdcc265b5c8292774139"
     },
     "signer-agent/signer_agent/confederation_dao_report.py": {
-      "bytes": 11512,
-      "sha256": "f698505bc2c6c1ffe03183763ded8ab4faac452cb80a8b2570a81e3d09d46914"
+      "bytes": 12503,
+      "sha256": "00768b3fbb5ffcc247bbfa56c1ce25530b7060d5a5b46b47719c34e64950fb36"
     },
     "signer-agent/signer_agent/config.py": {
-      "bytes": 3974,
-      "sha256": "563fe9ecb9131b1e0219d51f38d5c7ccd5388d612d03259af975f34ca03dc47e"
+      "bytes": 4107,
+      "sha256": "810650895d6ffd0814c124d0f12b0f4519ffb25f02b292ec7a75b824150cc765"
     },
     "signer-agent/signer_agent/continuity_cli.py": {
-      "bytes": 5411,
-      "sha256": "5ff6423b804c719a5ab4266319c6aa8515d59b1f50e33d61e0fdb8a8880a45ed"
+      "bytes": 5386,
+      "sha256": "ec7a11bc502146935c8274c5ca833e5368bd68c3d5f1a38b7a8ebce1c9b55b7d"
     },
     "signer-agent/signer_agent/continuity_handover.py": {
       "bytes": 11382,
@@ -17443,40 +18075,44 @@
       "sha256": "5128389a80e2df8de4b176670908cab6032f3477b8c15a5c2ca6005dc3079323"
     },
     "signer-agent/signer_agent/contract_provenance.py": {
-      "bytes": 16971,
-      "sha256": "9d21a2a626158948d074adde428992f36b0e6fb3d8600917cf366d3626d8e09b"
+      "bytes": 17988,
+      "sha256": "b0ebf7848f5ae3b4822208c57c181541825d3e288076a6559ec6c850d0c0309e"
     },
     "signer-agent/signer_agent/coordinator.py": {
-      "bytes": 21902,
-      "sha256": "5347814843559f055277e9fc73bb2f0514c120cd31896059d366915fa8498eba"
+      "bytes": 21897,
+      "sha256": "95dadbea928a563794b71397ce6d21f0cc4ace9f1a6f40bffb555bda25b84cf8"
     },
     "signer-agent/signer_agent/crypto.py": {
-      "bytes": 609,
-      "sha256": "99525a3d68f6cc727de6992023eb894e7f9f9606f39a92fadb3ea0a15323f3a4"
+      "bytes": 4989,
+      "sha256": "431e24ed11cc0b585379bec56eabe40225a629a28ea579ce1f8394714f8e8752"
     },
     "signer-agent/signer_agent/custodian_cli.py": {
-      "bytes": 9520,
-      "sha256": "a1844b15f31f63689b560cd16b23a6486913d227d1db4eeac787367081e3a123"
+      "bytes": 9794,
+      "sha256": "858663c0ca92e7d488251df80548c350be1acde440cd3018d36a1e6c0e257e4f"
     },
     "signer-agent/signer_agent/custody_mint.py": {
-      "bytes": 7317,
-      "sha256": "f2ca392ec0a19fdef19c780fe544cf4817807f007fe1fac87563a22914475f04"
+      "bytes": 7386,
+      "sha256": "0a4cb838af54abf168d5854544cf246bca54a008727222c226eecf417f5916fd"
+    },
+    "signer-agent/signer_agent/custody_network.py": {
+      "bytes": 7793,
+      "sha256": "13452f1c111035780be67d14be4b8a667e8901e62193e29459eaafdb5cf1d011"
     },
     "signer-agent/signer_agent/custody_transfer_cli.py": {
-      "bytes": 13813,
-      "sha256": "d066c5a7e25404f397268be41166a6632ea737287d02c53e0b8ff466f0f5e020"
+      "bytes": 16810,
+      "sha256": "1cc67b0e19d9abedcab08ae0c2aa46fc190199d7690273901a85c6dc8e24e280"
     },
     "signer-agent/signer_agent/dao_cli.py": {
       "bytes": 16102,
       "sha256": "868e8318649feda2b5e7b7a425fda371a86ff71d7c6690671aaee7aa23b209dc"
     },
     "signer-agent/signer_agent/dao_client.py": {
-      "bytes": 22160,
-      "sha256": "e4b56541f27471134eac3e240db5d716f30109f7708704bdb19f1c118e0bab19"
+      "bytes": 22692,
+      "sha256": "d77a81a1ce9c8e2f52c6898c224522a044dd1b0390d8258d3fb15808ba8176b1"
     },
     "signer-agent/signer_agent/dao_report.py": {
-      "bytes": 4904,
-      "sha256": "4f3c16fc4c881746b8c3bb662153edcac83f7a3cbffc30f3665b3b9bb45b6e90"
+      "bytes": 4919,
+      "sha256": "efd5e18893efa78df5f814d38e729c129d46dea4df664d83ba117144ef61fe82"
     },
     "signer-agent/signer_agent/deployment_limits.py": {
       "bytes": 1601,
@@ -17487,8 +18123,8 @@
       "sha256": "e5a7ba5c17144922601cb1fbd224794e098ea93a63a23c0cb526982c8a6c4b10"
     },
     "signer-agent/signer_agent/dkg.py": {
-      "bytes": 25836,
-      "sha256": "0e573ba0170036fd62a8573549f3a7c91299f0452ff5c3897982146cd76e7a40"
+      "bytes": 26674,
+      "sha256": "27a39768ca56ad733e48a66ecf85a6e0f8476b9051fce424ac782fef1645ee66"
     },
     "signer-agent/signer_agent/dkg_protocol.py": {
       "bytes": 6780,
@@ -17507,48 +18143,52 @@
       "sha256": "44c03b71c57894866ee12a2cb66e50de5dcda248bae9939c5d3619af177ab901"
     },
     "signer-agent/signer_agent/epoch_retention.py": {
-      "bytes": 11404,
-      "sha256": "71eb9d298175a97191d1700df0720a2de3f611e9ab957231cb9d9ef407f954fa"
+      "bytes": 11600,
+      "sha256": "d936493faf6e1cf7b6047e9a04add43ba102540a868d2e412f09b74043c3bc44"
     },
     "signer-agent/signer_agent/epoch_service.py": {
-      "bytes": 33474,
-      "sha256": "96a0b2e2c7db9983cf670114ea0e196f34b374646239af4c88bff9646f3da0c9"
+      "bytes": 33405,
+      "sha256": "daa182687ac9de4816f3b2258d5e6d8fefb1962ffbee9e6b46e1cd9573c139f8"
     },
     "signer-agent/signer_agent/ethereum_intents.py": {
-      "bytes": 24912,
-      "sha256": "ec4a24ef8493a5e85f9d3b8faaedb63a09a1a94758748c0b2ff994eaedc905de"
+      "bytes": 25492,
+      "sha256": "7b76e80b72992de6d388c62a6db0587922e39ae303ff47cd716d492df3f4760b"
     },
     "signer-agent/signer_agent/evm_log_paging.py": {
       "bytes": 2456,
       "sha256": "1b4cb3812531761628895451a6c376d4357b34dbcf532adcb9779fe6fb98b692"
     },
     "signer-agent/signer_agent/evm_network.py": {
-      "bytes": 4274,
-      "sha256": "40afe4e058f59a7a8beea238ea0a82b474459ecfb58f852b974394af1906bc8c"
+      "bytes": 5451,
+      "sha256": "5bc1d88ecfea06b7137315cdaad10363bc124a6ff47f5e619490569243a8e818"
+    },
+    "signer-agent/signer_agent/evm_rpc.py": {
+      "bytes": 3857,
+      "sha256": "6aa536aaacb58cb479198386e1476af64e72f62ca2435647c13ff7ef42695673"
     },
     "signer-agent/signer_agent/family_registry.py": {
       "bytes": 19300,
       "sha256": "c5365c7ddad411171b8ddf7acaab3a49e9fc2b6c3db4c214c43e5eedbcabd846"
     },
     "signer-agent/signer_agent/family_registry_cli.py": {
-      "bytes": 4745,
-      "sha256": "8233fcf4a81c66ab5f96956bb554ab90671ae5b38b3fb9c103f6857265b74a0d"
+      "bytes": 4742,
+      "sha256": "fbac1528a8860b91847d6465f7923879ea77e3bbde1e2fef14c2e77f80d55af5"
     },
     "signer-agent/signer_agent/fee_sale_cli.py": {
-      "bytes": 15056,
-      "sha256": "4b9a8072e7076866d23e6ee62629c4a507a7f1540b1fc85a9f2cd463cc569371"
+      "bytes": 16209,
+      "sha256": "73a04f1a2c70e799b1d7097bedc7a65f7885fc3ff571e91f073a1b0c66549624"
     },
     "signer-agent/signer_agent/fee_sale_governance.py": {
-      "bytes": 10863,
-      "sha256": "0355e2124a0e5f56aeea6411887dced957dff327172d2c0fd1b68e6114be4b9d"
+      "bytes": 11379,
+      "sha256": "d3aad21c95a1d58161216b2364e5db9ccf1d32093bfb7c4dd2456f647eeb2f10"
     },
     "signer-agent/signer_agent/finalization_recovery.py": {
       "bytes": 3074,
       "sha256": "9ce83b64f6841c2f0164273b5dd5591bc156d43376c928d30ea29323ab0979b0"
     },
     "signer-agent/signer_agent/flow_cli.py": {
-      "bytes": 9730,
-      "sha256": "df4b8f7f398ebaa30104f41686a200fabfd8e7edbf983bc911efee6feb6055ec"
+      "bytes": 9794,
+      "sha256": "f9fbf303efa11aec7fb12b60e97af58b5b626e92793bf0ab1983ce285eb57018"
     },
     "signer-agent/signer_agent/frost_math.py": {
       "bytes": 6931,
@@ -17559,8 +18199,8 @@
       "sha256": "775d145ba59bdac50248be458d83ff0cb3cff6bf5c7706dee7edceeeaab25145"
     },
     "signer-agent/signer_agent/gas_caller.py": {
-      "bytes": 17009,
-      "sha256": "90b36ea8179b5240cdca68b4b343105a31e464f790af6d6bd7a9d46fc527c250"
+      "bytes": 17004,
+      "sha256": "be2c1a683575c6e3d95cbc8aa19794da768de6db22ed652d24993eb8e87ab230"
     },
     "signer-agent/signer_agent/gas_caller_budget.py": {
       "bytes": 6362,
@@ -17571,8 +18211,8 @@
       "sha256": "35e1ee5a4d015b32bc9c52d0436ea48f016fade4663fc24e00c54219e5f03caa"
     },
     "signer-agent/signer_agent/gas_treasury.py": {
-      "bytes": 16017,
-      "sha256": "8340e7eb30b876c452aaad00732841def0d6b21bb9411f749d56583a2744cda8"
+      "bytes": 16012,
+      "sha256": "c325c25265f41f8d9e5acc8834f525252de5091d0b8d6c5b84d793bbf50e656c"
     },
     "signer-agent/signer_agent/incident_cli.py": {
       "bytes": 6242,
@@ -17587,72 +18227,76 @@
       "sha256": "ab40702186120bdb030f4164ef41d0cf36b363a0dec4418c2770eeed97acc624"
     },
     "signer-agent/signer_agent/indexer.py": {
-      "bytes": 4716,
-      "sha256": "88f0c51be91c2df1dc109e7a306348e266972315427994253a2214e0536ea02b"
+      "bytes": 6224,
+      "sha256": "3827e01f7864ddf3d0e28674f710eaa2ac824733fcb1eaae1906293649bbf615"
     },
     "signer-agent/signer_agent/launch_configurator.py": {
-      "bytes": 22426,
-      "sha256": "540cd4858a09fbc27b5c92e6ca5074540a5e45833eab91ddda9dc26b656d0e6b"
+      "bytes": 23004,
+      "sha256": "a32fbc834a8bca434511a26e8a92d1590d4406653b3f5a25cde90f41ba502711"
     },
     "signer-agent/signer_agent/launch_economics.py": {
       "bytes": 2797,
       "sha256": "4443a941a30749eddcce64377e54a0d6b65fdd7896cbc22a1613aa2903a693ac"
     },
     "signer-agent/signer_agent/launch_rpc.py": {
-      "bytes": 13280,
-      "sha256": "2935cbd2f9abdf361063bb1e8a65877a00ce5cb87a0daf0226af053b60c4bab0"
+      "bytes": 14376,
+      "sha256": "856cb35436d21f1ad3d4f8900373a8d0a5e8c7ab4f6fae41e3d55bc50dde3156"
     },
     "signer-agent/signer_agent/mint_admission.py": {
-      "bytes": 16240,
-      "sha256": "cbc9d9894cae7963e5f1e9f7e46a92406190920f6226484050a18c23510982a8"
+      "bytes": 22415,
+      "sha256": "577264b9501326b0ff5a3fe4a3b617667d3216518f55a6593e64ce87b3185b2d"
     },
     "signer-agent/signer_agent/mint_admission_client.py": {
-      "bytes": 13269,
-      "sha256": "3e0aab618289b08cce421de01c231f3740450337fc49b748c98c99047ee490c8"
+      "bytes": 16287,
+      "sha256": "eee5353cfc7e0e5f0dbe694d0df36408f2ccdbe10dd5faf88f38f1ddaccae250"
     },
     "signer-agent/signer_agent/mint_attempts.py": {
       "bytes": 3670,
       "sha256": "daefa0d84d1825702f000b4c1c107507c81e178bb145d05132f95b05408c1018"
     },
     "signer-agent/signer_agent/nft_cli.py": {
-      "bytes": 8749,
-      "sha256": "fcf89e7828339bddf90dda37f80a75920e8f876dae1c38b8bf6d5fd2e24b5125"
+      "bytes": 8764,
+      "sha256": "2d345d2c51b4e01a62e7b7089b5194d73d4f3e6271980c8eaeb9a413ddc173eb"
     },
     "signer-agent/signer_agent/nft_governance.py": {
       "bytes": 11044,
       "sha256": "ec0bb4911e1ca6ce946ce1a56f62b8259031026274f0392ae6660f76936a7d72"
     },
+    "signer-agent/signer_agent/nonce_anchor.py": {
+      "bytes": 12813,
+      "sha256": "f3ae998c638e7f7bf5003457d2a7932d57e08238d2569ff5fafcc31f1ea758d4"
+    },
     "signer-agent/signer_agent/onboarding.py": {
-      "bytes": 42870,
-      "sha256": "3021861eb42f07cc019951448628a29c3c3fb87edc98a9489a458d94df37b12b"
+      "bytes": 46521,
+      "sha256": "dfc1b8c7d591c24e4ef5ef1e6c506f6fe057bd768786caa9eca0f67723580d25"
     },
     "signer-agent/signer_agent/onchain_transport.py": {
-      "bytes": 16662,
-      "sha256": "dcc749b1aa15a40ebfad5f15cdf253655d7b021e6709f7ac1d7c60fe3c8baf37"
+      "bytes": 17711,
+      "sha256": "a8a5b153a58656f5570f4e054e66b8be644f6610000bd3f5d5ad832710d06401"
     },
     "signer-agent/signer_agent/operation_status.py": {
       "bytes": 6125,
       "sha256": "e3960ad5193cf026368c28073e3c299ffb951c9ce04c5387cc0d70880f4e3d6e"
     },
     "signer-agent/signer_agent/operation_worker.py": {
-      "bytes": 6950,
-      "sha256": "3f55642bc0e6d0f47a6808d3eaf052744e955cf7a211242e10a2017771a6bea8"
+      "bytes": 17501,
+      "sha256": "9ab7ca9bacaf39815826b29fa0ebd5a81abf8c890e2fdc0e45cf663e741e14af"
     },
     "signer-agent/signer_agent/operational_api.py": {
-      "bytes": 15769,
-      "sha256": "4f40e562be1f31245c7096de40166534326da4f4dea6a963ede80b34f4ef6d32"
+      "bytes": 22257,
+      "sha256": "9ddb19d82bfad542cce358b9645eacb14b6b8985bb2f325b921aab1ce2778363"
     },
     "signer-agent/signer_agent/operations.py": {
       "bytes": 13521,
       "sha256": "9a9751914d5837a9f27a957264b31658fb33b862675695b0a333b76c4abd0c32"
     },
     "signer-agent/signer_agent/participant_cli.py": {
-      "bytes": 42839,
-      "sha256": "72e943453bd24939fd7e698efc6c1a3ed1e372375d992683416f5ee56601a627"
+      "bytes": 52360,
+      "sha256": "3a0a2709f3ba0e95bb059676ab161148b0550982292018977abea127a4f6a4e3"
     },
     "signer-agent/signer_agent/participant_errors.py": {
-      "bytes": 37068,
-      "sha256": "b9a566990dd1d2edb4547cf3c251e8954b861dfc2929fe5d57db0202baa9cf6a"
+      "bytes": 45567,
+      "sha256": "de25584d37bb06add3f32decebca6bb5005503c9d3c3de215befac3c97c94ad8"
     },
     "signer-agent/signer_agent/platform_support.py": {
       "bytes": 1506,
@@ -17671,52 +18315,64 @@
       "sha256": "3b890722d04c3a1f4dff5aac25c7d8e42a22767654c26bab44c85f8c241c18d4"
     },
     "signer-agent/signer_agent/relay_keeper.py": {
-      "bytes": 10048,
-      "sha256": "5a33b97419727af2941f0c56ecf1966c89085f3c70370a753dd9d044dd5f03e1"
+      "bytes": 10043,
+      "sha256": "bc08ce627a5da30ff2da53dbed89c48a66b8cb8b49be12fe0f8fdf991e0b8410"
+    },
+    "signer-agent/signer_agent/reservation_ceremony.py": {
+      "bytes": 12774,
+      "sha256": "2c2ccf8f976c0e466e26a0a0988fb2020fbb17306ef3937166779701dcde5853"
+    },
+    "signer-agent/signer_agent/reservation_transfer_cli.py": {
+      "bytes": 17686,
+      "sha256": "7c0d0c1ce89c8d0200eb8d599c391fd12ea0767932ed839bec1ad4bd235735e4"
     },
     "signer-agent/signer_agent/safe_errors.py": {
       "bytes": 3527,
       "sha256": "1f18e7b62d2dfea8141e033f13fdfd8c22d4fe7ff780bd978508f56f00306fbe"
     },
     "signer-agent/signer_agent/secure_state.py": {
-      "bytes": 8214,
-      "sha256": "2411bde7a4914905681f0cb9cfea0ddf0285a294dfd035bac1199a0bd8f8c2ad"
+      "bytes": 17823,
+      "sha256": "269c76c85057fd14b8a6d816a2452063e002487245172a23253ab754ee681015"
     },
     "signer-agent/signer_agent/service.py": {
-      "bytes": 16453,
-      "sha256": "a4b7dc101b7bf46532fa8d2d4bb8bab661696aa8552ca67592320dc5d9e2ce83"
+      "bytes": 17422,
+      "sha256": "878987ed2051d671a00fe018d38ddf93f5820048632a0d9f18257aad5dc9f83b"
     },
     "signer-agent/signer_agent/smp1_deposit.py": {
-      "bytes": 31697,
-      "sha256": "59e54bccc7ec8a2f81697ed7698d969f2a66b203eff0053f9035a64d45971433"
+      "bytes": 31694,
+      "sha256": "977b64e059de229b20c6dec98e75eb3e1c51a7f21fd858cedf6145c873009b8e"
     },
     "signer-agent/signer_agent/smp1_deposit_cli.py": {
       "bytes": 3751,
       "sha256": "c641d8d37f186152aca80ea73a0db37dd4e266cc551416482f6580504875c77e"
     },
     "signer-agent/signer_agent/spv_automation.py": {
-      "bytes": 14886,
-      "sha256": "fb0e1997b1323f95e2ff918ac25cfd21aeab1d1e321d05644e8fc3f2e3324505"
+      "bytes": 15186,
+      "sha256": "df8007b1794a816aa6db22fc378c3c98fe58d2269345b8a9d844a0eddc86b0c9"
+    },
+    "signer-agent/signer_agent/spv_history.py": {
+      "bytes": 812,
+      "sha256": "2c9b5be635f017871957c146d97f7bbdfae4cf616bc12cfa7d32bec1e25e3025"
     },
     "signer-agent/signer_agent/spv_transport.py": {
-      "bytes": 32407,
-      "sha256": "d3dee58bd461077872cff4046bb6781b6b98b20162d6df32f9120efcfa9f10b8"
+      "bytes": 37016,
+      "sha256": "b3d0cef11962e767a66dc310ee2cf686d4d5433f22fda3edf8781c73b748890b"
     },
     "signer-agent/signer_agent/startup_rewards_cli.py": {
-      "bytes": 2971,
-      "sha256": "c9d79aa8e51703f7d8fe6d6ac9de3fc0677d61173c80b864b471003ec0137cf6"
+      "bytes": 2964,
+      "sha256": "0d190996c54eae42730d9a40a20ec24358b69cca2b4a4c2f0ac3df7002307ce7"
     },
     "signer-agent/signer_agent/transaction_wait.py": {
       "bytes": 5001,
       "sha256": "27b5c1a4c45dc3d3b2417cb6ed2c6c9d123ce41a6cb104beb0c340f021de66a0"
     },
     "signer-agent/signer_agent/ulr_treasury.py": {
-      "bytes": 34225,
-      "sha256": "3e67360c9812852975020cf5974430e11d369f436fa82e2bb0375ede84d1c0bc"
+      "bytes": 37310,
+      "sha256": "d9e79848863351aa30c8f982f4b0d7d10cc404af8196f49259962973f816beef"
     },
     "signer-agent/signer_agent/ulr_treasury_cli.py": {
-      "bytes": 22149,
-      "sha256": "a4e866aa9c3993cafc664ba18d56224bfdddde9cf63aa7f153718964c7fba802"
+      "bytes": 23396,
+      "sha256": "2d12327fee41f27d664dc7c5974d68bf0e1c6b828396e6bc8afe4d7b4083bb6a"
     },
     "signer-agent/signer_agent/verified_cache.py": {
       "bytes": 883,
@@ -17767,16 +18423,16 @@
       "sha256": "f8393862c3752263c218eb636cc2eb4f6228eca326e3cc7f074aac49ffc1a89a"
     },
     "signer-agent/signer_agent/zk_archive.py": {
-      "bytes": 12149,
-      "sha256": "872bc3269c476e0a8aafb0ed71b90469fe1165b99a6f18ddc3737536f1715bdd"
+      "bytes": 13511,
+      "sha256": "b64d19cf077f78c69b69a030b1b49656c5d8a38ad711577dc116982af39176fe"
     },
     "signer-agent/signer_agent/zk_archive_native.py": {
       "bytes": 1665,
       "sha256": "45d6c49f5e8df0976c5b1f077b7207cc480f6ce4ffaddc57713be52373ec4f81"
     },
     "signer-agent/signer_agent/zk_archive_ops.py": {
-      "bytes": 3600,
-      "sha256": "f56cd0b725b889713332318c872930f5197700a33502b0eb7041980a243b1cc1"
+      "bytes": 3759,
+      "sha256": "b36a700b85b8384ce76fa3ef1b421bdf610cbfeb435033533abdb2a7239719df"
     },
     "signer-agent/signer_agent/zk_isolation.py": {
       "bytes": 7309,
@@ -17787,12 +18443,12 @@
       "sha256": "45f7a02b727810a40049ab77bdc762ec905338d3b9b75ef1839eaa9c2faf58d5"
     },
     "signer-agent/signer_agent/zk_observations.py": {
-      "bytes": 19859,
-      "sha256": "1a59317120456452af62fe087c6dccba5b359df329503bad357b3e04ee0d34d8"
+      "bytes": 19656,
+      "sha256": "9f10989dc606cf00e495c114f93ad088e9fdbb1ac4a9ce9ae542089c29e32605"
     },
     "signer-agent/signer_agent/zk_peer_bundle.py": {
-      "bytes": 12431,
-      "sha256": "b2c3835cb4ba62c23528b05107a0c4b772693b0c88e0cf74d80cf4cc0a32c513"
+      "bytes": 13237,
+      "sha256": "c6aa8faa289cbf4d87ceb0573a0d5e375001c576d42b8cbefa15172d4228eea6"
     },
     "signer-agent/signer_agent/zk_profiles.py": {
       "bytes": 1872,
@@ -17815,16 +18471,16 @@
       "sha256": "b3c1babcf477328f2b82d0caa1fa5050ba55583f91f7d5958cca5216d6939667"
     },
     "signer-agent/signer_agent/zk_spv_cli.py": {
-      "bytes": 7042,
-      "sha256": "3e35ae354bbee0a11ad277b20c86890c6765769dc3ea94459be5f3f4e3c8d202"
+      "bytes": 7015,
+      "sha256": "a7bf6eb8dcb1271ed35fc16e83aa1d2943de2ae1cb0130fdafc51bff9b3c96f5"
     },
     "signer-agent/signer_agent/zk_submission.py": {
       "bytes": 4065,
       "sha256": "ad7e49213f14a7a5fa7a9e61430857297037166a293c0a28f7ca2e5169c767af"
     },
     "signer-agent/signer_agent/zk_worker.py": {
-      "bytes": 61109,
-      "sha256": "94db11a3fa7e47bb7ba494db3cb4a5f4a29ec59304580ab84cf8d7130dbaace0"
+      "bytes": 79793,
+      "sha256": "757cedc6a9d6f1053e8b26854d36ad5a15570570bcc9bc267426abf5aa1581cb"
     },
     "signer-agent/signer_agent/zk_worker_batching.py": {
       "bytes": 2906,
@@ -17843,8 +18499,8 @@
       "sha256": "63f8b07173e629c60f3680ecd5ea611f40b26d1fb3360493b036416a30a4ba70"
     },
     "signer-agent/signer_agent/zk_worker_transport.py": {
-      "bytes": 16883,
-      "sha256": "c8e404f8777230331d20505773b75d07ca39df755cdc990e7b4e16c8b264cb2e"
+      "bytes": 17056,
+      "sha256": "944180ec2d1f06d64d2b0fcfaf11942a23eb9f72fa98534f4a0d0bb3c4ea5547"
     },
     "signer-agent/tests/test_address_mint.py": {
       "bytes": 10481,
@@ -17882,25 +18538,29 @@
       "bytes": 4703,
       "sha256": "737c9d8a05fa0b30ab90e558726ea64bdf5925fbcd3cc310a9e6f3e3601948ef"
     },
+    "signer-agent/tests/test_bitcoin_broadcast_failover.py": {
+      "bytes": 12402,
+      "sha256": "bfd5d1d7e0c06113ef9ecf86e8117e93b7cb18ab044ba3fcee34f32e6f847188"
+    },
     "signer-agent/tests/test_bitcoin_continuity.py": {
       "bytes": 15644,
       "sha256": "cd33610c1baacd4cd3ebc74d91eb74be4149c981bef90c83f90b961a428832de"
     },
     "signer-agent/tests/test_bitcoin_funding.py": {
-      "bytes": 14613,
-      "sha256": "d0b31693b074bd14b79d0d5778be1385f831e4b61e82182e1368b94074cd101f"
+      "bytes": 32044,
+      "sha256": "86718bbb259da0d3de701b4b3324cc1eee785d65f2a9c6f20de6487d976e15a0"
     },
     "signer-agent/tests/test_bitcoin_input_keys.py": {
       "bytes": 24961,
       "sha256": "700dfd30c1be6d45bf985df1c4193dd9b85b069f8ebf97c81f4dced31b1aeacd"
     },
     "signer-agent/tests/test_bitcoin_mainnet_finality.py": {
-      "bytes": 10819,
-      "sha256": "52df4ae8430eca63f6b4b0fa8bc9de01c5bad9a5b7bda30a97aed608c1ef637c"
+      "bytes": 23031,
+      "sha256": "60dba432cb0e27a0c33c6273b77224e326c44d4073aaa2fd96d250269d62e1c2"
     },
     "signer-agent/tests/test_bitcoin_mainnet_payment.py": {
-      "bytes": 11865,
-      "sha256": "4a3c5b927f6cb7e97e24a235aa3a5b29c01ded1f9ac0352e80f6bab9e6ccb85c"
+      "bytes": 16300,
+      "sha256": "21871768e91d840666c112ee2939d1ec26fa1417cad9b9933aee15a0c33b4273"
     },
     "signer-agent/tests/test_bitcoin_mainnet_routing.py": {
       "bytes": 6714,
@@ -17911,24 +18571,32 @@
       "sha256": "1b70a60708ec4a9f6b25a71813d38a4592d1757e469f090b2ea0a0c22f5efe14"
     },
     "signer-agent/tests/test_bitcoin_network.py": {
-      "bytes": 27644,
-      "sha256": "69f3184d201f14466b20f28e07a4391a74e2461e41096c4be0946e1bcc0b6bb3"
+      "bytes": 27470,
+      "sha256": "88879abe611106532dd02d8f7ef2e0c4dbbdf0eab632e09381aa42f2af3d8b8a"
     },
     "signer-agent/tests/test_bitcoin_onchain_security.py": {
-      "bytes": 59785,
-      "sha256": "fa02ed07fccdc6c7226f36bb3b67a0df5da1514419d50949222855aa4ef7eb70"
+      "bytes": 67044,
+      "sha256": "f49f75b5a16f85ddaf931ed88a15928682dfd90978819b6250678ae521fd849c"
     },
     "signer-agent/tests/test_bitcoin_onchain_transport.py": {
-      "bytes": 4200,
-      "sha256": "6ea02a8fbce974c4e8031fdbbf9234f2e727b4ea1f0a65702189ca44c10123f4"
+      "bytes": 4642,
+      "sha256": "4c0d03b8477b509570b2a38e563287863bc8e65492ffb5837fc1da4374b9c7f8"
     },
     "signer-agent/tests/test_bitcoin_payment_recovery.py": {
-      "bytes": 10987,
-      "sha256": "3c6dd4477d1d1f92889bb2855d79b93fdc82fbaaa6348b74bb0738d72954e1a2"
+      "bytes": 10870,
+      "sha256": "ee7e0126d1f05ef68e636d57ef8b1c95e9749382559ceca54f3b9c210adcce18"
     },
     "signer-agent/tests/test_bitcoin_pending_discovery.py": {
       "bytes": 5776,
       "sha256": "7cb779f00906b24a47e0ffaa63ecb791297bd5cc2c8a56b64f56989eadbc2d3c"
+    },
+    "signer-agent/tests/test_bitcoin_recovery_policy.py": {
+      "bytes": 12005,
+      "sha256": "140b8f246782518771b1602e14f9671bd7e27a5d9fc8c2585a38c903d85ef06a"
+    },
+    "signer-agent/tests/test_bitcoin_recovery_signer.py": {
+      "bytes": 7140,
+      "sha256": "7e21d63649bbe935edf85510a3537e144cb0ea2e3f167bef5466a47376bed5ae"
     },
     "signer-agent/tests/test_board_intents.py": {
       "bytes": 5860,
@@ -17939,52 +18607,56 @@
       "sha256": "9f7f38ec12036f3bc5bdd4e146f5c6686f5b9d738f17b5e2e58a9f040307c9ad"
     },
     "signer-agent/tests/test_bootstrap_custody.py": {
-      "bytes": 22574,
-      "sha256": "6d9e790ef697c9470a5662bc37fb727beeafa71ee48bfef51d395882e255c319"
+      "bytes": 22978,
+      "sha256": "0afa35965f4bf7794b8795d515121dcab53f7c522fac3dd91d778432fb99b88c"
     },
     "signer-agent/tests/test_bootstrap_distribution.py": {
-      "bytes": 4461,
-      "sha256": "62e0be6030f2499914fa422f4db6e40ceaa8bbfd9edcae416926727b78efc27d"
+      "bytes": 5164,
+      "sha256": "dd3d9e900ed219384d35b0e08c8aad51e2eeb747d6e020f27fee332985442d3a"
+    },
+    "signer-agent/tests/test_bootstrap_formation_signing.py": {
+      "bytes": 12969,
+      "sha256": "d43302299bad2e3ca4eea7ab41b6eac515afc69a7887d8116d5009d63cb787b0"
     },
     "signer-agent/tests/test_bootstrap_funding.py": {
-      "bytes": 5194,
-      "sha256": "566bdecf697ddf72b57ed3ae8f3a818411e49396087be322023f086503a949ce"
+      "bytes": 5545,
+      "sha256": "7247fa982ec7a4e14bbc3c9c530fbcde3c86c14c85c515802066b1ba7e1d9acf"
     },
     "signer-agent/tests/test_bootstrap_nonce_legacy.py": {
-      "bytes": 10506,
-      "sha256": "045645f3d94f11a01922259cc495762a7ee5f73ac12a60503ad255b45850b661"
+      "bytes": 10191,
+      "sha256": "d94406c23df4a32437248dbe4d40523ec0a3e8aa744af858af30a57bebfaecc6"
     },
     "signer-agent/tests/test_bootstrap_parallel.py": {
-      "bytes": 16452,
-      "sha256": "f6785c4781426964b0bbb5774e870565386b4d937249efc5e181985b51146979"
+      "bytes": 16565,
+      "sha256": "bb9e173fe226df9e834b55c92fe66d72d10d55e6a06f8e664190334540183c01"
     },
     "signer-agent/tests/test_bootstrap_read_finality.py": {
-      "bytes": 17270,
-      "sha256": "1a2eed06b15071b2e271041139ff37e7a8bd5303bbd6ab1c3a8a7b1e73dd8d25"
+      "bytes": 17208,
+      "sha256": "dc5caae1c9adfda9ad546b6dabe84bae989b0f7312af65af1d1c53005a547f78"
     },
     "signer-agent/tests/test_bootstrap_receipt_checks.py": {
-      "bytes": 7262,
-      "sha256": "ba965b48c2434545169a8f02166daa335a450eaddabce8ef598beeb6a6626fad"
+      "bytes": 12649,
+      "sha256": "af8b15cd3e79ed7749cad884c43609ea741acb7f33c948d11ce9efad8cc98783"
     },
     "signer-agent/tests/test_bootstrap_recovery.py": {
-      "bytes": 17182,
-      "sha256": "f6d2461c001b9bd331c2ec8f6303590da9f3c89c63121e49889f8f91603337b5"
+      "bytes": 19740,
+      "sha256": "71d19b3ee8c5951762d503613f2030528a0236263265aa4916e0596b64bbfcab"
     },
     "signer-agent/tests/test_bootstrap_replacement.py": {
-      "bytes": 13315,
-      "sha256": "b019abbf300e7ced44b5ec12b9ed8cae909303e279c4ec9a3a89c03ff33e2b62"
+      "bytes": 18085,
+      "sha256": "1d4d0643ebba12ea8df9b943c84f509fa6f8ffe3bd2f5b984da20d5d92d9a76b"
     },
     "signer-agent/tests/test_bootstrap_system.py": {
-      "bytes": 15721,
-      "sha256": "cbe89aa6d9daa7140b21de5a91a96f2fea2e601819d9eb60970e29854c0f6d3d"
+      "bytes": 16579,
+      "sha256": "ad66fd209f68a1c1e4d840d1cb3e6959561ce8baee23eb9bcf1629ed336614a6"
     },
     "signer-agent/tests/test_bootstrap_tokens.py": {
-      "bytes": 9766,
-      "sha256": "8a39e2bbfd9c730f66151291e021e7cc1b0d86a7e940cb4e36128dcdc07dcd38"
+      "bytes": 10489,
+      "sha256": "e5e4dc67c4a250a18bb1415a9429e77205591d357b3a64113ba5b5ea445f3042"
     },
     "signer-agent/tests/test_bootstrap_ulr.py": {
-      "bytes": 20820,
-      "sha256": "2ba7e4757c96ac88390c48df37f2550a83990aa30878ee9010219f4768a9ca01"
+      "bytes": 21324,
+      "sha256": "fadf9e96eb09f52912038a409eaa15f00fc2a0d02a0d7dc6cd52200dde300d21"
     },
     "signer-agent/tests/test_btc_fee_reserve.py": {
       "bytes": 26411,
@@ -17995,8 +18667,8 @@
       "sha256": "91df5b12ec845fc0359989281963eacec791173f9e820feb5f7b5d6a8d165470"
     },
     "signer-agent/tests/test_confederation_dao_report.py": {
-      "bytes": 7258,
-      "sha256": "4496d96c1fa1dd2f067ae9e299f4390e94434b7b8eac6ac7745d8dd8c585f786"
+      "bytes": 9004,
+      "sha256": "17c206df8995cf601b71090883cf509479512b08a9ff0e2e7d239653192291b6"
     },
     "signer-agent/tests/test_continuity_handover.py": {
       "bytes": 11781,
@@ -18031,12 +18703,12 @@
       "sha256": "d4a4f49e31dac1d3330043fddccadd97e3a2398284a4fb558ea5733249c2533b"
     },
     "signer-agent/tests/test_contour_service.py": {
-      "bytes": 29129,
-      "sha256": "6a1506df8ed2df1487b02eb8283a8c87a3d0d31c70b754f6a05c0fd61830d9b8"
+      "bytes": 29092,
+      "sha256": "9ebbc6709650319933316a96016f14d16c7cb1c14a5b607db5623e44acf00a42"
     },
     "signer-agent/tests/test_contour_setup.py": {
-      "bytes": 21013,
-      "sha256": "58f5a8f2320cea90a4c32d9a1b7a9ccadf68f7ed21b14b0af3789f88ec328750"
+      "bytes": 21070,
+      "sha256": "7b41629007016a89190290edeab7833fdb05d330aab795d357346e3b0f7579fd"
     },
     "signer-agent/tests/test_contour_suite_plan.py": {
       "bytes": 8763,
@@ -18047,24 +18719,40 @@
       "sha256": "f404461502cc74b2a45bf36941e64b7aa74a31e9941493bdf37457f5e3f1e38d"
     },
     "signer-agent/tests/test_contour_worker.py": {
-      "bytes": 23710,
-      "sha256": "9fe1e0dfad9975965d70106fac1ecbac97388f511d0f97f27c4cb6ef0cf7ae46"
+      "bytes": 23811,
+      "sha256": "12134d70169be0fa58b7fe0cabc2a90f139fa36ac19b06f3818dcfe127f2cb9a"
     },
     "signer-agent/tests/test_contour_worker_cycle.py": {
       "bytes": 8908,
       "sha256": "04d2bf22b8f5a14fcaf1e00eb0662249a6f20011bead7b214cca8018483bcda7"
     },
     "signer-agent/tests/test_contract_provenance.py": {
-      "bytes": 24751,
-      "sha256": "2e09e1272439aa691fda7b6689351e5eaaa32d2d7cca506a5780c70b62ce10dd"
+      "bytes": 29750,
+      "sha256": "f97b1ef62c74a09b08e5037e99d10eb3f951081a8f388afd23924afc4d2d730b"
+    },
+    "signer-agent/tests/test_crypto_integrity.py": {
+      "bytes": 2297,
+      "sha256": "a601209743ba7838ba1e4816b78442c8f36ff49125f9d5bf7aaa6c71c6c97813"
     },
     "signer-agent/tests/test_custodian_snapshot.py": {
-      "bytes": 9025,
-      "sha256": "c0f9a3e6be4c2a2155e3c59d2d848e37ed6b2d60e519693ede3f67759e6ae0f9"
+      "bytes": 8878,
+      "sha256": "d8fd799bca359bbae93452b53ff871007625a81957b85348d9d82a4fff239a82"
+    },
+    "signer-agent/tests/test_custody_network.py": {
+      "bytes": 8018,
+      "sha256": "ebf01d7cceb93769f7d2ef72c5bc4464c53f8a0a7ddce96ef75f3b241c00f7ba"
+    },
+    "signer-agent/tests/test_custody_transfer_cli.py": {
+      "bytes": 5051,
+      "sha256": "54a5deb7ce62558ec7bddf84a491b905fd38b5539352251737ad655d017c49d0"
     },
     "signer-agent/tests/test_dao_cli.py": {
-      "bytes": 7302,
-      "sha256": "4ae8800aac85e2721f15dcd99b290a274cbf67551595c3ad1a71069f7f9da345"
+      "bytes": 7257,
+      "sha256": "72a99cc105061e5a3b3d2a191fbd43f30626887fc44eb6c848af9a6280bd988c"
+    },
+    "signer-agent/tests/test_dao_exit_resume.py": {
+      "bytes": 21707,
+      "sha256": "f8f9b0a5b9e8667fe890d7122548fe06db1b6973b7fdf2e1164e40ce6c33a5f3"
     },
     "signer-agent/tests/test_deployment_gas_report.py": {
       "bytes": 2437,
@@ -18075,8 +18763,8 @@
       "sha256": "44fdc23366c6aaebd6f109388c6cd67b2e5c1cb9b6406975ac8cad63a05b41a8"
     },
     "signer-agent/tests/test_deployment_stage_privacy.py": {
-      "bytes": 7191,
-      "sha256": "7ee01a1b50d26dd789640c2582b0664b6ec6f576e5f54d46e7d5b716cd9e069d"
+      "bytes": 7242,
+      "sha256": "193d688c7c26cf482c549434e77246785f81e88037d197807310c7fe33cced5c"
     },
     "signer-agent/tests/test_deployment_stage_runner.py": {
       "bytes": 52665,
@@ -18087,28 +18775,28 @@
       "sha256": "4e93f307f07fb1ef3fae371878b5d3a8a44f823409811ca8b6f798783cf6fb0c"
     },
     "signer-agent/tests/test_discovery_history.py": {
-      "bytes": 6093,
-      "sha256": "a9df00565b41b07d576a68e638d9263536b547cf67e17567699993a3133c9506"
+      "bytes": 6085,
+      "sha256": "fc2b5a4fbfd5e53852349156379550f14f001692619e9b5e7888847bfebd9dd5"
     },
     "signer-agent/tests/test_dkg_batching.py": {
       "bytes": 14249,
       "sha256": "68f2b42538c8af573a8621fbdd1b2b6e09aeded2d3c1b414740342d6a3cff6c5"
     },
     "signer-agent/tests/test_dkg_protocol.py": {
-      "bytes": 6878,
-      "sha256": "3a00746badf917c1ad83706dbb6adf0f6ed1a0775bab381e03cc8b75855e1235"
+      "bytes": 7649,
+      "sha256": "196bd5ab231ae16179dfe8e71fdd8cd508db1e3e3b88506c70a35a360023a8f8"
     },
     "signer-agent/tests/test_doctor_mainnet.py": {
       "bytes": 12598,
       "sha256": "9b57b79a880850ab9179737fd70f7b44f648158323a3e754f4c268c9de48177f"
     },
     "signer-agent/tests/test_epoch_service.py": {
-      "bytes": 23803,
-      "sha256": "984c774527f77ef90d124c449c1e72163043df2c958651c6b23b93620b02145b"
+      "bytes": 24166,
+      "sha256": "e31163cecfe41e306ba8316ed7831b0853fa189cfa6cd4f5663ee733991c18fd"
     },
     "signer-agent/tests/test_ethereum_mainnet.py": {
-      "bytes": 35341,
-      "sha256": "6e732e231cd9618bdc8364e5bf7e4658ebc9d58f7d3b82bde8f0ce6e968e078f"
+      "bytes": 37887,
+      "sha256": "29e58e61ea930b926e62fb8e2f7784b87b970011947e2503fd7de7222e705819"
     },
     "signer-agent/tests/test_ethereum_rpc_budget.py": {
       "bytes": 3239,
@@ -18122,9 +18810,13 @@
       "bytes": 3857,
       "sha256": "7069bd1ed970efe1217cb5452869990503387224e3ec14b3f9d7334e4d7a55f1"
     },
+    "signer-agent/tests/test_evm_rpc.py": {
+      "bytes": 6200,
+      "sha256": "26d3cca42032fee505c765f2eb6d8108344117b82f7f4835c09f18ebb649f34f"
+    },
     "signer-agent/tests/test_family_registry_cli.py": {
-      "bytes": 1731,
-      "sha256": "762cde42347e5f9109ac597c5f43821f0f095d984bc75c7187074b076e487777"
+      "bytes": 1539,
+      "sha256": "e8388bce41fb318d83fb75e8c11baed3e2effa99f137fa269a2e89da0b8ba744"
     },
     "signer-agent/tests/test_family_registry_policy.py": {
       "bytes": 7151,
@@ -18155,20 +18847,20 @@
       "sha256": "2ee4e18c921af838b00c90ba6aa761d40181581ba3589d2c63362e50500a1fff"
     },
     "signer-agent/tests/test_gas_governance.py": {
-      "bytes": 8574,
-      "sha256": "abfcc4fdf1eec09f65d6ad2b90db6bc8b65f12198bec39d0e178dc43340ca457"
+      "bytes": 8590,
+      "sha256": "00522cd045aaa5d92bfcca711ae38855519c3584db4974e227bbedacbaf37f49"
     },
     "signer-agent/tests/test_gas_treasury.py": {
       "bytes": 3247,
       "sha256": "ce1c954b0edec16dd5c45f970583e74be76ae5fac43a0e426716b35512aff6c1"
     },
     "signer-agent/tests/test_in_kind_bitcoin_payment.py": {
-      "bytes": 4110,
-      "sha256": "00f7b747ac651d1ef61d85656d9c24fc24e020f541b78a6b49d61e3a658b73e8"
+      "bytes": 7557,
+      "sha256": "a728c76797a2771b49cdd1b235dc31dabe023d8b229057d222cc5db07172c9d3"
     },
     "signer-agent/tests/test_in_kind_withdrawal.py": {
-      "bytes": 1111,
-      "sha256": "5a0a3ef842d2e4f26bd8fc16ccb98da42775c172560e1e6890583ab8a1639d8a"
+      "bytes": 3753,
+      "sha256": "e0f4a1e909da3b3d85ce64db263232eda2a218e114812b50c5029263d1912e62"
     },
     "signer-agent/tests/test_incident_status.py": {
       "bytes": 29429,
@@ -18183,12 +18875,12 @@
       "sha256": "f78783fe94da52b9e8947e4e6475383883005b5983d4f7f7954c8dc33c0c0fcc"
     },
     "signer-agent/tests/test_launch_configurator.py": {
-      "bytes": 14467,
-      "sha256": "43e10a025842e58f7eb0f80fb356150d063e0335e67d279a2573b3f1243c928e"
+      "bytes": 14748,
+      "sha256": "0ef4ec9048d7ee2ee5bec0c6a1a2969c0b5fb4e36cbab8a2de72a5ad96fecd75"
     },
     "signer-agent/tests/test_launch_rpc.py": {
-      "bytes": 9214,
-      "sha256": "6867ad8b184af7ea067794e3b5200ff3d63ba606db28d6fa2de3a0cddbf640ed"
+      "bytes": 10735,
+      "sha256": "31b3b848b5bfc53f6c61f3e576d6a888de549c2537e9c7abeca1d22f8f4215a5"
     },
     "signer-agent/tests/test_local_acceptance_coverage.py": {
       "bytes": 7176,
@@ -18199,8 +18891,8 @@
       "sha256": "4083ed9904da0d4192280586917339e59c7965870ca85d79123b91279c443623"
     },
     "signer-agent/tests/test_mint_admission.py": {
-      "bytes": 13162,
-      "sha256": "bec136499b1a19ac0a4956a042bffab2fbd1fc7085d2bb5051fc6bcc681e4c12"
+      "bytes": 22395,
+      "sha256": "3d42d50282664ec8f46e2926b83d0b88876d823c397bd51c27b95a86b3f32d23"
     },
     "signer-agent/tests/test_mint_attempts.py": {
       "bytes": 3711,
@@ -18214,13 +18906,17 @@
       "bytes": 7454,
       "sha256": "ad0cbaf55605488e04ceea4f5a2b52bff13a3c5f3d2e47f6d4dcd7ee9be9dff4"
     },
+    "signer-agent/tests/test_nonce_anchor.py": {
+      "bytes": 11100,
+      "sha256": "916a823a56e7744bf17c43120c4e9aa55f09c286e06e3293b9ab4b9c61b9fb4d"
+    },
     "signer-agent/tests/test_nonce_recovery.py": {
-      "bytes": 3623,
-      "sha256": "1de74a1994a28fab5281b17a50eb89cc06d85286e4cfdd3443562cb18bd9dc9d"
+      "bytes": 14457,
+      "sha256": "9ed587b653d36f301e35f0287e4d399faae1c6ee75b967e3086b79ae4c5bd14b"
     },
     "signer-agent/tests/test_onboarding.py": {
-      "bytes": 6027,
-      "sha256": "520757128c9f3333945e4314a140e51256d9079fe1728648d4cc3cb294f74dc1"
+      "bytes": 7466,
+      "sha256": "72a4fc678f4977e9aa2f261bd8e3ca1a677d2c9d43e182a0fd93730c7e6bf852"
     },
     "signer-agent/tests/test_onboarding_mainnet.py": {
       "bytes": 22686,
@@ -18235,8 +18931,8 @@
       "sha256": "85b316d15def41323a423b92e81c9b204fe37bc011aedb6684e22dffa3c3747d"
     },
     "signer-agent/tests/test_operations.py": {
-      "bytes": 14683,
-      "sha256": "2500d82e680ef00c1f14dfbf9b848fa1d7dcdb5d314bcdf9305896e5c129dea7"
+      "bytes": 34968,
+      "sha256": "6e862c43b9e68b4db0569ed4d523cab129b31b60fa6582cf3e0da533bc4a9c45"
     },
     "signer-agent/tests/test_platform_support.py": {
       "bytes": 4065,
@@ -18258,6 +18954,10 @@
       "bytes": 15705,
       "sha256": "ed7febe4cf5f565f58af11e25fa87c84c9d24162a9331a81c00a3c8f1d84e517"
     },
+    "signer-agent/tests/test_reservation_transfer_cli.py": {
+      "bytes": 18317,
+      "sha256": "079f8f44cd065db92740f8eab72e5e950bd8f0223f9f3658be6edcd35b2d6293"
+    },
     "signer-agent/tests/test_secure_state.py": {
       "bytes": 1152,
       "sha256": "b11bc1b472a1f68a5f3f92c906ea4bdc0618986da17b3e1536a54b907b9b008d"
@@ -18271,24 +18971,24 @@
       "sha256": "3faf1962d0b1ce53bd408896981a519f121530722feb0fdd2a3e7f403349f274"
     },
     "signer-agent/tests/test_security_logging.py": {
-      "bytes": 9385,
-      "sha256": "158f75ef071b12c9db92ff5a1d35dd9ceb7b297b96de1e68887df76d85ced492"
+      "bytes": 10217,
+      "sha256": "0eb3befba1d8a78075e550190480bca9e25032086c2a04dd9b16426b2b91273e"
     },
     "signer-agent/tests/test_security_onchain_origin.py": {
       "bytes": 11106,
       "sha256": "0033a01b7bb090d40ec8b57c0a3b308ec91a05835d52c3826b36354decf4ae57"
     },
     "signer-agent/tests/test_signing_confirmation_pins.py": {
-      "bytes": 5502,
-      "sha256": "796da733c2984f9f25c3ba71f1d6db5097523919434471b0d4d3d3ddb56fb4b5"
+      "bytes": 5410,
+      "sha256": "d3b2a30ba3c559c69f9a7736d9aba5cc332fbc0164785a010186f2a0fded2113"
     },
     "signer-agent/tests/test_signing_service.py": {
-      "bytes": 11311,
-      "sha256": "4c2aa30b64200b9701c988533267eec0ad2aabb232bc6b6013928226bd64e126"
+      "bytes": 12712,
+      "sha256": "17b9553fb9318d20ec3aedebd3bf89d21117b8326deee44158fdfa26b4949398"
     },
     "signer-agent/tests/test_signing_target_substitution.py": {
-      "bytes": 19434,
-      "sha256": "034655405a5346db03af3904ab001890a9ea75634fc3e66c489bec1f45cd1ccb"
+      "bytes": 19521,
+      "sha256": "adb34c8734e9be20b6993bf63d004cd7bdc4079f0abe0c93df482c34499d3fd3"
     },
     "signer-agent/tests/test_smp1_deposit.py": {
       "bytes": 20514,
@@ -18299,20 +18999,20 @@
       "sha256": "3cfee7624f05c7fa1ec38333958706578eeaed57c5941e934a712600aa9c9f62"
     },
     "signer-agent/tests/test_spv_transport.py": {
-      "bytes": 12027,
-      "sha256": "d65209997667af79a1cbecb88d5c82f93c8c6133804cb31460e2db8606bd23aa"
+      "bytes": 17626,
+      "sha256": "528041dad151e58cf611ecaa9c0cdbbe5abb94105bda4ea146e44e376828f003"
     },
     "signer-agent/tests/test_system_modes.py": {
-      "bytes": 4471,
-      "sha256": "2cfc3de48fa8adaada62dd029fdce4ae52dcd638fbb585f51cccfd545b24c202"
+      "bytes": 9028,
+      "sha256": "3d6a7e4d43d1e134791209b6017aa18db2a29d368bc3cf29708c5f4880e1d284"
     },
     "signer-agent/tests/test_transaction_wait.py": {
       "bytes": 7470,
       "sha256": "b7715e2d99dfbe61f59227df2cb10292c9944d82639b915d18dca687ce288e88"
     },
     "signer-agent/tests/test_ulr_treasury.py": {
-      "bytes": 40822,
-      "sha256": "5fd32d192a0a5b995d42e643c4e627f96010ce740e1306dc1ab216da4572127e"
+      "bytes": 54186,
+      "sha256": "24789134710aca7e7eb23738a5ec5b680bb3a1e968305991597a2a41692c1e3a"
     },
     "signer-agent/tests/test_unminted_deposit_protection.py": {
       "bytes": 2333,
@@ -18327,20 +19027,20 @@
       "sha256": "fa6ad658e9afee37adf56e85688afe3b4e0ececc6de9226523f7e472fcabc6d6"
     },
     "signer-agent/tests/test_withdrawal_fee_spv.py": {
-      "bytes": 6035,
-      "sha256": "843a223359bb4386f047eb1d12601d62dad8ac406f003c8c07de9c5cb6c61082"
+      "bytes": 6113,
+      "sha256": "a42a9adc4929af06fddef1099fe5b878f0a4c05023f1781a042b7b603770fb97"
     },
     "signer-agent/tests/test_withdrawal_user.py": {
       "bytes": 12642,
       "sha256": "6c7f51b347d54dc8557d8fe2a3fc3a53c3bb11cfd9ee00a4369f8bfa264fe761"
     },
     "signer-agent/tests/test_zk_archive.py": {
-      "bytes": 6177,
-      "sha256": "07e33b266841738d5ef4ca9b559dc60232ecd32c294205b7f31db76e438b936f"
+      "bytes": 8324,
+      "sha256": "98b8eb3f8e5a668fec68ae7e5b3785bc06fe4433953c96945b0a809a9b059a3c"
     },
     "signer-agent/tests/test_zk_bootstrap.py": {
-      "bytes": 7248,
-      "sha256": "d703332e6b28100e52e7c9b56a7d2fb1d3cd7e5e9d1028343abb3f345acd2185"
+      "bytes": 8269,
+      "sha256": "0446a36811412bed9029008d8fda0ffc60621ffee9cfdeef9198d1794cec458a"
     },
     "signer-agent/tests/test_zk_linux_port.py": {
       "bytes": 9281,
@@ -18351,12 +19051,12 @@
       "sha256": "a202609fe021b1f16b8feaf063b7a7f32ec008ef7289322796cf933e0f56f09a"
     },
     "signer-agent/tests/test_zk_observations.py": {
-      "bytes": 15711,
-      "sha256": "ea35c3450b8d5fafa55e99806455fe4d954e2941e8d07cbc7bed0b4369b34cbe"
+      "bytes": 17081,
+      "sha256": "3fca6cd47b276b44e79ee9d58e20a1b5f139d0a827b45ba6dab51662699a5b93"
     },
     "signer-agent/tests/test_zk_peer_bundle.py": {
-      "bytes": 12946,
-      "sha256": "509e2ed15900ef81b8addf6dfa2bb9b19e826bd59631d08f5ecdbded36be0a1f"
+      "bytes": 15151,
+      "sha256": "2a9065369409728ad74d615db636df864b31f7b1b7cbeabff571f509b35910b1"
     },
     "signer-agent/tests/test_zk_preparation_sources.py": {
       "bytes": 2831,
@@ -18367,12 +19067,12 @@
       "sha256": "4db6dfbbccf2b67571110e64cd12faa906ed034b5eee24e398d611db6eaa49e7"
     },
     "signer-agent/tests/test_zk_testnet4.py": {
-      "bytes": 4968,
-      "sha256": "f00b2500ec1411ecb5aca15ee4105fc918ede12650f677892b81fa8b30207642"
+      "bytes": 5032,
+      "sha256": "3097011546214d33547ebe293b8c7a532b19b5c55866a7e251aff7d5df92a509"
     },
     "signer-agent/tests/test_zk_worker.py": {
-      "bytes": 28353,
-      "sha256": "ecb0efab96e86b73faa2ac0dbd40c6cdb3339c8c408cb719bf5063590d65176d"
+      "bytes": 45881,
+      "sha256": "435592b5e83505286e534d27b4d47cd3876fccf08600f837cbd53a6467c40858"
     },
     "signer-agent/tests/test_zk_worker_service.py": {
       "bytes": 9255,
@@ -18391,24 +19091,44 @@
       "sha256": "bb9562dc4637d3e96936f3718d258167d48dace928d6b81a877dfa55eab238aa"
     },
     "tests/e2e/lifecycle_helpers.py": {
-      "bytes": 5397,
-      "sha256": "78a1513bd1b83e0e93b16cd660865cc449ca74157e4068c245087b7c2698f75e"
+      "bytes": 5624,
+      "sha256": "ec2e6250efbdc8d93b2a034c554e844bb06a800cafae5935c38574084d7d3aef"
     },
     "tests/e2e/script_helpers.py": {
       "bytes": 4778,
       "sha256": "510f3c5f8ee6dbf83682f3263326f30c5f29d27d94d976ad3b8b93ee13c0dd93"
     },
+    "tests/e2e/test_bitcoin_cltv_wallet.py": {
+      "bytes": 9425,
+      "sha256": "4982edbfc230ab94938e698e0b22177a3491ae47450f8fc806e67fdad949b641"
+    },
     "tests/e2e/test_bitcoin_onchain.py": {
-      "bytes": 32474,
-      "sha256": "e15d38957caabe25bf839926270806a2843afe6f82e0203bc9068dbe3c3b8c00"
+      "bytes": 32688,
+      "sha256": "0f8a5e7b78fdbe9e35ef306dec7c5eb2461b75388dc5d558cc591f7bfa78deea"
+    },
+    "tests/e2e/test_bitcoin_payout_package.py": {
+      "bytes": 4632,
+      "sha256": "e44dbbfd5ce51d6f0da00a9a61f377d9e7221fc2dd94288f2708c0b78646859e"
     },
     "tests/e2e/test_bitcoin_processes.py": {
-      "bytes": 31262,
-      "sha256": "386beb4cc508dccfa4e2353bde0d4db47aae72a411ee89ea76bbd2ffee5ad5e7"
+      "bytes": 31532,
+      "sha256": "86f5467c7eda25624ebddb4a9c4ae6b3442cecfe6c4d3f6fe13bd37b4789fb0e"
+    },
+    "tests/e2e/test_bitcoin_recovery_bootstrap.py": {
+      "bytes": 2936,
+      "sha256": "319aca22758c8c177b77478986afac6f78a370e86c57116e2bee88a123f03f16"
+    },
+    "tests/e2e/test_bitcoin_successor_ceremony.py": {
+      "bytes": 7059,
+      "sha256": "6e5c2c62754ae38a58faa71b727675008254a567ad442e46052376514dd9ac85"
+    },
+    "tests/e2e/test_bitcoin_t02_relay.py": {
+      "bytes": 16069,
+      "sha256": "6c63255b32498e2771090ee12feb600890b77ceedbd669bc18b00806a4f504dd"
     },
     "tests/e2e/test_bitcoin_treasury_onchain.py": {
-      "bytes": 4616,
-      "sha256": "aba360924eb933d00a1e182a766c9cd39df592c0bbba1dcbaf0393c3c5a4fe19"
+      "bytes": 6134,
+      "sha256": "f37bcc925d87d5fc0026a98b0e3b0d2f830db5b5001c9d3fc5594550c12e1491"
     },
     "tests/e2e/test_bootstrap_parallel_e2e.py": {
       "bytes": 10481,
@@ -18423,20 +19143,24 @@
       "sha256": "c8865951402ac11573bb6c6b2882b5c3ac23ccf516b8edfa6e4efa3093b3e2a8"
     },
     "tests/e2e/test_confederation_bootstrap.py": {
-      "bytes": 11615,
-      "sha256": "9bb775b931baa06b2a8152778d99d0d32276fae5d7df5be7e2ff5afa5d16af5a"
+      "bytes": 12013,
+      "sha256": "00b248e46a7a4a1ece7acef67f93d18979f8341d7787d39aa68a4bcaefa93954"
     },
     "tests/e2e/test_custody_transfer.py": {
-      "bytes": 22060,
-      "sha256": "bde2f1122f611e4cf6369dd3804c0e11363de6e7c52ec91ebe03e7d31d7aacc3"
+      "bytes": 24858,
+      "sha256": "c21708951e4b307e2197bbf0a4f4ea22154975c863cbe67d46f5c3a9b63755bc"
     },
     "tests/e2e/test_deployment_scripts.py": {
-      "bytes": 5576,
-      "sha256": "d3d5c6c3fea99f18461ce277ac6f670c577029fe39cd113010d1da74e7b26a03"
+      "bytes": 5825,
+      "sha256": "5a43f86a1393645bc088be87c4b64829a7a6a01a44f23be7eaf233223a698c47"
     },
     "tests/e2e/test_deployment_stages.py": {
-      "bytes": 11667,
-      "sha256": "8e7230fb5efd9f2f56c342bb712432c53e75694228b1adb3967935097bfeb6ac"
+      "bytes": 12094,
+      "sha256": "ec5d7e177eea879ba0819a91df3b25f156c57f15e531b7fc6873eafdd7a1f114"
+    },
+    "tests/e2e/test_direct_btc_s_exit.py": {
+      "bytes": 7038,
+      "sha256": "e735c71824be01b4e9c0c8d0c2a0929f051d9f3376953fa51a8e69fc7ebf88e2"
     },
     "tests/e2e/test_dkg_onchain_batching.py": {
       "bytes": 7385,
@@ -18451,8 +19175,8 @@
       "sha256": "7380d0af6f86e493cef89e22b1cbdd714089230c76926fc3dee153fe3ddd16bb"
     },
     "tests/e2e/test_ethereum_bootstrap.py": {
-      "bytes": 4405,
-      "sha256": "d23299722f14ca9af5b6322d877b713bf60b2377a0fb43e12443f9ffc494dd02"
+      "bytes": 4479,
+      "sha256": "9ab6e338c1a26fff513718d96833e3d741c47c04c9dd0c609be8324b92bcf15a"
     },
     "tests/e2e/test_ethereum_dao_transactions.py": {
       "bytes": 9470,
@@ -18466,25 +19190,29 @@
       "bytes": 4098,
       "sha256": "64ee578b97ffb6db884c6cc4dc9721b0796ac15ccf6deecde978fa37e486eff9"
     },
+    "tests/e2e/test_factory_reservation_transfer.py": {
+      "bytes": 9690,
+      "sha256": "94f9f56fd7f03c1a35abccc659060793fcfdb9c2386c036a52a5321733da2c31"
+    },
     "tests/e2e/test_frost_finalize_race.py": {
       "bytes": 5601,
       "sha256": "4a14ee24e9539ac6a25dde489d493eb1f445399770857803d12160c7eb745dbe"
     },
     "tests/e2e/test_full_bootstrap.py": {
-      "bytes": 28185,
-      "sha256": "a7949ef7da5dd0b40a0399aca3e637d3f7702e02666b46bd709f96eac1f9c264"
+      "bytes": 30392,
+      "sha256": "06edf0b9adbdd61c4129ee85a9ad38c6eb5e395137b6aa1ee87d1ebf0275f394"
     },
     "tests/e2e/test_in_kind_bootstrap.py": {
-      "bytes": 15367,
-      "sha256": "69fc7cdeda0cde8a8b1f115e9704c1bd2ef6e56591dfa1e7a6dc20b79c9cba9f"
+      "bytes": 16930,
+      "sha256": "2942743e9402beebae5abbc5fcf63c73dfd267f444608eba3d979aec15efae2b"
     },
     "tests/e2e/test_mainnet_bootstrap.py": {
       "bytes": 18386,
       "sha256": "d970fffcc7e73a0be39880f413389a5576366ac1eeaae975f71b7b7b203715e5"
     },
     "tests/e2e/test_mint_admission.py": {
-      "bytes": 5947,
-      "sha256": "dd9098abbd88d25ebf5d29b2553cf7da3d12b6aebe764510b590189f01c1e163"
+      "bytes": 7587,
+      "sha256": "d8dc8e5c0552d3eec8ddc23b038ca3307b78729f88ea6b999644424e27c8f336"
     },
     "tests/e2e/test_network_matrix.py": {
       "bytes": 16052,
@@ -18495,8 +19223,8 @@
       "sha256": "80880216dfb1e9129535ab447056518b4c952ac968e59320594f386134ac2202"
     },
     "tests/e2e/test_operational_api.py": {
-      "bytes": 7320,
-      "sha256": "e30573738c422652238375ba8e3525c7ff2d9a9d1d63e89c57f850aa6179c0d7"
+      "bytes": 12396,
+      "sha256": "a760817a95251ee4439023673c592a87415954a4024e8ff27f856fd05062d66f"
     },
     "tests/e2e/test_provenance_history.py": {
       "bytes": 4000,
@@ -18505,6 +19233,10 @@
     "tests/e2e/test_relay_batch_recovery.py": {
       "bytes": 10554,
       "sha256": "017c00d72303709870dea93d14fc83376e794df732333e866c9eaf1800ab3dbe"
+    },
+    "tests/e2e/test_reservation_ceremony.py": {
+      "bytes": 17154,
+      "sha256": "957bec34b94de864f9c8accf6195d08422ec0c1b52be3cb27cdbe16be5a0f053"
     },
     "tests/e2e/test_reusable_deployment_components.py": {
       "bytes": 6006,
@@ -18555,8 +19287,8 @@
       "sha256": "3805759f11fa8d085da3b8659ab3b295c1ce238e2e5edfbc1caf9a72872dcd32"
     },
     "tests/ops/test_package_distribution.py": {
-      "bytes": 6436,
-      "sha256": "7b6f00e770bb57b07944ae90d99cd0e218dad60f7206f94f5e999afa07b146dc"
+      "bytes": 7695,
+      "sha256": "84c0d8f4fb975fa3de79463104df88487c666c0576d1d17c1ee60988c3665238"
     },
     "tests/ops/test_participant_build.py": {
       "bytes": 2576,
@@ -18692,7 +19424,7 @@
     },
     "web3/README.md": {
       "bytes": 7990,
-      "sha256": "d639e9bc96dc062e3b8a0b797a343686aafa55c8a4fef2c15c4a7c6ca3094783"
+      "sha256": "5d2fc797d462141810e84c25dbaeb6940a815ba32d2e9716aeff363610e17d20"
     },
     "web3/contracts/src/FROSTAuthorization.sol": {
       "bytes": 7594,
@@ -18839,24 +19571,28 @@
       "sha256": "b37bb066ff76de96d5f835f911cb713747c7771a59b618a587ebf171db2e1b6b"
     },
     "web3/contracts/src/federation/BitcoinBatchRegistry.sol": {
-      "bytes": 8706,
-      "sha256": "ee4207fd8bfd50e29bea25f1669456627f1dc1e910352e07f2c8ddb5ce1eb392"
+      "bytes": 11321,
+      "sha256": "1e57edf9e5290bd7daebf2d24f1d2058dd34d334cc1c2c40a3211cffe0256286"
+    },
+    "web3/contracts/src/federation/BitcoinCustodyNetwork.sol": {
+      "bytes": 7249,
+      "sha256": "0b7c9d7af1db295cbdce3998a9e4d5b0c9b48c8b6ed1db082fd38c6fae413300"
     },
     "web3/contracts/src/federation/BitcoinCustodyTransfer.sol": {
-      "bytes": 9375,
-      "sha256": "8ea9351b3fc223c6676c07641df4971854afb2143877171e79a011519e3118d1"
+      "bytes": 9699,
+      "sha256": "e43fe1f0b6cf78244dd0ee9891ba9b82be45fa59d7bf921c6c941df1cae12a75"
     },
     "web3/contracts/src/federation/BitcoinCustodyTransferV2.sol": {
-      "bytes": 9741,
-      "sha256": "a5ce7bd70f60770f61fb7a2e9692095db66520e20efa723fe295ca46e854c0bc"
+      "bytes": 10222,
+      "sha256": "a2c4e35c56901ee6dfb2840d4e687a6651d8a8ffd5ced4a02b8affd755002f66"
     },
     "web3/contracts/src/federation/BitcoinDepositRegistry.sol": {
-      "bytes": 16935,
-      "sha256": "d7dc693619edfac130488fc56bfcc76c4dfe89569521465960e29f3fa38250ab"
+      "bytes": 19393,
+      "sha256": "a9005422521c3fde68cf1fdda313bd9afd017225ac1bf66a99320348496ac126"
     },
     "web3/contracts/src/federation/BitcoinFeeCodeHashes.sol": {
       "bytes": 455,
-      "sha256": "587455ca44eafa2e301dc6e6387cea33a018acfe517ec786e84f5b1012fc5a3d"
+      "sha256": "204c947d1f2a227490d0649d754b332ceaaeebaa41065dc9bf43e58120f730e8"
     },
     "web3/contracts/src/federation/BitcoinFeeFundingVerifier.sol": {
       "bytes": 3560,
@@ -18887,8 +19623,8 @@
       "sha256": "e86d6419cac480ad23a4f70e7f31db04ebe84e874631e6cd08b08af5d481a88e"
     },
     "web3/contracts/src/federation/BitcoinMintAdmission.sol": {
-      "bytes": 21686,
-      "sha256": "0f6e0c701a700b54abe0a4e96583dcff819f8f727ba5d7c6607945e0972118ae"
+      "bytes": 25908,
+      "sha256": "6e3e8a3d31802117222ff4c931ea7d57c2e084e6a4a96a8d783521a2ef672c42"
     },
     "web3/contracts/src/federation/BitcoinSigningBoard.sol": {
       "bytes": 9781,
@@ -18899,8 +19635,20 @@
       "sha256": "b67499011f9d6a74f77604533c52cb6172f0640b3eec7c2c3e77c7b842cbf114"
     },
     "web3/contracts/src/federation/BitcoinWithdrawalEscrowV2.sol": {
-      "bytes": 19182,
-      "sha256": "74182f6206b999441cb36ad3512b773eef0257981e04e42ea54bf26873c558fa"
+      "bytes": 21175,
+      "sha256": "441692e8113cc1519d611c742a5a5f13ea768f8703093087710d4ef65fd4625b"
+    },
+    "web3/contracts/src/federation/BitcoinWithdrawalFeeVerifier.sol": {
+      "bytes": 4864,
+      "sha256": "ff4071c15199da049844d3cf3b8a61aa855a21832c964a17fe9c8f4e97eaead7"
+    },
+    "web3/contracts/src/federation/BitcoinWithdrawalRecovery.sol": {
+      "bytes": 17225,
+      "sha256": "114d41e72f7e539ba96cad118eed02d8a3ed020121fdb278f9d755e8eff6caae"
+    },
+    "web3/contracts/src/federation/BitcoinWithdrawalRecoveryFactory.sol": {
+      "bytes": 2322,
+      "sha256": "4b153152537f0d40f73ce626fac4865d0cfe86079de440514a35c692dd47f688"
     },
     "web3/contracts/src/federation/CallbackPoolRegistry.sol": {
       "bytes": 4982,
@@ -18911,12 +19659,12 @@
       "sha256": "a5eb90a5e0627b920d6438367059bbddc8126ed53b1270964cf563c067e0bddf"
     },
     "web3/contracts/src/federation/ConfederationBitcoinReserve.sol": {
-      "bytes": 14991,
-      "sha256": "6ef2da385211e495ef7818de63c4e8693936c3c4788713c3fefa37a98fc671ea"
+      "bytes": 20428,
+      "sha256": "8da0813d2b8a6e49bb2bab941a324c18f44286f468d925dc5a4fa5191d3db4ed"
     },
     "web3/contracts/src/federation/ConfederationDAOIncome.sol": {
-      "bytes": 18312,
-      "sha256": "10796c793b626d96920c30b330ebe7434520947c57dfee67673e811f179d7ef7"
+      "bytes": 23546,
+      "sha256": "c473163e5c6205401abedcb48f35483d7c3dcb3e624f6309da7113c2e4577629"
     },
     "web3/contracts/src/federation/ConfederationDAOStake.sol": {
       "bytes": 8807,
@@ -18927,8 +19675,8 @@
       "sha256": "7bdb68fe70fc49eda37ce8edb49df74161f73c2bf1bfea724c70deb4c7057a06"
     },
     "web3/contracts/src/federation/ConfederationFactory.sol": {
-      "bytes": 33622,
-      "sha256": "50588b1c364a4265dbd7572f90fe89eabfd5ee2b96c31fec7d9f8e9d813b139a"
+      "bytes": 34416,
+      "sha256": "51dec5d42b740c46d518519d9450a0f752a2ccb57d5ec57ef478854aa0cbae0e"
     },
     "web3/contracts/src/federation/ConfederationGasTreasury.sol": {
       "bytes": 3457,
@@ -18939,16 +19687,16 @@
       "sha256": "dbccece672c185ac4737a7649d1b7ed96bff5079a2a15d4f295604d81dcded78"
     },
     "web3/contracts/src/federation/ConfederationMultiPool.sol": {
-      "bytes": 32601,
-      "sha256": "557c27f25c87a49502e930bfe6d96d3c56266604b1af45d865548596d8222973"
+      "bytes": 32645,
+      "sha256": "d80c43ab79ff89427d56c002cc9961d7da5e1521c3efa9723ad6134da91eae3d"
     },
     "web3/contracts/src/federation/ConfederationNFTPass.sol": {
-      "bytes": 4805,
-      "sha256": "7f972d37809d9bbd75098c7911995182a9195e4dbacf12af0d8495ad1a760953"
+      "bytes": 6508,
+      "sha256": "0c9d22aaeddb5e84da973cfeaff304a1c90bdc07747ff5e88ca9f13653bc3308"
     },
     "web3/contracts/src/federation/ConfederationPoolV2.sol": {
-      "bytes": 16240,
-      "sha256": "7131a5bd3bf4d1de477bf61d0e5f2b691985002e15a04f496b65bdb44eb096f1"
+      "bytes": 22605,
+      "sha256": "422ae7c37693db6241d4f63ca6d0c634ba6c77eba6a99dc2c7a36fee755fa576"
     },
     "web3/contracts/src/federation/ConfederationPoolV2Deployer.sol": {
       "bytes": 2912,
@@ -18978,13 +19726,17 @@
       "bytes": 3091,
       "sha256": "d7038bd9766a887fc8dc20fde106c37b5172ba662b8a9f64908b6a90220ec759"
     },
+    "web3/contracts/src/federation/CustodianDAOConfigValidator.sol": {
+      "bytes": 2656,
+      "sha256": "e7dcc6cc809b373f9cccd3450ea26c17d174222cd96bc27b3b09f9eea2ca18bd"
+    },
     "web3/contracts/src/federation/CustodianDAOConversionAdapter.sol": {
       "bytes": 4571,
       "sha256": "4b39ba6f79fc3924fea6a389c4176c26df77a50edf355288befcc3f511f15c17"
     },
     "web3/contracts/src/federation/CustodianDAODailySettlement.sol": {
-      "bytes": 12663,
-      "sha256": "2265c56902735a428ae99c3410cd26e1892812ae9cbe44daf3d39c1fd2a8eb1b"
+      "bytes": 13055,
+      "sha256": "64b393a1f43b99cc88c9fd58d65299991789e83e439e7f0c9bb7335bf50e03aa"
     },
     "web3/contracts/src/federation/CustodianDAODecisionBoard.sol": {
       "bytes": 6227,
@@ -19007,8 +19759,8 @@
       "sha256": "2acbfeb0a2b515116524b039ad74ddab91b4188400848383db3408bf814a8d2d"
     },
     "web3/contracts/src/federation/CustodianDAOStaking.sol": {
-      "bytes": 10363,
-      "sha256": "70ef727edc79708319ea095b85f7dd9b6dfe9d76ca679a1e47be6f6709d38549"
+      "bytes": 10755,
+      "sha256": "4cb816c6714644675e25365a6617d7e22f09662aecd783360d1adad4ce2f6ba9"
     },
     "web3/contracts/src/federation/CustodianValidator.sol": {
       "bytes": 15097,
@@ -19019,8 +19771,8 @@
       "sha256": "43d457e777c59dc24f66511cf2b1200ecb118562ec7a7d0ea81538224ca1ec59"
     },
     "web3/contracts/src/federation/DKGCoordinator.sol": {
-      "bytes": 33600,
-      "sha256": "b3138306be7f744165f46133bb4739927aa895b4a5c0f3e3dce6070df7aef422"
+      "bytes": 35135,
+      "sha256": "fdb221e649451a6de8594bb57101b850fa6c564e9ac365d9d5725f2368600b24"
     },
     "web3/contracts/src/federation/DKGHash.sol": {
       "bytes": 1821,
@@ -19043,12 +19795,12 @@
       "sha256": "b4947bf37d8daa7793b0bb5069c09efee8dd047bc4e0c388b76b88c4e3aa08d0"
     },
     "web3/contracts/src/federation/FederationFactory.sol": {
-      "bytes": 17483,
-      "sha256": "bd63d8e08e82af3a493c0bcf378c0e893946a4796a81cb35f7164d3aa6a29b0e"
+      "bytes": 19861,
+      "sha256": "2451fabacc768cc5f71ee48cdcced65f4d91a7aa95224fefcdc152f8e058086e"
     },
     "web3/contracts/src/federation/FederationFeeManager.sol": {
-      "bytes": 18349,
-      "sha256": "3ef0bdce0e3334922f1e482784eac70da295d0fb6ba9f3e57de08851583d0185"
+      "bytes": 19780,
+      "sha256": "b2f6b281b54b9500298190f0c60a09efd938f40ebd51a07111a09424d6132609"
     },
     "web3/contracts/src/federation/FederationFeeManagerDeployer.sol": {
       "bytes": 871,
@@ -19079,8 +19831,8 @@
       "sha256": "ceea707413edff721b5e75d9189378664dc9f379e9b6db7c1da4459baf6e8b14"
     },
     "web3/contracts/src/federation/FundedFeeSale.sol": {
-      "bytes": 11147,
-      "sha256": "01b1305558d28d5aa7b01adb3d6931529d9a6ac93f27dedda186a88c75ba112c"
+      "bytes": 11298,
+      "sha256": "91167846fb5a16052956f8ed0e6db99ab7919fc00eee3baa90fcea0e85e5db00"
     },
     "web3/contracts/src/federation/GlobalProjectWalletRegistry.sol": {
       "bytes": 13569,
@@ -19111,8 +19863,8 @@
       "sha256": "bc948ae9f88d924df32929e6150b9044516dbde9a662fa8b5c91a66d68d6c92c"
     },
     "web3/contracts/src/federation/MiningPoolV1.sol": {
-      "bytes": 14310,
-      "sha256": "0dd449a00111c22698c1405c8baf798c9a0aace872869e5e9269a884e7850a92"
+      "bytes": 14777,
+      "sha256": "22aace0cff9ad135500ac6f16b3aca127d6c02984794f92fec5ab95e58036f89"
     },
     "web3/contracts/src/federation/MultiPoolDeployer.sol": {
       "bytes": 2898,
@@ -19171,8 +19923,8 @@
       "sha256": "badba7abf1e51ae89807e17edce921fac94fa4c2e12d959ab1d246fe710c55eb"
     },
     "web3/contracts/src/federation/WithdrawalFeeFunding.sol": {
-      "bytes": 8893,
-      "sha256": "031bfe400c8a246d9ee54575e668a36ca0fd40f64be1af429b9144d4b5116874"
+      "bytes": 8982,
+      "sha256": "deac2e5f563c3f2cd16be235d289f7b3983debb98106d386a8d13e3be5a25d58"
     },
     "web3/contracts/src/federation/WithdrawalFeePayments.sol": {
       "bytes": 8437,
@@ -19247,8 +19999,8 @@
       "sha256": "6ba520c40b11f27b3e86bfd8ae858372d2a103a09b3f06dd248b5d7d5ccb5f93"
     },
     "web3/contracts/src/staking/ULRConfederationTreasury.sol": {
-      "bytes": 8542,
-      "sha256": "d574ebc8a1fa04de7243ca998fc62e241998113fa4c3bb5f651594ab13f22b6f"
+      "bytes": 10013,
+      "sha256": "9527f80bd4570ce87c3ea059d1822c0da81330197e932771e09d021058ca3ec3"
     },
     "web3/contracts/src/staking/ULRConfederationVoting.sol": {
       "bytes": 1371,
@@ -19259,8 +20011,8 @@
       "sha256": "f6f735aeb9e68693f29db5c739636effa5a5c08fbbeb51b079d9bb6884a04b24"
     },
     "web3/contracts/src/staking/ULRStaking.sol": {
-      "bytes": 14286,
-      "sha256": "78396c0bba9a90c3f0e9b59bbb866280cbecaf7b1a285231275318d71d65562c"
+      "bytes": 14697,
+      "sha256": "3a63c80dcb19f1f3551d48a5c3dadcb1edadf1c55330b8dcea6a9fbf9a493d7f"
     },
     "web3/contracts/src/staking/ULRStartupRewards.sol": {
       "bytes": 4603,
@@ -19279,8 +20031,8 @@
       "sha256": "1918bd1167fda4a26ca9d76f3868482be7282085d71577ff2f4427e47e1bd8c4"
     },
     "web3/contracts/src/tokens/FederationNFTModifier.sol": {
-      "bytes": 6705,
-      "sha256": "3d9ddc3be9d3a6c7d56fdd9a513bf6b2fb367205cbf17efe4d82d6b0c5bc8862"
+      "bytes": 8163,
+      "sha256": "40e5bb144a11af33eee4ce6e100337228a09bc3a4b96aee0f229c136a4b847f8"
     },
     "web3/contracts/src/tokens/MultiPoolShareToken.sol": {
       "bytes": 2630,
@@ -19348,7 +20100,7 @@
     },
     "web3/foundry.toml": {
       "bytes": 955,
-      "sha256": "bf986d8a8e2da4691c5a935d4134e8efdc7dfd63d4a8e4a1293a050a258af469"
+      "sha256": "c43b47f060a9e885139bd61b934b5e000e845fd81e84087eaf76c1de2636d97a"
     },
     "web3/lib/openzeppelin-contracts-upgradeable/.changeset/afraid-chicken-attack.md": {
       "bytes": 243,
@@ -28367,8 +29119,8 @@
       "sha256": "014d76ae3d851b2128a7d0bbaff67155cc91c38ced481a8dafb060fc8eda0d0b"
     },
     "web3/test/BitcoinAddressRegistry.t.sol": {
-      "bytes": 37253,
-      "sha256": "eee1657fd49a5923e6b5f564e84b46575b2796aaddde996e1de18fd3ac256c74"
+      "bytes": 38925,
+      "sha256": "106204c28004e14fa67a7c9cba385451ee3054b51db50530a1dc4c54e934a63d"
     },
     "web3/test/BitcoinByteOrder.t.sol": {
       "bytes": 909,
@@ -28383,16 +29135,16 @@
       "sha256": "265bf23db2be5091e7580c5c42000d690992a1ef164005971fe1c7cce5e2500a"
     },
     "web3/test/BitcoinCustodyTransfer.t.sol": {
-      "bytes": 16091,
-      "sha256": "6b92d26b5ee9489a6f9e61e5178ce4745a619da76e18de00c2fb95a436edef27"
+      "bytes": 16796,
+      "sha256": "e0428b55f7544d8ecb344f676080c5bd181b3640f5171821da53181c7fe38602"
     },
     "web3/test/BitcoinDepositDerivation.t.sol": {
       "bytes": 5149,
       "sha256": "726de60406c11035034811f8900ab0961f78153815c78fc677e489c97152eae5"
     },
     "web3/test/BitcoinFeeReserve.t.sol": {
-      "bytes": 14620,
-      "sha256": "06cf47e5b354e15949dd5343cb0b02a7147a2668a23f033e5674d9ab3d8a8921"
+      "bytes": 14733,
+      "sha256": "43d777ee75f8f8f1662fe4cf9a67f5d22f95b349ead534fd7490b7d279c75fe1"
     },
     "web3/test/BitcoinFundingParser.t.sol": {
       "bytes": 12113,
@@ -28407,8 +29159,8 @@
       "sha256": "fa0e5da1746b7d479f1ac05ff7084c15215b923b80ca7565484c3360eea81ef0"
     },
     "web3/test/BitcoinMintAdmission.t.sol": {
-      "bytes": 26908,
-      "sha256": "2d21c0af2fbd60b84fb02cc0c80a3a7a95b5c71ea2342908a8a0f1de98931878"
+      "bytes": 34907,
+      "sha256": "de2a3b7ff33e4b9fe48aeda99705f81044480703758b045e3139b94d2840b316"
     },
     "web3/test/BitcoinRosterBinding.t.sol": {
       "bytes": 3292,
@@ -28431,8 +29183,16 @@
       "sha256": "a6b3a2f28f791547d2c8a9be7b6def1110f7155380ad91b3d9b89ca18e72e992"
     },
     "web3/test/BitcoinWithdrawalEscrowV2.t.sol": {
-      "bytes": 9509,
-      "sha256": "63e2e5fbe8c5c4151a589cc0635728cc8fa72c4605cf5af37b186349b6a74cb6"
+      "bytes": 12971,
+      "sha256": "25f2a0cfe98f8eb2c9e8e7dd49ccda0faeda53d60cbd78e9f72d422899078469"
+    },
+    "web3/test/BitcoinWithdrawalRecovery.t.sol": {
+      "bytes": 2898,
+      "sha256": "d0ad838b326a818906909ca7c9abcd6ac7f97d2499557fc2153d81dc1ca59fd8"
+    },
+    "web3/test/BitcoinWithdrawalRecoveryFixture.sol": {
+      "bytes": 43391,
+      "sha256": "008c5a1fe6947f10f0e908c8f69879c99064265ca23e21a918a895e74b4e1abe"
     },
     "web3/test/CallbackPoolAdmission.t.sol": {
       "bytes": 8389,
@@ -28443,36 +29203,40 @@
       "sha256": "b44d6319862e2f84f169a818852c9b4fd9870e0a7d750d5af2e9e9efa66fd982"
     },
     "web3/test/ConfederationBacking.t.sol": {
-      "bytes": 24310,
-      "sha256": "9494267c08bba6a5406b56f4c4f54a66b52a094522bc280212d1db0e24969d61"
+      "bytes": 35680,
+      "sha256": "e8f5bb1b2d10a3456fae945f456d90c2c2c4b2e047c14324d46f87bbba80ca10"
     },
     "web3/test/ConfederationComposition.t.sol": {
-      "bytes": 16446,
-      "sha256": "cc19b7b124cef143716a3ccbcb2bd90a6a42633b8d1129c93f2e0f66514d63c5"
+      "bytes": 22076,
+      "sha256": "6ecbb9d7abd9a1f55bf6ddef463aa3ef7cfdafb668c612f32b7a4519c856ed02"
     },
     "web3/test/ConfederationDAOIncome.t.sol": {
-      "bytes": 20539,
-      "sha256": "538f749c3ac31f1a51448f7a394c338f9f45885d905283d05e0c26c7011be947"
+      "bytes": 35648,
+      "sha256": "4a32e95a74c89e5a6817873576e1f5bdb707f626e66856407089cb2d20ed80c7"
     },
     "web3/test/ConfederationEpochFixture.sol": {
       "bytes": 6337,
       "sha256": "90e2d4ada45bb8533dee227e73072211494ee848459d9763578e80379644a4dc"
+    },
+    "web3/test/ConfederationReservationTransfer.t.sol": {
+      "bytes": 7003,
+      "sha256": "a0b957c720e8545867f48c044bec1126c23ffba5be5b73a2f3a09c702500acc3"
     },
     "web3/test/ContractSubstitutionReview20261103.t.sol": {
       "bytes": 5212,
       "sha256": "03a598fe7d3dd7e392e48ebc6043a45754559af9a6fd2477a6c67e7dbf071713"
     },
     "web3/test/CriticalTests.t.sol": {
-      "bytes": 129292,
-      "sha256": "e2164f65ae5749f84482e50d22a9cfafc7f1ef6689244b4ac7500d2f4c2cfd9d"
+      "bytes": 129880,
+      "sha256": "16cead73a764df2b5e2ce4544938aa1a62758fa81f3722011f00cd0b219f0029"
     },
     "web3/test/CustodianDAO.t.sol": {
-      "bytes": 80856,
-      "sha256": "b9dd0e5da13ceeaef2049a56bce04c5a8f66cf90fbed2ee16432f9b9c5d7cba2"
+      "bytes": 82995,
+      "sha256": "474e5ddb5f6228ba01f6e721c070ffa01dd850f4374a5cc1531391f2b5040b07"
     },
     "web3/test/CustodianMonetaryEpoch.t.sol": {
-      "bytes": 7455,
-      "sha256": "36640ce4808a4ed89f425d3c246e08b7102d682d29c5e3f4e4c23b3efce5ba70"
+      "bytes": 7813,
+      "sha256": "a450e967e136cfcb1f2dae17c690e0ff4b81efa54cad3ecab2ae5be70e545d4d"
     },
     "web3/test/DAONoLPSettlement.t.sol": {
       "bytes": 18093,
@@ -28491,8 +29255,8 @@
       "sha256": "8ad505a0c86afb4463d209396c9810e8f0fabd81fe49878841302510f76eec35"
     },
     "web3/test/DeploymentFeeStages.t.sol": {
-      "bytes": 21587,
-      "sha256": "114d726139e931f0000cbbabe79d0113f1cfe681426f318a11aa9e4d69acbd01"
+      "bytes": 21929,
+      "sha256": "f0dfd7417932b985c93206310bcc766b02317db8120a136082e99fb03bc25c94"
     },
     "web3/test/DeploymentStageFixture.sol": {
       "bytes": 5584,
@@ -28515,20 +29279,24 @@
       "sha256": "66fb1c974025171d3e0312888a1fd401043925edd636870593b1719e2960e943"
     },
     "web3/test/FactoryLegacyGuards.t.sol": {
-      "bytes": 9601,
-      "sha256": "397e0e29e09bbab9693f1e9a1f6a605fcc2fd684a3ac291107df5b973f5f9c04"
+      "bytes": 10223,
+      "sha256": "19ee9afd99c46c484bd82c2430218aaf647980c495dad29c24f6ad186d60a0a3"
+    },
+    "web3/test/FederationReservationTerms.t.sol": {
+      "bytes": 13052,
+      "sha256": "1d839899b9dd79b61d85ef1ebd070dbaa7ad0495ed58b5d8cfa443118b25afda"
     },
     "web3/test/FullFederationAdoption.t.sol": {
-      "bytes": 14767,
-      "sha256": "9b79ef1930fd606f8fbcce900ce4ec2536daa873889f36d9203703cb5f9e7914"
+      "bytes": 17647,
+      "sha256": "ab6f818480c3f2f8bd15a2fd86ca94ceddfbf1cbda7a11dd137f2698982b4f41"
     },
     "web3/test/FundedConverter.t.sol": {
       "bytes": 2374,
       "sha256": "053c0a84852657942ea5934f9a39dce40bd57f8929f46aa6296cfb9b70382ef5"
     },
     "web3/test/FundedFeeSale.t.sol": {
-      "bytes": 19689,
-      "sha256": "a217d814405cb46c27990c75b2a9c98fa7667c2009002eff0b8bb29440056976"
+      "bytes": 21258,
+      "sha256": "3ca80af9e7fd2f6dae4316e81124bf71bb487236c66df58d64c16eed09a0348c"
     },
     "web3/test/GasCallerFixture.sol": {
       "bytes": 560,
@@ -28619,8 +29387,8 @@
       "sha256": "15120b9bde1a6c2c39f8cc24fee9873290a54dee70331910a04ca25af5206f8f"
     },
     "web3/test/SecurityReviewFactoryDeployment.t.sol": {
-      "bytes": 7593,
-      "sha256": "3950d73067b0805df0666ec35ea2433d6f86fe167bfec8a4a22cb8964b7f2085"
+      "bytes": 7868,
+      "sha256": "e01cfaa393d6c3e983d3b894a4e61ba449df0915f01aa66bf7c5834cd5c9b91a"
     },
     "web3/test/SecurityReviewGovernance.t.sol": {
       "bytes": 6537,
@@ -28663,12 +29431,12 @@
       "sha256": "029ac3e673ccdb2f284a1e79fc4226848b65174610cc68d01552404798bc06d0"
     },
     "web3/test/ULRStaking.t.sol": {
-      "bytes": 14536,
-      "sha256": "549baceee4b383f888800bea8fe073a4c2585b40bc46e4b7865170e0b4b44c75"
+      "bytes": 16245,
+      "sha256": "bccb3aa16fc7c714b3f367e177f0c7c8bf6db3416be20a7ab71616f7aa2b8eb1"
     },
     "web3/test/ULRTreasury.t.sol": {
-      "bytes": 32324,
-      "sha256": "28b286e074cf84e5fcf4b0465394cf76a1f031215f61a6657676a690ae2e0b02"
+      "bytes": 39124,
+      "sha256": "58c7a71351063680dc26d635197df8677a4f14bf9786c2517a809cd2157ec00a"
     },
     "web3/test/UnitEscrowFixture.sol": {
       "bytes": 1632,
@@ -28679,8 +29447,8 @@
       "sha256": "303b1b70668519700316bc3deb3d1d9a9d9ee4893d037a3dab8d5ca30d0e8edc"
     },
     "web3/test/WithdrawalFeeSubsidy.t.sol": {
-      "bytes": 44150,
-      "sha256": "8abb830aa5af6a56fb58edf114f5adad3760ec69fe3e87a892101d7b7ba12cf6"
+      "bytes": 45029,
+      "sha256": "bced0e799ce17745833b607de66bd8e368870a4fb5bb0225e36d70e56bf1788b"
     },
     "web3/test/WithdrawalRounding.t.sol": {
       "bytes": 30262,
@@ -28848,7 +29616,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "52ee046bc67de954ae997372c3c721ec5a298318",
+  "source_revision": "47506da7104f096c27d71c9ba9ca046443959af5",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }

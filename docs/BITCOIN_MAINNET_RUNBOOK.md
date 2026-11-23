@@ -145,15 +145,23 @@ V6 на Anvil/Sepolia сохраняет `integration_fee_exemption=true`: со�
 ограничен последними 8192 блоками; для старого приглашения используйте
 `--recent-blocks` либо `--from-block`, а `--from-block 0` явно просматривает всю
 историю. `NOT_FOUND_IN_RANGE` относится только к возвращённому диапазону.
-Сохраните поле `block` выбранного результата и используйте его при вступлении:
+Сохраните поле `block` выбранного результата. С Ethereum mainnet или Sepolia
+при первом вступлении нужен журнал на независимом томе. Для защиты от отката
+обоих локальных томов подключите отдельный HTTPS-якорь по примеру.
+Сохраните переменную `SATOSHIFI_NONCE_ANCHOR_CONFIG` в окружении подписанта.
+[Настройка журнала и якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
 
 ```sh
 export BOARD_BLOCK='<поле block выбранного результата discover>'
+export NONCE_LEDGER_DIR='<абсолютный путь на отдельном томе>'
+export SATOSHIFI_NONCE_ANCHOR_CONFIG='<абсолютный путь к личному JSON с правами 0600>'
+install -d -m 700 "$NONCE_LEDGER_DIR"
 frost-signer setup join-chain --board "$BOARD" --rpc "$RPC" \
   --board-creation-block "$BOARD_BLOCK" \
   --accept-fingerprint "$FINGERPRINT" --identity-file "$IDENTITY" \
   --directory "$PARTICIPANT_DIR" \
-  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE"
+  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE" \
+  --nonce-ledger-dir "$NONCE_LEDGER_DIR" --nonce-anchor-config "$SATOSHIFI_NONCE_ANCHOR_CONFIG"
 ```
 
 `--board-creation-block` также принимают `setup status`, `assemble-chain`,

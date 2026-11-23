@@ -61,12 +61,9 @@ cd satoshify
 git rev-parse HEAD
 rustup override set 1.89.0
 python3.11 -m venv .venv
-.venv/bin/pip install -r signer-agent/requirements.lock
-.venv/bin/pip install --no-deps -e './signer-agent[test]'
 source .venv/bin/activate
-cargo build --locked --manifest-path frost-crypto/Cargo.toml
-forge build --root web3
-python ops/generate_abis.py --check
+python ops/bootstrap_host.py build
+python ops/bootstrap_host.py check --role signer
 frost-signer setup --help
 forge --version
 anvil --version
@@ -74,7 +71,9 @@ rustc --version
 ```
 
 Все используют один commit и настройки компилятора из `web3/foundry.toml`
-(solc 0.8.30); зависимости Solidity уже в репозитории, `forge install` не нужен.
+(solc 0.8.39). Установщик проверяет хеши Python-колёс, собирает FROST в новом
+каталоге и сохраняет SHA‑256 бинарника. `check` показывает его в
+`native_frost_sha256`. Зависимости Solidity уже в репозитории.
 Автоопределение remappings выключено: абсолютный путь к клону не должен попадать
 в metadata и менять runtime. `BOARD_BUILD_MISMATCH`/`REGISTRY_BUILD_MISMATCH`
 не обходят отключением проверки: сверьте commit и настройки сборки. При переходе
@@ -301,7 +300,8 @@ export FINGERPRINT='<поле fingerprint>'
 frost-signer setup join-chain --board "$BOARD" --rpc "$RPC" \
   --board-creation-block "$BOARD_BLOCK" \
   --accept-fingerprint "$FINGERPRINT" \
-  --identity-file "$IDENTITY" --directory "$PARTICIPANT_DIR"
+  --identity-file "$IDENTITY" --directory "$PARTICIPANT_DIR" \
+  --nonce-ledger-dir "$INDEPENDENT_NONCE_DIR"
 ```
 
 Подписанное enrollment связывает собственный адрес и три транспортных public
@@ -309,6 +309,14 @@ key с точными байтами приглашения. Публикует�
 Неполный набор, замена ключа, неверная подпись или несовпадающий roster отвергаются.
 Retry использует уже созданные ключи. Локальный `enrollment.json` публичный;
 передавать его не нужно, поскольку запись находится в board.
+До enrollment создайте независимый закрытый каталог `INDEPENDENT_NONCE_DIR`
+по [инструкции журнала](SIGNING_PROTOCOL.md#independent-nonce-ledger).
+Флаг обязателен для Ethereum mainnet и Bitcoin mainnet с Sepolia.
+Локальная репетиция и Sepolia + testnet4 поддерживают его опционально.
+Чтобы защитить новую роль от отката обоих локальных томов, дополнительно
+передайте `--nonce-anchor-config` при первом enrollment и задайте
+`SATOSHIFI_NONCE_ANCHOR_CONFIG` для дальнейшего подписания.
+[Настройка HTTPS-якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
 
 ## 3. Оператор запускает bootstrap
 

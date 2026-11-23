@@ -11,6 +11,7 @@ from pathlib import Path
 from eth_account import Account
 from hexbytes import HexBytes
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import TransactionNotFound, ContractLogicError
 from .operations import Journal, canonical, public_data
 from .deployment_limits import check_deployment
@@ -47,6 +48,21 @@ def artifact_fingerprint(compiled, *, legacy=False):
             "immutableReferences": code.get("immutableReferences", {}),
         }
     return "evm-v1:" + hashlib.sha256(canonical(executable).encode()).hexdigest()
+
+
+def pinned_artifact(item):
+    """Resolve a journal pin without falling back to an unrelated build."""
+    kind, pin = item["artifact"], item.get("artifact_hash")
+    compiled = artifact(kind)
+    fingerprint = dict(legacy=bool(pin and not pin.startswith("evm-v1:")))
+    if not pin or pin == artifact_fingerprint(compiled, **fingerprint):
+        return compiled, False
+    from .bitcoin_trust import previous_artifacts
+
+    for _, previous in previous_artifacts(kind):
+        if pin == artifact_fingerprint(previous, **fingerprint):
+            return previous, True
+    raise ValueError("ARTIFACT_HASH_MISMATCH")
 
 
 def encode_args(inputs, values):
@@ -112,9 +128,7 @@ class Bootstrap:
             or (not public_bitcoin and "bitcoin_policy" in profile)
         ):
             raise ValueError("INTEGRATION_NETWORK_NOT_ALLOWED")
-        self.w3 = Web3(
-            Web3.HTTPProvider(evm_rpc_override or profile["evm_rpc"], request_kwargs={"timeout": 20})
-        )
+        self.w3 = evm_web3(evm_rpc_override or profile["evm_rpc"], timeout=20)
         self.journal = Journal(state)
         self.contracts = dict(profile.get("contracts", {}))
         self.values = {}
@@ -148,7 +162,8 @@ class Bootstrap:
             raise ValueError("CHAIN_MISMATCH")
         if changed_rpc:
             from .bootstrap_parallel import verify_source_anchors
-            verify_source_anchors(self.w3, self.journal, self.prefix, allow_recovery=True)
+            verify_source_anchors(self.w3, self.journal, self.prefix, allow_recovery=True,
+                                  confirmation_floor=self.evm_confirmations)
         self.journal.put(self.prefix, request)
         if self.w3.eth.chain_id == 1 or self.evm_confirmations != 1:
             from .evm_network import read_block
@@ -161,6 +176,12 @@ class Bootstrap:
 
     def check_external_components(self):
         """Fail before any bootstrap transaction if an enrolled dependency changed."""
+        if "successor_dkg" in self.profile.get("bitcoin_recovery", {}):
+            from .bitcoin_recovery_policy import check_enrolled_successor
+            from .evm_network import read_block, verify_anchor
+            block = read_block(self.w3, self.evm_confirmations)
+            check_enrolled_successor(self.w3, self.profile, self.contract("dkg"), block.number)
+            verify_anchor(self.w3, block.number, block.hash)
         if "ulr" in self.profile and self.profile["ulr"]["mode"] == "reuse":
             from .bootstrap_ulr import inspect_roots
             inspect_roots(self.w3, self.profile,
@@ -284,8 +305,13 @@ class Bootstrap:
 
     def contract(self, name):
         item = self.contracts[name]
+        kind = item["artifact"]
+        if kind in ("ULRStaking", "BitcoinMintAdmission", "MiningPoolV1", "ConfederationBitcoinReserve") and item.get("artifact_hash"):
+            compiled, _ = pinned_artifact(item)
+        else:
+            compiled = artifact(kind)
         return self.w3.eth.contract(
-            address=item["address"], abi=artifact(item["artifact"])["abi"]
+            address=item["address"], abi=compiled["abi"]
         )
 
     def fn(self, spec):
@@ -454,10 +480,9 @@ class Bootstrap:
 
     def manifest(self):
         contracts = {}
+        previous_staking = False
         for name, item in self.contracts.items():
-            pin = item.get("artifact_hash")
-            if pin and pin != artifact_fingerprint(artifact(item["artifact"]), legacy=not pin.startswith("evm-v1:")):
-                raise ValueError("ARTIFACT_HASH_MISMATCH")
+            compiled, previous = pinned_artifact(item)
             code = self.w3.eth.get_code(item["address"])
             if not code:
                 raise ValueError("CONTRACT_CODE_MISSING")
@@ -466,6 +491,21 @@ class Bootstrap:
                 "0x"
             ) != runtime_hash.removeprefix("0x"):
                 raise ValueError("CODE_HASH_MISMATCH")
+            if previous:
+                from .bitcoin_trust import _check_runtime
+
+                _check_runtime(code, compiled["deployedBytecode"])
+                binding = (item["address"], item["artifact_hash"])
+                if binding not in getattr(self, "_previous_deployments", ()):
+                    from .contract_provenance import prove_creation
+                    from .evm_network import read_block, verify_anchor
+
+                    block = read_block(self.w3, self.evm_confirmations)
+                    prove_creation(self.w3, item["address"], item["artifact"], None, block.number,
+                                   previous_build=True)
+                    verify_anchor(self.w3, block.number, block.hash)
+                if name == "staking" and item["artifact"] == "ULRStaking":
+                    previous_staking = True
             contracts[name] = dict(item, runtime_hash=runtime_hash)
         step_keys = {self.prefix + ":" + step["id"] for step in self.profile["steps"]}
         steps = [
@@ -487,7 +527,7 @@ class Bootstrap:
             result["withdrawal_fee"] = manifest(self)
         if "ulr" in self.profile:
             from .bootstrap_ulr import manifest
-            result["ulr"] = manifest(self)
+            result["ulr"] = manifest(self, previous_staking=previous_staking)
         if "system_bootstrap" in self.profile:
             from .bootstrap_system import manifest
             result["system"] = manifest(self, result["ulr"], result["withdrawal_fee"])
@@ -560,8 +600,18 @@ class Bootstrap:
         retry_observation(lambda: self._verify_checks(step, receipt))
 
     def _verify_checks(self, step, receipt):
-        historical = [check for check in step.get("checks", []) if check.get("at_receipt")]
-        if any(type(check.get("at_receipt", False)) is not bool for check in step.get("checks", [])):
+        checks = step["checks"]
+        if step.get("artifact") == "SPVServicePaymentRegistry":
+            from .bootstrap_plan import spv_payment_deployment
+
+            confederation = self.profile.get("confederation_id")
+            if isinstance(confederation, str) and canonical(step) == canonical(
+                spv_payment_deployment(confederation, historical=False)
+            ):
+                # Preserve the exact version-1 request and its journal hash.
+                checks = spv_payment_deployment(confederation)["checks"]
+        historical = [check for check in checks if check.get("at_receipt")]
+        if any(type(check.get("at_receipt", False)) is not bool for check in checks):
             raise ValueError("BINDING_CHECK_SNAPSHOT_POLICY")
         if historical:
             if receipt is None:
@@ -570,16 +620,18 @@ class Bootstrap:
                 raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
         previous = getattr(self, "_read_snapshot", None)
         try:
-            if (receipt is not None and previous is None and len(historical) < len(step["checks"])
+            if (receipt is not None and previous is None and len(historical) < len(checks)
                     and self.w3.eth.chain_id == 11155111 and self.evm_confirmations == 1):
                 from .evm_network import read_block
                 block = read_block(self.w3, self.evm_confirmations)
                 if block.number < receipt.blockNumber:
                     raise ValueError("EVM_RECEIPT_HEAD_BEHIND")
                 self._read_snapshot = block
-            for check in step["checks"]:
+            for check in checks:
                 fn = self.fn(check)
                 value = (fn.call(block_identifier=receipt.blockNumber) if check.get("at_receipt") else self.read(fn))
+                if "indices" in check:
+                    value = [value[index] for index in check["indices"]]
                 if self.wire(value) != self.resolve(check["equals"]):
                     raise ValueError("BINDING_CHECK_FAILED")
         finally:
@@ -618,10 +670,48 @@ class Bootstrap:
         return transaction_gas_with_margin(self.w3, function.build_transaction(transaction))
 
     def record_deployment(self, step, result, receipt):
-        if step["kind"] != "deploy" or "contract" in result:
+        if step["kind"] != "deploy":
             return
         from .transaction_wait import retry_observation
-        retry_observation(lambda: self._record_deployment(step, result, receipt))
+        if "contract" in result:
+            retry_observation(lambda: self.verify_deployment_pin(step, result, receipt))
+        else:
+            retry_observation(lambda: self._record_deployment(step, result, receipt))
+
+    def verify_deployment_pin(self, step, result, receipt):
+        item = result["contract"]
+        if item["artifact"] != step["artifact"]:
+            raise ValueError("ARTIFACT_HASH_MISMATCH")
+        if step["artifact"] not in ("ULRStaking", "BitcoinMintAdmission", "MiningPoolV1", "ConfederationBitcoinReserve"):
+            return
+        compiled, previous = pinned_artifact(item)
+        if not previous:
+            return
+        if receipt is None or receipt.contractAddress != item["address"]:
+            raise ValueError("BTC_CREATION_RECEIPT_MISMATCH")
+        code = self.w3.eth.get_code(item["address"], block_identifier=receipt.blockNumber)
+        if HexBytes(item["runtime_hash"]) != Web3.keccak(code):
+            raise ValueError("CODE_HASH_MISMATCH")
+        self.verify_previous_creation(step, result, receipt, compiled, code)
+        if not hasattr(self, "_previous_deployments"):
+            self._previous_deployments = set()
+        self._previous_deployments.add((item["address"], item["artifact_hash"]))
+
+    def verify_previous_creation(self, step, result, receipt, compiled, code, transaction=None):
+        from .bitcoin_trust import _check_runtime
+        from .contract_provenance import _creation_input
+        from .evm_network import verify_anchor
+
+        _check_runtime(code, compiled["deployedBytecode"])
+        if transaction is None:
+            transaction = self.w3.eth.get_transaction(result["tx_hash"])
+        constructor = next(row for row in compiled["abi"] if row["type"] == "constructor")
+        arguments = encode_args(constructor["inputs"], self.resolve(step["args"]))
+        if (transaction["to"] is not None or HexBytes(transaction["hash"]) != HexBytes(result["tx_hash"])
+                or HexBytes(transaction["blockHash"]) != receipt.blockHash
+                or HexBytes(transaction["input"]) != _creation_input(compiled, arguments)):
+            raise ValueError("BTC_CANONICAL_CREATION_NOT_FOUND")
+        verify_anchor(self.w3, receipt.blockNumber, receipt.blockHash)
 
     def _record_deployment(self, step, result, receipt):
         if step.get("create_group"):
@@ -633,8 +723,18 @@ class Bootstrap:
         code = self.w3.eth.get_code(receipt.contractAddress, block_identifier=receipt.blockNumber)
         transaction = self.w3.eth.get_transaction(result["tx_hash"])
         check_deployment(code, transaction["input"])
-        from .bitcoin_trust import checked_runtime
-        checked_runtime(self.w3, receipt.contractAddress, step["artifact"], receipt.blockNumber)
+        from .bitcoin_trust import checked_runtime, runtime_artifact
+        try:
+            checked_runtime(self.w3, receipt.contractAddress, step["artifact"], receipt.blockNumber)
+        except ValueError as error:
+            # An old signed CREATE can still confirm after upgrading the SDK.
+            # Never select an old build for an unsigned or newly built step.
+            if (str(error) != "BTC_CONTRACT_BUILD_MISMATCH" or not result.get("raw_transaction")
+                    or Web3.keccak(HexBytes(result["raw_transaction"])) != HexBytes(result["tx_hash"])):
+                raise
+            _, a = runtime_artifact(self.w3, receipt.contractAddress, step["artifact"], receipt.blockNumber,
+                                    previous_build=True)
+            self.verify_previous_creation(step, result, receipt, a, code, transaction)
         result["contract"] = dict(address=receipt.contractAddress, artifact=step["artifact"],
             artifact_hash=artifact_fingerprint(a),
             runtime_hash=Web3.keccak(code).hex())
@@ -644,16 +744,21 @@ class Bootstrap:
         return apply_confirmed(self, identity, **options)
 
     def apply(self, identity=None, dry_run=False, verify=False, *, before_submit=None, defer_zk_freshness=False,
+              evm_graph_only=False,
               pause_for_funding=False, funding_complete=False, funding_min_wei=None, funding_operator_min_wei=None,
               ulr_distribution_complete=False, accept_ulr_distribution=None):
+        if evm_graph_only and (not verify or dry_run or identity is not None or defer_zk_freshness):
+            raise ValueError("API_EVM_GRAPH_VERIFY_ONLY")
         if defer_zk_freshness:
             from .zk_spv import is_zk
             if self.profile.get('bitcoin_network') not in ('mainnet','testnet4') or not is_zk(self.profile.get('bitcoin_policy')):
                 raise ValueError('BOOTSTRAP_ZK_BINDING_PROFILE')
-        from .bootstrap_parallel import parallel_groups, apply_group, recover_identity, restore_signed, save_signed
+        from .bootstrap_parallel import (parallel_groups, apply_group, recover_identity, require_publication_context,
+                                         restore_signed, save_signed)
         from .bootstrap_create import creation_groups, apply_group as apply_creation
         from .bootstrap_recovery import (ReplacementAwaitingFinality, check_receipt_binding,
-                                         require_resume_lane, signed_nonce)
+                                         require_resume_lane, signed_fields, signed_nonce)
+        from .reservation_transfer_cli import cancelled_result, is_reservation_transfer, validate_rebroadcast
         groups = parallel_groups(self.profile["steps"])
         creates = creation_groups(self.profile["steps"])
         self.check_external_components()
@@ -682,6 +787,10 @@ class Bootstrap:
                 return funding
             handled_groups = set()
             for step in self.profile["steps"]:
+                # EVM graph verification replays the original journal and current
+                # on-chain bindings. A live Bitcoin observation is a separate check.
+                if evm_graph_only and step["kind"] == "bitcoin_ready":
+                    continue
                 if step.get("create_group"):
                     group = step["create_group"]
                     if group in handled_groups:
@@ -720,6 +829,9 @@ class Bootstrap:
                     continue
                 key = self.prefix + ":" + step["id"]
                 entry = self.journal.put(key, step)
+                if entry["status"] == "CANCELLED" and is_reservation_transfer(self.prefix, step):
+                    from .evm_network import read_block
+                    return cancelled_result(self.w3, entry, read_block(self.w3, self.evm_confirmations))
                 result = entry["result"]
                 if step["kind"] == "ulr_distribution":
                     pending = distribution_checkpoint(self, step, entry, account,
@@ -769,6 +881,8 @@ class Bootstrap:
                             if self.evm_confirmations > int(self.profile.get("evm_confirmations", "1")):
                                 return dict(status="CONFIRMING", step=step["id"], tx_hash=result["tx_hash"])
                             raise ValueError("EVM_RPC_BEHIND")
+                    if step["kind"] == "deploy":
+                        self.verify_deployment_pin(step, result, receipt)
                     self.outputs(step, result)
                     self.verify_checks(step, receipt)
                     continue
@@ -795,6 +909,7 @@ class Bootstrap:
                     )
                 if account is None:
                     raise ValueError("LOCAL_EVM_IDENTITY_REQUIRED")
+                protected_transfer = is_reservation_transfer(self.prefix, step)
                 recover_only = bool(before_submit([step])) if before_submit is not None else False
                 # Shared identity lock across all journals prevents parallel nonce allocation.
                 nonce_lock = Path(identity).resolve().with_suffix(".evm-nonce.lock")
@@ -816,6 +931,11 @@ class Bootstrap:
                                                  reservations=reservations)
                     except ReplacementAwaitingFinality as error:
                         return dict(step=step["id"], **error.outcome)
+                    if protected_transfer:
+                        current = self.journal.get(key)
+                        if current["status"] == "CANCELLED":
+                            from .evm_network import read_block
+                            return cancelled_result(self.w3, current, read_block(self.w3, self.evm_confirmations))
                     replacement = replacements.get((str(self.journal.path.resolve()), key))
                     if replacement:
                         if replacement["status"] == "BROADCAST":
@@ -835,6 +955,9 @@ class Bootstrap:
                                 return dict(step=step["id"], **waiting)
                             raise ValueError("EVM_RPC_BEHIND")
                         tx = self.build_transaction(step, account, nonce)
+                        if protected_transfer:
+                            validate_rebroadcast(self.w3, self.journal, self.prefix, step, tx, account.address,
+                                                 confirmation_floor=self.evm_confirmations)
                         signed = account.sign_transaction(tx)
                         raw = bytes(signed.raw_transaction)
                         result = dict(
@@ -861,6 +984,11 @@ class Bootstrap:
                         except TransactionNotFound:
                             if signed_nonce(result, account, self.w3.eth.chain_id) < floor:
                                 raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
+                            if protected_transfer:
+                                fields = signed_fields(result, account, self.w3.eth.chain_id)
+                                validate_rebroadcast(self.w3, self.journal, self.prefix, step, fields, account.address,
+                                                     confirmation_floor=self.evm_confirmations)
+                            require_publication_context(self, self.journal, self.prefix, step)
                             self.broadcast(result["raw_transaction"])
                         self.journal.update(key, "BROADCAST", result)
                         try:
@@ -905,6 +1033,8 @@ class Bootstrap:
                     identity_journal.update(result["tx_hash"], "CONFIRMED",
                         dict(block_hash=result["block_hash"], block_number=result["block_number"]))
             manifest = self.manifest()
+            if evm_graph_only:
+                return dict(status="EVM_GRAPH_VERIFIED", manifest=manifest)
             status = "GRAPH_CONFIGURED_FRESHNESS_PENDING" if defer_zk_freshness else "VERIFIED"
             self.journal.update(self.prefix, status, manifest)
             return dict(status=status, manifest=manifest)
@@ -944,6 +1074,7 @@ def main(argv):
     recovery.add_argument("--prepare-nonce-close", action="store_true", help="Review an exact zero-value nonce close")
     recovery.add_argument("--confirm-nonce-close", metavar="FINGERPRINT", help="Authorize that exact nonce close")
     p.add_argument("--confirm-replacement", metavar="FINGERPRINT", help="Send the reviewed fee replacement for this call")
+    p.add_argument("--cancel-reservation", action="store_true", help="Replace a journaled reservation transfer with a reviewed zero-value self-transfer")
     p.add_argument("--max-fee-per-gas-wei", help="Replacement EIP-1559 fee cap in wei")
     p.add_argument("--max-priority-fee-per-gas-wei", help="Replacement EIP-1559 tip cap in wei")
     p.add_argument("--gas-limit", help="Replacement gas limit, defaults to the previous attempt's limit")
@@ -987,10 +1118,10 @@ def _run(a):
 
         result = replace_pending(a.identity_file, a.rpc, a.tx_hash, fee=a.max_fee_per_gas_wei,
             priority=a.max_priority_fee_per_gas_wei, max_cost=a.max_cost_wei, gas=a.gas_limit,
-            confirmed=a.confirm_replacement)
+            confirmed=a.confirm_replacement, cancel=a.cancel_reservation)
         print(json.dumps(result, indent=2))
         return 2 if result["status"] == "EVM_REPLACEMENT_SEND_UNCERTAIN" else 0
-    if any(value is not None for value in replacement):
+    if a.cancel_reservation or any(value is not None for value in replacement):
         raise ValueError("EVM_REPLACEMENT_INPUTS_REQUIRED")
     if a.action == "bind-legacy-nonce":
         if not all((a.identity_file, a.rpc, a.tx_hash, a.source_journal)) or a.profile or a.deployment or a.dry_run:

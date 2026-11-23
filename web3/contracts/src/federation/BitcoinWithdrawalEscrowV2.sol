@@ -6,12 +6,15 @@ import "./BitcoinBatchRegistry.sol";
 import "../core/BitcoinTxParser.sol";
 import "../tokens/ConfederationShareV2.sol";
 import "./CallbackPoolRegistry.sol";
+import "./BitcoinWithdrawalRecoveryFactory.sol";
+import "./BitcoinWithdrawalFeeVerifier.sol";
 
 import {IPaymentSPV, IDepositSpendRecorder, IWithdrawalPool, ICustodyDepositPool}
     from "./BitcoinWithdrawalEscrow.sol";
 
 interface IWithdrawalFeeLimit {
     function minerFeeLimitSats(uint256 id) external view returns (uint64);
+    function minimumPayoutSats(uint256 id) external view returns (uint64);
     function shareToken() external view returns (address);
     function bitcoinReserve() external view returns (address);
 }
@@ -22,22 +25,20 @@ interface IConfederationReserveBinding {
     function shareToken() external view returns (address);
 }
 
-interface IWithdrawalInputValues {
-    struct OutputValue { uint64 sats; bytes script; bool known; }
-    function getValue(bytes32 key) external view returns (OutputValue memory);
-    function backingSats(bytes32 key) external view returns (uint256);
-    function scriptPools(bytes32 scriptHash) external view returns (address);
-}
-
 /// @notice Pays ordinary S withdrawals from their gross locked backing including miner fees.
 contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
     using SafeERC20 for IERC20;
     uint256 public constant SAT = 1e10;
     uint64 public immutable defaultMinerFeeLimitSats;
+    BitcoinWithdrawalFeeVerifier public immutable feeVerifier;
+    BitcoinWithdrawalRecoveryFactory public immutable recoveryFactory;
 
     mapping(bytes32 => uint256) public minerFee;
 
     error InvalidFeePlan();
+    error InvalidWithdrawalDestination();
+    error InvalidRecoveryBinding();
+    error RecoveryEpochPaused();
     enum State {
         None,
         Pending,
@@ -93,16 +94,19 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
 
     IDepositSpendRecorder public depositRegistry;
     CallbackPoolRegistry public callbackPoolRegistry;
+    BitcoinWithdrawalRecovery public recovery;
     // BitcoinDepositRegistry also uses this accessor for legacy fee credits.
     address public constant withdrawalFees = address(0);
     mapping(bytes32 => Request) public requests;
     mapping(bytes32 => Payment) private payments;
+    mapping(bytes32 => uint32) private boundChangeOutputs;
     mapping(bytes32 => bool) public spentInputs;
     event Escrowed(bytes32 indexed id, address indexed token, uint256 amount);
     event PaymentBound(bytes32 indexed batch, bytes32 txid);
     event PaymentSettled(bytes32 indexed batch, bytes32 txid, bytes32 blockHash);
     event Refunded(bytes32 indexed id);
     event CallbackPoolRegistrySet(address indexed registry);
+    event RecoverySet(address indexed recovery);
 
     constructor(
         address registry,
@@ -114,9 +118,11 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
     ) {
         if (defaultMinerFeeLimitSats_ == 0) revert InvalidFeePlan();
         defaultMinerFeeLimitSats = defaultMinerFeeLimitSats_;
+        recoveryFactory = new BitcoinWithdrawalRecoveryFactory();
         require(registry.code.length > 0 && relay.code.length > 0 && confirmations >= 6, "config");
         require(minP2WPKHSats_ >= 294 && minP2TRSats_ >= 330, "withdrawal minimums");
         batches = BitcoinBatchRegistry(registry);
+        feeVerifier = batches.withdrawalFeeVerifier();
         spv = IPaymentSPV(relay);
         depth = confirmations;
         minP2WPKHSats = minP2WPKHSats_;
@@ -138,6 +144,53 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         batches.authorization().consumeOperation(op);
         nonce++;
         depositRegistry = IDepositSpendRecorder(registry);
+    }
+
+    function getSetRecoveryOperationHash(address policy) public view returns (bytes32) {
+        return batches.authorization().hashOperation(address(this), this.setRecovery.selector,
+            keccak256(abi.encode(policy, policy.codehash)), nonce);
+    }
+
+    /// @notice One-time pre-funding binding for the V3 cold recovery profile.
+    function setRecovery(address policy, bytes32 op) external {
+        BitcoinWithdrawalRecovery candidate = BitcoinWithdrawalRecovery(policy);
+        if (address(recovery) != address(0) || !recoveryFactory.deployed(policy) || address(candidate.escrow()) != address(this)
+            || batches.nonce() != 1 || batches.feeReserve() != address(0) || op != getSetRecoveryOperationHash(policy)) {
+            revert InvalidRecoveryBinding();
+        }
+        candidate.validateBinding();
+        batches.authorization().consumeOperation(op);
+        ++nonce;
+        recovery = candidate;
+        BitcoinDepositRegistry(address(depositRegistry)).registerRecoveryScript(
+            address(candidate.reserve()), candidate.successorScriptHash(), candidate.sponsorScriptHash()
+        );
+        batches.setRecoveryController(policy);
+        emit RecoverySet(policy);
+    }
+
+    function recordRecovery(bytes calldata raw, bytes32 txid) external nonReentrant {
+        if (msg.sender != address(recovery)) revert InvalidRecoveryBinding();
+        (bytes32[] memory prev, uint32[] memory vout) = BitcoinTxParser.parseAllInputs(raw);
+        for (uint256 i; i < prev.length; ++i) {
+            bytes32 key = keccak256(abi.encode(_display(prev[i]), vout[i]));
+            if (spentInputs[key]) revert InvalidRecoveryBinding();
+            spentInputs[key] = true;
+        }
+        depositRegistry.recordFamily(txid);
+        IWithdrawalInputValues(address(depositRegistry)).recordSpendWithChange(raw, 0, 1);
+    }
+
+    function _requireOpenEpoch() private view {
+        if (address(recovery) != address(0) && recovery.withdrawalsPaused()) revert RecoveryEpochPaused();
+    }
+
+    function _epochScript(bytes32 batch) private view returns (bytes32) {
+        return address(recovery) == address(0) ? bytes32(0) : recovery.paymentScriptHash(batch);
+    }
+
+    function _recovered(bytes32 batch) private view returns (bool) {
+        return address(recovery) != address(0) && recovery.recoveredTxid(batches.reservationRoot(batch)) != 0;
     }
 
     function requestKey(address pool, uint256 id) public pure returns (bytes32) {
@@ -181,17 +234,22 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         uint256 amount,
         bytes calldata script
     ) private {
+        _requireOpenEpoch();
         address reserve = IWithdrawalFeeLimit(pool).bitcoinReserve();
         require(
             address(depositRegistry) != address(0) && depositRegistry.poolScripts(reserve) != 0
                 && IWithdrawalFeeLimit(pool).shareToken() == token && localCustodyPools[pool]
                 && IConfederationReserveBinding(reserve).escrow() == address(this)
                 && IConfederationReserveBinding(reserve).deposits() == address(depositRegistry)
-                && IConfederationReserveBinding(reserve).shareToken() == token,
+                && IConfederationReserveBinding(reserve).shareToken() == token
+                && (address(recovery) == address(0) || address(recovery.reserve()) == reserve),
             "unregistered S reserve"
         );
         require(requests[key].state == State.None && amount > 0 && amount % SAT == 0, "amount or duplicate");
-        _validateOutput(amount / SAT, script);
+        IWithdrawalFeeLimit terms = IWithdrawalFeeLimit(pool);
+        (uint64 cap, uint256 scriptMinimum) = withdrawalPolicy(script, terms.minerFeeLimitSats(localId));
+        uint256 minimum = terms.minimumPayoutSats(localId);
+        if (minimum < scriptMinimum || amount / SAT < minimum + cap) revert InvalidFeePlan();
         uint256 beforeBalance = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         require(IERC20(token).balanceOf(address(this)) == beforeBalance + amount, "transfer");
@@ -207,10 +265,24 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         _lock(requestKey(msg.sender, id), msg.sender, id, token, owner, amount, script);
     }
 
-    function _validateOutput(uint256 sats, bytes memory script) private view {
+    /// @notice Resolve the effective fee cap and the configured minimum for an external payout script.
+    function withdrawalPolicy(bytes calldata script, uint64 feeLimit)
+        public view returns (uint64 effectiveFeeLimit, uint256 scriptMinimumSats)
+    {
+        scriptMinimumSats = _scriptMinimum(script);
+        IWithdrawalInputValues registry = IWithdrawalInputValues(address(depositRegistry));
+        if (registry.scriptPools(keccak256(script)) != address(0)) revert InvalidWithdrawalDestination();
+        effectiveFeeLimit = _effectiveFeeLimit(feeLimit);
+    }
+
+    function _effectiveFeeLimit(uint64 feeLimit) private view returns (uint64) {
+        return feeLimit == type(uint64).max ? defaultMinerFeeLimitSats : feeLimit;
+    }
+
+    function _scriptMinimum(bytes memory script) private view returns (uint256) {
         bool isP2WPKH = script.length == 22 && script[0] == 0x00 && script[1] == 0x14;
         require(isP2WPKH || (script.length == 34 && script[0] == 0x51 && script[1] == 0x20), "script");
-        require(sats >= (isP2WPKH ? minP2WPKHSats : minP2TRSats), "below withdrawal minimum");
+        return isP2WPKH ? minP2WPKHSats : minP2TRSats;
     }
 
     function refund(bytes32 key) external nonReentrant {
@@ -218,7 +290,9 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         require(msg.sender == r.pool, "owner");
         require(
             r.state == State.Pending
-                || (r.state == State.Bound && batches.batchState(r.batch) == BitcoinBatchRegistry.State.Cancelled),
+                || (r.state == State.Bound
+                    && (batches.batchState(r.batch) == BitcoinBatchRegistry.State.Cancelled
+                        || address(recovery) != address(0) && recovery.canRefund(r.batch))),
             "signature may exist"
         );
         r.state = State.Refunded;
@@ -263,9 +337,11 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
     function _bindUserFunded(bytes32 batch, bytes calldata raw, bytes32 txid, bytes32[] memory keys, bool replacement)
         private
     {
+        _requireOpenEpoch();
         Payment storage p = payments[batch];
         if (txid == bytes32(0) || p.txid != bytes32(0) || keys.length == 0 || keys.length > 32
             || batches.batchState(batch) != BitcoinBatchRegistry.State.Reserved
+            || batches.batchWalletResult(batch) != batches.walletResult()
             || batches.feeReserve() != address(0)) revert InvalidFeePlan();
         for (uint256 i; i < keys.length; ++i) {
             Request storage r = requests[keys[i]];
@@ -280,7 +356,7 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
             p.requests.push(keys[i]);
         }
         uint256 fee = _feeForPrincipalInputs(batch, raw);
-        _checkNetPayments(raw, p.requests, fee);
+        boundChangeOutputs[batch] = _checkNetPayments(batch, raw, p.requests, fee, replacement);
         p.txid = txid;
         minerFee[batch] = fee;
         depositRegistry.recordFamily(txid);
@@ -288,70 +364,24 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
     }
 
     function _feeForPrincipalInputs(bytes32 batch, bytes calldata raw) private view returns (uint256) {
-        if (raw.length > 100000) revert InvalidFeePlan();
-        (bytes32[] memory prev, uint32[] memory vouts) = BitcoinTxParser.parseAllInputs(raw);
-        bytes32[] memory reserved = batches.getInputs(batch);
-        IWithdrawalInputValues registry = IWithdrawalInputValues(address(depositRegistry));
-        if (prev.length != reserved.length) revert InvalidFeePlan();
-        uint256 totalInputs;
-        for (uint256 i; i < prev.length; ++i) {
-            bytes32 key = keccak256(abi.encode(prev[i], vouts[i]));
-            IWithdrawalInputValues.OutputValue memory value = registry.getValue(key);
-            if (keccak256(abi.encode(_display(prev[i]), vouts[i])) != reserved[i] || !value.known || value.sats == 0
-                || registry.backingSats(key) != value.sats
-                || registry.scriptPools(keccak256(value.script)) == address(0)) revert InvalidFeePlan();
-            totalInputs += value.sats;
-        }
-        uint256 outputs = BitcoinTxParser.outputCount(raw);
-        if (outputs == 0 || outputs > 32) revert InvalidFeePlan();
-        uint256 totalOutputs;
-        for (uint256 i; i < outputs; ++i) {
-            (uint64 amount,) = BitcoinTxParser.outputAt(raw, i);
-            totalOutputs += amount;
-        }
-        if (totalOutputs > totalInputs) revert InvalidFeePlan();
-        return totalInputs - totalOutputs;
+        return feeVerifier.feeForInputs(batches, IWithdrawalInputValues(address(depositRegistry)), batch, raw, _epochScript(batch));
     }
 
-    function _checkNetPayments(bytes calldata raw, bytes32[] storage keys, uint256 fee) private view {
-        uint256 count = keys.length;
-        uint256[] memory net = new uint256[](count);
-        bytes32[] memory destinations = new bytes32[](count);
-        IWithdrawalInputValues registry = IWithdrawalInputValues(address(depositRegistry));
-        for (uint256 i; i < count; ++i) {
+    function _checkNetPayments(bytes32 batch, bytes calldata raw, bytes32[] storage keys, uint256 fee, bool replacement)
+        private view returns (uint32)
+    {
+        BitcoinWithdrawalFeeVerifier.Payout[] memory payouts = new BitcoinWithdrawalFeeVerifier.Payout[](keys.length);
+        for (uint256 i; i < keys.length; ++i) {
             Request storage r = requests[keys[i]];
-            destinations[i] = keccak256(r.script);
-            if (registry.scriptPools(destinations[i]) != address(0)) revert InvalidFeePlan();
-            uint256 share = fee / count + (i < fee % count ? 1 : 0);
-            uint256 gross = r.amount / SAT;
-            uint64 limit = IWithdrawalFeeLimit(r.pool).minerFeeLimitSats(r.localId);
-            if (share > (limit == type(uint64).max ? defaultMinerFeeLimitSats : limit) || share >= gross) revert InvalidFeePlan();
-            net[i] = gross - share;
-            _validateOutput(net[i], r.script);
+            IWithdrawalFeeLimit terms = IWithdrawalFeeLimit(r.pool);
+            uint64 limit = _effectiveFeeLimit(terms.minerFeeLimitSats(r.localId));
+            uint64 minimum = terms.minimumPayoutSats(r.localId);
+            if (minimum < _scriptMinimum(r.script)) revert InvalidFeePlan();
+            payouts[i] = BitcoinWithdrawalFeeVerifier.Payout(r.script, r.amount / SAT, limit, minimum);
         }
-        for (uint256 i; i < count; ++i) {
-            Request storage r = requests[keys[i]];
-            uint256 due;
-            for (uint256 j; j < count; ++j) {
-                if (destinations[j] == destinations[i]) due += net[j];
-            }
-            if (BitcoinTxParser.sumOutputsToScript(raw, r.script) != due) revert InvalidFeePlan();
-        }
-        uint256 outputCount = BitcoinTxParser.outputCount(raw);
-        for (uint256 i; i < outputCount; ++i) {
-            (uint64 amount, bytes memory script) = BitcoinTxParser.outputAt(raw, i);
-            if (amount == 0) continue;
-            bytes32 scriptHash = keccak256(script);
-            if (registry.scriptPools(scriptHash) != address(0)) continue;
-            bool known;
-            for (uint256 j; j < count; ++j) {
-                if (destinations[j] == scriptHash) {
-                    known = true;
-                    break;
-                }
-            }
-            if (!known) revert InvalidFeePlan();
-        }
+        return feeVerifier.checkNetPayments(
+            IWithdrawalInputValues(address(depositRegistry)), raw, payouts, fee, replacement, _epochScript(batch)
+        );
     }
 
     function settle(bytes32 batch, bytes calldata raw, bytes32 blockHash, bytes32[] calldata siblings, uint256 index)
@@ -359,7 +389,8 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         nonReentrant
     {
         Payment storage p = payments[batch];
-        require(!p.settled && p.txid != 0 && batches.batchState(batch) == BitcoinBatchRegistry.State.Signing, "state");
+        require(!p.settled && p.txid != 0 && batches.batchState(batch) == BitcoinBatchRegistry.State.Signing
+            && !_recovered(batch), "state");
         require(raw.length <= 100000 && siblings.length <= 32 && index >> siblings.length == 0, "proof bounds");
         require(BitcoinTxParser.txId(raw) == p.txid, "transaction");
         (bool canonical, uint64 confirmations) = spv.getBlockStatus(blockHash);
@@ -376,14 +407,14 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
         }
         uint256 fee = _feeForPrincipalInputs(batch, raw);
         if (fee != minerFee[batch]) revert InvalidFeePlan();
-        _checkNetPayments(raw, p.requests, fee);
-        require(address(depositRegistry) != address(0), "deposit registry missing");
         uint256 burnedSats;
         for (uint256 i; i < p.requests.length; i++) {
             Request storage r = requests[p.requests[i]];
             burnedSats += r.amount / SAT;
         }
-        depositRegistry.recordSpend(raw, burnedSats);
+        // The proven txid commits the outputs validated at bind. A subsequent
+        // deposit registration cannot reclassify any output of this payment.
+        IWithdrawalInputValues(address(depositRegistry)).recordSpendWithChange(raw, burnedSats, boundChangeOutputs[batch]);
         p.settled = true;
         p.blockHash = blockHash;
         for (uint256 i; i < p.requests.length; i++) {
@@ -404,7 +435,7 @@ contract BitcoinWithdrawalEscrowV2 is ReentrancyGuard {
 
     function isBound(bytes32 batch) external view returns (bool) {
         Payment storage p = payments[batch];
-        if (p.txid == 0 || p.settled) return false;
+        if (p.txid == 0 || p.settled || _recovered(batch)) return false;
         for (uint256 i; i < p.requests.length; ++i) {
             if (requests[p.requests[i]].state != State.Bound) return false;
         }

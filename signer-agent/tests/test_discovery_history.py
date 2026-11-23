@@ -112,7 +112,7 @@ def test_cli_uses_configured_floor_only_on_configured_evm(
 ):
     w3, requests, _ = search
     w3.eth.chain_id = rpc_chain
-    monkeypatch.setattr(onboarding, "Web3", Mock(wraps=Web3, return_value=w3))
+    monkeypatch.setattr(onboarding, "evm_web3", Mock(return_value=w3))
     config = launch_configurator.defaults()
     config.update(ethereum_network="sepolia", evm_discovery_from_block=first)
     config_path = tmp_path / "launch.json"

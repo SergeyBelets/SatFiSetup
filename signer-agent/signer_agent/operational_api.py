@@ -4,13 +4,113 @@ This process has no access path to participant state, exports, passwords or priv
 
 import hashlib
 import hmac
+import io
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import BoundedSemaphore, Lock
+from time import monotonic
 from urllib.parse import urlsplit, parse_qs, unquote
 from .safe_errors import DiagnosticArgumentParser
 from .operations import Journal, OperationJournal, public_data, prepare_operation
-from .bootstrap import Bootstrap, encode_args, artifact
+from .bootstrap import Bootstrap, artifact
+from .bitcoin_rpc import BitcoinRPC
+
+
+READINESS_TTL_SECONDS = 15
+HTTP_BODY_LIMIT = 64 * 1024
+HTTP_REQUEST_LIMIT = 128 * 1024
+HTTP_REQUEST_READ_SECONDS = 10
+HTTP_CONNECTION_LIMIT = 16
+
+
+class RequestLimitExceeded(Exception):
+    pass
+
+
+class RequestInput(io.RawIOBase):
+    """Enforce one deadline and byte budget across the request line, headers and body."""
+
+    def __init__(self, connection):
+        self.connection = connection
+        self.deadline = monotonic() + HTTP_REQUEST_READ_SECONDS
+        self.remaining = HTTP_REQUEST_LIMIT
+
+    def readable(self):
+        return True
+
+    def readinto(self, buffer):
+        if self.remaining == 0:
+            raise RequestLimitExceeded()
+        timeout = self.deadline - monotonic()
+        if timeout <= 0:
+            raise TimeoutError()
+        self.connection.settimeout(timeout)
+        try:
+            size = self.connection.recv_into(buffer, min(self.remaining, len(buffer)))
+        finally:
+            self.connection.settimeout(HTTP_REQUEST_READ_SECONDS)
+        self.remaining -= size
+        return size
+
+
+class OperationalHTTPServer(ThreadingHTTPServer):
+    request_queue_size = 32
+
+    def __init__(self, address, request_handler):
+        self._connections = BoundedSemaphore(HTTP_CONNECTION_LIMIT)
+        super().__init__(address, request_handler)
+
+    def process_request(self, request, client_address):
+        if not self._connections.acquire(blocking=False):
+            try:
+                request.setblocking(False)
+                request.send(
+                    b"HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\n"
+                    b"Retry-After: 1\r\nCache-Control: no-store\r\nContent-Length: 0\r\n\r\n"
+                )
+            except OSError:
+                pass
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._connections.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._connections.release()
+
+
+def add_connection_options(parser):
+    parser.add_argument("--rpc", help="Override the local EVM RPC")
+    parser.add_argument("--bitcoin-rpc", help="Local configuration for the public Bitcoin Core RPC endpoint")
+    parser.add_argument("--bitcoin-cookie", help="Local path to the Bitcoin Core authentication file")
+
+
+def connection_options(args):
+    if bool(args.bitcoin_rpc) != bool(args.bitcoin_cookie):
+        raise ValueError("BITCOIN_RPC_CREDENTIALS_REQUIRED")
+    return dict(evm_rpc=args.rpc, bitcoin_rpc=args.bitcoin_rpc, bitcoin_cookie=args.bitcoin_cookie)
+
+
+def bitcoin_for_profile(profile, bitcoin_rpc, bitcoin_cookie):
+    # A transaction-only or local profile has no Bitcoin freshness checkpoint.
+    if not any(step["kind"] == "bitcoin_ready" for step in profile["steps"]):
+        return None
+    if not bitcoin_rpc or not bitcoin_cookie:
+        raise ValueError("MAINNET_CORE_REQUIRED")
+    return BitcoinRPC(bitcoin_rpc, bitcoin_cookie, profile["bitcoin_network"], profile["bitcoin_policy"])
+
+
+def deployment_runner(profile, journal, *, evm_rpc=None, bitcoin_rpc=None, bitcoin_cookie=None, evm_graph_only=False):
+    core = None if evm_graph_only else bitcoin_for_profile(profile, bitcoin_rpc, bitcoin_cookie)
+    return Bootstrap(profile, journal.path, bitcoin=core, evm_rpc_override=evm_rpc)
 
 
 def public_result(result):
@@ -75,7 +175,48 @@ def public_operation(policy, entry):
     )
 
 
-def read_view(policy, journal, name, args=None):
+class DeploymentObservations:
+    """Reuse recent HTTP verification results without queuing concurrent refreshes."""
+
+    def __init__(self, journal, connections):
+        self.journal = journal
+        self.connections = connections
+        self.checked = {}
+        self.refresh = Lock()
+
+    def recent(self, deployment):
+        saved = self.checked.get(deployment)
+        if saved is not None:
+            timestamp, runner, ready = saved
+            age = monotonic() - timestamp
+            if age < READINESS_TTL_SECONDS:
+                return runner, ready, int(age)
+
+    def observe(self, deployment):
+        saved = self.recent(deployment)
+        if saved is not None:
+            return saved
+        if not self.refresh.acquire(blocking=False):
+            raise ValueError("API_VERIFICATION_IN_PROGRESS")
+        try:
+            saved = self.recent(deployment)
+            if saved is not None:
+                return saved
+            profile = self.journal.get(deployment)["request"]["profile"]
+            runner = deployment_runner(profile, self.journal, **self.connections)
+            ready = runner.apply(verify=True)["status"] == "VERIFIED"
+            self.checked[deployment] = (monotonic(), runner, ready)
+            return runner, ready, 0
+        except KeyError:
+            raise
+        except Exception:
+            self.checked[deployment] = (monotonic(), None, False)
+            raise
+        finally:
+            self.refresh.release()
+
+
+def read_view(policy, journal, name, args=None, *, observations=None, **connections):
     spec = dict(policy.get("views", {})[name])
     if spec.get("deployment") not in policy.get("deployments", []):
         raise KeyError(spec.get("deployment"))
@@ -84,8 +225,13 @@ def read_view(policy, journal, name, args=None):
             raise ValueError("VIEW_ARGUMENTS_FIXED")
         spec["args"] = public_data(args)
     profile = journal.get(spec["deployment"])["request"]["profile"]
-    b = Bootstrap(profile, journal.path)
-    if b.apply(verify=True)["status"] != "VERIFIED":
+    if observations is None:
+        b = deployment_runner(profile, journal, **connections)
+        ready = b.apply(verify=True)["status"] == "VERIFIED"
+        age = 0
+    else:
+        b, ready, age = observations.observe(spec["deployment"])
+    if not ready:
         raise ValueError("DEPLOYMENT_INCOMPLETE")
     fn = b.fn(spec)
     if fn.abi["stateMutability"] not in ("view", "pure"):
@@ -99,16 +245,29 @@ def read_view(policy, journal, name, args=None):
         bitcoin_network=profile["bitcoin_network"],
         block_number=str(block.number),
         block_hash=block.hash.hex(),
+        deployment_check_age_seconds=age,
         value=b.wire(value),
         units=b.resolve(spec.get("units")),
     )
 
 
-def handler(policy, journal):
+def handler(policy, journal, **connections):
     requests = OperationJournal(journal.path)
+    observations = DeploymentObservations(journal, connections)
 
     class API(BaseHTTPRequestHandler):
         server_version = "SatohsiOps/1"
+
+        def setup(self):
+            super().setup()
+            self.rfile.close()
+            self.rfile = io.BufferedReader(RequestInput(self.connection))
+
+        def handle_one_request(self):
+            try:
+                super().handle_one_request()
+            except RequestLimitExceeded:
+                self.close_connection = True
 
         def log_message(self, *args):
             pass  # Never log credentials, query strings or request bodies.
@@ -243,13 +402,12 @@ def handler(policy, journal):
                 if path == "/readiness":
                     checks = []
                     for deployment in policy.get("deployments", []):
-                        entry = journal.get(deployment)
-                        profile = entry["request"]["profile"]
-                        state = Bootstrap(profile, journal.path).apply(verify=True)
+                        _, ready, age = observations.observe(deployment)
                         checks.append(
                             {
                                 "deployment": deployment,
-                                "ready": state["status"] == "VERIFIED",
+                                "ready": ready,
+                                "age_seconds": age,
                             }
                         )
                     ready = bool(checks) and all(c["ready"] for c in checks)
@@ -268,7 +426,7 @@ def handler(policy, journal):
                     for name, metric in policy.get("metrics", {}).items():
                         try:
                             observed[name] = read_view(
-                                policy, journal, metric["view"], metric.get("args")
+                                policy, journal, metric["view"], metric.get("args"), observations=observations
                             )
                         except Exception:
                             observed[name] = {"error": "METRIC_UNAVAILABLE"}
@@ -296,7 +454,7 @@ def handler(policy, journal):
                         raise ValueError("VIEW_ARGUMENTS_SIZE")
                     args = None if encoded is None else json.loads(encoded)
                     return self.reply(
-                        200, read_view(policy, journal, path.split("/")[-1], args)
+                        200, read_view(policy, journal, path.split("/")[-1], args, observations=observations)
                     )
                 return self.reply(404, {"error": "NOT_FOUND"})
             except KeyError:
@@ -305,6 +463,8 @@ def handler(policy, journal):
                 code = str(exc)
                 if code == "API_OPERATION_DEPLOYMENT_REQUIRED":
                     return self.reply(409, {"error": code})
+                if code == "API_VERIFICATION_IN_PROGRESS":
+                    return self.reply(503, {"error": code})
                 if code in (
                     "API_OPERATION_DEPLOYMENT_QUERY",
                     "INVALID_IDEMPOTENCY_KEY",
@@ -324,10 +484,16 @@ def handler(policy, journal):
             if urlsplit(self.path).path != "/v1/operations":
                 return self.reply(404, {"error": "NOT_FOUND"})
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if length <= 0 or length > 65536:
+                lengths = self.headers.get_all("Content-Length", [])
+                if len(lengths) > 1 or "Transfer-Encoding" in self.headers:
+                    return self.reply(400, {"error": "REQUEST_BODY_FRAMING"})
+                length = int(lengths[0]) if lengths else 0
+                if length <= 0 or length > HTTP_BODY_LIMIT:
                     return self.reply(413, {"error": "BODY_SIZE"})
-                request = json.loads(self.rfile.read(length))
+                body = self.rfile.read(length)
+                if len(body) != length:
+                    return self.reply(400, {"error": "INVALID_REQUEST"})
+                request = json.loads(body)
                 result = prepare_operation(
                     policy, requests, self.headers.get("Idempotency-Key", ""), request
                 )
@@ -347,6 +513,10 @@ def handler(policy, journal):
                         )
                     },
                 )
+            except RequestLimitExceeded:
+                return self.reply(413, {"error": "BODY_SIZE"})
+            except TimeoutError:
+                return self.reply(408, {"error": "REQUEST_TIMEOUT"})
             except Exception:
                 return self.reply(400, {"error": "INVALID_REQUEST"})
 
@@ -358,7 +528,9 @@ def main(argv):
     p.add_argument("--policy", required=True)
     p.add_argument("--state", required=True)
     p.add_argument("--port", type=int, default=8787)
+    add_connection_options(p)
     a = p.parse_args(argv)
+    connections = connection_options(a)
     policy = public_data(json.loads(Path(a.policy).read_text()))
     if not policy.get("principals"):
         raise ValueError("AUTH_POLICY_REQUIRED")
@@ -368,7 +540,7 @@ def main(argv):
             or len(principal["sha256"]) != 64
         ):
             raise ValueError("AUTH_POLICY_INVALID")
-    server = ThreadingHTTPServer(
-        ("127.0.0.1", a.port), handler(policy, Journal(a.state))
+    server = OperationalHTTPServer(
+        ("127.0.0.1", a.port), handler(policy, Journal(a.state), **connections)
     )
     server.serve_forever()

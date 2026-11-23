@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {DAOMockCoordinator, DAOMockVerifier} from "./CustodianDAO.t.sol";
-import {EconomyAsset} from "./ConfederationDAOIncome.t.sol";
+import {EconomyAsset, EconomySettlementLifecycle} from "./ConfederationDAOIncome.t.sol";
 import {FROSTAuthorization} from "../contracts/src/FROSTAuthorization.sol";
 import {SimpleMultiPool} from "../contracts/src/demo/SimpleMultiPool.sol";
 import {MultiPoolShareToken} from "../contracts/src/tokens/MultiPoolShareToken.sol";
@@ -23,6 +23,7 @@ contract FeeSaleTestUSD is ERC20("Fee sale test USD", "TUSD") {
 
     function decimals() public pure override returns (uint8) { return 6; }
     function mint(address receiver, uint256 amount) external { _mint(receiver, amount); }
+    function burn(address holder, uint256 amount) external { _burn(holder, amount); }
     function setTaxed(bool value) external { taxed = value; }
 
     function _update(address from, address to, uint256 value) internal override {
@@ -260,7 +261,8 @@ contract FundedSFeeSaleTest is FundedFeeSaleFixture {
         decisions = new CustodianDAODecisionBoard(address(staking), address(auth));
         // The test drives the pool's earned-fee hook directly. The DAO, staking,
         // validator and authorization execute their production accounting.
-        income = new ConfederationDAOIncome(address(this), address(share), address(auth), address(staking), address(decisions));
+        income = new ConfederationDAOIncome(address(this), address(share), address(auth), address(staking),
+            address(decisions), address(new EconomySettlementLifecycle(address(this))));
         _enableStable(income);
         sale = new FundedFeeSale(address(income), address(share), address(stable), address(income), 4_000);
     }
@@ -431,9 +433,45 @@ contract FundedSFeeSaleTest is FundedFeeSaleFixture {
         assertEq(sale.bidCount(), 0);
     }
 
+    function testEscrowShortfallPreservesBidsAndApprovalUntilCovered() public {
+        _bind();
+        _earn(ConfederationDAOIncome.Stream.Wrap, 100);
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 id = _fund(BUYER, 25, 200e6, deadline);
+        bytes32 op = sale.getFillBidOperationHash(id);
+        _approve(op, address(sale));
+        stable.burn(address(sale), 10e6);
+        bytes memory shortfall = abi.encodeWithSelector(FundedFeeSale.EscrowShortfall.selector, 190e6, 200e6);
+        vm.expectRevert(shortfall);
+        sale.fillBid(id, op);
+        assertFalse(auth.executedOperations(op));
+
+        stable.mint(BOB, 10e6);
+        vm.startPrank(BOB);
+        stable.approve(address(sale), 10e6);
+        vm.expectRevert(shortfall);
+        sale.fundBid(1, 10e6, deadline);
+        vm.stopPrank();
+        assertEq(sale.bidCount(), 1);
+
+        vm.warp(deadline + 1);
+        vm.expectRevert(shortfall);
+        vm.prank(BUYER);
+        sale.cancelBid(id);
+        assertEq(sale.stableEscrow(), 200e6);
+        vm.prank(BOB);
+        stable.transfer(address(sale), 10e6);
+        vm.prank(BUYER);
+        sale.cancelBid(id);
+        assertEq(stable.balanceOf(BUYER), 200e6);
+        assertEq(sale.stableEscrow(), 0);
+        assertEq(sale.inventory(), 40);
+        assertEq(income.accountedBalance(address(stable)), 0);
+    }
+
     function testDAORejectsOtherSaleAndUnboundProceeds() public {
         ConfederationDAOIncome other = new ConfederationDAOIncome(
-            address(this), address(share), address(auth), address(staking), address(decisions));
+            address(this), address(share), address(auth), address(staking), address(decisions), address(income.factory()));
         _enableStable(other);
         FundedFeeSale wrong = new FundedFeeSale(address(other), address(share), address(stable), address(other), 4_000);
         bytes32 op = income.getSetFeeSaleOperationHash(address(wrong));

@@ -3,29 +3,34 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.logs import DISCARD
 from .safe_errors import DiagnosticArgumentParser
 from .bootstrap import Bootstrap, artifact
-from .bootstrap_custody import review_intent, SOURCE_FIELDS
+from .bootstrap_custody import review_intent
 from .bitcoin_trust import checked_runtime
-from .contract_provenance import prove_creation
+from .custody_network import known_legacy_gateway_runtime, review_source, source_graph
 from .dao_client import account_at, units, wire
 from .evm_network import read_block
-from .onboarding import read_public, write_public
+from .onboarding import write_public
 from .operations import canonical, Journal
 
 
-def inspect(w3, board_address):
+def inspect(w3, board_address, *, at=None):
     from .onchain_transport import ceremony_bundle
     from .board_intents import intent_rows
     bundle = ceremony_bundle(w3, board_address, "conf_ceremony")
     invite = bundle["onboarding"]["invitation"]
     if "bitcoin_custody" not in invite:
         raise ValueError("BITCOIN_CUSTODY_POLICY_REQUIRED")
-    block = read_block(w3, int(invite["evm_confirmations"]))
-    def contract(address, kind):
-        checked_runtime(w3, address, kind, block.number)
+    block = read_block(w3, int(invite["evm_confirmations"])) if at is None else w3.eth.get_block(at)
+    def contract(address, kind, *, legacy=False, previous=False):
+        options = {"legacy_custody": True} if legacy else {}
+        if previous:
+            options["previous_build"] = True
+        checked_runtime(w3, address, kind, block.number, **options)
         return w3.eth.contract(address=address, abi=artifact(kind)["abi"])
     def read(c, method, *args):
         return getattr(c.functions, method)(*args).call(block_identifier=block.number)
@@ -41,26 +46,36 @@ def inspect(w3, board_address):
         intent = row["intent"]
         if intent.get("artifact") != issuer_kind or intent.get("hash_method") != "getSetCustodyTransferOperationHash":
             continue
-        review_intent(w3, intent, bundle, block.number)
-        mining = contract(intent["target"], issuer_kind)
-        gateway = contract(intent["hash_args"][0], gateway_kind)
+        gateway_address = intent["hash_args"][0]
+        code = bytes(w3.eth.get_code(gateway_address, block_identifier=block.number))
+        legacy = known_legacy_gateway_runtime(code, gateway_kind)
+        # For an exact historical gateway, locate the already consumed binding
+        # before widening this read-only review to the previous issuer/pool build.
+        mining = (w3.eth.contract(address=intent["target"], abi=artifact(issuer_kind)["abi"])
+                  if legacy else contract(intent["target"], issuer_kind, previous=True))
         auth = contract(read(mining, "authorization"), "DKGAuthorization")
         op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
         if not read(auth, "executedOperations", op):
             continue
+        if read(auth, "operationTargets", op) != mining.address:
+            raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+        if legacy:
+            mining = contract(mining.address, issuer_kind, legacy=True, previous=True)
+        review_intent(w3, intent, bundle, block.number, legacy_enrolled=legacy, enrolled_issuer=mining.address)
+        gateway = w3.eth.contract(address=gateway_address, abi=artifact(gateway_kind)["abi"])
         if (read(mining, "custodyTransfer") != gateway.address
                 or read(auth, "operationTargets", op) != mining.address
                 or bytes(read(auth, "dkgId")).hex() != invite["sessions"]["conf_ceremony"]
                 or list(read(auth, "getParticipants")) != invite["participants"][1:]
                 or int(read(auth, "threshold")) != int(invite["bitcoin_custody"]["threshold"])):
             raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
-        pool = contract(read(gateway, "pool"), pool_kind)
+        pool = contract(read(gateway, "pool"), pool_kind, legacy=legacy)
         if read(pool, "confederationId") != invite["confederation_id"]:
             raise ValueError("BITCOIN_CUSTODY_POOL_BINDING")
-        candidates[gateway.address] = dict(gateway=gateway, mining=mining, pool=pool)
+        candidates[gateway.address] = (dict(gateway=gateway, mining=mining, pool=pool), legacy)
     if len(candidates) != 1:
         raise ValueError("BITCOIN_CUSTODY_BINDING_REQUIRED")
-    nodes = next(iter(candidates.values()))
+    nodes, legacy = next(iter(candidates.values()))
     public = dict(chain_id=str(w3.eth.chain_id), bitcoin_network=invite["bitcoin_network"],
         board=board.address, gateway=nodes["gateway"].address, mining=nodes["mining"].address,
         pool=nodes["pool"].address, destination_script=bytes(read(nodes["gateway"], "destinationScript")).hex(),
@@ -68,40 +83,47 @@ def inspect(w3, board_address):
         sources=invite["bitcoin_custody"]["sources"])
     if w3.eth.get_block(block.number).hash != block.hash:
         raise ValueError("BITCOIN_CUSTODY_REORG")
-    return dict(nodes=nodes, invite=invite, block=block, public=public,
+    return dict(nodes=nodes, invite=invite, block=block, public=public, legacy_gateway=legacy,
         fingerprint=hashlib.sha256(canonical(public).encode()).hexdigest())
 
 
 def source_descriptor(w3, mining_address, block):
-    def contract(address, kind):
-        checked_runtime(w3, address, kind, block.number)
-        prove_creation(w3, address, kind, None, block.number) if kind != "PoolMpToken" else None
-        return w3.eth.contract(address=address, abi=artifact(kind)["abi"])
-    def read(c, getter):
-        return getattr(c.functions, getter)().call(block_identifier=block.number)
-    mining = contract(mining_address, "MiningPoolV1")
-    token = contract(read(mining, "mpToken"), "PoolMpToken")
-    escrow = contract(read(mining, "escrow"), "BitcoinWithdrawalEscrow")
-    deposits = contract(read(mining, "deposits"), "BitcoinDepositRegistry")
-    batches = contract(read(escrow, "batches"), "BitcoinBatchRegistry")
-    if (read(token, "poolDAO") != mining.address or read(escrow, "depositRegistry") != deposits.address
-            or read(deposits, "spendRecorder") != escrow.address or read(batches, "withdrawalEscrow") != escrow.address):
-        raise ValueError("BITCOIN_CUSTODY_SOURCE_GRAPH")
-    result = dict(escrow=escrow.address, token=token.address)
-    for node, field in ((escrow, "escrow_hash"), (token, "token_hash"), (mining, "mining_hash"),
-                        (deposits, "deposit_hash"), (batches, "batch_hash")):
-        result[field] = Web3.to_hex(Web3.keccak(w3.eth.get_code(node.address, block_identifier=block.number)))
+    result, _ = source_graph(w3, mining_address, block.number)
     if w3.eth.get_block(block.number).hash != block.hash:
         raise ValueError("BITCOIN_CUSTODY_REORG")
     return result
 
 
+def _destination_zk_adapter(w3, context):
+    from .zk_profiles import profile as zk_profile
+    from .zk_spv import inspect_binding
+
+    invite, block = context["invite"], context["block"]
+    policy = invite["bitcoin_policy"]
+    address = context["nodes"]["mining"].functions.deposits().call(block_identifier=block.number)
+    checked_runtime(w3, address, "BitcoinDepositRegistry", block.number,
+                    legacy_custody=context.get("legacy_gateway", False))
+    deposits = w3.eth.contract(address=address, abi=artifact("BitcoinDepositRegistry")["abi"])
+    if deposits.functions.depth().call(block_identifier=block.number) != int(invite["bitcoin_confirmations"]):
+        raise ValueError("ZK_CONSUMER_BINDING")
+    address = deposits.functions.spv().call(block_identifier=block.number)
+    kind = zk_profile(policy)["adapter"]
+    checked_runtime(w3, address, kind, block.number)
+    candidate = w3.eth.contract(address=address, abi=artifact(kind)["abi"])
+    state = candidate.functions.state().call(block_identifier=block.number)
+    _, adapter, _, _ = inspect_binding(w3, state, policy, block.number, adapter_address=address)
+    if w3.eth.get_block(block.number).hash != block.hash:
+        raise ValueError("BITCOIN_CUSTODY_REORG")
+    return adapter
+
+
 def transact(w3, context, args, kind, target, method, values):
     if not args.identity_file:
         raise ValueError("SEND_REQUIRES_IDENTITY_STATE_AND_ID")
-    sender = account_at(args.identity_file).address
-    contract = w3.eth.contract(address=target, abi=artifact(kind)["abi"])
+    account = account_at(args.identity_file)
+    sender = account.address
     if not args.send:
+        contract = w3.eth.contract(address=target, abi=artifact(kind)["abi"])
         result = getattr(contract.functions, method)(*values).call({"from": sender})
         return dict(status="SIMULATED", result=wire(result), target=target, method=method)
     if not args.state or not args.id or re.fullmatch(r"[A-Za-z0-9_-]{1,80}", args.id) is None:
@@ -117,18 +139,44 @@ def transact(w3, context, args, kind, target, method, values):
         steps=[dict(id="send", kind="call", contract="target", method=method, args=wire(values))])
     if "bitcoin_policy" in invite:
         profile["bitcoin_policy"] = invite["bitcoin_policy"]
-    runner = Bootstrap(profile, args.state)
-    result = runner.apply_confirmed(args.identity_file)
-    item = runner.journal.get(prefix + ":send")["result"]
+
+    def send_attempt(_, attempt):
+        runner = Bootstrap(attempt, args.state)
+        result = runner.apply_confirmed(args.identity_file)
+        item = runner.journal.get(attempt["deployment_id"] + ":send")["result"]
+        return runner, result, item
+
+    from .zk_spv import is_zk
+    if method == "finalize" and is_zk(invite.get("bitcoin_policy")):
+        from .zk_submission import submit
+
+        adapter = _destination_zk_adapter(w3, context)
+        executor = SimpleNamespace(w3=w3, account=account, identity_file=args.identity_file,
+                                   transaction_journal=args.state)
+        runner, result, item = submit(executor, profile, adapter, values[4], send_attempt)
+    else:
+        runner, result, item = send_attempt(None, profile)
     output = dict(status=result["status"], tx_hash=item.get("tx_hash"), target=target, method=method)
     if result["status"] == "VERIFIED" and method == "request":
         receipt = runner.verify_receipt(item)
         events = context["nodes"]["gateway"].events.Requested().process_receipt(receipt, errors=DISCARD)
         if len(events) != 1:
             raise ValueError("BITCOIN_CUSTODY_REQUEST_RECEIPT")
-        output.update(transfer_id=str(events[0]["args"]["id"]),
+        transfer_id = events[0]["args"]["id"]
+        output.update(transfer_id=str(transfer_id),
                       source_request=Web3.to_hex(events[0]["args"]["requestKey"]))
+        output.update(_issuance_quote(context, transfer_id, values[1], receipt.blockNumber))
     return output
+
+
+def _issuance_quote(context, transfer_id, amount, at):
+    if context["invite"].get("ulr", {}).get("version") != "3" or context.get("legacy_gateway"):
+        return {}
+    gateway = context["nodes"]["gateway"]
+    net = gateway.functions.quotedShares(transfer_id).call(block_identifier=at)
+    if not 0 < net <= amount:
+        raise ValueError("BTC_CUSTODY_ISSUANCE_QUOTE")
+    return dict(protocol_fee_s=str(amount - net), net_shares=str(net))
 
 
 def main(argv):
@@ -150,7 +198,7 @@ def main(argv):
             p.add_argument("--source", type=int, required=True)
             p.add_argument("--satoshis", required=True)
         if action in ("request", "minimum"):
-            p.add_argument("--minimum-shares", required=True, help="decimal cBTC amount, at most 18 decimal places")
+            p.add_argument("--minimum-shares", required=True, help="decimal S or cBTC amount, at most 18 decimal places")
         if action == "request":
             p.add_argument("--recipient", required=True)
         if action in ("status", "cancel", "minimum"):
@@ -167,7 +215,7 @@ def main(argv):
             p.add_argument("--id")
             p.add_argument("--send", action="store_true")
     args = parser.parse_args(argv)
-    w3 = Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 30}))
+    w3 = evm_web3(args.rpc, timeout=30)
     if args.action == "source":
         value = source_descriptor(w3, Web3.to_checksum_address(args.mining), read_block(w3, args.confirmations))
         if Path(args.output).exists():
@@ -177,10 +225,13 @@ def main(argv):
         return 0
     context = inspect(w3, args.board)
     if args.action == "inspect":
-        print(json.dumps(dict(status="BITCOIN_CUSTODY_CONFIGURED", fingerprint=context["fingerprint"], **context["public"])))
+        print(json.dumps(dict(status="BITCOIN_CUSTODY_CONFIGURED", fingerprint=context["fingerprint"],
+                              legacy_gateway=context["legacy_gateway"], **context["public"])))
         return 0
     if args.accept_fingerprint != context["fingerprint"]:
         raise ValueError("BITCOIN_CUSTODY_FINGERPRINT")
+    if context["legacy_gateway"] and args.action in ("approve", "request"):
+        raise ValueError("BITCOIN_CUSTODY_LEGACY_RECOVERY_ONLY")
     gateway = context["nodes"]["gateway"]
     target, kind, method = gateway.address, ("BitcoinCustodyTransferV2" if context["invite"].get("ulr", {}).get("version") == "3"
                                           else "BitcoinCustodyTransfer"), args.action
@@ -190,6 +241,7 @@ def main(argv):
         value = dict(status=("NONE", "WAITING", "COMPLETED", "CANCELLED")[int(t[5])], transfer_id=str(args.transfer_id),
                      owner=t[0], recipient=t[1], source=str(t[2]), amount_units=str(t[3]), minimum_share_units=str(t[4]))
         if int(t[5]):
+            value.update(_issuance_quote(context, args.transfer_id, t[3], at))
             s = context["public"]["sources"][int(t[2])]
             escrow = w3.eth.contract(address=s["escrow"], abi=artifact("BitcoinWithdrawalEscrow")["abi"])
             key = escrow.functions.requestKey(gateway.address, args.transfer_id).call(block_identifier=at)
@@ -217,11 +269,17 @@ def main(argv):
         from .bitcoin_proofs import inclusion
         row = gateway.functions.transfers(args.transfer_id[0]).call(block_identifier=at)
         source = context["public"]["sources"][int(row[2])]
+        if context["legacy_gateway"]:
+            review_source(w3, source, context["invite"]["bitcoin_network"], at)
+            if w3.eth.get_block(at).hash != context["block"].hash:
+                raise ValueError("BITCOIN_CUSTODY_REORG")
         escrow = w3.eth.contract(address=source["escrow"], abi=artifact("BitcoinWithdrawalEscrow")["abi"])
         batch = bytes.fromhex(args.paid_batch.removeprefix("0x"))
         if len(batch) != 32:
             raise ValueError("BITCOIN_CUSTODY_BATCH")
         paid = escrow.functions.payment(batch).call(block_identifier=at)
+        if not paid[2] or not any(paid[0]):
+            raise ValueError("BITCOIN_CUSTODY_SOURCE_NOT_PAID")
         proof = inclusion(BitcoinRPC(args.bitcoin_rpc, args.bitcoin_cookie,
             context["invite"]["bitcoin_network"], context["invite"].get("bitcoin_policy")), bytes(paid[0])[::-1].hex())
         if int(proof["confirmations"]) < int(context["invite"]["bitcoin_confirmations"]):

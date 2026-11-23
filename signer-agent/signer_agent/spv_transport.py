@@ -17,17 +17,19 @@ import time
 from eth_abi import encode
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 from . import crypto
 from .bootstrap import Bootstrap, artifact
 from .bitcoin_trust import checked_runtime
 from .contract_provenance import prove_creation
-from .evm_network import read_block
+from .evm_network import read_block, verify_anchor
 from .onboarding import read_private
 from .operations import canonical
 from .zk_service_binding import inspect_service_view
 from .zk_spv import validate_confederation, checkpoint_descriptor
 from .zk_profiles import profile as zk_profile
 from .zk_worker_prover import write
+from .spv_history import history_limit, require_history_space, sqlite_bytes
 
 KINDS = {"REQUEST": 0, "ACK": 1, "STATUS": 2}
 MAX_PLAIN = 12000
@@ -85,8 +87,9 @@ def load_config(path):
     if c.get('version') in ('2','3','4'):fields.add('payment')
     if c.get('version')in ('3','4'):fields.add('address_deposits')
     if c.get("version")=="4":fields.add("withdrawal_fees")
-    if set(c) != fields or c["version"] not in ("1","2","3","4") or c["chain_id"] not in ("1", "11155111", "31337"):
+    if not fields <= set(c) <= fields | {"history_max_bytes"} or c["version"] not in ("1","2","3","4") or c["chain_id"] not in ("1", "11155111", "31337"):
         raise ValueError("SPV_TRANSPORT_CONFIG")
+    history_limit(c)
     from .bootstrap_policy import validate_confirmations
     validate_confirmations(c, "SPV_")
     from .bitcoin_network import validate_policy
@@ -117,6 +120,7 @@ def load_config(path):
 
 class Store:
     def __init__(self, c, address):
+        self.history_limit = history_limit(c)
         self.path = Path(c["directory"]); self.path.mkdir(mode=0o700, parents=True, exist_ok=True)
         if self.path.is_symlink() or self.path.stat().st_mode & 0o077 or self.path.stat().st_uid != os.getuid():
             raise ValueError("SPV_PRIVATE_DIRECTORY")
@@ -136,6 +140,17 @@ class Store:
         old = self.get("scope")
         if old is not None and old != scope: raise ValueError("SPV_TRANSPORT_SCOPE_CHANGED")
         self.put("scope",scope)
+        if self.get("packet-history-enabled") and self.history_limit is None:
+            self.db.close()
+            raise ValueError("SPV_HISTORY_POLICY_REQUIRED")
+        if self.history_limit is not None:
+            self.db.executescript("""
+                CREATE INDEX IF NOT EXISTS spv_incoming_state ON incoming(state);
+                CREATE INDEX IF NOT EXISTS spv_outgoing_state ON outgoing(state);
+                CREATE INDEX IF NOT EXISTS spv_request_route ON outgoing(json_extract(body,'$.header.route'))
+                    WHERE json_extract(body,'$.header.kind')='REQUEST';
+            """)
+            self.put("packet-history-enabled", True)
         personal=c.get("withdrawal_fees")
         if self.get("withdrawal_fees_config") not in (None,personal):raise ValueError("SPV_WITHDRAWAL_FEE_PROFILE_CHANGED")
         if personal is not None:self.put("withdrawal_fees_config",personal)
@@ -153,15 +168,46 @@ class Store:
     def queue(self,logical,packet):
         old=self.outgoing(logical)
         if old: return old[0]
-        # Total history is bounded, including sent rows; no silent deletion/budget rotation.
-        if self.db.execute("SELECT COUNT(*) FROM outgoing").fetchone()[0] >= int(self.c["max_pending_messages"]):
+        self.require_space()
+        if self.active_count("outgoing") >= int(self.c["max_pending_messages"]):
             raise ValueError("SPV_OUTBOX_FULL")
         key=message_key(packet["header"]["route"],packet["header"]["kind"],packet["header"]["sequence"])
         self.db.execute("INSERT INTO outgoing VALUES(?,?,?,'QUEUED')",(key,logical,canonical(packet)))
         return key
-    def incoming(self,kind=None):
-        rows=[(r[0],json.loads(r[1]),r[2]) for r in self.db.execute("SELECT id,body,state FROM incoming ORDER BY rowid")]
-        return [r for r in rows if not kind or r[1].get("header",{}).get("kind")==kind]
+    def active_count(self, direction):
+        predicates = {"incoming": " WHERE state IN ('RECEIVED','VALIDATION_REVIEW_REQUIRED')",
+                      "outgoing": " WHERE state!='CONFIRMED'"}
+        predicate = predicates[direction]
+        return self.db.execute("SELECT COUNT(*) FROM " + direction + (predicate if self.history_limit is not None else "")).fetchone()[0]
+
+    def require_space(self):
+        require_history_space(self.path, "transport.sqlite", self.history_limit)
+
+    def history_status(self):
+        if self.history_limit is None:
+            return None
+        return dict(admission_limit_bytes=self.history_limit, bytes=sqlite_bytes(self.path,"transport.sqlite"),
+            active_incoming=self.active_count("incoming"), active_outgoing=self.active_count("outgoing"),
+            replies_anchor=self.get("reply-history-anchor"), rechecking_replies=bool(self.get("reply-history-recheck")))
+
+    def incoming(self,kind=None,*,received_only=False,limit=None):
+        clauses, args = [], []
+        if kind:
+            clauses.append("json_extract(body,'$.header.kind')=?"); args.append(kind)
+        elif received_only:
+            clauses.append("json_extract(body,'$.header.kind') IN ('ACK','STATUS')")
+        if received_only:
+            clauses.append("state='RECEIVED'")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        query = "SELECT id,body,state FROM incoming" + where + " ORDER BY rowid"
+        if limit is not None:
+            query += " LIMIT ?"; args.append(limit)
+        return [(key,json.loads(body),state) for key,body,state in self.db.execute(query,args)]
+
+    def request_for_route(self, route):
+        row = self.db.execute("SELECT body FROM outgoing WHERE json_extract(body,'$.header.kind')='REQUEST' "
+                              "AND json_extract(body,'$.header.route')=?", (route,)).fetchone()
+        return json.loads(row[0]) if row else None
     def mark(self,key,state): self.db.execute("UPDATE incoming SET state=? WHERE id=?",(state,key))
     @contextmanager
     def exclusive(self):
@@ -186,7 +232,7 @@ class Store:
 
 class Client:
     def __init__(self,c,w3=None):
-        self.c=c; self.w3=w3 or Web3(Web3.HTTPProvider(c["evm_rpc"],request_kwargs={"timeout":30}))
+        self.c=c; self.w3=w3 or evm_web3(c["evm_rpc"], timeout=30)
         self.account=Account.from_key(json.loads(read_private(Path(c["identity_file"])))["private_key"])
         self.store=Store(c,self.account.address)
         self.keys={}
@@ -199,6 +245,15 @@ class Client:
     def close(self): self.store.close()
     def stable(self,block):
         if self.w3.eth.get_block(block.number).hash!=block.hash: raise ValueError("SPV_EVM_REORG")
+    def anchor_reorg(self, anchor, block):
+        try:
+            verify_anchor(self.w3, anchor["number"], anchor["hash"], safe=block)
+        except ValueError as error:
+            if str(error) == "EVM_REORG_RECOVERY_REQUIRED":
+                self.stable(block)
+                return True
+            raise
+        return False
     def context(self):
         if str(self.w3.eth.chain_id)!=self.c["chain_id"]: raise ValueError("CHAIN_MISMATCH")
         b=read_block(self.w3,int(self.c["evm_confirmations"]))
@@ -286,12 +341,12 @@ class Client:
         with self.store.exclusive():
             b,board,_=self.context()
             anchor=self.store.get("outgoing_anchor")
-            if anchor and (anchor["number"]>b.number or self.w3.eth.get_block(anchor["number"]).hash.hex()!=anchor["hash"]):
+            if anchor and self.anchor_reorg(anchor, b):
                 self.store.db.execute("UPDATE outgoing SET state='QUEUED' WHERE state='CONFIRMED'")
             self.store.put("outgoing_anchor",dict(number=b.number,hash=b.hash.hex()))
             rows=self.store.db.execute("SELECT id,body FROM outgoing WHERE state!='CONFIRMED'"+
                 (" AND id=?" if message_id is not None else "")+" ORDER BY rowid",
-                () if message_id is None else (message_id,)).fetchall()
+                () if message_id is None else (message_id,))
             for key,encoded in rows:
                 packet=json.loads(encoded); h=packet["header"]
                 retry=self.store.get("retry:"+key) or dict(next_at=0,attempts=0)
@@ -343,11 +398,14 @@ class Client:
         return runner.apply(c["identity_file"])
     def poll(self):
         with self.store.exclusive():
-            b,board,domain=self.context(); count=board.functions.messageCount(self.account.address).call(block_identifier=b.number)
+            b,board,domain=self.context()
             cursor=self.store.get("cursor") or dict(index=0,number=b.number,hash=b.hash.hex())
-            if cursor["number"]>b.number or self.w3.eth.get_block(cursor["number"]).hash.hex()!=cursor["hash"] or cursor["index"]>count:
+            rewind=self.anchor_reorg(cursor, b)
+            count=board.functions.messageCount(self.account.address).call(block_identifier=b.number)
+            if rewind:
                 cursor["index"]=0  # Re-read canonical bytes; never delete obligations/outgoing ciphertext.
-                self.store.db.execute("UPDATE incoming SET state='RECEIVED' WHERE state!='QUARANTINED' AND json_extract(body,'$.header.kind') IN ('ACK','STATUS')")
+            elif cursor["index"]>count:
+                raise ValueError("EVM_RPC_BEHIND")
             saved=[]
             end=min(count,cursor["index"]+int(self.c["max_messages_per_poll"]))
             for i in range(cursor["index"],end):
@@ -369,9 +427,15 @@ class Client:
                 saved.append((key,record,state))
             self.stable(b); self.store.db.execute("BEGIN IMMEDIATE")
             try:
+                if rewind:
+                    self.store.db.execute("UPDATE incoming SET state='RECEIVED' WHERE state!='QUARANTINED' AND json_extract(body,'$.header.kind') IN ('ACK','STATUS')")
                 for key,record,state in saved:
                     old=self.store.db.execute("SELECT state,body FROM incoming WHERE id=?",(key,)).fetchone()
-                    if not old and self.store.db.execute("SELECT COUNT(*) FROM incoming").fetchone()[0]>=int(self.c["max_pending_messages"]): raise ValueError("SPV_INBOX_FULL")
+                    if not old:
+                        self.store.require_space()
+                        if ((self.store.history_limit is None or state == 'RECEIVED')
+                                and self.store.active_count("incoming") >= int(self.c["max_pending_messages"])):
+                            raise ValueError("SPV_INBOX_FULL")
                     if old:
                         prior=json.loads(old[1])
                         if "body" in prior and (prior["body"]!=record.get("body") or prior["header"]!=record["header"]):
@@ -386,13 +450,21 @@ class Client:
     def process_replies(self):
         with self.store.exclusive():
             b,board,_=self.context()
-            outgoing=[json.loads(r[0]) for r in self.store.db.execute("SELECT body FROM outgoing")]
-            originals={p["header"]["route"]:p for p in outgoing if p["header"]["kind"]=="REQUEST"}
-            for key,record,state in self.store.incoming():
+            cursor = self.store.get("cursor")
+            if cursor is not None and cursor["number"] > b.number:
+                raise ValueError("EVM_RPC_BEHIND")
+            history_enabled = self.store.history_limit is not None
+            if history_enabled:
+                self._recheck_replies(b)
+            limit = int(self.c['max_messages_per_poll']) if history_enabled else None
+            for key,record,state in self.store.incoming(received_only=history_enabled, limit=limit):
                 h=record.get("header",{})
                 if h.get("kind") not in ("ACK","STATUS"):continue
-                body=record.get("body",{});original=originals.get(h["route"])
-                if not original or state=="QUARANTINED":continue
+                body=record.get("body",{});original=self.store.request_for_route(h["route"])
+                if state=="QUARANTINED":continue
+                if not original:
+                    if history_enabled:self.store.mark(key,"QUARANTINED")
+                    continue
                 current=board.functions.packet(hex32(key)).call(block_identifier=b.number)
                 projection=self.store.get("reply:"+h["route"]) or dict(sequence=-1,acknowledged=False,status="AWAITING_ACK")
                 if not bytes(current[8]):
@@ -427,6 +499,31 @@ class Client:
                 projection.update(number=b.number,block_hash=b.hash.hex(),
                     late=b.timestamp>int(h["expires_at"]))
                 self.stable(b);self.store.put("reply:"+h["route"],projection);self.store.mark(key,"HANDLED")
+            if history_enabled and self.store.get("reply-history-recheck"):
+                if self.store.incoming(received_only=True, limit=1):
+                    raise ValueError("SPV_REPLY_HISTORY_RECHECK_REQUIRED")
+                self.stable(b)
+                self.store.put("reply-history-recheck", False)
+
+    def _recheck_replies(self, block):
+        # Reply projections are derived from exact ciphertext records. Rebuild
+        # them in bounded pages after confirmed canonical history changes.
+        scope = self.store.get("reply-history-anchor")
+        rewind = not scope or self.anchor_reorg(scope, block)
+        self.stable(block)
+        db = self.store.db
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            if rewind:
+                db.execute("DELETE FROM meta WHERE key GLOB 'reply:*'")
+                db.execute("UPDATE incoming SET state='RECEIVED' WHERE state!='QUARANTINED' "
+                           "AND json_extract(body,'$.header.kind') IN ('ACK','STATUS')")
+                self.store.put("reply-history-recheck", True)
+            self.store.put("reply-history-anchor", dict(number=block.number,hash=block.hash.hex()))
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
 
 
 def main():
@@ -463,7 +560,7 @@ def main():
         else:
             c.process_replies()
             receipts=[dict(route=k[len("reply:"):],status=json.loads(v)["status"],acknowledged=json.loads(v)["acknowledged"]) for k,v in c.store.db.execute("SELECT key,body FROM meta WHERE key LIKE 'reply:%'")]
-            result=dict(status="LOCAL",receipts=receipts,outgoing=dict(c.store.db.execute("SELECT state,COUNT(*) FROM outgoing GROUP BY state")),incoming=dict(c.store.db.execute("SELECT state,COUNT(*) FROM incoming GROUP BY state")))
+            result=dict(status="LOCAL",receipts=receipts,outgoing=dict(c.store.db.execute("SELECT state,COUNT(*) FROM outgoing GROUP BY state")),incoming=dict(c.store.db.execute("SELECT state,COUNT(*) FROM incoming GROUP BY state")),history=c.store.history_status())
         print(json.dumps(result))
     finally: c.close()
 

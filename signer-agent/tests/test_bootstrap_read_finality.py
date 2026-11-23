@@ -356,12 +356,8 @@ def test_rpc_override_preserves_request_and_requires_existing_anchors(tmp_path, 
         def __init__(self, endpoint, **options):
             self.endpoint_uri = endpoint
 
-    class LocalWeb3:
-        HTTPProvider = Provider
-        def __init__(self, provider):
-            self.provider, self.eth = provider, handlers[provider.endpoint_uri]
-
-    monkeypatch.setattr(engine, "Web3", LocalWeb3)
+    monkeypatch.setattr(engine, "evm_web3", lambda endpoint, **kw:
+                        SimpleNamespace(provider=Provider(endpoint), eth=handlers[endpoint]))
     step = wait_step()
     profile = dict(deployment_id="same-deployment", evm_rpc="local-first", evm_confirmations="12",
                    mode="integration", chain_id="11155111", bitcoin_network="regtest", steps=[step])

@@ -16,6 +16,7 @@ from pathlib import Path
 from eth_abi import encode
 from eth_utils import keccak
 from web3 import Web3
+from .evm_rpc import evm_web3
 
 from . import crypto
 from .bootstrap import artifact
@@ -75,7 +76,7 @@ def load_config(path):
 class Deposit:
     def __init__(self, config, *, w3=None, bitcoin=None):
         self.c=config
-        self.w3=w3 or Web3(Web3.HTTPProvider(config['evm_rpc'],request_kwargs={'timeout':30}))
+        self.w3=w3 or evm_web3(config['evm_rpc'], timeout=30)
         self.bitcoin=bitcoin or BitcoinRPC(config['bitcoin_rpc'],config['bitcoin_cookie'],config['bitcoin_network'],config['bitcoin_policy'])
         self.journal=Journal(Path(config['directory'])/'smp1-deposits.sqlite')
         self.journal.put('wallet-policy',{k:v for k,v in config.items() if k not in ('evm_rpc','bitcoin_rpc','bitcoin_cookie','directory')})

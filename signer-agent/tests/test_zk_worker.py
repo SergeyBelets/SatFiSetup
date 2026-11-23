@@ -38,6 +38,76 @@ def test_config_scope_permissions_and_budget_ranges(tmp_path):
     with pytest.raises(ValueError, match="PERMISSIONS"): load_config(path)
 
 
+def test_retained_needs_limit_validates_the_history_bound(tmp_path):
+    c = config(tmp_path)
+    path = tmp_path / "worker.json"
+    for retained in ("8", "4096"):
+        configured = dict(c, max_retained_needs=retained)
+        write(path, configured)
+        assert load_config(path) == configured
+    for retained in (None, 8, "0", "7", "08", "4097"):
+        write(path, dict(c, max_retained_needs=retained))
+        with pytest.raises(ValueError, match="^ZK_WORKER_CONFIG_RANGE:max_retained_needs$"):
+            load_config(path)
+
+
+def test_witness_is_private_configuration_and_lag_waits_after_pin(tmp_path, monkeypatch):
+    from test_evm_rpc import node
+
+    cfg = dict(config(tmp_path), evm_rpc="https://primary.example.test/secret",
+               evm_witness_rpc="https://witness.example.test/secret",
+               chain_id="11155111", evm_confirmations="4")
+    path = tmp_path / "worker.json"
+    write(path, cfg)
+    assert load_config(path) == cfg
+    with pytest.raises(ValueError, match="^EVM_RPC_HTTPS_REQUIRED$"):
+        write(path, dict(cfg, evm_rpc="http://external.example.test/secret"))
+        load_config(path)
+    review_fields = ("version", "chain_id", "evm_rpc", "evm_confirmations", "evm_witness_rpc",
+                     "bitcoin_policy", "zk_state")
+    review = {key: cfg[key] for key in review_fields}
+    write(path, review)
+    assert load_config(path, review=True) == review
+    worker = Worker.__new__(Worker)
+    worker.c, worker.inbox = cfg, Inbox(cfg)
+    worker.w3 = node(120)
+    worker.evm_witness = node(115)
+    worker.bitcoin = object()
+    state = (None,) * 8 + (False,)
+    primary_values = [state]
+    contract = NS(functions=NS(halted=lambda: NS(call=lambda: False),
+                               getState=lambda: NS(call=lambda **_: primary_values[0]),
+                               isFresh=lambda: NS(call=lambda **_: True)))
+    witness = NS(functions=NS(halted=lambda: NS(call=lambda: False),
+                              getState=lambda: NS(call=lambda **_: state),
+                              isFresh=lambda: NS(call=lambda **_: True)))
+    monkeypatch.setattr(zk_worker, "inspect_binding", lambda w3, *a:
+                        (contract if w3 is worker.w3 else witness, None, {}, None))
+    monkeypatch.setattr(zk_worker, "check_core", lambda *a: None)
+    try:
+        first, witnessed_state, _, _, _ = worker.context()
+        assert first.number == 112
+        assert worker.inbox.get("evm-witness-height") == 112
+        assert "secret" not in json.dumps(worker.inbox.get("scope"))
+        primary_values[0] = (False,) * 9
+        assert witnessed_state.functions.getState().call(block_identifier=112) == state
+        with pytest.raises(ValueError, match="^EVM_RPC_WITNESS_MISMATCH$"):
+            worker.context()
+        primary_values[0] = state
+        worker.evm_witness = node(114)
+        with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$") as reason:
+            worker.context()
+        assert zk_worker.worker_failure(reason.value)["status"] == "AWAITING_EVM_RPC"
+        worker.evm_witness = node(115, fork=112)
+        with pytest.raises(ValueError, match="^EVM_RPC_WITNESS_MISMATCH$"):
+            worker.context()
+        assert worker.inbox.get("evm-witness-height") == 112
+        worker.evm_witness = node(116)
+        assert worker.context()[0].number == 113
+    finally:
+        worker.inbox.close()
+
+
 def test_cpu_batch_limit_timeout_and_local_cuda_pin_are_bounded(tmp_path):
     c = dict(config(tmp_path), headers_per_attempt="4", stage_timeout_seconds="86400",
              cuda=dict(r0vm_binary=str(tmp_path / "r0vm-cuda"), r0vm_sha256="11" * 32, segment_limit_po2="18"))
@@ -63,6 +133,100 @@ def test_durable_dedup_scope_and_shared_budget(tmp_path):
     a.close(); b.close()
     c["zk_state"] = Web3.to_checksum_address("0x"+"33"*20)
     with pytest.raises(ValueError, match="SCOPE_CHANGED"): Inbox(c)
+
+
+def test_completed_needs_release_pending_capacity_with_retention_limit(tmp_path):
+    c = dict(config(tmp_path), max_pending="1", max_transaction_cost_wei="8", max_total_cost_wei="8")
+    need = dict(kind="deposit", consumer=next(iter(c["allowed_consumers"])), txid="11" * 32, vout="0")
+    later = dict(need, vout="1")
+    completed = dict(need, vout="2")
+    blocked = dict(need, vout="3")
+
+    legacy = Inbox(c)
+    key = legacy.enqueue(need, observation_status="COMPLETED")
+    legacy.reserve("first", 8)
+    with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+        legacy.enqueue(later)
+    legacy.close()
+
+    inbox = Inbox(dict(c, max_retained_needs="3"))
+    try:
+        assert inbox.enqueue(need) == key
+        assert inbox.needs() == [(key, need, "COMPLETED")]
+        later_key = inbox.enqueue(later, observation_status="READY")
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            inbox.enqueue(blocked)
+
+        # Canonical observations are free to reopen a previous need at capacity.
+        assert inbox.enqueue(need, observation_status="NEEDS_STATE") == key
+        inbox.status(later_key, "COMPLETED")
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            inbox.enqueue(blocked)
+        completed_key = inbox.enqueue(completed, observation_status="COMPLETED")
+        assert inbox.needs() == [(key, need, "NEEDS_STATE"), (later_key, later, "COMPLETED"),
+                                 (completed_key, completed, "COMPLETED")]
+        inbox.status(key, "COMPLETED")
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            inbox.enqueue(blocked)
+        assert inbox.enqueue(later) == later_key
+        with pytest.raises(ValueError, match="^ZK_WORKER_GAS_BUDGET$"):
+            inbox.reserve("later", 1)
+    finally:
+        inbox.close()
+
+
+def test_archived_needs_keep_ids_and_review_reorg_in_pages(tmp_path):
+    cfg = dict(config(tmp_path), max_pending="1", max_retained_needs="1", history_max_bytes=str(64 * 2**20),
+               max_transaction_cost_wei="8", max_total_cost_wei="8")
+    first = NS(number=100, hash=b"a" * 32)
+    recent = NS(number=100, hash=b"b" * 32)
+    older = NS(number=99, hash=b"o" * 32)
+    worker = Worker.__new__(Worker)
+    worker.c = cfg
+    worker.inbox = Inbox(cfg)
+    seen = []
+    worker.w3 = NS(eth=NS(get_block=lambda number: recent))
+    worker.stable = lambda block: None
+
+    def observe(key, need, *_):
+        seen.append(key)
+        return dict(status="NEEDS_STATE" if need == {"index": 0} else "COMPLETED")
+
+    worker.observe_queued_need = observe
+    keys = []
+    try:
+        for i in range(40):
+            key = worker.inbox.enqueue({"index": i}, observation_status="COMPLETED")
+            keys.append(key)
+            worker.inbox.checkpoint_completed([key], first)
+        worker.inbox.put("service:" + keys[0], {"service_job_id": "old-paid-job", "deadline": "42"})
+        worker.inbox.reserve("original", 8)
+        assert worker.inbox.needs(active_only=True) == []
+        assert worker.inbox.enqueue({"index": 0}) == keys[0]
+        assert worker._history_current(first)
+        with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$"):
+            worker._history_current(older)
+        assert not worker._history_current(recent)
+        assert worker._recheck_history(recent, None, {}) == dict(status="ZK_NEED_HISTORY_RECHECK", checked=32)
+        worker.inbox.close()
+        worker.inbox = Inbox(cfg)
+        assert not worker._history_current(recent)
+        assert worker._recheck_history(recent, None, {}) == dict(status="ZK_NEED_HISTORY_RECHECK", checked=8)
+        assert worker._recheck_history(recent, None, {}) == dict(status="ZK_NEED_HISTORY_RECHECKED", checked=0)
+        assert len(seen) == len(set(seen)) == 40
+        assert worker._history_current(recent)
+        assert worker.inbox.needs(active_only=True) == [(keys[0], {"index": 0}, "NEEDS_STATE")]
+        assert worker.inbox.get("service:" + keys[0])["deadline"] == "42"
+        with pytest.raises(ValueError, match="^ZK_WORKER_INBOX_FULL$"):
+            worker.inbox.enqueue({"index": 40})
+        with pytest.raises(ValueError, match="^ZK_WORKER_GAS_BUDGET$"):
+            worker.inbox.reserve("new", 1)
+        assert worker.inbox.history_status()["archived"] == 39
+    finally:
+        worker.inbox.close()
+    cfg.pop("history_max_bytes")
+    with pytest.raises(ValueError, match="^SPV_HISTORY_POLICY_REQUIRED$"):
+        Inbox(cfg)
 
 
 def fixture_headers():
@@ -379,11 +543,224 @@ def test_state_change_during_proving_never_broadcasts_old_proof(tmp_path, monkey
     w.inbox.enqueue(dict(kind="deposit", consumer="x", txid="11"*32, vout="0"))
     assert w.tick()["status"] == "PROOF_PREPARED"
     def changed(self, base):
-        m["state"] = list(m["state"]); m["state"][7] = "ff"*32
+        newer = read(base / "native.json")["after"]
+        newer[7] = "ff" * 32
+        m["state"] = newer
         return VERIFIER_SELECTOR + bytes(256)
     monkeypatch.setattr(LocalProver, "prove", changed)
     assert w.tick()["status"] == "REVALIDATE_STATE"
     assert m["sends"] == []
+    w.inbox.close()
+
+
+@pytest.mark.parametrize("phase,boundary", [
+    ("PREPARED", "all"), ("PREPARED", "prepare"), ("PREPARED", "publish"),
+    ("PREPARED", "prove"), ("SENDING", "all"), ("SENDING", "publish"),
+])
+def test_worker_keeps_attempt_on_lag_before_proving_or_publication(tmp_path, monkeypatch, phase, boundary):
+    w = make_worker(tmp_path)
+    model = simulated(w, monkeypatch, tmp_path)
+    w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="11" * 32, vout="0"))
+    assert w.advance("prepare")["status"] == "PROOF_PREPARED"
+    active = dict(w.inbox.get("attempt"), phase=phase)
+    w.inbox.put("attempt", active)
+    w.inbox.reserve("existing-reservation", 100)
+    observed = w.context()
+
+    def advance():
+        return w.tick() if boundary == "all" else w.advance(boundary)
+
+    w.context = lambda **kw: (NS(number=0, hash=bytes(32)), *observed[1:])
+    assert advance()["status"] == "AWAITING_EVM_RPC"
+    assert w.inbox.get("attempt") == active
+    if phase == "PREPARED":
+        w.context = lambda **kw: (*observed[:-1], {"blocks": active["target_height"] - 1})
+        assert advance()["status"] == "WAITING_BITCOIN_RPC"
+        assert w.inbox.get("attempt") == active
+    assert model["proves"] == 0 and not model["sends"]
+    assert dict(w.inbox.db.execute("SELECT * FROM reservations")) == {"existing-reservation": "100"}
+    w.inbox.close()
+
+
+def test_worker_waits_on_lag_after_proving_and_keeps_attempt(tmp_path, monkeypatch):
+    w = make_worker(tmp_path)
+    model = simulated(w, monkeypatch, tmp_path)
+    w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="11" * 32, vout="0"))
+    assert w.tick()["status"] == "PROOF_PREPARED"
+    active = w.inbox.get("attempt")
+    observed = w.context()
+
+    def proof_with_lag(self, base):
+        w.context = lambda **kw: (*observed[:-1], {"blocks": active["target_height"] - 1})
+        return VERIFIER_SELECTOR + bytes(256)
+
+    monkeypatch.setattr(LocalProver, "prove", proof_with_lag)
+    assert w.tick()["status"] == "WAITING_BITCOIN_RPC"
+    assert w.inbox.get("attempt") == active
+    assert not model["sends"]
+    w.inbox.close()
+
+
+def test_worker_recovers_persisted_publication_before_reproving(tmp_path, monkeypatch):
+    from signer_agent.operations import Journal
+    from signer_agent.zk_spv_cli import transition_step
+
+    w = make_worker(tmp_path)
+    model = simulated(w, monkeypatch, tmp_path)
+    w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="11" * 32, vout="0"))
+    assert w.tick()["status"] == "PROOF_PREPARED"
+    active = dict(w.inbox.get("attempt"), phase="SENDING")
+    w.inbox.put("attempt", active)
+    base = w.inbox.path / "attempts" / active["id"]
+    name = "zk-worker-" + active["id"]
+    step = transition_step(w.c["chain_id"], w.c["zk_state"], w.c["bitcoin_policy"],
+                           (base / "state.journal").read_bytes(), VERIFIER_SELECTOR + bytes(256))
+    Journal(w.inbox.path / "transactions.sqlite").put(name + ":transition", step)
+
+    def reconcile(target, saved, records, *, recover_only):
+        assert recover_only and target == name and saved == step
+        return dict(status="BROADCAST")
+
+    w.publish = reconcile
+    assert w.tick() == dict(status="BROADCAST", proving_attempt_id=active["id"])
+    assert w.inbox.get("attempt") == active and model["proves"] == 0
+    w.inbox.close()
+
+
+@pytest.mark.parametrize(("core_state", "delivered", "expected"), [
+    ("same", False, "BROADCAST"), ("fork", False, "REVALIDATE_BITCOIN"),
+    ("behind", False, "WAITING_BITCOIN_RPC"), ("inconsistent", False, "WAITING_BITCOIN_RPC"),
+    ("offline", False, "WAITING_BITCOIN_RPC"), ("offline", True, "VERIFIED"),
+])
+def test_transition_publication_rechecks_frozen_target_only_to_send(tmp_path, monkeypatch, core_state, delivered, expected):
+    from signer_agent.bitcoin_rpc import BitcoinRPCError
+    from signer_agent.bootstrap import Bootstrap
+    from signer_agent.bootstrap_parallel import require_publication_context
+
+    c = config(tmp_path)
+    worker = Worker.__new__(Worker)
+    worker.c = c
+    worker.inbox = Inbox(c)
+    active = dict(id="01" * 32, phase="SENDING", target_height=32257, target_hash="aa" * 32)
+    worker.inbox.put("attempt", active)
+    prefix = "zk-worker-" + active["id"]
+    step = dict(id="transition", kind="call", contract="relay", method="submitTransition", args=["0x01", "0x02"])
+    observations, sends = [], []
+
+    def rpc(method, *args):
+        observations.append((method, args))
+        if core_state == "offline":
+            raise BitcoinRPCError("BITCOIN_RPC_FAILED")
+        if method == "getblockchaininfo":
+            height = 32256 if core_state == "behind" else 32258
+            return dict(chain="main", blocks=height, headers=height, initialblockdownload=False, bestblockhash="11" * 32)
+        assert method == "getblockhash"
+        if args == (32257,):
+            return ("bb" if core_state == "fork" else "aa") * 32
+        assert args == (32258,)
+        return ("12" if core_state == "inconsistent" else "11") * 32
+
+    worker.bitcoin = NS(call=rpc)
+
+    def init(runner, profile, path):
+        assert profile["deployment_id"] == prefix
+        runner.journal = NS(path=path)
+
+    def apply(runner, identity, *, before_submit):
+        assert before_submit([step]) is True
+        if delivered:
+            return dict(status="VERIFIED")
+        require_publication_context(runner, runner.journal, prefix, step)
+        sends.append(step)
+        return dict(status="BROADCAST")
+
+    monkeypatch.setattr(Bootstrap, "__init__", init)
+    monkeypatch.setattr(Bootstrap, "apply", apply)
+    try:
+        assert worker.publish(prefix, step, {}, recover_only=True)["status"] == expected
+        assert sends == ([step] if expected == "BROADCAST" else [])
+        assert worker.inbox.get("attempt") == active
+        assert bool(observations) is not delivered
+    finally:
+        worker.inbox.close()
+
+
+def test_shared_identity_lane_observes_delivered_transition_but_needs_worker_to_rebroadcast(tmp_path):
+    from eth_account import Account
+    from hexbytes import HexBytes
+    from web3.exceptions import TransactionNotFound
+
+    from signer_agent.bootstrap_parallel import recover_identity, save_signed
+    from signer_agent.operations import Journal
+
+    account = Account.create()
+    prefix = "zk-worker-" + "01" * 32
+    step = dict(id="transition", kind="call", contract="relay", method="submitTransition", args=["0x01", "0x02"])
+    path = Journal(tmp_path / "worker.sqlite")
+    key = prefix + ":transition"
+    path.put(key, step)
+    lane = Journal(tmp_path / "identity.sqlite")
+    tx = account.sign_transaction(dict(chainId=31337, nonce=0, gasPrice=1, gas=21000,
+                                       to=account.address, value=0, data="0x01"))
+    result = dict(tx_hash=tx.hash.hex(), raw_transaction=tx.raw_transaction.hex(), nonce="0")
+    sends, receipts = [], {}
+
+    def receipt(digest):
+        if digest not in receipts:
+            raise TransactionNotFound(digest)
+        return receipts[digest]
+
+    def unknown(digest):
+        raise TransactionNotFound(digest)
+
+    block_hash = HexBytes("0x" + "a5" * 32)
+    w3 = NS(eth=NS(chain_id=31337, get_transaction_receipt=receipt, get_transaction=unknown,
+                   get_block=lambda number: NS(number=number, hash=block_hash)))
+    bootstrap = NS(w3=w3, journal=path, broadcast=sends.append)
+    save_signed(lane, bootstrap, key, step, result)
+
+    with pytest.raises(ValueError, match="ZK_TRANSACTION_RECOVERY_REQUIRED"):
+        recover_identity(lane, bootstrap, account)
+    assert not sends
+    assert path.get(key)["result"] == result
+
+    receipts[result["tx_hash"]] = NS(transactionHash=tx.hash, blockHash=block_hash, blockNumber=1, status=1)
+    recover_identity(lane, bootstrap, account)
+    assert not sends
+    assert path.get(key)["result"] == result
+
+
+@pytest.mark.parametrize("work", ["other_consumer", "heartbeat", "none"])
+def test_exhausted_proof_budget_preserves_other_work_and_prior_obligation(tmp_path, monkeypatch, work):
+    from signer_agent import zk_worker_heartbeat
+
+    w = make_worker(tmp_path)
+    model = simulated(w, monkeypatch, tmp_path)
+    exhausted = w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="11" * 32, vout="0"))
+    w.c["max_attempts"] = "1"
+    old_history = ["ab" * 32]
+    w.inbox.put("job_attempts", {exhausted: old_history})
+    old_obligation = {"deadline": 100, "created_at": 0, "origins": {"local": 100}}
+    w.inbox.put("obligation:" + exhausted, old_obligation)
+    if work == "other_consumer":
+        eligible = w.inbox.enqueue(dict(kind="deposit", consumer="unit", txid="22" * 32, vout="0"))
+    elif work == "heartbeat":
+        eligible = "heartbeat:reviewed"
+        w.c["heartbeat"] = {"enabled": True}
+        monkeypatch.setattr(zk_worker_heartbeat, "observe", lambda *a:
+                            dict(service_job_id=eligible, deadline=100, broadcast_not_before=10))
+    prepared = w.advance("prepare")
+    assert w.inbox.needs()[0][2] == "ATTEMPT_BUDGET_REVIEW_REQUIRED"
+    history = w.inbox.get("job_attempts")
+    assert history[exhausted] == old_history and w.inbox.get("obligation:" + exhausted) == old_obligation
+    if work == "none":
+        assert prepared["status"] == "ATTEMPT_BUDGET_REVIEW_REQUIRED"
+        assert w.inbox.get("attempt") is None
+    else:
+        assert prepared["status"] == "PROOF_PREPARED"
+        assert w.inbox.get("attempt")["need_ids"] == [eligible]
+        assert history[eligible] == [prepared["proving_attempt_id"]]
+    assert model["proves"] == 0 and not model["sends"]
     w.inbox.close()
 
 

@@ -55,6 +55,7 @@ contract FederationFeeManager is IFeeManager, ReentrancyGuard {
     mapping(bytes32 => uint256) public nftMintedTokenIds;
     mapping(bytes32 => address) public nftCreatedCollections;
     mapping(address => bool) public managedNFTCollections;
+    mapping(bytes32 => FederationNFTModifier) private wrapReservations;
 
     // ======== EVENTS ========
 
@@ -164,6 +165,32 @@ contract FederationFeeManager is IFeeManager, ReentrancyGuard {
         uint256 discount = address(nftModifier) == address(0)
             ? 0 : nftModifier.previewDiscountFor(nftTokenId, account, amount);
         return _calculateFeeWithDiscount(isWrap ? wrapFeeConfig : unwrapFeeConfig, amount, discount);
+    }
+
+    function reserveWrapDiscount(uint256 id, uint256 amount, uint256 tokenId, address account)
+        external nonReentrant returns (uint256 fee, bool reserved)
+    {
+        if (!authorizedFeeCollectors[msg.sender] || msg.sender.code.length == 0) revert UnauthorizedFeeCollector();
+        FederationNFTModifier nft = nftModifier;
+        if (address(nft) == address(0)) return (_calculateFee(wrapFeeConfig, amount), false);
+        bytes32 key = _wrapReservation(id);
+        if (address(wrapReservations[key]) != address(0)) revert InvalidNFTConfiguration();
+        uint256 discount = nft.reserveDiscountFor(key, tokenId, account, amount);
+        wrapReservations[key] = nft;
+        return (_calculateFeeWithDiscount(wrapFeeConfig, amount, discount), true);
+    }
+
+    /// @dev Uses the originally reserved collection, even after configuration or role changes.
+    function closeWrapDiscount(uint256 id, bool settled) external nonReentrant {
+        bytes32 key = _wrapReservation(id);
+        FederationNFTModifier nft = wrapReservations[key];
+        if (address(nft) == address(0)) revert InvalidNFTConfiguration();
+        delete wrapReservations[key];
+        nft.closeDiscountReservation(key, settled);
+    }
+
+    function _wrapReservation(uint256 id) private view returns (bytes32) {
+        return keccak256(abi.encode(msg.sender, id));
     }
 
     // ======== GOVERNANCE ========

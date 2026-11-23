@@ -94,8 +94,10 @@ SQLite WAL/FULL. It contains no identity keys, FROST shares, payer budgets or si
 EOA transaction journals. Header indexes are hints; native authenticated state
 remains authoritative.
 
-New segments are promoted only after the worker sees the corresponding confirmed
-EVM state. Candidate proving files do not become accepted history. Versions retain
+Before signing a new transition the publisher checks that its exact native delta
+fits the archive limits. New segments are promoted after the worker sees the
+corresponding confirmed EVM state. Candidate proving files remain separate.
+Versions retain
 side-branch admission order and the known-root/log/count commitments. No tip-only
 reconstruction guesses missing admitted forks. V3 retained arrays can migrate once
 through native replay; the old array and monetary journal are retained.
@@ -116,9 +118,11 @@ this archive change does not claim a portable Linux proving installation.
 
 Limits are explicit: host protocol accepts at most two million archived headers,
 with an operator-configured lower count and byte budget (template: 200,000 and
-1 GiB). `max_bytes` bounds retained raw segments and imported backup file size;
-SQLite indexes/WAL, stream cache and temporary recovery space require additional
-filesystem capacity. This is not a hard filesystem quota. The native sparse trees
+1 GiB). `max_bytes` bounds the raw segments. Optional `max_backup_bytes` bounds
+the full SQLite file on both backup and restore. Its default is `max_bytes`
+for compatibility with existing configurations. This setting can be adjusted
+on the same archive. SQLite indexes/WAL, stream cache and temporary recovery
+space require additional filesystem capacity. The native sparse trees
 still occupy RAM and cold startup still requires replay. Large-archive time/RAM,
 backup latency and crash/failover qualification must be measured on the target.
 It is not claimed to be a fully disk-resident sparse-tree implementation.

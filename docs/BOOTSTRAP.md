@@ -141,7 +141,8 @@ The generated graph deploys verifier/registry/coordinator, creates all
 three independent DKG ceremonies before waiting for their completed results, renounces coordinator `ADMIN_ROLE` after the verified
 registry binding, deploys and allowlists the real factory/deployer graph,
 reserves `federation_id` for `evm_ceremony.id` and `confederation_id` for
-`conf_ceremony.id` from the signed invitation, adopts completed
+`conf_ceremony.id` with the formation and share-token metadata hashes from the
+signed invitation, adopts completed
 EVM_AUTH results, creates federation/confederation, and connects
 the selected relay, common deposit registry, withdrawal escrow, proof-only mining pool,
 MP, fee manager, governance registry, fixed-supply governance token, staking,
@@ -150,8 +151,15 @@ conversion/router sources. DAO registration targets ConfederationFactory and
 waits for both enforced FROST and custodians. Factory verification reads the
 registered DAO graph. Direct target-bound operations remain available.
 
-The account that deployed each factory makes its reservation. Bootstrap checks
-both reservations on resume. Only the same ID and session can be replayed.
+The account that deployed each factory makes its reservation. Create and reuse
+bind the new organizations to their own reservations. Bootstrap rechecks the
+ID, session and two hashes on resume and verify. It also compares the adopted
+formation and deployed token metadata. An exact reservation retry requires all
+four inputs to match. Before an early mainnet payer approval, the signer
+checks the relevant reservation. A confederation approval also checks the
+parent federation reservation. The paid V3 review checks the native S pool
+and share deployers from the enrolled policy.
+[Recover an unused ID after a terminal DKG](RECOVERY.md#unused-factory-id-recovery).
 [Shared federation factory](FEDERATION_CONFEDERATION_SETUP.md#6-дополнительная-федерация-на-существующей-factory) ·
 [Shared confederation factory](FEDERATION_CONFEDERATION_SETUP.md#7-дополнительная-конфедерация-на-существующей-factory).
 
@@ -429,6 +437,13 @@ can execute/adopt this generated mainnet ZK graph one original unit at a time,
 with private gas/cost caps and strict signed-byte recovery. Its explicit structural
 mode returns `GRAPH_CONFIGURED_FRESHNESS_PENDING`; it does not replace the
 normal bootstrap freshness checks or authorize monetary clients to bypass them.
+
+The interactive CREATE path also deploys the ZK state before proving. Normal
+resume exposes its actual address in the partial manifest on
+`AWAITING_BITCOIN_RELAY` with `bitcoin.reason=AWAITING_ZK_PROOF`. Use
+`--defer-zk-freshness` on the same journal when the worker needs consumer
+addresses first. After the computing worker publishes enough local proofs
+to reach Fresh, finish ordinary resume and verify. [State-first CREATE and public ZIP review](COLD_START.md#zk-первый-state-и-собственный-proof).
 
 
 ## Canonical family root in the withdrawal profile

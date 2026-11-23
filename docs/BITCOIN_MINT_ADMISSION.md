@@ -21,6 +21,12 @@ existing deployed pool.
 
 ## Economic claim and authorization attempts
 
+For direct BTC-funded S issuance on the current V3 reserve, the recipient
+locks the fee for the exact Bitcoin outpoint and amount before broadcasting.
+Use the same gross allocation for the mint claim. The SDK checks the
+confirmed quote before requesting ZK work or submitting the mint; the reserve
+checks it again during settlement. [Direct deposit procedure](CONFEDERATION_DAO_IN_KIND.md#прямой-депозит-btc--s).
+
 `getClaimId(txid, vout)` identifies an outpoint in this exact pool. The contract
 address and EVM chain identify its storage and authorization domain. A claim
 stores its recipients, amounts and original deadline once. `claimOperator`
@@ -35,11 +41,13 @@ request leaves no partial claim or increased attempt count. The caller's EOA
 nonce and its cryptographic signing nonces remain separate concerns.
 
 An attempt records the claim ID, exact operation hash, pool nonce, session ID,
-original deadline and retirement state. The admission is the actual session
+its deadline and retirement state. The admission is the actual session
 creator, so it can atomically abort an expired open session. Every attempt and
 claim remains readable after retirement; the contract never rewrites an old
 session for a new nonce. There are at most eight sessions per claim across all
-pool nonces. A new deadline, proposer or allocation cannot reset that budget.
+pool nonces. A renewed window, proposer or allocation cannot reset that budget.
+On the current issuer and admission pair, each new signing window is limited
+to seven days. The originally recorded deadline remains in the claim history.
 An explicit retry includes the expected previous session. A subsequent retry
 at the same pool nonce therefore has distinct transaction bytes and cannot be
 mistaken for a retransmission of the preceding signed EVM transaction. Operator
@@ -62,7 +70,53 @@ or (address mode only) its derivation generation has advanced. It may then be
 retired even if finalized/approved at the same pool nonce. Resume never revives
 it. Derivation suspension leaves independent custody mint available; custody
 suspension fences both. An unavailable view alone cannot release an executable
-authorization. The original deadline and global eight-attempt budget still apply.
+authorization. The stored attempt deadline and global eight-attempt budget still apply.
+
+The current admission build can also retire an attempt when the enrolled deposit
+registry has permanently classified its exact outpoint as consumed or as a
+wallet output. Check the pool's allocation before reporting completion. A
+retired attempt can coexist with a still-recorded authorization whose outpoint
+is rejected by the mint entry point. Retirement conserves the pool mint nonce.
+This rule applies to the updated admission bytecode. The previous, precisely
+identified deployment remains verifiable for recovery under its original rules.
+The one-time pool binding keeps its deployed admission address.
+
+### Retire an expired slot and renew the same claim
+
+Any member of the enrolled DKG can run `btc-mint-retire --mint-admission ADDRESS
+--session SESSION`. After the attempt deadline, the current issuer advances
+the nonce only when the bound admission retires that exact current slot. The
+advance and the slot release are one Ethereum transaction. A retired approval
+remains in the original authorization history. Its nonce no longer matches any
+mint entry point on that issuer. Other pending authorizations for the same
+issuer nonce also become stale, as they would after a successful mint.
+
+Mint can still execute after the deadline until retirement is included. If the
+mint wins that race, it consumes the output and advances the nonce once.
+Retirement then only clears the old slot. If retirement wins, the old mint
+reverts on its operation hash and the output remains available for a fresh
+approval. No BTC or token balance changes at retirement.
+
+After confirmation, the current operator can run `btc-mint-renew
+--mint-admission ADDRESS --session SESSION --deadline UNIX_TIME`. The operator
+must specify a future deadline within seven days and a retired session whose
+stored deadline has passed. The same outpoint, recipients and allocation
+use a fresh FROST session and the original eight-attempt budget. The new
+authorization uses a higher issuer nonce or, for an irreversibly fenced
+generation, a different current generation from the enrolled registry.
+Original deposit validity, proof, maturity and quote checks still apply.
+Use the renewed attempt deadline for subsequent mint commands.
+
+New admission deployment requires an issuer that supports nonce retirement.
+Previously deployed issuers and their one-time admission bindings use their
+original retirement rules. A known prior build can be verified from its
+exact artifact and creation evidence. A finalized legacy slot can still
+require completion or a permanent registry/generation fence. Enroll the
+custody gateway during deployment before opening public mint admissions.
+
+Before reviewing a base mint for signature, the SDK checks the exact Bitcoin
+transaction against the issuer's enrolled custody gateway. Funds sent through
+that gateway's handover flow follow its cross-wallet settlement procedure.
 
 Address completion requires exact `mintedAllocations`, `mintedAddressIntents`,
 `mintedAddressSats`, immutable binding/provenance and consumed state. It does not
@@ -76,18 +130,19 @@ completion. The contract rejects further admission for any minted outpoint.
 
 | Canonical observation | Allowed transition |
 | --- | --- |
-| Same current nonce, OPENED and original deadline not passed | Keep the slot; continue the same session. |
-| Same current nonce, expired OPENED | A participant may atomically abort and retire it. The original claim cannot receive a fresh deadline. |
-| Same current nonce, ABORTED with no approved operation | Retire; the operator may explicitly retry before the original deadline and within the claim's remaining budget. |
-| Same current nonce, FINALIZED or operation approved | Keep it available for exact execution, including after the original deadline. |
-| Pool nonce demonstrably advanced | Retire the superseded attempt, including a finalized one. If incomplete, explicitly retry under the new current slot, original deadline and budget. |
+| Same current nonce, OPENED and deadline not passed | Continue the same session. |
+| Same current nonce, expired OPENED | The current build aborts the coordinator session and advances the issuer nonce atomically. |
+| Same current nonce, ABORTED with no approved operation | The operator may retire and retry within a live window and its remaining budget. |
+| Exact outpoint recorded as consumed or as a wallet output | Retire the attempt. Verify the recorded allocation separately to determine whether the claimant received MP or S. |
+| Same current nonce, FINALIZED or operation approved | Exact execution remains possible until retirement. On the current build explicit retirement can advance the nonce after expiry. |
+| Pool nonce demonstrably advanced | Retire the superseded attempt. For an incomplete claim, retry within the existing window or renew after expiry with the remaining budget. |
 | RPC/coordinator observation unavailable | Do not infer retirement or completion. |
 
 The coordinator can finalize an existing session after its deadline. Therefore,
-TTL expiry by itself is not proof that a session has become unexecutable. The
-admission's stored deadline also cannot be extended by changing the coordinator's
-mutable session deadline. Signers use the original deadline for new commitments
-and shares, while execution of an already finalized result remains possible.
+Expiry alone leaves the old authorization available. It becomes stale at the
+nonce change or when the enrolled registry permanently fences the output. The
+admission's stored deadline is independent of the coordinator's mutable session
+deadline. Signers use the stored attempt deadline for new commitments and shares.
 
 The contract provides a single occupied slot with explicit backpressure, not a
 complete waiting-queue service. End-to-end bounded waiting queues, latency and
@@ -111,11 +166,13 @@ transport writer does not recover a lost threshold share or reduce the threshold
 For a bound pool, standard signing checks require its canonical admission,
 current slot and attempt context before a commitment, fresh share or cached
 share submission. They verify the typed outpoint/allocation, operation and DKG
-authority. Funding bytes and the inclusion proof are checked by the proposer
-and executor; the pool's existing on-chain mint path validates its proof and
-allocation. The address route additionally requires each signer to review Core
-funding, inclusion and current generations independently before private work.
-Admission alone is not approval to sign or mint.
+authority. Each public Bitcoin mint signer supplies its own
+`--bitcoin-rpc "$BTC_RPC"` and `--bitcoin-cookie "$BTC_COOKIE"` to
+`dkg sign-evm --session "$SESSION" --mint-admission "$MINT_ADMISSION"`.
+The signer checks the same BTC funding, maturity, outpoint, allocation and
+inclusion used by the executor and rechecks the exact EVM session after the
+observation. The address route applies its additional generation checks.
+The pool's on-chain mint path verifies the proof and allocation at execution.
 
 The existing `mintFromProof` entry point and nonce semantics are preserved.
 An independently authorized legacy caller may still advance the pool nonce.
@@ -133,7 +190,7 @@ checks are recorded separately in `ops/artifacts/zkspv`.
 The local contract run passed 25 new state-machine tests and 13 existing
 `MiningDepositAllocation` tests with a 16,777,216 gas ceiling and Osaka's
 transaction gas cap enabled. The new admission runtime is 11,783 bytes and
-initcode is 13,255 bytes under the unchanged solc 0.8.30 optimizer/via-IR
+initcode was 13,255 bytes in the recorded solc 0.8.30 optimizer/via-IR
 configuration. Test harness deployment loads compiled fixtures with `deployCode`
 to avoid embedding every component's initcode in the test contract itself.
 See [contract evidence](../ops/artifacts/zkspv/mint-admission-contract-report.json).

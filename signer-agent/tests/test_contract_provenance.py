@@ -95,11 +95,12 @@ def test_creation_input_uses_artifact_and_constructor_abi():
 
 
 @pytest.mark.parametrize("tamper", [None, "runtime", "initcode"])
-def test_old_treasury_requires_exact_reviewed_runtime_and_constructor(monkeypatch, tamper):
+@pytest.mark.parametrize("version", ["Legacy", "V1", "V2"])
+def test_old_treasury_requires_exact_reviewed_runtime_and_constructor(monkeypatch, tamper, version):
     from signer_agent import bitcoin_trust
 
     kind = "ULRConfederationTreasury"
-    reference = Path(__file__).resolve().parents[1] / "contracts/ULRConfederationTreasuryLegacy.json"
+    reference = Path(__file__).resolve().parents[1] / f"contracts/ULRConfederationTreasury{version}.json"
     legacy = json.loads(reference.read_text())
     current = dict(deepcopy(legacy), abi=artifact(kind)["abi"])
     current["deployedBytecode"]["object"] += "00"
@@ -125,6 +126,94 @@ def test_old_treasury_requires_exact_reviewed_runtime_and_constructor(monkeypatc
         expected = "BTC_CONTRACT_BUILD_MISMATCH" if tamper == "runtime" else "BTC_CONSTRUCTOR_INPUT_MISMATCH"
         with pytest.raises(ValueError, match=expected):
             prove_creation(history.w3, target, kind, args, 8, birth_hint=8)
+
+
+@pytest.mark.parametrize("kind,args", [
+    ("ConfederationBitcoinReserve", ["pool", address(1), address(2), address(3)]),
+    ("ConfederationPoolV2", ["conf", address(1), address(2), address(3)]),
+    ("ConfederationPoolV2Deployer", [address(1)]),
+])
+def test_legacy_custody_origin_requires_explicit_recovery_and_exact_initcode(kind, args):
+    from signer_agent.bitcoin_trust import checked_runtime
+
+    path = Path(__file__).resolve().parents[1] / "contracts" / f"{kind}CustodyLegacy2630366.json"
+    legacy = json.loads(path.read_text())
+    history = History()
+    target = address(100)
+    runtime = bytes.fromhex(legacy["deployedBytecode"]["object"].removeprefix("0x"))
+    initcode = bytes.fromhex(legacy["bytecode"]["object"].removeprefix("0x"))
+    constructor = next(row for row in artifact(kind)["abi"] if row["type"] == "constructor")
+    initcode += encode([item["type"] for item in constructor["inputs"]], args)
+    history.contracts[target] = (8, runtime)
+    history.transaction(8, to=None, input_data=initcode, deployed=target)
+    with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD_MISMATCH"):
+        checked_runtime(history.w3, target, kind, 8)
+    proof = prove_creation(history.w3, target, kind, args, 8, birth_hint=8, legacy_custody=True)
+    assert proof["runtime_hash"] == Web3.keccak(runtime).hex()
+    assert proof["initcode_hash"] == Web3.keccak(initcode).hex()
+    with pytest.raises(ValueError, match="BTC_CONSTRUCTOR_INPUT_MISMATCH"):
+        prove_creation(history.w3, target, kind, [*args[:-1], address(4)], 8,
+                       birth_hint=8, legacy_custody=True)
+
+
+def test_legacy_ulr_factory_can_only_be_proven_with_explicit_treasury_compatibility():
+    kind = "ConfederationFactory"
+    args = [address(i) for i in range(1, 5)]
+    path = Path(__file__).resolve().parents[1] / "contracts/ConfederationFactoryULRLegacy2630366.json"
+    legacy = json.loads(path.read_text())
+    history = History()
+    target = address(100)
+    runtime = bytes.fromhex(legacy["deployedBytecode"]["object"].removeprefix("0x"))
+    initcode = bytes.fromhex(legacy["bytecode"]["object"].removeprefix("0x")) + encode(["address"] * 4, args)
+    history.contracts[target] = (8, runtime)
+    history.transaction(8, to=None, input_data=initcode, deployed=target)
+    with pytest.raises(ValueError, match="BTC_CONTRACT_BUILD_MISMATCH"):
+        prove_creation(history.w3, target, kind, args, 8, birth_hint=8)
+    proof = prove_creation(history.w3, target, kind, args, 8, birth_hint=8, legacy_ulr_factory=True)
+    assert proof["method"] == "direct"
+    assert proof["initcode_hash"] == Web3.keccak(initcode).hex()
+
+
+@pytest.mark.parametrize("kind,types,args,pin", [
+    ("ULRStaking", ["address", "address", "uint256", "uint256"],
+     [address(1), address(2), 200_000 * 10**18, 10**18],
+     "evm-v1:84e2e90b100a4a644f588cd309d252a71106f74efdab005fb5a5878adcc286c2"),
+    ("BitcoinMintAdmission", ["address", "address"], [address(1), address(2)],
+     "evm-v1:159ad4cb74e152d67e4bd4e499b82b98c2abb655f4664db8934dac532bac04a8"),
+])
+def test_previous_build_requires_opt_in_and_exact_runtime_and_initcode(monkeypatch, kind, types, args, pin):
+    from signer_agent import bitcoin_trust
+    from signer_agent.bootstrap import artifact_fingerprint
+
+    previous = bitcoin_trust.previous_artifact(kind)
+    assert artifact_fingerprint(previous) == pin
+    assert bitcoin_trust.previous_artifact("FROSTVerifier") is None
+    current = deepcopy(previous)
+    current["deployedBytecode"]["object"] += "00"
+    current["bytecode"]["object"] += "00"
+    monkeypatch.setattr(bitcoin_trust, "artifact", lambda _: current)
+
+    history = History()
+    target = address(100)
+    runtime = bytes.fromhex(previous["deployedBytecode"]["object"].removeprefix("0x"))
+    initcode = bytes.fromhex(previous["bytecode"]["object"].removeprefix("0x"))
+    tx, _ = history.transaction(8, to=None, input_data=initcode + encode(types, args), deployed=target)
+    history.contracts[target] = (8, runtime)
+    with pytest.raises(ValueError, match="^BTC_CONTRACT_BUILD_MISMATCH$"):
+        bitcoin_trust.checked_runtime(history.w3, target, kind, 8)
+    assert bitcoin_trust.checked_runtime(history.w3, target, kind, 8, previous_build=True) == Web3.keccak(runtime).hex()
+
+    correct_input = tx["input"]
+    tx["input"] = initcode + b"\0" + encode(types, args)
+    with pytest.raises(ValueError, match="^BTC_CONSTRUCTOR_INPUT_MISMATCH$"):
+        prove_creation(history.w3, target, kind, args, 8, previous_build=True)
+    tx["input"] = correct_input
+    proof = prove_creation(history.w3, target, kind, args, 8, previous_build=True)
+    assert proof["initcode_hash"] == Web3.keccak(correct_input).hex()
+
+    history.contracts[target] = (8, bytes([runtime[0] ^ 1]) + runtime[1:])
+    with pytest.raises(ValueError, match="^BTC_CONTRACT_BUILD_MISMATCH$"):
+        prove_creation(history.w3, target, kind, args, 8, previous_build=True)
 
 
 @pytest.mark.parametrize("args", [[], None])

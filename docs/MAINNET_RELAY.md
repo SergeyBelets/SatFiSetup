@@ -87,7 +87,7 @@ comparisons remain necessary. The CLI additionally rejects a tip too far in the
 future and checks the configured EVM receipt depth.
 
 For a supported constructor payload, dynamic lengths are fixed by validation.
-With the mandated Solidity 0.8.30 / Osaka / via-IR / optimizer-runs=1 configuration,
+In the historical Solidity 0.8.30 / Osaka / via-IR / optimizer-runs=1 build,
 the current measured runtime is **5,903 bytes**, creation code **7,947 bytes**,
 constructor arguments **1,920 bytes**, and actual initcode **9,867 bytes**; see the
 [26 October size report](../ops/artifacts/operations-final-20261026.contract-sizes.json). These fit EIP-170 and

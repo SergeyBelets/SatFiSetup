@@ -112,6 +112,19 @@ authenticated origin, the pinned inspector, guest program and strict isolation.
 
 ## Worker modes and transition archives
 
+Both `run --boundary prepare` and `run --boundary export` need a deployed ZK
+state visible at the worker's confirmed EVM block. They bind the native input
+and journal to the actual chain, state address, checkpoint and predecessor.
+Take `zk_state` from `manifest.contracts.relay.address` when bootstrap reports
+`status=AWAITING_BITCOIN_RELAY` and `bitcoin.reason=AWAITING_ZK_PROOF`.
+Take the complete policy from the enrolled invitation. The current worker
+config requires at least one consumer in `allowed_consumers`, including
+heartbeat mode. In a new CREATE, the ordinary bootstrap checks Fresh before
+deploying consumers. Run the same deployment with `--defer-zk-freshness` to
+get their actual addresses, then finish the Fresh check with an ordinary
+`resume` and `verify`. If verified consumers already exist, use their
+confirmed addresses. [Cold start with the state-first CREATE](COLD_START.md#zk-первый-state-и-собственный-proof).
+
 | Mode | Work performed | Expected entry point |
 | --- | --- | --- |
 | Prepare only | Observe a queued request or heartbeat and prepare the native transition input and journal | `run --boundary prepare` |
@@ -136,6 +149,7 @@ loop. Prepare-only does not require the proving tools or Docker image.
 If another publisher has already landed the exact prepared transition, the
 loop retains the accepted archive locally. `AWAITING_EVM_RPC` or
 `WAITING_BITCOIN_RPC` keeps the selected attempt while the node catches up.
+The same anchor checks apply during local proving and publication.
 If a stable observation invalidates an unsubmitted attempt, the loop returns
 `REVALIDATE_STATE` or `REVALIDATE_BITCOIN` with `retired=true`. It retains
 the attempt files and can prepare again on the next poll. A pending `SENDING`
@@ -153,8 +167,38 @@ Use `--without-proof` to share a prepared transition for input review.
 In the full archive the journal and seal are evidence for the exact
 transition. `verify-bundle` reviews the enrolled graph and confirmed EVM
 state without a prover, spending identity or Bitcoin RPC credentials.
-The archive does not replace Bitcoin transaction inclusion, monetary policy,
-or ordinary FROST checks. [Archive contents and distribution boundaries](DISTRIBUTION.md#публичный-архив-перехода).
+For a single computation, designate the computing worker as publisher and
+run its separate `publish` command. A publisher on another worker computes
+its own local result. Bitcoin transaction inclusion, monetary policy and
+ordinary FROST checks still apply. [Archive contents and distribution boundaries](DISTRIBUTION.md#публичный-архив-перехода).
+
+### EVM transport and independent verification
+
+Use `https://` for a remote EVM RPC. Plain HTTP is allowed for loopback.
+Preflight and runtime both verify TLS certificates and disable redirects and
+proxies configured through the environment. Keep authenticated URLs in the
+private configuration for each machine.
+
+Set the optional `evm_witness_rpc` in the private worker or ZIP review JSON
+to an independently trusted endpoint for the same EVM chain. With both
+providers, review uses the smaller confirmed height, compares the block hash,
+checks the pinned state and performs the same verifier call on both for a seal.
+RPC lag below a previously accepted worker anchor returns `AWAITING_EVM_RPC`.
+A disagreement at the same confirmed anchor blocks acceptance. A successful
+two-provider review reports `independent_rpc_confirmed: true`. A single RPC
+configuration relies on that endpoint for its read-only review. The on-chain
+verifier checks the proof itself when the publisher submits it.
+
+```mermaid
+flowchart TD
+    accTitle: Два доверенных EVM RPC при проверке ZK ZIP
+    A["Проверить транспорт обоих RPC"] --> B["Выбрать меньшую подтверждённую высоту"]
+    B --> C{"Общий блок доступен и хеши совпадают?"}
+    C -->|"Отставание"| W["Ждать сохранённый якорь"]
+    C -->|"Хеши различаются"| X["Остановить проверку"]
+    C -->|"Да"| D["Сверить state, граф и Groth16 на обоих RPC"]
+    D --> E["Публичное подтверждение архива"]
+```
 
 ## Running and requesting
 
@@ -192,11 +236,61 @@ remain waiting and are re-observed by the worker.
 
 ## Limits, recovery and state changes
 
-* `max_pending` bounds **all retained unique requests**, including completed
-  requests. Identical requests deduplicate across restarts. There is no automatic
-  deletion or rotation: retain the journal and its cost ledger together.
+* By default `max_pending` bounds all retained unique requests. An explicit
+  `max_retained_needs` between `max_pending` and 4,096 sets a separate limit for
+  all retained rows. With this option, only `COMPLETED` rows stop counting
+  toward pending capacity. A `READY` need can still require work. Canonical
+  re-observation may reopen an existing completed row, which counts as pending
+  again. Deduplication, gas budgets and payment records stay in SQLite. The
+  worker preserves the fail-closed retained limit without automatic rotation.
+* Set `history_max_bytes` to a decimal string to enable indexed completion
+  history in the current `worker.sqlite`. The example profiles use
+  `"134217728"` (128 MiB). The allowed range is 8 MiB to 1 TiB.
+  At a stable confirmed EVM block the worker archives
+  only needs it has observed as `COMPLETED` through the consumer contract.
+  Archived needs no longer count toward `max_pending` or `max_retained_needs`.
+  The original need ID, request, status, deadlines, service links, proof attempts
+  and reserved costs stay available in the same journal. Enabling this policy
+  requires keeping the option on subsequent runs of that journal.
+* The `status` response reports active needs and `need_history` with the row
+  count, bytes, checkpoint and recheck cursor. RPC lag preserves the checkpoint.
+  If the confirmed checkpoint leaves the canonical EVM chain, the worker pauses
+  new work and rechecks at most 32 archived needs per tick. Recheck progress
+  survives restart. A need whose completion has disappeared becomes active
+  with its original terms and budget. If many old needs reopen at once, the
+  active backlog may exceed the new-admission cap until it drains.
+* The byte limit is a pre-admission check for the existing SQLite file plus WAL
+  and SHM. Existing operations can still be reconciled at the limit, so keep
+  free filesystem space for their writes. The header archive, signed transaction
+  journals and optional observation history have their own storage policies.
+  Keep these files together when taking a consistent backup, including a private
+  copy of the necessary nonce and budget journals. A restored snapshot must
+  match the current chain and keep the same identities and spending history.
+  The need history increases with distinct completed obligations. Plan storage
+  growth and preserve the existing financial journal.
+
+```mermaid
+flowchart TD
+    accTitle: Indexed ZK request history and reorg recovery
+    accDescr: The worker archives completed needs at a confirmed consumer anchor and preserves original records. A canonical reorg triggers bounded revalidation while an RPC lag preserves the checkpoint.
+    CONFIG["Enable history_max_bytes"] --> FINISHED["Consumer confirms COMPLETED<br/>at a stable EVM block"]
+    FINISHED --> STORE["Archive in the same SQLite journal<br/>Preserve request ID and budget"]
+    STORE --> CHAIN{"Saved checkpoint status"}
+    CHAIN -->|"Canonical"| LIVE["Resume work and check file space<br/>before admitting a new request"]
+    CHAIN -->|"RPC behind"| WAIT["Wait with the same checkpoint"]
+    CHAIN -->|"Reorg confirmed"| REVIEW["Pause new work<br/>Recheck up to 32 archived needs per tick"]
+    REVIEW -->|"Completion disappeared"| RESTORE["Reopen original need<br/>with its existing terms and budget"]
+    REVIEW -->|"All pages reconciled"| ANCHOR["Save the confirmed checkpoint"]
+    ANCHOR --> LIVE
+```
+
 * `max_attempts` bounds distinct proof inputs per request, including catch-up
-  batches. `max_headers_per_sync` in the enrolled policy caps each batch at 1..64.
+  batches. A need that exhausts its budget enters
+  `ATTEMPT_BUDGET_REVIEW_REQUIRED`. Its counters and paid obligations stay
+  in the journal. Other eligible needs and funded heartbeat work can proceed.
+  SPV transport reports the held need as `OBSERVATION_UNAVAILABLE` with the
+  reason `ZK_WORKER_ATTEMPT_BUDGET`.
+  `max_headers_per_sync` in the enrolled policy caps each batch at 1..64.
   `max_stage_retries` separately bounds retries after explicit failed-stage
   completion reports. `stage_timeout_seconds` is per proving stage (60..86400).
 * `minimum_free_bytes` is checked before each new stage (at least 8 GiB).
@@ -223,8 +317,15 @@ remain waiting and are re-observed by the worker.
   prover may still exist. Stop and inspect the process and stage logs before any
   operator recovery; do not delete the marker to bypass the check.
   `ZK_TRANSACTION_RECOVERY_REQUIRED` similarly requires resolving the existing
-  signed transaction against the confirmed state, not sending a replacement
-  blindly. Source/artifact drift is rejected.
+  signed transaction against the confirmed state. A `SENDING` attempt with
+  an exact recorded transaction can use journal recovery for the same bytes.
+  A receipt or a known Ethereum transaction can be observed through the signed
+  journal. To rebroadcast a transaction that Ethereum RPC does not know, the
+  owning worker rechecks the target hash with a sufficiently current Bitcoin
+  node. RPC lag or inconsistent reads return `WAITING_BITCOIN_RPC`.
+  A confirmed change of the Bitcoin target returns `REVALIDATE_BITCOIN`.
+  The signed bytes and EVM nonce remain in the journal for reconciliation.
+  New proving work uses provenance matching the current source and artifacts.
 * `ZK_ARCHIVE_RECOVERY_REQUIRED` means a noninitial state has no matching local
   admitted-header history. Restore the worker's matching backup; a tip alone
   cannot reconstruct previously admitted fork history. V4 uses the permanent segmented archive
@@ -243,11 +344,13 @@ that directory. Cost/polling limits can be adjusted explicitly; changing scope
 requires a separately provisioned worker and reconciliation of old transactions
 and budgets. Do not create new directories to evade an exhausted cost ledger.
 
-An initial bootstrap readiness barrier occurs before ordinary consumer deployment.
-The V1 consumer-only configuration uses the operator's initial proof activation.
-The V2 configuration with heartbeat enabled can perform the first useful update
-before consumers exist. Once deployed, consumers can request catch-up and header
-materialization. A state advanced externally also needs the matching
+The initial CREATE readiness barrier occurs after deployment of state, adapter
+and verifier and before ordinary consumer deployment. V1 is consumer-driven.
+V2 and later can prepare useful work from a heartbeat without a consumer
+request, with a populated consumer allowlist. On a fresh graph use the explicit
+structural bootstrap stage to deploy consumers before the first worker proof.
+The resulting graph waits for Fresh. Consumers then request catch-up and header
+materialization as needed. A state advanced externally also needs the matching
 archive imported/recovered before this worker can build its next witness.
 
 ## Recorded evidence
@@ -350,12 +453,13 @@ payment. Admission itself transfers no value. Permission renewal is explicit;
 terms and original service deadline cannot be silently rewritten. Attaching or
 paying does not complete a need. Group membership is immutable once attached;
 new grouping/batching must not create another full charge for already covered
-work. Automatic distributed quote selection and encrypted delivery are still
-separate pending integrations.
+work. The V2 local path above predates V3 encrypted delivery and V4 optional
+issuer/payer automation. See the corresponding release sections below.
 
 With `heartbeat.enabled=true`, the worker can prepare the first useful update
-before any consumer exists, then schedule new useful work from its canonical
-activation/acceptance anchor. Lead time permits proving ahead of the boundary;
+before the first consumer request, after configuring a real consumer allowlist.
+It then schedules work from its canonical activation/acceptance anchor.
+Lead time permits proving ahead of the boundary;
 heartbeat-only publication waits until the boundary. A mature consumer need can
 make the same prepared work urgent. Partial catch-up, an ACK/status, a side-branch
 update or failed proving does not advance the anchor. Canonical Fresh state that
@@ -364,9 +468,9 @@ anchor. No Bitcoin progress produces no empty proof. `continuous_fresh` requires
 compatible interval/grace/safety/Fresh bounds.
 
 Missed/no-progress/error notices enter a bounded durable **local** status outbox
-with backoff. They are not claimed as delivered: the encrypted remote transport
-adapter is still pending. The earlier calendar planner remains a separate model;
-the executable heartbeat reads the real worker state/Core/provenance boundary.
+with backoff. That outbox is a local record. The separate V3 encrypted transport
+has its own delivery and recovery path. The earlier calendar planner remains a
+separate model. The executable heartbeat reads real state, Core and provenance.
 
 This V2 stage originally had focused unit/ABI checks and Solidity compilation.
 The 2 November local acceptance includes 3269 Python, 834 ordinary Solidity and

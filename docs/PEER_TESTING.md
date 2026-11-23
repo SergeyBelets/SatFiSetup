@@ -310,7 +310,7 @@ HTTP executor/retry и relay recovery с историческими mainnet/test
 
 Установите зависимости и закреплённые версии по
 [общей инструкции](CROSS_PLATFORM_QUICKSTART.md#3-системные-зависимости):
-Python 3.11+, Rust 1.89.0, Foundry 1.8.5, solc 0.8.30. Для Bitcoin-тестов
+Python 3.11+, Rust 1.89.0, Foundry 1.8.5, solc 0.8.39. Для Bitcoin-тестов
 нужен Core 30.3. Бинарники другой ОС и чужой `.venv` не переносятся.
 Для холодной установки оставьте запас свободного диска сверх минимальных
 порогов тестового runner: зависимости, toolchains и Solidity builds требуют
@@ -325,7 +325,7 @@ cd "$HOME/src/satoshify"
 python3 -m venv .venv
 source .venv/bin/activate
 python ops/bootstrap_host.py build
-python -m pip install -e './signer-agent[test,evm-test]'
+python -m pip install --no-build-isolation -e './signer-agent[test,evm-test]'
 ```
 
 `build` сам собирает FROST и оба Solidity-проекта, затем проверяет ABI и runtime

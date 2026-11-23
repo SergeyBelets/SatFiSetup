@@ -97,7 +97,9 @@ contract WithdrawalFeeFunding {
         require(siblings.length <= 32 && index >> siblings.length == 0,"fee proof bounds");
         (bool canonical,uint64 depth)=deposits.spv().getBlockStatus(blockHash);
         bool coinbase=p.inputs.length == 1 && p.inputs[0].txidLE == 0 && p.inputs[0].vout == type(uint32).max;
-        require(canonical && depth >= (coinbase ? 101 : deposits.depth()) && deposits.spv().checkTxInclusion(blockHash,p.txid,siblings,index),"fee funding proof/maturity");
+        uint32 requiredDepth=deposits.depth();
+        if (coinbase && requiredDepth < 101) requiredDepth=101;
+        require(canonical && depth >= requiredDepth && deposits.spv().checkTxInclusion(blockHash,p.txid,siblings,index),"fee funding proof/maturity");
         deposits.markUserFee(raw,vout);WithdrawalFeeCredits(credits).issue(b.request,p.txid,vout,p.amount);
     }
 }

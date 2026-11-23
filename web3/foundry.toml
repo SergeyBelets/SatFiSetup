@@ -9,7 +9,7 @@ auto_detect_remappings = false
 optimizer = true
 optimizer_runs = 1
 via_ir = true
-solc_version = "0.8.30"
+solc_version = "0.8.39"
 # Pin the target: changing Foundry must not silently change deployed bytecode.
 evm_version = "osaka"
 # Monetary gas bounds model each external test action as a separate transaction.

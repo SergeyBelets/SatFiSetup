@@ -12,12 +12,15 @@ from signer_agent import bootstrap_replacement as replacement
 from signer_agent import bootstrap_create, bootstrap_parallel
 from signer_agent.bootstrap_parallel import recover_identity, restore_signed, save_signed
 from signer_agent.bootstrap_recovery import identity_lane, protected_nonce_floor, signed_fields
-from signer_agent.operations import Journal
+from signer_agent.operations import Journal, OperationJournal
 
 
 @pytest.fixture
 def fixture(tmp_path, monkeypatch, request):
     chain = getattr(request, "param", 1)
+    api_operation = chain == "api"
+    if api_operation:
+        chain = 11155111
     account = Account.create()
     identity = tmp_path / "identity.json"
     identity.write_text(json.dumps({"private_key": account.key.hex()}))
@@ -26,8 +29,31 @@ def fixture(tmp_path, monkeypatch, request):
     journal = Journal(tmp_path / "sender.sqlite")
     step = dict(id="send", kind="call", contract="target", method="test", args=[])
     profile = dict(deployment_id="fixture", chain_id=str(chain), steps=[step], evm_confirmations="12")
-    journal.put("fixture", dict(profile=profile))
-    key = "fixture:send"
+    target = Web3.to_checksum_address("0x" + "42" * 20)
+    runtime = b"target code"
+    api = None
+    if api_operation:
+        from signer_agent import operation_worker as worker
+
+        api_journal = journal
+        requests = OperationJournal(api_journal.path)
+        spec = dict(deployment="fixture", contract="target", method="test", artifact="Fixture")
+        contracts = {"target": dict(artifact="Fixture", address=target, runtime_hash=Web3.keccak(runtime).hex())}
+        profile.update(evm_rpc="rpc", approval_deadline="1")
+        api_journal.put("fixture", dict(profile=profile, version="1"))
+        api_journal.update("fixture", "VERIFIED", dict(contracts=contracts))
+        requests.put("operation", dict(action="claim", args=[], spec=spec))
+        operation = requests.find("operation", ["fixture"])
+        state_path, profile = worker.execution_profile(api_journal, operation, profile, contracts)
+        journal = Journal(state_path)
+        step = profile["steps"][0]
+        policy = {"actions": {"claim": spec}, "deployments": ["fixture"]}
+        policy_path = tmp_path / "policy.json"
+        policy_path.write_text(json.dumps(policy))
+        api = SimpleNamespace(journal=api_journal, requests=requests, policy=policy, policy_path=policy_path)
+    prefix = profile["deployment_id"]
+    journal.put(prefix, dict(profile=profile, version="1"))
+    key = prefix + ":" + step["id"]
     journal.put(key, step)
     sent, receipts, known, estimates = [], {}, {}, []
     state = SimpleNamespace(finalized=100, latest=120, pending=211, nonce=211, base_fee=20,
@@ -36,7 +62,7 @@ def fixture(tmp_path, monkeypatch, request):
     def block(tag):
         number = state.latest if tag == "latest" else state.finalized if tag == "finalized" else tag
         return AttributeDict(dict(number=number, hash=HexBytes(state.block_hashes.get(number, number.to_bytes(32, "big"))),
-                                  baseFeePerGas=state.base_fee, gasLimit=10_000_000))
+                                  baseFeePerGas=state.base_fee, gasLimit=10_000_000, timestamp=number))
 
     def observed(store, digest):
         if digest not in store:
@@ -69,23 +95,14 @@ def fixture(tmp_path, monkeypatch, request):
                           get_transaction_receipt=lambda digest: observed(receipts, digest),
                           get_transaction=lambda digest: observed(known, digest), send_raw_transaction=send,
                           get_balance=lambda *args, **kwargs: 10**18,
-                          get_code=lambda *args, **kwargs: b"", estimate_gas=estimate)
+                          get_code=lambda address, **kwargs: runtime if api_operation and address == target else b"",
+                          estimate_gas=estimate)
     w3 = SimpleNamespace(eth=eth)
-    class FixtureWeb3:
-        HTTPProvider = staticmethod(lambda *args, **kwargs: None)
-        keccak = staticmethod(Web3.keccak)
-        to_hex = staticmethod(Web3.to_hex)
-        to_checksum_address = staticmethod(Web3.to_checksum_address)
-
-        def __new__(cls, *args, **kwargs):
-            return w3
-
-    monkeypatch.setattr(replacement, "Web3", FixtureWeb3)
+    monkeypatch.setattr(replacement, "evm_web3", lambda *a, **kw: w3)
     monkeypatch.setenv("SATOSHIFI_MAX_FEE_PER_GAS_WEI", "100")
     monkeypatch.setenv("SATOSHIFI_MAX_PRIORITY_FEE_PER_GAS_WEI", "10")
     monkeypatch.setenv("SATOSHIFI_MAX_TX_GAS", "100000")
-    target = Web3.to_checksum_address("0x" + "42" * 20)
-    values = dict(chainId=chain, nonce=211, to=target, gas=55000, type=2, value=4, data="0x1234",
+    values = dict(chainId=chain, nonce=211, to=target, gas=55000, type=2, value=0 if api_operation else 4, data="0x1234",
                   maxFeePerGas=20, maxPriorityFeePerGas=2, accessList=[dict(address=target,
                   storageKeys=["0x" + "01" * 32])])
     signed = account.sign_transaction(values)
@@ -94,8 +111,8 @@ def fixture(tmp_path, monkeypatch, request):
     def forbidden(_):
         raise AssertionError("retry rebroadcast an alternative without explicit confirmation")
 
-    bootstrap = SimpleNamespace(w3=w3, journal=journal, broadcast=forbidden, prefix="fixture")
-    save_signed(lane, bootstrap, key, step, original, allow_fee_replacement=True)
+    bootstrap = SimpleNamespace(w3=w3, journal=journal, broadcast=forbidden, prefix=prefix)
+    save_signed(lane, bootstrap, key, step, original, allow_fee_replacement=not api_operation)
     journal.update(key, "BROADCAST", original)
 
     def command(tx_hash=None, **overrides):
@@ -108,10 +125,81 @@ def fixture(tmp_path, monkeypatch, request):
         state.nonce = 212
         state.pending = 212
 
+    if api is not None:
+        monkeypatch.setattr(worker, "deployment_runner", lambda *_, **__: SimpleNamespace(
+            apply=lambda **_: dict(status="VERIFIED", manifest=dict(contracts=contracts))))
+        monkeypatch.setattr(worker, "Bootstrap", lambda *_, **__: SimpleNamespace(
+            fn=lambda _: SimpleNamespace(_encode_transaction_data=lambda: "0x1234")))
+
+        def api_command(confirmed=None, *, fee="45", cap="4000000"):
+            args = SimpleNamespace(id="operation", identity_file=identity, policy=policy_path, rpc="rpc",
+                bitcoin_rpc=None, bitcoin_cookie=None, max_fee_per_gas_wei=fee, max_priority_fee_per_gas_wei="3",
+                max_cost_wei=cap, confirm_replacement=confirmed)
+            return worker.replace_operation(api_journal, requests, args, ["fixture"])
+
+        api.command = api_command
+
     return SimpleNamespace(chain=chain, identity=identity, account=account, lane=lane, bootstrap=bootstrap,
         journal=journal, step=step,
         key=key, state=state, original=original, sent=sent, known=known, estimates=estimates,
-        command=command, mine=mine)
+        command=command, mine=mine, api=api)
+
+
+@pytest.mark.parametrize("fixture", ["api"], indirect=True)
+def test_api_replacement_requires_review_and_rechecks_acl_after_estimation(fixture, monkeypatch):
+    f = fixture
+    api = f.api
+    original = f.original["tx_hash"]
+    with pytest.raises(ValueError, match="EVM_REPLACEMENT_UNSUPPORTED"):
+        f.command()
+    review = api.command()
+    assert review["status"] == "EVM_REPLACEMENT_REVIEW"
+    assert review["replacement"]["gas"] == "55000"
+    assert not f.sent and replacement._candidate_rows(f.lane, original) == []
+    with pytest.raises(ValueError, match="EVM_REPLACEMENT_FINGERPRINT"):
+        api.command(review["fingerprint"], fee="46")
+    with pytest.raises(ValueError, match="EVM_REPLACEMENT_BUDGET_EXCEEDED"):
+        api.command(cap="2474999")
+
+    eth = f.bootstrap.w3.eth
+    estimate = eth.estimate_gas
+
+    def revoke_during_preflight(*args, **kwargs):
+        gas = estimate(*args, **kwargs)
+        api.policy_path.write_text(json.dumps(dict(api.policy, actions={})))
+        return gas
+
+    monkeypatch.setattr(eth, "estimate_gas", revoke_during_preflight)
+    with pytest.raises(ValueError, match="ACTION_NOT_ALLOWED"):
+        api.command(review["fingerprint"])
+    assert not f.sent and replacement._candidate_rows(f.lane, original) == []
+    api.policy_path.write_text(json.dumps(api.policy))
+    monkeypatch.setattr(eth, "estimate_gas", estimate)
+
+    submitted = api.command(review["fingerprint"])
+    alternative = submitted["tx_hash"]
+    assert api.command(review["fingerprint"]) == submitted and f.sent == [alternative]
+    old, new = [signed_fields(f.lane.get(tx)["request"], f.account, f.chain) for tx in (original, alternative)]
+    assert {key: old[key] for key in (*replacement.CALL_KEYS, "gas")} == {
+        key: new[key] for key in (*replacement.CALL_KEYS, "gas")}
+    f.mine(alternative, 105)
+    f.state.finalized = 110
+    recover_identity(f.lane, f.bootstrap, f.account)
+    assert f.journal.get(f.key)["result"]["tx_hash"] == alternative
+    assert f.lane.get(original)["request"]["raw_transaction"] == f.original["raw_transaction"]
+
+
+@pytest.mark.parametrize("fixture", ["api"], indirect=True)
+def test_api_replacement_refuses_pending_runtime_change(fixture, monkeypatch):
+    f = fixture
+    review = f.api.command()
+    get_code = f.bootstrap.w3.eth.get_code
+    monkeypatch.setattr(f.bootstrap.w3.eth, "get_code", lambda address, *, block_identifier:
+        b"changed" if address != f.account.address and block_identifier == "pending"
+        else get_code(address, block_identifier=block_identifier))
+    with pytest.raises(ValueError, match="CODE_HASH_MISMATCH"):
+        f.api.command(review["fingerprint"])
+    assert not f.sent
 
 
 @pytest.mark.parametrize("fixture", [1, 11155111], indirect=True, ids=["mainnet", "sepolia"])

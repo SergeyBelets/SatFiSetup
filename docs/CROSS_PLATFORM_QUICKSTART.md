@@ -61,10 +61,12 @@ flowchart TD
 завершите собственный короткий smoke. Linux/WSL2 x86-64 теперь используют
 bubblewrap namespaces, seccomp и отдельные immutable tool pins. Установка,
 Docker socket, реальные isolation probes и порядок всех ZK-стадий описаны в
-[Linux ZK runbook](ZK_PROVER_LINUX.md). macOS arm64 сохраняет sandbox backend;
-CLI/socket выбираются локально. Каждый участник сам считает рабочие proofs.
-Проверка опубликованного state не заменяет собственный расчёт. Неподдерживаемые
-платформы, включая Linux ARM64, блокируются при ZK enrollment.
+[Linux ZK runbook](ZK_PROVER_LINUX.md). macOS arm64 сохраняет sandbox backend,
+CLI/socket выбираются локально. Prover готовит и рассчитывает переход по
+подтверждённому state после CREATE. Другие участники могут независимо проверить
+публичный ZIP через свои EVM RPC. Для публикации worker использует свой proof.
+Неподдерживаемые платформы, включая Linux ARM64, блокируются при ZK enrollment.
+[Холодный старт ZK и режимы worker](COLD_START.md#zk-первый-state-и-собственный-proof).
 Порт проверен по компонентам; полный fresh-proof прогон и физический WSL2 ещё
 не подтверждены. Порядок поставки и расчёта: [инструкция](DISTRIBUTION.md).
 
@@ -133,7 +135,7 @@ forge --version
 anvil --version
 ```
 
-Используем solc **0.8.30**, Osaka, optimizer/via-IR и remappings из
+Для новых развёртываний используем solc **0.8.39**, Osaka, optimizer/via-IR и remappings из
 `web3/foundry.toml`. Не изменяйте эти параметры отдельно на одном компьютере.
 Foundry скачивает соответствующий solc при первой сборке; нужен доступ к
 интернету либо заранее проверенный бинарник, заданный `FOUNDRY_SOLC`.
@@ -156,12 +158,11 @@ python ops/bootstrap_host.py check --role signer
 ```
 
 На macOS с отдельным Python используйте `python3.11 -m venv .venv`.
-`build` ставит закреплённые версии Python-пакетов из `requirements.lock`, editable
-SDK, собирает FROST посредством `cargo +1.89.0 --locked`, собирает обычный Solidity
-и ZK state-adapter, проверяет ABI/runtime hash tables. Он не создаёт identity, не запускает узлы и
-не отправляет транзакций. `requirements.lock` фиксирует версии, но не содержит
-hashes всех platform wheels. Не переносите `.venv`, native binaries или `out`
-с другой ОС. Зависимости Solidity включены в репозиторий; `forge install` не нужен.
+`build` проверяет SHA‑256 Python-колёс по `requirements.lock` и устанавливает
+SDK с закреплённым backend сборки. Затем он собирает FROST через
+`cargo +1.89.0 --locked`, Solidity и ZK state-adapter и проверяет таблицы ABI
+и runtime-хешей. Используйте `.venv`, бинарники и `out`, собранные для своей ОС.
+Зависимости Solidity уже включены в репозиторий. [Режим проверки хешей pip](https://pip.pypa.io/en/stable/topics/secure-installs/).
 
 Ожидается `READY_TO_CONFIGURE`, а не production Ready. Сравните
 `protocol_source_sha256` из `check` на всех машинах: значения должны совпасть.
@@ -171,13 +172,32 @@ production Solidity и параметры/lockfiles. `.gitattributes` закре
 проверки контрактов продолжают выполняться на каждом компьютере независимо.
 
 Каждый новый терминал начинает с `cd "$HOME/src/satoshify"` и
-`source .venv/bin/activate`. Для сборки `--release` отдельно задайте абсолютный
-`SATOHSI_CRYPTO_BIN`; обычный `build` создаёт ожидаемый debug-бинарник.
+`source .venv/bin/activate`. Обычный `build` записывает локальный SHA‑256
+рядом с собранным FROST-бинарником. `check` показывает его в
+`native_frost_sha256`. Для собственного проверенного бинарника, в том числе
+`--release`, задайте абсолютный `SATOHSI_CRYPTO_BIN` и согласованный SHA‑256 в
+`SATOHSI_CRYPTO_SHA256`. Подписант mainnet требует такой пин и сверяет его до
+передачи секретных данных в FROST-процесс. После смены проверенной версии
+повторите сборку и сверку. Версии правил и SHA‑256 источников проверяются по
+тому же согласованному каналу, что и поставка.
+
+```mermaid
+flowchart TD
+    accTitle: Проверка целостности Python-поставки и FROST
+    accDescr: Установщик проверяет хеши колёс, собирает FROST из закреплённых зависимостей и записывает хеш бинарника. Подписант mainnet сверяет хеш до передачи приватных данных.
+    PACKAGE["Проверить исходный архив<br/>по согласованному SHA-256"] --> WHEELS["Проверить хеши Python-колёс<br/>по requirements.lock"]
+    WHEELS --> BUILD["Собрать FROST в новом каталоге<br/>cargo +1.89.0 --locked"]
+    BUILD --> PIN["Записать локальный SHA-256<br/>check: native_frost_sha256"]
+    CUSTOM["Свой проверенный FROST: абсолютный путь<br/>и согласованный SHA-256"] --> VERIFY
+    PIN --> VERIFY{"Mainnet: хеш бинарника<br/>совпадает с пином?"}
+    VERIFY -->|"Да"| IPC["Передать входные данные<br/>проверенному FROST-процессу"]
+    VERIFY -->|"Нет или пин отсутствует"| STOP["Остановиться до передачи<br/>секретных данных"]
+```
 
 Проверка portable-подмножества SDK:
 
 ```bash
-python -m pip install -e './signer-agent[test,evm-test]'
+python -m pip install --no-build-isolation -e './signer-agent[test,evm-test]'
 python -m ops.system_modes preflight --mode signer
 python -m ops.system_modes run --mode signer --output "$HOME/satoshifi-test-signer-001"
 ```
@@ -216,6 +236,8 @@ Windows CI этот workflow не заявляет.
 Каждый участник задаёт Infura Sepolia и архивный HTTPS Bitcoin Core со
 своими учётными данными. Перед enrollment запустите `configure check-rpc`
 с согласованным приглашением. Вариант подходит для relay и ZK.
+Удалённый EVM RPC требует HTTPS и при проверке, и при выполнении команд.
+Для независимой проверки ZK ZIP можно настроить второй EVM RPC на той же сети.
 [Настройка и команды для удалённых RPC](LAUNCH_CONFIGURATOR.md#sepolia-и-bitcoin-testnet4-без-локальных-нод).
 
 Для тестового запуска скачайте **Bitcoin Core 30.3** с
@@ -407,15 +429,33 @@ frost-signer setup discover --operator "$OPERATOR" --rpc "$RPC"
 сети, токены, fees, system policy, сроки, runtime/constructor происхождение.
 Установите `BOARD`, `BOARD_BLOCK`, `FINGERPRINT` из этой записи:
 
+Для Ethereum mainnet или Bitcoin mainnet с Sepolia подготовьте
+`NONCE_LEDGER_DIR` с абсолютным путём к приватному каталогу на отдельном томе.
+Для защиты от отката обоих локальных томов добавьте `SATOSHIFI_NONCE_ANCHOR_CONFIG`
+с путём к личному файлу `0600`, подготовленному после настройки независимого
+HTTPS-якоря. Задайте оба пути до первого enrollment. После регистрации оставьте эту переменную
+в окружении подписанта и сохраните доступ к прежнему журналу и якорю.
+[Настройка HTTPS-якоря](SIGNING_PROTOCOL.md#off-host-nonce-anchor).
+
 ```bash
+NONCE_ARGS=()
+if [[ -n "${NONCE_LEDGER_DIR:-}" ]]; then
+  install -d -m 700 "$NONCE_LEDGER_DIR"
+  NONCE_ARGS=(--nonce-ledger-dir "$NONCE_LEDGER_DIR")
+  if [[ -n "${SATOSHIFI_NONCE_ANCHOR_CONFIG:-}" ]]; then
+    export SATOSHIFI_NONCE_ANCHOR_CONFIG
+    NONCE_ARGS+=(--nonce-anchor-config "$SATOSHIFI_NONCE_ANCHOR_CONFIG")
+  fi
+fi
 frost-signer setup join-chain --board "$BOARD" --rpc "$RPC" --board-creation-block "$BOARD_BLOCK" \
   --accept-fingerprint "$FINGERPRINT" --identity-file "$IDENTITY" --directory "$PARTICIPANT_DIR" \
-  "${BTC_ARGS[@]}"
+  "${BTC_ARGS[@]}" "${NONCE_ARGS[@]}"
 ```
 
 При regtest `BTC_ARGS` пуст также на последующих apply/resume/verify. При testnet4 или
 mainnet нужен собственный проверенный Core. Повтор использует прежние enrollment
 и transport keys; не удаляйте каталог ради retry.
+[Сохранение журнала и восстановление nonce](SIGNING_PROTOCOL.md#independent-nonce-ledger).
 
 ## 10. Оператор начинает, участники ведут DKG
 

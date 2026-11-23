@@ -7,9 +7,10 @@ import pytest
 from web3 import Web3
 from web3.datastructures import AttributeDict
 
-from signer_agent import bitcoin_worker, bitcoin_onchain, crypto
-from signer_agent.bitcoin_onchain_plan import onchain_plan_hash
+from signer_agent import bitcoin_worker, bitcoin_onchain, bitcoin_onchain_payment, crypto
+from signer_agent.bitcoin_onchain_plan import onchain_plan_hash, serialize_plan
 from signer_agent.bitcoin_proofs import sha256d
+from signer_agent.secure_state import SecureState
 from test_bitcoin_onchain_security import public_bitcoin_plan
 from test_bitcoin_network import policy
 
@@ -99,7 +100,7 @@ def mainnet_signing_views(public_bitcoin_plan, monkeypatch):
                             assert_unspent=lambda *args: pytest.fail("unconfirmed state reached nonce creation"))
     return SimpleNamespace(manifest=manifest, plan=plan, key=key, graph=graph, registry=registry,
                            bitcoin=bitcoin, calls=calls, sends=sends, view=view, state=state,
-                           built=built, contract=contract, values=values)
+                           built=built, contract=contract, values=values, confirmed=confirmed, latest=latest)
 
 
 def test_all_bitcoin_spend_terms_are_read_from_one_confirmed_evm_block(mainnet_signing_views):
@@ -113,6 +114,37 @@ def test_all_bitcoin_spend_terms_are_read_from_one_confirmed_evm_block(mainnet_s
         "withdrawalEscrow", "payment", "requests", "depositRegistry", "backingSats",
         "validateCallback", "feeReserve",
     }
+    assert s.sends == []
+
+
+def test_ordinary_bitcoin_signing_keeps_packet_snapshot_when_rpc_advances(mainnet_signing_views):
+    s = mainnet_signing_views
+    confirmed = AttributeDict(dict(number=89, hash=b"advanced", timestamp=s.confirmed.timestamp))
+    latest = AttributeDict(dict(number=101, hash=b"latest", timestamp=s.latest.timestamp))
+    blocks = {88: s.confirmed, 89: confirmed, "latest": latest}
+    s.registry.w3.eth.get_block = blocks.__getitem__
+    built, digest = bitcoin_worker.validate(s.manifest, s.key, s.plan, s.registry, s.bitcoin, s.graph,
+                                           packet_anchor=s.confirmed)
+    assert digest == onchain_plan_hash(s.manifest, s.plan)
+    assert built["_packet_anchors"] == (s.confirmed, confirmed)
+    assert {block for method, block in s.calls if method != "feeReserve"} == {89}
+    assert s.sends == []
+
+
+@pytest.mark.parametrize("number,hash_,error", [
+    (88, b"earlier-branch", "EVM_REORG_RECOVERY_REQUIRED"),
+    (89, b"not-yet-confirmed", "EVM_RPC_BEHIND"),
+])
+def test_ordinary_signing_refuses_changed_or_lagging_packet_anchor_before_private_work(
+    mainnet_signing_views, monkeypatch, number, hash_, error,
+):
+    s = mainnet_signing_views
+    monkeypatch.setattr(bitcoin_worker.crypto, "call", lambda *args, **kwargs:
+                        pytest.fail("lost packet anchor reached cryptographic signing work"))
+    with pytest.raises(ValueError, match=error):
+        bitcoin_worker.sign_step("btc-sign", s.manifest, s.key, s.plan, s.registry, s.state, s.bitcoin,
+                                 packet_anchor=SimpleNamespace(number=number, hash=hash_))
+    assert s.calls == []
     assert s.sends == []
 
 
@@ -206,3 +238,219 @@ def test_unissued_committed_deposit_cannot_reach_bitcoin_nonce(mainnet_signing_v
         bitcoin_worker.sign_step(action, s.manifest, s.key, s.plan, s.registry, s.state, s.bitcoin)
     assert operations == ["bitcoin_build"]
     assert s.sends == []
+
+
+@pytest.fixture
+def expired_s_payment(mainnet_signing_views, tmp_path, monkeypatch):
+    s = mainnet_signing_views
+    s.plan.update(version="5", previous="00" * 32, max_fee=s.plan["fee"])
+    s.latest = AttributeDict(dict(number=100, hash=b"latest", timestamp=int(s.plan["deadline"]) + 1))
+    s.registry.w3.eth.get_block = lambda number: s.latest if number in ("latest", 100) else s.confirmed
+    s.key["participant"] = s.manifest.participants[0]
+    s.key["result"].update(signing_share="00" * 31 + "01", key_package="test-key-package")
+    s.graph["contracts"] = {
+        name: dict(address=contract_address, artifact=artifact_name)
+        for name, contract_address, artifact_name in (
+            ("batches", s.plan["batch_registry"], "BitcoinBatchRegistry"),
+            ("escrow", s.values["withdrawalEscrow"], "BitcoinWithdrawalEscrowV2"),
+            ("deposits", s.values["depositRegistry"], "BitcoinDepositRegistry"),
+        )
+    }
+    user_fee_cap = 1000
+    root = bytes.fromhex(s.plan["batch_id"])
+    digest = onchain_plan_hash(s.manifest, s.plan)
+    s.values.update(
+        batches=[digest, bytes.fromhex(s.key["result_hash"]), int(s.plan["deadline"]), 2],
+        getInputs=[bitcoin_worker.outpoint_hash(s.plan["inputs"][0]["outpoint"])],
+        plan=serialize_plan(s.plan, s.manifest), isBound=True,
+        minerFee=user_fee_cap, minerFeeLimitSats=user_fee_cap, minimumPayoutSats=9000,
+        minP2WPKHSats=294, backingSats=10000,
+        getValue=(10000, bytes.fromhex(s.plan["wallet_script"]), True),
+    )
+    s.values["requests"][4] = 10000 * 10**10
+    packets = {}
+    s.view.latest_state = 2
+    s.view.core_anchor_changes = False
+    artifacts = bitcoin_onchain_payment.artifact
+    def payment_artifact(kind):
+        if kind == "ConfederationPoolV2":
+            return dict(abi=[{"type": "function", "name": "minimumPayoutSats"}])
+        return artifacts(kind)
+    monkeypatch.setattr(bitcoin_onchain_payment, "artifact", payment_artifact)
+
+    class Functions:
+        def __getattr__(self, method):
+            def call(*args, block_identifier):
+                if method == "batchState":
+                    return s.view.batch_state if block_identifier == 88 else s.view.latest_state
+                if method == "scriptPools":
+                    return address(0 if args[0] == Web3.keccak(bytes.fromhex(s.plan["outputs"][0]["script"])) else 20)
+                if method == "packet":
+                    batch_id, index, kind, sender = args
+                    assert batch_id == root
+                    return packets.get((index, kind, sender), b"")
+                return getattr(s.contract.functions, method)(*args).call(block_identifier=block_identifier)
+            return lambda *args: SimpleNamespace(call=lambda **kwargs: call(*args, **kwargs))
+
+    def contract(*, address, abi):
+        return SimpleNamespace(address=address, abi=abi, w3=s.registry.w3, functions=Functions())
+
+    s.registry.w3.eth.contract = contract
+    s.board = contract(address=s.plan["signing_board"], abi=[])
+    original_core_call = s.bitcoin.call
+    core_reads = []
+    def core_call(method, *args):
+        if method == "getbestblockhash":
+            core_reads.append(method)
+            return "cd" * 32 if s.view.core_anchor_changes and len(core_reads) > 1 else "ab" * 32
+        return original_core_call(method, *args)
+    s.bitcoin.call = core_call
+    s.state = SecureState(tmp_path / "signer.enc", "test-expired-s-state")
+    s.packets = packets
+    s.signed = []
+    native_call = crypto.call
+    def local_crypto(op, **kwargs):
+        if op == "sign":
+            s.signed.append(kwargs)
+            return {"share": "00" * 31 + "01"}
+        return native_call(op, **kwargs)
+    monkeypatch.setattr(crypto, "call", local_crypto)
+    s.sid = "btc:" + s.manifest.context.hex() + ":" + s.plan["batch_id"] + ":0"
+    s.step = lambda action, **kwargs: bitcoin_worker.sign_step(
+        action, s.manifest, s.key, s.plan, s.registry, s.state, s.bitcoin, **kwargs)
+    return s
+
+
+def _publish_commitment(s, participant, commitment):
+    address = s.manifest.participants[participant - 1]
+    s.packets[0, 0, address] = bitcoin_onchain.packet_payload(
+        s.plan, 0, "commitment", str(participant), commitment, s.manifest)
+
+
+def test_expired_s_payment_can_finish_the_existing_frost_transcript(expired_s_payment):
+    s = expired_s_payment
+    with pytest.raises(ValueError, match="^BATCH_EXPIRED$"):
+        s.step("btc-commit")
+    assert s.state.get(s.sid) is None
+    commitment = s.step("btc-commit", resume_board=s.board)["values"][0]
+    _publish_commitment(s, 1, commitment)
+    assert s.step("btc-commit", resume_board=s.board)["values"] == [commitment]
+    other = crypto.call("nonce", share="00" * 31 + "02")["commitments"]
+    _publish_commitment(s, 2, other)
+    with pytest.raises(ValueError, match="^BATCH_EXPIRED$"):
+        s.step("btc-sign")
+    signed = s.step("btc-sign", resume_board=s.board)
+    assert s.step("btc-sign", resume_board=s.board) == signed
+    assert len(s.signed) == 1
+    assert s.signed[0]["commitments"] == {"1": commitment, "2": other}
+    stored = s.state.get(s.sid)
+    s.state.assert_spent(s.sid, stored["transcript"])
+    assert "nonces" not in stored and s.sends == []
+
+
+def test_v3_rechecks_mempool_floor_before_entering_signing(expired_s_payment):
+    s = expired_s_payment
+    s.latest = AttributeDict({**s.latest, "timestamp": int(s.plan["deadline"])})
+    s.view.batch_state = 1
+    core_call = s.bitcoin.call
+    policy = {"loaded": True, "mempoolminfee": Decimal("0.0010"), "minrelaytxfee": Decimal("0.000001"),
+              "incrementalrelayfee": Decimal("0.000001")}
+
+    def call(method, *args):
+        if method == "getmempoolinfo":
+            return policy
+        return core_call(method, *args)
+
+    s.bitcoin.call = call
+    with pytest.raises(ValueError, match="^BTC_PLAN_BELOW_MEMPOOL_FEE$"):
+        s.step("btc-commit")
+    assert s.sends == [] and s.state.get(s.sid) is None
+    policy["mempoolminfee"] = Decimal("0.000001")
+    assert s.step("btc-commit")["status"] == "COMMITTED"
+    assert s.sends == [("beginSigning", bytes.fromhex(s.plan["batch_id"]))]
+
+
+def test_v3_relay_fee_uses_signed_vsize_and_incremental_rbf_fee():
+    policy = {"loaded": True, "mempoolminfee": Decimal("0.00001"), "minrelaytxfee": Decimal("0.00001"),
+              "incrementalrelayfee": Decimal("0.00001")}
+    bitcoin = SimpleNamespace(call=lambda method: policy)
+    escrow = SimpleNamespace(functions=SimpleNamespace(minerFee=lambda previous: SimpleNamespace(
+        call=lambda **kwargs: 1000)))
+    built = {"unsigned": "00" * 111}
+    plan = dict(version="5", inputs=[{}], previous="11" * 32, fee="1127")
+    # 111 stripped bytes plus 68 witness bytes give 128 virtual bytes.
+    with pytest.raises(ValueError, match="^BTC_PLAN_BELOW_MEMPOOL_FEE$"):
+        bitcoin_onchain_payment.require_v3_relay_fee(bitcoin, plan, built, escrow, 88)
+    plan["fee"] = "1128"
+    bitcoin_onchain_payment.require_v3_relay_fee(bitcoin, plan, built, escrow, 88)
+    policy["loaded"] = False
+    with pytest.raises(ValueError, match="^BTC_MEMPOOL_POLICY_UNAVAILABLE$"):
+        bitcoin_onchain_payment.require_v3_relay_fee(bitcoin, plan, built, escrow, 88)
+
+
+@pytest.mark.parametrize("state,error", [
+    ("reserved", "BTC_EXPIRED_SIGNING_NOT_BOUND"),
+    ("unexpired", "BTC_EXPIRED_SIGNING_NOT_BOUND"),
+    ("not_bound", "BTC_EXPIRED_SIGNING_NOT_BOUND"),
+    ("latest_no_signing", "BTC_EXPIRED_SIGNING_NOT_BOUND"),
+    ("plan_mismatch", "BTC_PLAN_BINDING"),
+    ("fee_mismatch", "ESCROW_PAYMENT_MISMATCH"),
+    ("owner_minimum", "BTC_WITHDRAWAL_BELOW_MINIMUM"),
+    ("core_tip_changed", "BTC_INPUT_CORE_CHANGED"),
+    ("lost_nonce", "NONCE_COMMITMENT_MISMATCH"),
+])
+def test_expired_s_recovery_keeps_current_contract_and_nonce_guards(expired_s_payment, state, error):
+    s = expired_s_payment
+    if state == "reserved":
+        s.view.batch_state = 1
+    elif state == "unexpired":
+        s.latest = AttributeDict({**s.latest, "timestamp": int(s.plan["deadline"])})
+    elif state == "not_bound":
+        s.values["isBound"] = False
+    elif state == "latest_no_signing":
+        s.view.latest_state = 3
+    elif state == "plan_mismatch":
+        s.values["plan"] = b""
+    elif state == "fee_mismatch":
+        s.values["minerFee"] = 999
+    elif state == "owner_minimum":
+        s.values["minimumPayoutSats"] = 9001
+    elif state == "core_tip_changed":
+        s.view.core_anchor_changes = True
+    else:  # lost_nonce
+        _publish_commitment(s, 1, crypto.call("nonce", share="00" * 31 + "01")["commitments"])
+    with pytest.raises(ValueError, match=f"^{error}$"):
+        s.step("btc-commit", resume_board=s.board)
+    assert s.state.get(s.sid) is None and s.signed == [] and s.sends == []
+
+
+def test_expired_legacy_plan_still_rejects_recovery(mainnet_signing_views):
+    s = mainnet_signing_views
+    latest = AttributeDict({**s.latest, "timestamp": int(s.plan["deadline"]) + 1})
+    old_get_block = s.registry.w3.eth.get_block
+    s.registry.w3.eth.get_block = lambda number: latest if number == "latest" else old_get_block(number)
+    with pytest.raises(ValueError, match="^BTC_EXPIRED_SIGNING_NOT_BOUND$"):
+        bitcoin_worker.validate(s.manifest, s.key, s.plan, s.registry, s.bitcoin, s.graph, resume_board=object())
+    assert s.sends == []
+
+
+@pytest.mark.parametrize("replacement", [False, True], ids=["initial", "rbf"])
+def test_v5_payment_terms_pin_owner_minimum_and_miner_cap(expired_s_payment, replacement):
+    s = expired_s_payment
+    if replacement:
+        s.plan["previous"] = "ab" * 32
+        s.values["minerFee"] = int(s.plan["fee"]) - 1
+    else:
+        s.values["requests"][-2:] = [bytes(32), 1]
+    contracts = {name: s.registry.w3.eth.contract(address=spec["address"], abi=[])
+                 for name, spec in s.graph["contracts"].items()}
+    contracts["escrow"].abi = [{"name": "defaultMinerFeeLimitSats"}]
+    bitcoin_onchain_payment._terms(contracts, s.plan)
+    s.values["minimumPayoutSats"] += 1
+    with pytest.raises(ValueError, match="^BTC_WITHDRAWAL_BELOW_MINIMUM$"):
+        bitcoin_onchain_payment._terms(contracts, s.plan)
+    assert [(method, height) for method, height in s.calls
+            if method in ("minerFeeLimitSats", "minimumPayoutSats")] == [
+        ("minerFeeLimitSats", 100), ("minimumPayoutSats", 100),
+        ("minerFeeLimitSats", 100), ("minimumPayoutSats", 100),
+    ]

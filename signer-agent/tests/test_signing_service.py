@@ -108,7 +108,13 @@ def _config(tmp_path, sender, signing_share, index):
 
 
 @pytest.mark.parametrize("pinned_finalization", [False, True])
-def test_two_round_approval_can_resume_across_runs(tmp_path, pinned_finalization):
+@pytest.mark.parametrize("guarded", [False, True])
+def test_two_round_approval_can_resume_across_runs(tmp_path, pinned_finalization, guarded):
+    if guarded:
+        external = tmp_path / "external"
+        external.mkdir(mode=0o700)
+        tmp_path = tmp_path / "local"
+        tmp_path.mkdir(mode=0o700)
     group_secret = 23
     while scalar_base_mult(group_secret).y & 1:
         group_secret += 1
@@ -152,8 +158,11 @@ def test_two_round_approval_can_resume_across_runs(tmp_path, pinned_finalization
     services = []
     for index, (participant, share) in enumerate(zip(participants, signing_shares), start=1):
         config = replace(_config(tmp_path, participant, share, index), auto_finalize=pinned_finalization)
+        if guarded:
+            config = replace(config, nonce_ledger=str(external / f"{index}.sqlite"))
+            SecureState(config.state_path, config.state_key, nonce_ledger=config.nonce_ledger).initialize_nonce_ledger()
         client = FakeClient(participant, participants, public_key_shares, shared)
-        services.append(SigningService(config, client, SecureState(config.state_path, config.state_key)))
+        services.append(SigningService(config, client))
 
     assert services[0].approve(session).status == "committed"
     assert services[1].approve(session).status == "committed"
@@ -161,7 +170,6 @@ def test_two_round_approval_can_resume_across_runs(tmp_path, pinned_finalization
     services[0] = SigningService(
         services[0].config,
         FakeClient(participants[0], participants, public_key_shares, shared),
-        SecureState(services[0].config.state_path, services[0].config.state_key),
     )
     transcript = build_transcript(
         FakeClient.chain_id,
@@ -200,6 +208,24 @@ def test_two_round_approval_can_resume_across_runs(tmp_path, pinned_finalization
     for index, service in enumerate(services, start=1):
         key = SecureState.session_key(FakeClient.chain_id, FakeClient.address, session.session_id)
         assert service.state.get(key)["status"] == "consumed"
+
+
+@pytest.mark.parametrize("chain,network,reviewed_session,code", [
+    (11155111, "testnet4", None, "PUBLIC_EVM_TYPED_SIGNING_REQUIRED"),
+    (1, "mainnet", 10, "PUBLIC_EVM_TYPED_SIGNING_REQUIRED"),
+    (1, "testnet4", 9, "NONCE_LEDGER_NOT_BOUND_RECOVERY_REQUIRED"),
+    (11155111, "mainnet", 9, "NONCE_LEDGER_NOT_BOUND_RECOVERY_REQUIRED"),
+])
+def test_signing_service_guards_session_binding_and_independent_journal(tmp_path, chain, network,
+                                                                       reviewed_session, code):
+    sender = to_checksum_address("0x0000000000000000000000000000000000001001")
+    config = _config(tmp_path, sender, 23, 1)
+    client = SimpleNamespace(chain_id=chain, bitcoin_graph={"bitcoin_network": network})
+    service = SigningService(config, client, reviewed_session_id=reviewed_session)
+    with pytest.raises((RuntimeError, ValueError), match=code):
+        service.approve(SimpleNamespace(session_id=9, state=1, purpose=1))
+    assert not service.state.path.exists()
+    assert not (tmp_path / "state-1.enc.spent.sqlite").exists()
 
 
 @pytest.mark.parametrize("entrypoint", ["approve", "try_finalize"])

@@ -63,6 +63,7 @@ def authorize(
         json.dumps(
             dict(
                 chain_id=str(w3.eth.chain_id),
+                coordinator=coordinator.address,
                 target=target,
                 operation_hash=message.hex(),
                 artifact=artifact,
@@ -807,6 +808,9 @@ def test_dkg_taproot_pays_p2wpkh_and_p2tr(tmp_path, record_property):
         ),
     )
     btc.call("invalidateblock", result["block_hash"])
+    # A shorter tip cannot establish a conflicting block at the payment height.
+    assert worker.confirmation(plan["batch_id"])["status"] == "OBSERVATION_UNAVAILABLE"
+    btc.call("generatetoaddress", 6, mining_address)
     assert worker.confirmation(plan["batch_id"])["status"] == "RECOVERY_REQUIRED"
     with pytest.raises(ValueError, match="PAYMENTS_PAUSED_FOR_RECOVERY"):
         worker.broadcast(plan["batch_id"], signed)

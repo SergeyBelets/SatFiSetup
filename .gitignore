@@ -32,3 +32,12 @@ web3/broadcast/
 
 # Generated historical proof bundles stay local; participants compute their own proofs.
 /ops/artifacts/zkspv/launch-packages/*.tar.gz
+
+# SatFiSetup: wrapper backend and local keys
+.aws-sam/
+samconfig.toml
+node_modules/
+**/target/
+*.egg-info/
+*identity*
+.state/

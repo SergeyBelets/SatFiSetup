@@ -2,6 +2,8 @@
 pragma solidity ^0.8.30;
 import "forge-std/Test.sol";
 import "../contracts/src/federation/BitcoinCustodyTransfer.sol";
+import {RegtestHeaderRelay} from "../contracts/src/federation/RegtestHeaderRelay.sol";
+import {BitcoinWithdrawalFeeVerifier} from "../contracts/src/federation/BitcoinWithdrawalFeeVerifier.sol";
 
 // Explicit unit boundaries: real contracts/accounting, synthetic signatures/SPV.
 // Native FROST and real Bitcoin acceptance are exercised separately in tests/e2e.
@@ -25,6 +27,9 @@ contract CustodyDkgFixture {
 contract CustodyBatchFixture {
     address public immutable dkg;
     bytes32 public constant walletId = bytes32(uint256(1));
+    bytes32 public constant walletResult = bytes32(uint256(2));
+    address public constant recoveryController = address(0);
+    BitcoinWithdrawalFeeVerifier public immutable withdrawalFeeVerifier = new BitcoinWithdrawalFeeVerifier();
     address public immutable authorization = address(new CustodyAuthFixture());
     address public withdrawalEscrow;
     address public feeReserve;
@@ -42,16 +47,26 @@ contract CustodyBatchFixture {
         state = next;
     }
     function batchState(bytes32) external view returns(BitcoinBatchRegistry.State) { return state; }
+    function batchWalletResult(bytes32) external pure returns (bytes32) { return walletResult; }
     function getInputs(bytes32) external view returns(bytes32[] memory) { return inputs; }
 }
-contract CustodySPVFixture {
+contract CustodySPVFixture is Test {
+    RegtestHeaderRelay public immutable relay = new RegtestHeaderRelay();
     uint64 private confirmations = 100;
     bool private canonical = true;
-    function setDepth(uint64 value) external { confirmations = value; }
-    function setCanonical(bool value) external { canonical = value; }
-    function testHelpersEnabled() external pure returns(bool) { return false; }
-    function getBlockStatus(bytes32) external view returns(bool,uint64) { return (canonical, confirmations); }
-    function checkTxInclusion(bytes32,bytes32,bytes32[] calldata,uint256) external pure returns(bool) { return true; }
+
+    constructor() {
+        _mockStatus();
+        vm.mockCall(address(relay), abi.encodeWithSelector(IPaymentSPV.checkTxInclusion.selector), abi.encode(true));
+    }
+
+    function setDepth(uint64 value) external { confirmations = value; _mockStatus(); }
+    function setCanonical(bool value) external { canonical = value; _mockStatus(); }
+
+    function _mockStatus() private {
+        vm.mockCall(address(relay), abi.encodeWithSelector(IPaymentSPV.getBlockStatus.selector),
+            abi.encode(canonical, confirmations));
+    }
 }
 
 contract BitcoinCustodyTransferTest is Test {
@@ -75,9 +90,9 @@ contract BitcoinCustodyTransferTest is Test {
     function graph(bytes32 group) private returns(Graph memory g) {
         g.batches = new CustodyBatchFixture(group);
         g.spv = new CustodySPVFixture();
-        g.escrow = new BitcoinWithdrawalEscrow(address(g.batches), address(g.spv), 6, 294, 330);
+        g.escrow = new BitcoinWithdrawalEscrow(address(g.batches), address(g.spv.relay()), 6, 294, 330);
         g.batches.bindEscrow(address(g.escrow));
-        g.deposits = new BitcoinDepositRegistry(address(g.spv), g.batches.authorization(), 6, address(g.escrow));
+        g.deposits = new BitcoinDepositRegistry(address(g.spv.relay()), g.batches.authorization(), 6, address(g.escrow));
         g.escrow.setDepositRegistry(address(g.deposits), g.escrow.getSetDepositRegistryOperationHash(address(g.deposits)));
         g.mining = new MiningPoolV1("custody", address(g.deposits), address(g.escrow), "MP", "MP");
         bytes memory script = g.mining.payoutScript();

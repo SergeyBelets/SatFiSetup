@@ -35,6 +35,7 @@ def test_real_hpke_and_every_routing_field_is_authenticated():
 
 def client_config(tmp_path):
     c=json.loads(Path('config/spv-transport.example.json').read_text())
+    c.pop('history_max_bytes')  # Most fixtures exercise the unchanged legacy policy.
     wc=worker_config(tmp_path)
     c.update(chain_id='31337',evm_confirmations='1',evm_rpc='http://127.0.0.1:1',bitcoin_policy=wc['bitcoin_policy'],
         zk_state=wc['zk_state'],factory=Web3.to_checksum_address('0x'+'33'*20),
@@ -61,8 +62,8 @@ def test_transport_private_config_scope_limits_and_durable_outbox(tmp_path):
     s.close()
 
 
-def fake_client(tmp_path):
-    c,key=client_config(tmp_path);client=Client(c,w3=NS())
+def fake_client(tmp_path, **limits):
+    c,key=client_config(tmp_path);c.update(limits);client=Client(c,w3=NS())
     recipient=Account.from_key('22'*32).address;peer=crypto.call('transport_key')
     view_address=Web3.to_checksum_address('0x'+'66'*20);adapter=Web3.to_checksum_address('0x'+'77'*20)
     def method(value):return lambda *a:NS(call=lambda **kw:value)
@@ -176,6 +177,118 @@ def test_queued_rpc_lag_keeps_the_existing_wire_status(tmp_path, monkeypatch):
     assert replies[0]["status"] == "OBSERVATION_UNAVAILABLE"
     assert replies[0]["result"] == "WAITING_BITCOIN_RPC"
     c.close(); inbox.close()
+
+
+def test_rpc_behind_does_not_requeue_messages_or_rewind_cursor(tmp_path):
+    client, recipient, _, block, board = fake_client(tmp_path)
+    need = dict(kind="deposit", consumer=Web3.to_checksum_address("0x" + "88" * 20), txid="bb" * 32, vout="1")
+    key, _ = client.send_request(need, "fed", recipient)
+    board.functions.messageCount = lambda _address: NS(call=lambda **_kw: 0)
+    client.store.db.execute("UPDATE outgoing SET state='CONFIRMED' WHERE id=?", (key,))
+    prior = dict(number=2, hash=("22" * 32))
+    cursor = dict(prior, index=1)
+    client.store.put("outgoing_anchor", prior)
+    client.store.put("cursor", cursor)
+    client.send = lambda *_a, **_kw: pytest.fail("RPC lag must never trigger a send")
+    try:
+        for action in (client.transmit, client.poll, client.process_replies):
+            with pytest.raises(ValueError, match="^EVM_RPC_BEHIND$"):
+                action()
+        assert client.store.get("outgoing_anchor") == prior
+        assert client.store.get("cursor") == cursor
+        assert client.store.db.execute("SELECT state FROM outgoing WHERE id=?", (key,)).fetchone()[0] == "CONFIRMED"
+    finally:
+        client.close()
+
+
+def test_different_block_hash_can_rewind_message_cursor(tmp_path):
+    client, _, _, block, board = fake_client(tmp_path)
+    board.functions.messageCount = lambda _address: NS(call=lambda **_kw: 0)
+    client.store.put("cursor", dict(number=block.number, hash="22" * 32, index=1))
+    try:
+        assert client.poll() == 0
+        assert client.store.get("cursor") == dict(number=block.number, hash=block.hash.hex(), index=0)
+    finally:
+        client.close()
+
+
+def test_confirmed_packet_history_releases_active_slots_and_preserves_budgets(tmp_path, monkeypatch):
+    cfg, _ = client_config(tmp_path)
+    cfg.update(max_pending_messages="1", max_transaction_cost_wei="8", max_total_cost_wei="8",
+               history_max_bytes=str(64 * 2**20))
+    filename = tmp_path / "configured.json"
+    write(filename, cfg)
+    assert load_config(filename) == cfg
+    sender = header()["sender"]
+    store = Store(cfg, sender)
+    pending = dict(header=header(), ciphertext="aa" * 80, body={})
+    published = store.queue("first", pending)
+    store.db.execute("UPDATE outgoing SET state='CONFIRMED' WHERE id=?", (published,))
+    store.reserve("first", 8)
+    queued = dict(pending, header=dict(header(), route="ab" * 32))
+    try:
+        assert store.queue("second", queued) != published
+        assert store.history_status()["active_outgoing"] == 1
+        store.close()
+        store = Store(cfg, sender)
+        assert store.outgoing("first") == (published, pending, "CONFIRMED")
+        assert store.queue("first", queued) == published
+        with pytest.raises(ValueError, match="^SPV_OUTBOX_FULL$"):
+            store.queue("third", pending)
+        with pytest.raises(ValueError, match="^SPV_TRANSPORT_GAS_BUDGET$"):
+            store.reserve("new", 1)
+        with monkeypatch.context() as patch:
+            patch.setattr("signer_agent.spv_history.sqlite_bytes", lambda *_: int(cfg["history_max_bytes"]))
+            assert store.queue("first", queued) == published
+            with pytest.raises(ValueError, match="^SPV_HISTORY_STORAGE_LIMIT$"):
+                store.queue("third", pending)
+    finally:
+        store.close()
+
+
+def test_archived_replies_are_rechecked_in_bounded_pages_after_confirmed_reorg(tmp_path):
+    import hashlib
+
+    client, receiver, _, block, board = fake_client(tmp_path, history_max_bytes=str(64 * 2**20),
+                                                    max_messages_per_poll="1")
+    records = []
+    packets = {}
+    body = dict(kind="deposit", consumer=Web3.to_checksum_address("0x" + "88" * 20), txid="bb" * 32, vout="1")
+    for revision in ("0", "1"):
+        _, original = client.send_request(body, "fed", receiver, revision=revision)
+        h = dict(original["header"], kind="ACK", sender=receiver, recipient=client.account.address)
+        message = message_key(h["route"], "ACK", "0")
+        record = dict(header=h, body=dict(version="1", request_id=original["request_id"], status="ACCEPTED",
+            operation_id=original["body"]["operation_id"]), ciphertext_sha256=hashlib.sha256(b"packet").hexdigest())
+        client.store.db.execute("INSERT INTO incoming VALUES(?,?,'RECEIVED')", (message, json.dumps(record)))
+        records.append((message, h["route"]))
+        packets[message] = b"packet"
+    queried = []
+
+    def packet(message):
+        queried.append(message.hex())
+        return NS(call=lambda **_: [None] * 8 + [packets.get(message.hex(), b"")])
+
+    board.functions.packet = packet
+    try:
+        with pytest.raises(ValueError, match="^SPV_REPLY_HISTORY_RECHECK_REQUIRED$"):
+            client.process_replies()
+        client.process_replies()
+        client.process_replies()
+        assert queried == [message for message, _ in records]
+        doomed, route = records[0]
+        packets.pop(doomed)
+        block.hash = b"b" * 32
+        with pytest.raises(ValueError, match="^SPV_REPLY_HISTORY_RECHECK_REQUIRED$"):
+            client.process_replies()
+        assert not client.store.get("reply:" + route)
+        client.process_replies()
+        assert client.store.get("reply:" + records[1][1])["acknowledged"]
+        assert not client.store.get("reply-history-recheck")
+        assert len(client.store.incoming("ACK")) == 2
+        assert queried == [message for message, _ in records] * 2
+    finally:
+        client.close()
 
 
 def test_worker_groups_two_ready_needs_into_one_prepared_proof(tmp_path,monkeypatch):

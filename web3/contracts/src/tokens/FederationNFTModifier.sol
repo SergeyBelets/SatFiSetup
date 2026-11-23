@@ -27,11 +27,17 @@ contract FederationNFTModifier is ERC721, AccessControl {
 
     /// @notice Metadata per token
     mapping(uint256 => NFTMetadata) public nftMetadata;
+    struct DiscountReservation {
+        uint256 tokenId;
+        uint256 volume;
+    }
+    mapping(address => mapping(bytes32 => DiscountReservation)) private reservations;
 
     // ======== EVENTS ========
 
     event NFTMinted(uint256 indexed tokenId, address indexed to, uint256 discountBps, uint256 volumeLimit, uint256 expiration);
     event NFTUsed(uint256 indexed tokenId, uint256 volume, uint256 usedVolume, uint256 remainingVolume);
+    event NFTVolumeReleased(uint256 indexed tokenId, uint256 volume, uint256 remainingVolume);
     event NFTExpired(uint256 indexed tokenId);
     event NFTBurned(uint256 indexed tokenId);
 
@@ -125,6 +131,28 @@ contract FederationNFTModifier is ERC721, AccessControl {
     {
         if (ownerOf(tokenId) != account) revert NotTokenOwner();
         return _validateDiscount(tokenId, volume);
+    }
+
+    /// @notice Lock one allowance against the current owner and available volume.
+    function reserveDiscountFor(bytes32 id, uint256 tokenId, address account, uint256 volume)
+        external onlyRole(USAGE_ROLE) returns (uint256 discountBps)
+    {
+        require(volume != 0 && reservations[msg.sender][id].volume == 0, "discount reservation");
+        if (ownerOf(tokenId) != account) revert NotTokenOwner();
+        discountBps = _consumeDiscount(tokenId, volume);
+        reservations[msg.sender][id] = DiscountReservation(tokenId, volume);
+    }
+
+    /// @notice Only the original reserving contract may settle or release this allowance.
+    function closeDiscountReservation(bytes32 id, bool settled) external {
+        DiscountReservation memory reservation = reservations[msg.sender][id];
+        require(reservation.volume != 0, "discount reservation");
+        delete reservations[msg.sender][id];
+        if (!settled) {
+            NFTMetadata storage meta = nftMetadata[reservation.tokenId];
+            meta.usedVolume -= reservation.volume;
+            emit NFTVolumeReleased(reservation.tokenId, reservation.volume, meta.volumeLimit - meta.usedVolume);
+        }
     }
 
     function _consumeDiscount(uint256 tokenId, uint256 volume) internal returns (uint256 discountBps) {

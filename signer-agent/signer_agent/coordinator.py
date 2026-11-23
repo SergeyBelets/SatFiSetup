@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from eth_utils import to_checksum_address
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import ContractLogicError
 
 from .config import Config
@@ -124,7 +125,7 @@ class CoordinatorClient:
 
     def __init__(self, config: Config):
         self.config = config
-        self.w3 = Web3(Web3.HTTPProvider(config.rpc_url, request_kwargs={"timeout": 30}))
+        self.w3 = evm_web3(config.rpc_url, timeout=30)
         if not self.w3.is_connected():
             raise RuntimeError("cannot connect to EVM RPC")
         self.sender = to_checksum_address(config.sender)

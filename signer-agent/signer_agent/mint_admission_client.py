@@ -7,6 +7,8 @@ from .bootstrap import Bootstrap
 def remember(state, registry, record):
     """Persist a separate receipt/intent per canonical session, never rewrite it."""
     intent = record["intent"]
+    if record.get("deadline") is not None and str(record["deadline"]) != intent["deadline"]:
+        raise ValueError("BTC_MINT_ECONOMIC_INTENT_CHANGED")
     reference = record["claim_id"] or "operator-transfer:" + intent["session"]
     root = "btc-mint-admission:" + intent["chain_id"] + ":" + intent["mint_admission"] + ":" + reference
     key = root + ":session:" + intent["session"]
@@ -18,6 +20,8 @@ def remember(state, registry, record):
             raise ValueError("BTC_MINT_ADMISSION_REORG")
         return key
     economic = {name: intent[name] for name in ("target", "artifact", "hash_method", "hash_args", "deadline")}
+    if record.get("claim_deadline") is not None:
+        economic["deadline"] = str(record["claim_deadline"])
     if record.get("generation_mode"):
         economic["hash_args"] = Bootstrap.wire(record["economic_arguments"])
     index = state.get(root) or dict(economic=economic, sessions=[])
@@ -89,7 +93,8 @@ def dispatch_funding(a, manifest, key, registry, state, graph, contracts, target
     board = context["board"]
     reference = claim_id(target.address, arguments[0], arguments[1])
     claim = _read(board, block.number, "getClaim", reference)
-    if claim[4] and (int(claim[4]) != deadline or Bootstrap.wire(list(claim[:4])) != Bootstrap.wire(arguments)):
+    if claim[4] and (int(_read(board, block.number, "attempts", claim[6])[3]) != deadline
+            or Bootstrap.wire(list(claim[:4])) != Bootstrap.wire(arguments)):
         raise ValueError("BTC_MINT_ECONOMIC_INTENT_CHANGED")
     with state.exclusive():
         if a.action == "btc-mint-retry":
@@ -132,8 +137,8 @@ def dispatch_funding(a, manifest, key, registry, state, graph, contracts, target
         if a.action != "btc-mint-execute":
             return _result(record)
         # Exact completion was checked before UTXO observation in the caller.
-        # A finalized authorization can still execute after its original deadline;
-        # never open another session or silently extend that deadline to do so.
+        # A finalized authorization remains executable until nonce retirement.
+        # Execution never creates a new session or silently extends a deadline.
         record = _execution_record(registry, address, int(claim[6]), role)
         current = confirmed_block(registry.w3, graph)
         if _mint_complete(target, arguments, current):
@@ -200,6 +205,44 @@ def management(a, manifest, key, registry, state, graph):
         record = session_record(registry.w3, board.address, a.session, block.number,
                                 role=role, require_active=False)
         remember(state, registry, record)
+        if a.action == "btc-mint-renew":
+            if not record["claim_id"]:
+                raise ValueError("BTC_MINT_ADMISSION_SESSION_MISMATCH")
+            from .bitcoin_trust import runtime_artifact
+            _, compiled = runtime_artifact(registry.w3, board.address, "BitcoinMintAdmission", block.number,
+                                           previous_build=True)
+            if not any(item.get("name") == "renewMint" and item.get("type") == "function" for item in compiled["abi"]):
+                raise ValueError("BTC_MINT_RENEWAL_UNSUPPORTED_BUILD")
+            claim_id_bytes = bytes.fromhex(record["claim_id"])
+            claim = _read(board, block.number, "getClaim", claim_id_bytes)
+            deadline = decimal(str(a.deadline), positive=True)
+            if not record["deadline"] < int(block.timestamp) < deadline <= int(block.timestamp) + 7 * 86400:
+                raise ValueError("BTC_MINT_RENEWAL_WINDOW_INVALID")
+            if int(claim[6]) == a.session:
+                nonce = int(_read(pool, block.number, "nonce"))
+                if (nonce < record["nonce"] or (nonce == record["nonce"] and record["fence_valid"])
+                        or not _read(board, block.number, "attempts", a.session)[4]):
+                    raise ValueError("BTC_MINT_RENEWAL_REQUIRES_RETIREMENT")
+                registry_view = record["context"].get("address_context")
+                cg, dg = 0, 0
+                if registry_view is not None:
+                    address_registry = registry_view["registry"]
+                    cg = int(_read(address_registry, block.number, "custodyGeneration"))
+                    if record["generation_mode"] == 2:
+                        dg = int(_read(address_registry, block.number, "derivationGeneration"))
+                snapshot_check(registry.w3, block)
+                receipt = send(registry, board.address, "BitcoinMintAdmission", "renewMint",
+                    [claim_id_bytes, nonce, a.session, deadline, cg, dg], graph=graph)
+                block = registry.w3.eth.get_block(receipt["blockNumber"])
+                claim = _read(board, block.number, "getClaim", claim_id_bytes)
+            renewed = session_record(registry.w3, board.address, int(claim[6]), block.number,
+                role=role, signing=True)
+            if (renewed["claim_id"] != record["claim_id"] or renewed["deadline"] != deadline
+                    or renewed["nonce"] < record["nonce"] or renewed["operation_hash"] == record["operation_hash"]):
+                raise ValueError("BTC_MINT_RENEWAL_SESSION_MISMATCH")
+            remember(state, registry, renewed)
+            snapshot_check(registry.w3, block)
+            return _result(renewed)
         if a.action in ("btc-mint-retire", "btc-mint-transfer-retire"):
             mint = a.action == "btc-mint-retire"
             if bool(record["claim_id"]) != mint:

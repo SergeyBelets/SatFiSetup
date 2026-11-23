@@ -314,6 +314,53 @@ contract ULRTreasuryTest is Test {
         clone.payDay(day);
     }
 
+    function test_DepositDebitsOnlyAfterExactEnrollment() public {
+        factory.configure("C", address(auth), address(validatorA));
+        ULRConfederationTreasury fresh =
+            new ULRConfederationTreasury(address(factory), "C", address(snapshots), 1_000e6, 9000);
+        usd.mint(alice, 10e6);
+        vm.prank(alice);
+        usd.approve(address(fresh), 10e6);
+
+        vm.expectRevert(ULRConfederationTreasury.NotEnrolled.selector);
+        vm.prank(alice);
+        fresh.deposit(4e6);
+        assertEq(usd.balanceOf(alice), 10e6);
+        assertEq(usd.balanceOf(address(fresh)), 0);
+        assertEq(usd.allowance(alice, address(fresh)), 10e6);
+
+        bytes32 op = snapshots.getEnrollTreasuryOperationHash(address(factory), "C", address(fresh));
+        _authorize(auth, op, address(snapshots));
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(op);
+        snapshots.enrollTreasury(address(factory), "C", address(fresh), op);
+        assertFalse(snapshots.activeTreasuries(fresh.scope()));
+
+        vm.prank(alice);
+        fresh.deposit(4e6);
+        assertEq(usd.balanceOf(alice), 6e6);
+        assertEq(usd.balanceOf(address(fresh)), 4e6);
+        assertEq(usd.allowance(alice, address(fresh)), 6e6);
+    }
+
+    function test_DepositRejectsDifferentTreasuryForRegisteredScope() public {
+        ULRConfederationTreasury other =
+            new ULRConfederationTreasury(address(factory), "A", address(snapshots), 1_000e6, 9000);
+        assertEq(other.scope(), treasuryA.scope());
+        assertEq(snapshots.treasuries(other.scope()), address(treasuryA));
+        usd.mint(bob, 10e6);
+        vm.prank(bob);
+        usd.approve(address(other), 10e6);
+
+        vm.expectRevert(ULRConfederationTreasury.NotEnrolled.selector);
+        vm.prank(bob);
+        other.deposit(10e6);
+        assertEq(usd.balanceOf(bob), 10e6);
+        assertEq(usd.balanceOf(address(other)), 0);
+        assertEq(usd.balanceOf(address(treasuryA)), 0);
+        assertEq(usd.allowance(bob, address(other)), 10e6);
+    }
+
     function test_SnapshotCannotBePublishedWithoutSystemAuthorizationOrReplaced() public {
         (
             ULRCustodianSnapshots.Report memory report,
@@ -552,6 +599,101 @@ contract ULRTreasuryTest is Test {
         factory.setActive("A", false);
         vm.expectRevert(ULRConfederationTreasury.InvalidBinding.selector);
         treasuryA.payDay(day);
+    }
+
+    function test_InactiveRecoveryIsExactAndPreservesFundedStakingClaims() public {
+        _publish();
+        usd.mint(address(treasuryA), 11_000e6);
+        assertEq(treasuryA.payDay(day), 5_400e6);
+
+        uint256 amount = 5_600e6;
+        uint256 deadline = block.timestamp + 1 hours;
+        bytes32 activeSpend = treasuryA.getSpendOperationHash(bob, amount, deadline);
+        _authorize(auth, activeSpend, address(treasuryA));
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(activeSpend);
+        bytes32 recovery = treasuryA.getRecoverInactiveOperationHash(bob, amount, deadline);
+        assertNotEq(recovery, activeSpend);
+        vm.expectRevert(ULRConfederationTreasury.InvalidBinding.selector);
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+
+        factory.setActive("A", false);
+        vm.expectRevert(ULRConfederationTreasury.InvalidBinding.selector);
+        treasuryA.deposit(1e6);
+        vm.expectRevert(ULRConfederationTreasury.InvalidBinding.selector);
+        treasuryA.spend(bob, amount, deadline, activeSpend);
+        vm.expectRevert(ULRConfederationTreasury.ApprovalRequired.selector);
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(recovery);
+        vm.expectRevert(FROSTAuthorization.OperationNotApproved.selector);
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+        _authorize(auth, recovery, address(treasuryA));
+        vm.expectRevert(ULRConfederationTreasury.InvalidOperation.selector);
+        treasuryA.recoverInactive(alice, amount, deadline, recovery);
+        vm.expectRevert(ULRConfederationTreasury.InvalidOperation.selector);
+        treasuryA.recoverInactive(bob, amount - 1, deadline, recovery);
+
+        usd.setTax(true);
+        vm.expectRevert(ULRConfederationTreasury.InvalidTransfer.selector);
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+        assertEq(treasuryA.operationNonce(), 0);
+        assertFalse(auth.executedOperations(recovery));
+        assertEq(usd.balanceOf(address(treasuryA)), amount);
+        usd.setTax(false);
+
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+        assertEq(treasuryA.operationNonce(), 1);
+        assertEq(treasuryA.inactiveRecoveryReceipts(recovery), keccak256(abi.encode(bob, amount, deadline)));
+        assertEq(usd.balanceOf(address(treasuryA)), 0);
+        assertEq(usd.balanceOf(bob), amount);
+        assertFalse(auth.executedOperations(activeSpend));
+        vm.expectRevert(ULRConfederationTreasury.InvalidOperation.selector);
+        treasuryA.recoverInactive(bob, amount, deadline, recovery);
+
+        uint256[] memory days_ = new uint256[](1);
+        days_[0] = day;
+        vm.prank(alice);
+        assertEq(staking.claim(days_), 1_350e6);
+    }
+
+    function test_InactiveRecoveryChecksEnrollmentAndAcceptsNewApprovedDonations() public {
+        ULRConfederationTreasury other =
+            new ULRConfederationTreasury(address(factory), "A", address(snapshots), 1_000e6, 9000);
+        factory.setActive("A", false);
+        uint256 deadline = block.timestamp + 1 hours;
+        bytes32 otherOp = other.getRecoverInactiveOperationHash(bob, 1e6, deadline);
+        vm.expectRevert(ULRConfederationTreasury.NotEnrolled.selector);
+        other.recoverInactive(bob, 1e6, deadline, otherOp);
+
+        usd.mint(address(this), 3e6);
+        usd.transfer(address(treasuryA), 1e6);
+        bytes32 first = treasuryA.getRecoverInactiveOperationHash(bob, 1e6, deadline);
+        _authorize(auth, first, address(treasuryA));
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(first);
+        treasuryA.recoverInactive(bob, 1e6, deadline, first);
+
+        usd.transfer(address(treasuryA), 2e6);
+        bytes32 late = treasuryA.getRecoverInactiveOperationHash(bob, 2e6, deadline);
+        _authorize(auth, late, address(treasuryA));
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(late);
+        vm.warp(deadline + 1);
+        vm.expectRevert(ULRConfederationTreasury.InvalidOperation.selector);
+        treasuryA.recoverInactive(bob, 2e6, deadline, late);
+
+        uint256 newDeadline = deadline + 1 hours;
+        bytes32 donation = treasuryA.getRecoverInactiveOperationHash(bob, 2e6, newDeadline);
+        _authorize(auth, donation, address(treasuryA));
+        vm.prank(alice);
+        validatorA.registerCustodianSignature(donation);
+        treasuryA.recoverInactive(bob, 2e6, newDeadline, donation);
+        assertEq(usd.balanceOf(bob), 3e6);
+        assertEq(usd.balanceOf(address(treasuryA)), 0);
+        assertEq(treasuryA.operationNonce(), 2);
+        assertFalse(auth.executedOperations(late));
     }
 
     function test_FeeRouterCanSendGrossRealizedFeesToTreasuryAndStakers() public {

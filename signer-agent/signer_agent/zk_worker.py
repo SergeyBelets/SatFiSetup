@@ -17,17 +17,19 @@ import time
 from types import SimpleNamespace
 
 from web3 import Web3
+from .evm_rpc import evm_web3, witness_endpoint, witness_web3
 from .bootstrap import Bootstrap, artifact
-from .bitcoin_network import validate_policy, check_core, header_hash
+from .bitcoin_network import PUBLIC_NETWORKS, validate_policy, check_core, header_hash
 from .bitcoin_rpc import BitcoinRPC, BitcoinRPCError
 from .bitcoin_trust import checked_runtime
 from .contract_provenance import prove_creation
-from .evm_network import read_block
+from .evm_network import read_block, read_common_block, verify_anchor, verify_witness_anchor
 from .operations import canonical
 from .zk_spv import inspect_binding, is_zk
 from .zk_profiles import profile as zk_profile
 from .zk_spv_cli import transition_step, materialization_step
 from .zk_worker_prover import LocalProver, ROOT, read, write, sha
+from .spv_history import history_limit, require_history_space, sqlite_bytes
 
 
 def digest(value):
@@ -45,6 +47,7 @@ def validate_chain_config(c):
         raise ValueError("ZK_POLICY_REQUIRED")
     from .bootstrap_policy import validate_confirmations
     validate_confirmations(c, "ZK_WORKER_")
+    witness_endpoint(c)
 
 
 def load_config(path, *, review=False):
@@ -52,7 +55,8 @@ def load_config(path, *, review=False):
     if path.stat().st_mode & 0o077 or path.stat().st_uid != os.getuid():
         raise ValueError("ZK_WORKER_CONFIG_PERMISSIONS")
     c = read(path)
-    if review and set(c) == {"version", "chain_id", "evm_rpc", "evm_confirmations", "bitcoin_policy", "zk_state"}:
+    review_fields = {"version", "chain_id", "evm_rpc", "evm_confirmations", "bitcoin_policy", "zk_state"}
+    if review and review_fields <= set(c) <= review_fields | {"evm_witness_rpc"}:
         if (c["version"] != "1" or c["chain_id"] not in ("1", "11155111", "31337")
                 or not isinstance(c["evm_rpc"], str) or not c["evm_rpc"]
                 or not Web3.is_checksum_address(c["zk_state"])):
@@ -69,11 +73,13 @@ def load_config(path, *, review=False):
     if c.get("version") in ("5","6","7"):required.add("address_deposits")
     if c.get("version") in ("6","7"):required.add("withdrawal_fees")
     if c.get("version")=="7": required.add("observations")
-    if (not required <= set(c) <= required | {"headers_per_attempt", "cuda"}
+    optional = {"headers_per_attempt", "cuda", "evm_witness_rpc", "max_retained_needs", "history_max_bytes"}
+    if (not required <= set(c) <= required | optional
             or c["version"] not in ("1", "2", "3", "4", "5", "6", "7")
             or c["chain_id"] not in ("1", "11155111", "31337")):
         raise ValueError("ZK_WORKER_CONFIG_SCHEMA")
     validate_chain_config(c)
+    history_limit(c)
     from .zk_worker_prover import MAX_STAGE_TIMEOUT_SECONDS, validate_cuda
     if c.get("cuda") is not None:
         validate_cuda(c["cuda"])
@@ -89,6 +95,10 @@ def load_config(path, *, review=False):
         value = c[name]
         if not isinstance(value, str) or not re.fullmatch(r"[1-9][0-9]*", value) or not low <= int(value) <= high:
             raise ValueError("ZK_WORKER_CONFIG_RANGE:" + name)
+    retained = c.get("max_retained_needs", c["max_pending"])
+    if (not isinstance(retained, str) or not re.fullmatch(r"[1-9][0-9]{0,3}", retained)
+            or not int(c["max_pending"]) <= int(retained) <= 4096):
+        raise ValueError("ZK_WORKER_CONFIG_RANGE:max_retained_needs")
     if (not isinstance(c["allowed_consumers"], dict) or not 1 <= len(c["allowed_consumers"]) <= 4096
             or any(not Web3.is_checksum_address(k) or v not in ("MiningPoolV1", "BitcoinWithdrawalEscrow",
                    "ConfederationBitcoinReserve", "BitcoinWithdrawalEscrowV2")
@@ -119,9 +129,13 @@ def load_config(path, *, review=False):
         from .zk_service_issuer import validate
         validate(c)
         a=c['archive']
-        if set(a)!={'directory','max_headers','max_bytes'} or not Path(a['directory']).is_absolute():raise ValueError('ZK_ARCHIVE_POLICY')
+        archive_fields = {'directory', 'max_headers', 'max_bytes'}
+        if not archive_fields <= set(a) <= archive_fields | {'max_backup_bytes'} or not Path(a['directory']).is_absolute():
+            raise ValueError('ZK_ARCHIVE_POLICY')
         from .spv_automation import integer
         integer(a['max_headers'],64,2000000);integer(a['max_bytes'],1048576,2**40)
+        if 'max_backup_bytes' in a:
+            integer(a['max_backup_bytes'],1048576,2**40)
     if c["version"] in ("5","6","7"):
         from .address_spv import validate_profile
         validate_profile(c["address_deposits"],c["allowed_consumers"])
@@ -137,6 +151,7 @@ def load_config(path, *, review=False):
 class Inbox:
     def __init__(self, config):
         self.config = config
+        self.history_limit = history_limit(config)
         from .zk_observations import require_policy
         require_policy(config)
         self.path = Path(config["directory"])
@@ -150,6 +165,7 @@ class Inbox:
             CREATE TABLE IF NOT EXISTS needs(id TEXT PRIMARY KEY, body TEXT NOT NULL, status TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY, cost TEXT NOT NULL);
         """)
+        self._init_history()
         scope = {k: config[k] for k in ("chain_id", "evm_confirmations", "bitcoin_policy", "zk_state", "allowed_consumers")}
         if config.get("version") in ("2","3","4","5","6","7"):
             scope["service"] = {k: v for k, v in config["service"].items() if not k.startswith("max_")}
@@ -165,7 +181,10 @@ class Inbox:
         if self.get('address_deposits_config') not in (None,profile):raise ValueError('SPV_ADDRESS_PROFILE_CHANGED')
         if profile is not None:self.put('address_deposits_config',profile)
         if config.get('version') in ('4','5','6','7'):
-            for key,value in [('archive_config',config['archive'])]+([('automation_config',config['automation'])] if config['automation'].get('enabled') else []):
+            # The file cap applies only to backup/restore and can be tuned
+            # without changing the admitted archive's identity or data limits.
+            archive_config = {k: v for k, v in config['archive'].items() if k != 'max_backup_bytes'}
+            for key,value in [('archive_config',archive_config)]+([('automation_config',config['automation'])] if config['automation'].get('enabled') else []):
                 old=self.get(key)
                 if old is not None and old!=value:raise ValueError('ZK_WORKER_RUNTIME_POLICY_CHANGED')
                 self.put(key,value)
@@ -177,24 +196,96 @@ class Inbox:
             from .zk_observations import validate
             validate(observed);self.put('observations_policy',observed)
 
+    def _init_history(self):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            archived_column = any(row[1] == "archived" for row in self.db.execute("PRAGMA table_info(needs)"))
+            if archived_column and self.history_limit is None:
+                raise ValueError("SPV_HISTORY_POLICY_REQUIRED")
+            if self.history_limit is not None:
+                if not archived_column:
+                    self.db.execute("ALTER TABLE needs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0")
+                self.db.execute("CREATE INDEX IF NOT EXISTS need_archive_group ON needs(archived, id)")
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            self.db.close()
+            raise
+
     def close(self): self.db.close()
     def get(self, key):
         row = self.db.execute("SELECT body FROM meta WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else None
     def put(self, key, value):
         self.db.execute("INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET body=excluded.body", (key, canonical(value)))
-    def needs(self):
-        return [(row[0], json.loads(row[1]), row[2]) for row in self.db.execute("SELECT id,body,status FROM needs ORDER BY rowid")]
-    def status(self, key, status): self.db.execute("UPDATE needs SET status=? WHERE id=?", (status, key))
-    def enqueue(self, request):
+
+    def record_evm_witness_height(self, number):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            previous = self.get("evm-witness-height")
+            if previous is not None and number < previous:
+                raise ValueError("EVM_RPC_BEHIND")
+            if previous != number:
+                self.put("evm-witness-height", number)
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+    def needs(self, *, active_only=False):
+        query = "SELECT id,body,status FROM needs"
+        if active_only and self.history_limit is not None:
+            query += " WHERE archived=0"
+        return [(row[0], json.loads(row[1]), row[2]) for row in self.db.execute(query + " ORDER BY rowid")]
+
+    def status(self, key, status):
+        if self.history_limit is not None and status != "COMPLETED":
+            self.db.execute("UPDATE needs SET status=?,archived=0 WHERE id=?", (status, key))
+        else:
+            self.db.execute("UPDATE needs SET status=? WHERE id=?", (status, key))
+
+    def history_status(self):
+        if self.history_limit is None:
+            return None
+        return dict(archived=self.db.execute("SELECT COUNT(*) FROM needs WHERE archived=1").fetchone()[0],
+            bytes=sqlite_bytes(self.path, "worker.sqlite"), admission_limit_bytes=self.history_limit,
+            anchor=self.get("need-history-anchor"), recheck=self.get("need-history-recheck"))
+
+    def checkpoint_completed(self, keys, block):
+        if not keys:
+            return
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            self.db.executemany("UPDATE needs SET archived=1 WHERE id=? AND status='COMPLETED'",
+                                ((key,) for key in keys))
+            self.put("need-history-anchor", dict(number=block.number, hash=block.hash.hex()))
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+
+    def insert_need(self, key, request, status):
+        """Admit a new need within the caller's write transaction."""
+        max_pending = int(self.config["max_pending"])
+        max_retained = int(self.config.get("max_retained_needs", max_pending))
+        # Original admission semantics apply to stores that have not enabled the archive.
+        require_history_space(self.path, "worker.sqlite", self.history_limit)
+        active = " WHERE archived=0" if self.history_limit is not None else ""
+        retained, pending = self.db.execute(
+            "SELECT COUNT(*), COUNT(CASE WHEN status != 'COMPLETED' THEN 1 END) FROM needs" + active
+        ).fetchone()
+        if retained >= max_retained or (status != "COMPLETED" and pending >= max_pending):
+            raise ValueError("ZK_WORKER_INBOX_FULL")
+        self.db.execute("INSERT INTO needs(id,body,status) VALUES(?,?,?)", (key, canonical(request), status))
+
+    def enqueue(self, request, *, observation_status=None):
         key = digest(["satoshifi.local-spv-need.v1", self.get("scope"), request])
         self.db.execute("BEGIN IMMEDIATE")
         try:
-            row = self.db.execute("SELECT status FROM needs WHERE id=?", (key,)).fetchone()
+            row = self.db.execute("SELECT 1 FROM needs WHERE id=?", (key,)).fetchone()
             if not row:
-                if self.db.execute("SELECT COUNT(*) FROM needs").fetchone()[0] >= int(self.config["max_pending"]):
-                    raise ValueError("ZK_WORKER_INBOX_FULL")
-                self.db.execute("INSERT INTO needs VALUES(?,?,?)", (key, canonical(request), "QUEUED"))
+                self.insert_need(key, request, observation_status or "QUEUED")
+            elif observation_status is not None:
+                self.status(key, observation_status)
             self.db.commit()
         except BaseException:
             self.db.rollback(); raise
@@ -214,11 +305,42 @@ class Inbox:
             raise
 
 
+class _AgreedStateViews:
+    """Reuse witnessed observations for decisions made from this exact block."""
+
+    def __init__(self, functions, block, current, fresh, halt_observed):
+        self.functions, self.block = functions, block
+        self.current, self.fresh, self.halt_observed = current, fresh, halt_observed
+
+    def __getattr__(self, name):
+        return getattr(self.functions, name)
+
+    def _at_block(self, block_identifier, value):
+        if block_identifier != self.block:
+            raise ValueError("EVM_RPC_WITNESS_MISMATCH")
+        return value
+
+    def getState(self):
+        return SimpleNamespace(call=lambda *, block_identifier: self._at_block(block_identifier, self.current))
+
+    def isFresh(self):
+        return SimpleNamespace(call=lambda *, block_identifier: self._at_block(block_identifier, self.fresh))
+
+    def halted(self):
+        def read(*, block_identifier=None):
+            if block_identifier is None:
+                return self.halt_observed or self.functions.halted().call()
+            return self._at_block(block_identifier, self.current[8])
+        return SimpleNamespace(call=read)
+
+
 class Worker:
     def __init__(self, config):
-        self.c = config; self.inbox = Inbox(config)
-        self.w3 = Web3(Web3.HTTPProvider(config["evm_rpc"], request_kwargs={"timeout": 30}))
+        self.c = config
+        self.w3 = evm_web3(config["evm_rpc"], timeout=30)
+        self.evm_witness = witness_web3(config, timeout=30)
         self.bitcoin = BitcoinRPC(config["bitcoin_rpc"], config["bitcoin_cookie"], config['bitcoin_policy']['network'], config["bitcoin_policy"])
+        self.inbox = Inbox(config)
         self.lock_fd = None
 
     def archive_store(self):
@@ -254,10 +376,33 @@ class Worker:
             finally: self.lock_fd = None
 
     def context(self, *, allow_halt=False):
-        if self.w3.eth.chain_id != int(self.c["chain_id"]): raise ValueError("CHAIN_MISMATCH")
-        block = read_block(self.w3, int(self.c["evm_confirmations"]))
+        chain_id, confirmations = int(self.c["chain_id"]), int(self.c["evm_confirmations"])
+        witness = getattr(self, "evm_witness", None)
+        if witness is None:
+            if self.w3.eth.chain_id != chain_id:
+                raise ValueError("CHAIN_MISMATCH")
+            block = read_block(self.w3, confirmations)
+        else:
+            block = read_common_block(self.w3, witness, confirmations, chain_id,
+                                      minimum=self.inbox.get("evm-witness-height"))
+        active = self.inbox.get("attempt") or {}
+        anchor = active.get("evm_prepare_anchor")
+        if anchor and block.number < anchor["number"]:
+            raise ValueError("EVM_RPC_BEHIND")
         state, adapter, records, _ = inspect_binding(self.w3, self.c["zk_state"], self.c["bitcoin_policy"], block.number)
         halted = state.functions.halted().call()
+        if witness is not None:
+            other, _, _, _ = inspect_binding(witness, self.c["zk_state"], self.c["bitcoin_policy"], block.number)
+            current = state.functions.getState().call(block_identifier=block.number)
+            fresh = state.functions.isFresh().call(block_identifier=block.number)
+            if (current != other.functions.getState().call(block_identifier=block.number)
+                    or fresh != other.functions.isFresh().call(block_identifier=block.number)):
+                raise ValueError("EVM_RPC_WITNESS_MISMATCH")
+            halted = halted or current[8] or other.functions.halted().call()
+            self.stable(block)
+            self.inbox.record_evm_witness_height(block.number)
+            state = SimpleNamespace(address=self.c["zk_state"],
+                                    functions=_AgreedStateViews(state.functions, block.number, current, fresh, halted))
         if halted and not allow_halt: raise ValueError("MAINNET_RELAY_HALTED")
         core = None if halted else check_core(self.bitcoin, self.c['bitcoin_policy']['network'], self.c["bitcoin_policy"])
         from .zk_observations import observe
@@ -265,13 +410,27 @@ class Worker:
         return block, state, adapter, records, core
 
     def new_work_guard(self):
+        history_enabled = self.c.get("history_max_bytes") is not None
+        if history_enabled or self.c.get('observations'):
+            block, _, _, _, _ = self.context()
+            if history_enabled and not self._history_current(block):
+                raise ValueError("ZK_NEED_HISTORY_RECHECK_REQUIRED")
         if self.c.get('observations'):
-            self.context()
             from .zk_observations import observer
             observer(self).fence()
 
     def stable(self, block):
-        if self.w3.eth.get_block(block.number).hash != block.hash: raise ValueError("BTC_REGISTRY_READ_REORG")
+        witness = getattr(self, "evm_witness", None)
+        if witness is not None:
+            verify_witness_anchor(self.w3, block)
+            verify_witness_anchor(witness, block)
+        else:
+            try:
+                verify_anchor(self.w3, block.number, block.hash)
+            except ValueError as error:
+                if str(error) == "EVM_REORG_RECOVERY_REQUIRED":
+                    raise ValueError("BTC_REGISTRY_READ_REORG") from None
+                raise
 
     def aligned(self, state, block, core):
         s = state.functions.getState().call(block_identifier=block.number)
@@ -392,6 +551,8 @@ class Worker:
 
     def request(self, request, *, register_local=True):
         block, state, adapter, _, core = self.context()
+        if self.c.get("history_max_bytes") is not None and not self._history_current(block):
+            raise ValueError("ZK_NEED_HISTORY_RECHECK_REQUIRED")
         observation = self.observe_need(request, block, adapter, core); self.stable(block)
         if observation["status"] == "READY" and not self.aligned(state, block, core):
             observation["status"] = "NEEDS_STATE"
@@ -410,7 +571,7 @@ class Worker:
             key=log.detect_need(request,observation['status'],created,deadline,local)
             log.drain();self.inbox.status(key,observation['status'])
         else:
-            key = self.inbox.enqueue(request); self.inbox.status(key, observation["status"])
+            key = self.inbox.enqueue(request, observation_status=observation["status"])
         if not self.c.get('observations') and register_local and self.c.get("batching") and self.inbox.get("obligation:"+key) is None:
             from .zk_worker_batching import register
             register(self,key,block.timestamp,block.timestamp+int(self.c["batching"]["local_service_seconds"]),"local")
@@ -461,12 +622,54 @@ class Worker:
                 reserve(worker, name + ":" + step["id"], int(fee) * tx["gas"] + int(tx.get("value", 0)),
                         getattr(worker, "publication_needs", []))
                 return tx
+
+            def check_worker_transition_broadcast(self, source, prefix, saved_step):
+                active = inbox.get("attempt")
+                if (not active or active["phase"] != "SENDING" or prefix != "zk-worker-" + active["id"]
+                        or prefix != name or source.path.resolve() != self.journal.path.resolve()
+                        or saved_step != step):
+                    raise ValueError("ZK_TRANSACTION_RECOVERY_REQUIRED")
+                worker.check_transition_target(active)
+
         profile = dict(deployment_id=name, mode="backed", bitcoin_network=config['bitcoin_policy']['network'], bitcoin_policy=config["bitcoin_policy"],
             chain_id=config["chain_id"], evm_rpc=config["evm_rpc"], evm_confirmations=config["evm_confirmations"],
             contracts=records, steps=[step])
         runner=BudgetedBootstrap(profile,self.inbox.path/'transactions.sqlite')
-        if recover_only:return runner.apply(config['identity_file'],before_submit=lambda steps:True)
-        return runner.apply(config['identity_file'])
+        try:
+            if recover_only:
+                return runner.apply(config['identity_file'], before_submit=lambda steps: True)
+            return runner.apply(config['identity_file'])
+        except ValueError as error:
+            if str(error) not in ("WAITING_BITCOIN_RPC", "REVALIDATE_BITCOIN"):
+                raise
+            return dict(status=str(error))
+
+    def recover_transition(self, active, base, prepared, records):
+        """Reconcile only persisted publication bytes, even across SDK upgrades."""
+        path = self.inbox.path / "transactions.sqlite"
+        if not path.is_file():
+            return None
+        from .operations import Journal
+
+        name = "zk-worker-" + active["id"]
+        try:
+            entry = Journal(path).get(name + ":transition")
+        except KeyError:
+            return None
+        saved_step = entry["request"]
+        journal = (base / "state.journal").read_bytes()
+        if (hashlib.sha256(journal).hexdigest() != prepared["journal_sha256"]
+                or not isinstance(saved_step.get("args"), list) or len(saved_step["args"]) != 2):
+            raise ValueError("ZK_TRANSACTION_RECOVERY_BINDING")
+        seal = bytes.fromhex(saved_step["args"][1].removeprefix("0x"))
+        step = transition_step(self.c["chain_id"], self.c["zk_state"], self.c["bitcoin_policy"], journal, seal)
+        if step != saved_step:
+            raise ValueError("ZK_TRANSACTION_RECOVERY_BINDING")
+        result = self.publish(name, step, records, recover_only=True)
+        if result["status"] == "NOT_SIGNED":
+            return None
+        return dict(status="STATE_PROGRESS" if result["status"] == "VERIFIED" else result["status"],
+                    proving_attempt_id=active["id"])
 
     def retain_accepted_archive(self,active,native,current,block):
         """Retain only an already accepted exact native transition; no proving/send."""
@@ -488,6 +691,10 @@ class Worker:
         with self.exclusive():
             transport=None
             if self.c.get("transport"):
+                if self.c.get("history_max_bytes") is not None and self.inbox.get("need-history-anchor"):
+                    block, _, _, _, _ = self.context(allow_halt=True)
+                    if not self._history_current(block):
+                        return self._tick()
                 try:
                     from .zk_worker_transport import WorkerTransport
                     transport=WorkerTransport(self);transport.ingest()
@@ -522,44 +729,69 @@ class Worker:
         with self.exclusive():
             return self._tick(boundary="prepare", retain_accepted=True)
 
-    def revisit_preparation(self, active, native, current, block, core):
-        attempt = active["id"]
+    def attempt_evm_behind(self, active, native, current, block):
+        """An unavailable height/state cannot justify retiring frozen work."""
         anchor = active.get("evm_prepare_anchor")
         if anchor and block.number < anchor["number"]:
-            return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
+            return True
+        if current in (native["before"], native["after"]) or int(current[11]) > int(native["before"][11]):
+            return False
+        if not anchor:
+            return int(current[11]) < int(native["before"][11])
+        try:
+            verify_anchor(self.w3, anchor["number"], anchor["hash"], safe=block)
+        except ValueError as error:
+            if str(error) == "EVM_RPC_BEHIND":
+                return True
+            if str(error) != "EVM_REORG_RECOVERY_REQUIRED":
+                raise
+            return False
+        return True  # The anchor survived. The earlier/contradictory state did not.
+
+    def check_transition_target(self, active):
+        """Recheck the frozen target only if EVM has no observation of this transaction."""
+        try:
+            core = self.bitcoin.call("getblockchaininfo")
+        except BitcoinRPCError:
+            raise ValueError("WAITING_BITCOIN_RPC") from None
+        expected_chain = PUBLIC_NETWORKS[self.c["bitcoin_policy"]["network"]][0]
+        if (not isinstance(core, dict) or core.get("chain") != expected_chain
+                or core.get("initialblockdownload") is not False or type(core.get("blocks")) is not int
+                or core["blocks"] != core.get("headers")):
+            raise ValueError("WAITING_BITCOIN_RPC")
+        status = self.attempt_bitcoin_status(active, core, bind_tip=True)
+        if status:
+            raise ValueError(status)
+
+    def attempt_bitcoin_status(self, active, core, *, bind_tip=False):
+        height = active["target_height"]
+        if core["blocks"] < height:
+            return "WAITING_BITCOIN_RPC"
+        try:
+            observed = self.bitcoin.call("getblockhash", height)
+            if not isinstance(observed, str) or not re.fullmatch(r"[0-9a-f]{64}", observed):
+                return "WAITING_BITCOIN_RPC"
+            if observed == active["target_hash"] and not bind_tip:
+                return None
+            tip = self.bitcoin.call("getblockhash", core["blocks"])
+            if (not isinstance(tip, str) or tip != core.get("bestblockhash") or not re.fullmatch(r"[0-9a-f]{64}", tip)
+                    or (tip if height == core["blocks"] else self.bitcoin.call("getblockhash", height)) != observed):
+                return "WAITING_BITCOIN_RPC"
+        except BitcoinRPCError:
+            return "WAITING_BITCOIN_RPC"
+        return None if observed == active["target_hash"] else "REVALIDATE_BITCOIN"
+
+    def revisit_preparation(self, active, native, current, block, bitcoin_status):
+        attempt = active["id"]
         if current == native["after"]:
             self.retain_accepted_archive(active, native, current, block)
             return dict(status="STATE_ALREADY_ACCEPTED", proving_attempt_id=attempt)
         if current != native["before"]:
-            if int(current[11]) < int(native["before"][11]):
-                if not anchor:
-                    return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
-                from .evm_network import verify_anchor
-                try:
-                    verify_anchor(self.w3, anchor["number"], anchor["hash"], safe=block)
-                except ValueError as error:
-                    if str(error) == "EVM_RPC_BEHIND":
-                        return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
-                    if str(error) != "EVM_REORG_RECOVERY_REQUIRED":
-                        raise
-                else:
-                    return dict(status="AWAITING_EVM_RPC", proving_attempt_id=attempt)
             status = "REVALIDATE_STATE"
         else:
-            height = active["target_height"]
-            if core["blocks"] < height:
-                return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
-            try:
-                observed = self.bitcoin.call("getblockhash", height)
-                if observed == active["target_hash"]:
-                    return dict(status="PROOF_PREPARED", proving_attempt_id=attempt)
-                tip = self.bitcoin.call("getblockhash", core["blocks"])
-                if (tip != core["bestblockhash"]
-                        or (tip if height == core["blocks"] else self.bitcoin.call("getblockhash", height)) != observed):
-                    return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
-            except BitcoinRPCError:
-                return dict(status="WAITING_BITCOIN_RPC", proving_attempt_id=attempt)
-            status = "REVALIDATE_BITCOIN"
+            status = bitcoin_status
+            if status != "REVALIDATE_BITCOIN":
+                return dict(status=status or "PROOF_PREPARED", proving_attempt_id=attempt)
         self.stable(block)
         self.inbox.put("attempt", None)
         return dict(status=status, proving_attempt_id=attempt, retired=True)
@@ -595,28 +827,83 @@ class Worker:
             prepared=read(base/'preparation.json')
             if prepared.get('native_sha256') and sha(base/'native.json')!=prepared['native_sha256']:
                 raise ValueError('ZK_ARCHIVE_NATIVE_SUMMARY_DRIFT')
-            self.new_work_guard()
-            block,state,_,_,_=self.context(allow_halt=True)
+            native = read(base / "native.json")
+            block,state,_,_,core=self.context(allow_halt=True)
             current=state_wire(state.functions.getState().call(block_identifier=block.number))
             if state.functions.halted().call():
                 return dict(status='HALTED' if current[8] else 'HALT_OBSERVED_UNCONFIRMED',published=False)
-            if self.bitcoin.call('getblockhash',active['target_height'])!=active['target_hash']:
-                return dict(status='REVALIDATE_BITCOIN',published=False)
+            if self.attempt_evm_behind(active, native, current, block):
+                return dict(status="AWAITING_EVM_RPC", proving_attempt_id=active["id"], published=False)
+            status = self.attempt_bitcoin_status(active, core)
+            if status:
+                return dict(status=status, proving_attempt_id=active["id"], published=False)
+            self.new_work_guard()
             self.stable(block)
             LocalProver(self.c,self.lock_fd).prove(base)
-            if self.bitcoin.call('getblockhash',active['target_height'])!=active['target_hash']:
-                return dict(status='REVALIDATE_BITCOIN',published=False)
+            newer,latest,_,_,latest_core=self.context(allow_halt=True)
+            now=state_wire(latest.functions.getState().call(block_identifier=newer.number))
+            if newer.number < block.number or self.attempt_evm_behind(active, native, now, newer):
+                return dict(status="AWAITING_EVM_RPC", proving_attempt_id=active["id"], published=False)
+            if latest.functions.halted().call():
+                return dict(status='HALTED' if now[8] else 'HALT_OBSERVED_UNCONFIRMED',published=False)
+            status = self.attempt_bitcoin_status(active, latest_core)
+            if status:
+                return dict(status=status, proving_attempt_id=active["id"], published=False)
             result=dict(status='LOCAL_PROOF_COMPUTED',proving_attempt_id=active['id'],published=False,
                 receipt_sha256=sha(base/'local-result/receipt.bin'),journal_sha256=sha(base/'state.journal'))
-            newer,latest,_,_,_=self.context(allow_halt=True)
-            now=state_wire(latest.functions.getState().call(block_identifier=newer.number))
-            native=read(base/'native.json');self.stable(newer)
+            self.stable(newer)
             result['accepted']=now==native['after']
             if result['accepted']:self.accept_local_transition(active,native,now,newer)
             elif now!=native['before']:
                 result.update(status='LOCAL_PROOF_COMPUTED_REPLAY_REQUIRED',requires_replay=True)
             self.inbox.put('local-proof:'+active['id'],result)
             return result
+
+    def _history_current(self, block):
+        anchor = self.inbox.get("need-history-anchor")
+        review = self.inbox.get("need-history-recheck")
+        if review:
+            anchor = review
+        if anchor:
+            try:
+                verify_anchor(self.w3, anchor["number"], anchor["hash"], safe=block)
+            except ValueError as error:
+                if str(error) != "EVM_REORG_RECOVERY_REQUIRED":
+                    raise
+                return False
+        return review is None
+
+    def _recheck_history(self, block, adapter, core):
+        review = self.inbox.get("need-history-recheck") or dict(cursor="")
+        if review.get("hash"):
+            try:
+                verify_anchor(self.w3, review["number"], review["hash"], safe=block)
+            except ValueError as error:
+                if str(error) != "EVM_REORG_RECOVERY_REQUIRED":
+                    raise
+                review = dict(cursor="")
+        db = self.inbox.db
+        rows = db.execute("SELECT id,body FROM needs WHERE archived=1 AND id>? ORDER BY id LIMIT 32",
+                          (review["cursor"],)).fetchall()
+        checked = [(key, self.observe_queued_need(key, json.loads(body), block, adapter, core)["status"])
+                   for key, body in rows]
+        self.stable(block)
+        anchor = dict(number=block.number, hash=block.hash.hex())
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            for key, status in checked:
+                if status != "COMPLETED":
+                    self.inbox.status(key, status)
+            if rows:
+                self.inbox.put("need-history-recheck", dict(anchor, cursor=rows[-1][0]))
+            else:
+                self.inbox.put("need-history-anchor", anchor)
+                self.inbox.put("need-history-recheck", None)
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
+        return dict(status="ZK_NEED_HISTORY_RECHECK" if rows else "ZK_NEED_HISTORY_RECHECKED", checked=len(rows))
 
     def _tick(self, *, boundary='all', retain_accepted=False):
         block, state, adapter, records, core = self.context(allow_halt=True)
@@ -627,6 +914,24 @@ class Worker:
                 self.inbox.put("terminal_halt", dict(state=current, block_number=block.number, block_hash=block.hash.hex()))
                 return dict(status="HALTED", confirmed=True)
             return dict(status="HALT_OBSERVED_UNCONFIRMED", confirmed=False)
+        if self.c.get("history_max_bytes") is not None and not self._history_current(block):
+            return self._recheck_history(block, adapter, core)
+        active = self.inbox.get("attempt")
+        bitcoin_status = None
+        if active:
+            if retain_accepted and active["phase"] != "PREPARED":
+                return dict(status="PUBLICATION_RECOVERY_REQUIRED", proving_attempt_id=active["id"])
+            base = self.inbox.path / "attempts" / active["id"]
+            native = read(base / "native.json")
+            prepared = read(base / "preparation.json")
+            if prepared.get("native_sha256") and sha(base / "native.json") != prepared["native_sha256"]:
+                raise ValueError("ZK_ARCHIVE_NATIVE_SUMMARY_DRIFT")
+            if self.attempt_evm_behind(active, native, current, block):
+                return dict(status="AWAITING_EVM_RPC", proving_attempt_id=active["id"])
+            if current == native["before"] and active["phase"] != "SENDING":
+                bitcoin_status = self.attempt_bitcoin_status(active, core)
+                if bitcoin_status == "WAITING_BITCOIN_RPC":
+                    return dict(status=bitcoin_status, proving_attempt_id=active["id"])
         from .zk_observations import observer
         observation_log=observer(self)
         if observation_log:observation_log.fence()
@@ -639,17 +944,9 @@ class Worker:
             if maintenance:
                 if heartbeat:maintenance['deadline']=min(maintenance['deadline'],heartbeat['deadline'])
                 heartbeat=maintenance
-        active = self.inbox.get("attempt")
         if active:
-            if retain_accepted and active["phase"] != "PREPARED":
-                return dict(status="PUBLICATION_RECOVERY_REQUIRED", proving_attempt_id=active["id"])
-            base = self.inbox.path / "attempts" / active["id"]
-            native = read(base / "native.json")
-            prepared=read(base/'preparation.json')
-            if prepared.get('native_sha256') and sha(base/'native.json')!=prepared['native_sha256']:
-                raise ValueError('ZK_ARCHIVE_NATIVE_SUMMARY_DRIFT')
             if retain_accepted:
-                return self.revisit_preparation(active, native, current, block, core)
+                return self.revisit_preparation(active, native, current, block, bitcoin_status)
             if current == native["after"]:
                 if boundary=='prepare':return dict(status='STATE_ALREADY_ACCEPTED',proving_attempt_id=active['id'])
                 self.accept_local_transition(active,native,current,block)
@@ -661,68 +958,104 @@ class Worker:
                 self.inbox.put("attempt", None); active = None
             else:
                 if boundary=='prepare':
-                    if self.bitcoin.call('getblockhash',active['target_height'])!=active['target_hash']:
-                        return dict(status='REVALIDATE_BITCOIN',proving_attempt_id=active['id'])
-                    return dict(status='PROOF_PREPARED',proving_attempt_id=active['id'])
-                if active.get("broadcast_not_before") and active["phase"] != "SENDING":
+                    return dict(status=bitcoin_status or "PROOF_PREPARED", proving_attempt_id=active["id"])
+                if bitcoin_status == "REVALIDATE_BITCOIN":
+                    if boundary != "all":
+                        return dict(status=bitcoin_status, proving_attempt_id=active["id"])
+                    self.stable(block)
+                    self.inbox.put("attempt", None)
+                    active = None
+                elif active.get("broadcast_not_before") and active["phase"] != "SENDING":
                     # A new mature consumer request may make prepared heartbeat
                     # work urgent. Never hold it until the heartbeat boundary.
-                    for key, request, _ in self.inbox.needs():
+                    jobs = self.inbox.get("job_attempts") or {}
+                    added = []
+                    queued = self.inbox.needs(active_only=True) if self.c.get("history_max_bytes") else self.inbox.needs()
+                    for key, request, _ in queued:
                         observation = self.observe_queued_need(key, request, block, adapter, core)
                         if observation["status"] == "NEEDS_STATE":
+                            if not self.attempt_budget_available(jobs, key, active["id"]):
+                                self.inbox.status(key, "ATTEMPT_BUDGET_REVIEW_REQUIRED")
+                                continue
                             if self.c.get("service", {}).get("mode") == "paid":
                                 from .zk_worker_service import source
                                 try: source(self, [key])
                                 except ValueError as exc:
                                     if str(exc) == "ZK_SERVICE_AWAITING_PAYMENT": continue
                                     raise
-                            active["broadcast_not_before"] = 0
-                            active["need_ids"] = sorted(set(active.get("need_ids", []) + [key]))
-                    self.inbox.put("attempt", active)
-                if active["phase"] != "SENDING" and self.bitcoin.call("getblockhash", active["target_height"]) != active["target_hash"]:
-                    if boundary!='all':return dict(status='REVALIDATE_BITCOIN',proving_attempt_id=active['id'])
-                    self.inbox.put("attempt", None); active = None
-                else:
+                            added.append(key)
+                    if added:
+                        active["broadcast_not_before"] = 0
+                        active["need_ids"] = sorted(set(active.get("need_ids", []) + added))
+                        self.update_active_attempt_budgets(active, jobs, added)
+                if active:
                     self.publication_needs = active.get("funding_need_ids", active.get("need_ids", []))
-                    if active["phase"] != "SENDING" and self.c.get("service"):
+                    if active["phase"] == "SENDING":
+                        self.stable(block)
+                        recovered = self.recover_transition(active, base, prepared, records)
+                        if recovered is not None:
+                            return recovered
+                        status = self.attempt_bitcoin_status(active, core)
+                        if status:
+                            return dict(status=status, proving_attempt_id=active["id"])
+                    if self.c.get("service"):
                         from .zk_worker_service import preflight
                         try: preflight(self, self.publication_needs)
                         except ValueError as exc:
                             if str(exc) != "ZK_SERVICE_AWAITING_PAYMENT" or not heartbeat: raise
                             # An unpaid/reorged consumer obligation must not veto
                             # explicitly funded security work on the same proof.
-                            self.publication_needs = [heartbeat["service_job_id"]]
+                            job = heartbeat["service_job_id"]
+                            jobs = self.inbox.get("job_attempts") or {}
+                            if not self.attempt_budget_available(jobs, job, active["id"]):
+                                return dict(status="ATTEMPT_BUDGET_REVIEW_REQUIRED",
+                                            reason="ZK_WORKER_ATTEMPT_BUDGET", proving_attempt_id=active["id"])
+                            self.publication_needs = [job]
                             preflight(self, self.publication_needs)
                             active["funding_need_ids"] = self.publication_needs
                             active["broadcast_not_before"] = heartbeat["broadcast_not_before"]
-                            self.inbox.put("attempt", active)
+                            self.update_active_attempt_budgets(active, jobs, self.publication_needs)
                     prover=LocalProver(self.c,self.lock_fd)
                     seal=(prover.verify_own(base,base/'publish-verified')
                           if boundary=='publish' else prover.prove(base))
                     # Re-read confirmed state/Core after the expensive proof.
-                    newer, s, _, _, _ = self.context()
-                    if state_wire(s.functions.getState().call(block_identifier=newer.number)) != current:
+                    newer, s, _, _, latest_core = self.context()
+                    newer_state = state_wire(s.functions.getState().call(block_identifier=newer.number))
+                    if newer.number < block.number or self.attempt_evm_behind(active, native, newer_state, newer):
+                        return dict(status="AWAITING_EVM_RPC", proving_attempt_id=active["id"])
+                    if newer_state != current:
                         return dict(status="REVALIDATE_STATE")
-                    if active["phase"] != "SENDING" and self.bitcoin.call("getblockhash", active["target_height"]) != active["target_hash"]:
-                        return dict(status="REVALIDATE_BITCOIN")
+                    status = self.attempt_bitcoin_status(active, latest_core)
+                    if status:
+                        return dict(status=status, proving_attempt_id=active["id"])
                     self.stable(newer)
                     if active.get("broadcast_not_before") and active["broadcast_not_before"] > newer.timestamp:
                         return dict(status="WAITING_HEARTBEAT_BROADCAST", not_before=active["broadcast_not_before"])
                     step = transition_step(self.c["chain_id"], state.address, self.c["bitcoin_policy"],
                                            (base / "state.journal").read_bytes(), seal)
+                    if self.c.get("archive"):
+                        if "delta" not in native:
+                            raise ValueError("ZK_ARCHIVE_REPREPARE_REQUIRED")
+                        self.archive_ref(native["before"])
+                        self.archive_store().check_promotion(native["before"], native["after"], native["delta"])
                     active["phase"] = "SENDING"; self.inbox.put("attempt", active)
                     result = self.publish("zk-worker-" + active["id"], step, records)
                     return dict(status="STATE_PROGRESS" if result["status"] == "VERIFIED" else result["status"],
                                 proving_attempt_id=active["id"])
         if boundary=='publish':return dict(status='NO_PREPARED_ATTEMPT')
         observations = []
+        completed = []
         waiting_for_core = False
         aligned = self.aligned(state, block, core)
-        for key, request, _ in self.inbox.needs():
+        history_enabled = self.c.get("history_max_bytes") is not None
+        needs = self.inbox.needs(active_only=True) if history_enabled else self.inbox.needs()
+        for key, request, _ in needs:
             observation = self.observe_queued_need(key, request, block, adapter, core)
             waiting_for_core |= observation["status"] == "WAITING_BITCOIN_RPC"
             if observation["status"] == "READY" and not aligned: observation["status"] = "NEEDS_STATE"
             self.inbox.status(key, observation["status"])
+            if history_enabled and observation["status"] == "COMPLETED":
+                completed.append(key)
             if observation["status"] == "NEEDS_STATE":
                 if self.c.get("service", {}).get("mode") == "paid":
                     from .zk_worker_service import source
@@ -738,9 +1071,12 @@ class Worker:
                         self.inbox.status(key, "AWAITING_SERVICE_PAYMENT"); continue
                 observations.append((key, observation))
         self.stable(block)
+        if history_enabled:
+            self.inbox.checkpoint_completed(completed, block)
         from .zk_worker_batching import select as select_group
-        group=select_group(self,observations,block.timestamp) if self.c.get("batching") else None
         if not observations and not heartbeat:
+            if self.c.get("batching"):
+                select_group(self, observations, block.timestamp)
             return dict(status="WAITING_BITCOIN_RPC" if waiting_for_core else "IDLE")
         archive = self.archive_ref(current) if self.c.get('archive') else self.inbox.get("archive:" + current[7])
         if archive is None:
@@ -751,6 +1087,8 @@ class Worker:
         if aligned and state.functions.isFresh().call(block_identifier=block.number):
             enough = [(key, o) for key, o in observations if o["height"] + o["depth"] - 1 <= int(current[3])]
             if enough:
+                if self.c.get("batching"):
+                    select_group(self, observations, block.timestamp)
                 if boundary=='prepare':return dict(status='MATERIALIZATION_REQUIRED')
                 out = self.inbox.path / "membership" / current[7]
                 native = self.native(archive, [], heights, out)
@@ -791,19 +1129,25 @@ class Worker:
         target_hash = self.bitcoin.call("getblockhash", end)
         if header_hash(bytes.fromhex(headers[-1]))[::-1].hex() != target_hash: raise ValueError("MAINNET_CORE_REORG_DURING_CHECK")
         attempt_id = digest([self.inbox.get("scope"), current, headers])
+        jobs = self.inbox.get("job_attempts") or {}
+        eligible = []
+        for key, observation in observations:
+            if self.attempt_budget_available(jobs, key, attempt_id):
+                eligible.append((key, observation))
+            else:
+                self.inbox.status(key, "ATTEMPT_BUDGET_REVIEW_REQUIRED")
+        observations = eligible
+        heights = [observation["height"] for _, observation in observations]
+        group = select_group(self, observations, block.timestamp) if self.c.get("batching") else None
         need_ids = [key for key, _ in observations]
-        if heartbeat and not observations: need_ids.append(heartbeat["service_job_id"])
+        if heartbeat and not observations and self.attempt_budget_available(jobs, heartbeat["service_job_id"], attempt_id):
+            need_ids.append(heartbeat["service_job_id"])
+        if not need_ids:
+            return dict(status="ATTEMPT_BUDGET_REVIEW_REQUIRED", reason="ZK_WORKER_ATTEMPT_BUDGET")
         if boundary == "all" and self.c.get("service"):
             from .zk_worker_service import preflight
             preflight(self, need_ids)
-        jobs = self.inbox.get("job_attempts") or {}
-        for key in need_ids:
-            attempts = jobs.get(key, [])
-            if attempt_id not in attempts:
-                if len(attempts) >= int(self.c["max_attempts"]): raise ValueError("ZK_WORKER_ATTEMPT_BUDGET")
-                attempts.append(attempt_id)
-            jobs[key] = attempts
-        self.inbox.put("job_attempts", jobs)
+        self.record_attempt_budgets(jobs, need_ids, attempt_id)
         base = self.inbox.path / "attempts" / attempt_id
         native = self.native(archive, headers, heights, base)
         if native["before"] != current: raise ValueError("ZK_ARCHIVE_STATE_MISMATCH")
@@ -835,6 +1179,27 @@ class Worker:
         except BaseException:self.inbox.db.rollback();raise
         return dict(status="PROOF_PREPARED", proving_attempt_id=attempt_id)
 
+    def attempt_budget_available(self, jobs, key, attempt_id):
+        attempts = jobs.get(key, ())
+        return attempt_id in attempts or len(attempts) < int(self.c["max_attempts"])
+
+    def record_attempt_budgets(self, jobs, need_ids, attempt_id):
+        for key in need_ids:
+            attempts = jobs.setdefault(key, [])
+            if attempt_id not in attempts:
+                attempts.append(attempt_id)
+        self.inbox.put("job_attempts", jobs)
+
+    def update_active_attempt_budgets(self, active, jobs, need_ids):
+        self.inbox.db.execute("BEGIN IMMEDIATE")
+        try:
+            self.record_attempt_budgets(jobs, need_ids, active["id"])
+            self.inbox.put("attempt", active)
+            self.inbox.db.commit()
+        except BaseException:
+            self.inbox.db.rollback()
+            raise
+
 
 def request_from_consumer(config_path, graph, request):
     """Local participant hook. All money/signature checks still run on retry."""
@@ -857,6 +1222,8 @@ def worker_failure(exc):
     code = str(exc).split(":", 1)[0] if type(exc) is ValueError else "ZK_WORKER_LOCAL_FAILURE"
     if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", code):
         code = "ZK_WORKER_OBSERVATION_UNAVAILABLE"
+    if code in ("EVM_RPC_BEHIND", "EVM_CONFIRMATIONS_PENDING"):
+        return dict(status="AWAITING_EVM_RPC", reason=code)
     return dict(status="BLOCKED", reason=code)
 
 
@@ -908,7 +1275,7 @@ def main(argv=None):
         from .zk_peer_bundle import verify_bundle
 
         c = load_config(a.config, review=True)
-        context = SimpleNamespace(c=c, w3=Web3(Web3.HTTPProvider(c["evm_rpc"], request_kwargs={"timeout": 30})))
+        context = SimpleNamespace(c=c, w3=evm_web3(c["evm_rpc"], timeout=30))
         return bundle_action(verify_bundle, context, a.bundle_file, require_proof=a.require_proof)
     c = load_config(a.config)
     worker = Worker(c)
@@ -924,7 +1291,11 @@ def main(argv=None):
             try:result=worker.advance(a.action)
             except Exception as exc:
                 from .participant_errors import participant_exception_code
-                result=dict(status='BLOCKED',reason=participant_exception_code(exc))
+                reason = participant_exception_code(exc)
+                if reason in ('EVM_RPC_BEHIND', 'EVM_CONFIRMATIONS_PENDING'):
+                    result = dict(status='AWAITING_EVM_RPC', reason=reason)
+                else:
+                    result = dict(status='BLOCKED', reason=reason)
             print(json.dumps(result));return 2 if result['status']=='BLOCKED' else 0
         if a.action in ('observations','observation-backup','observation-restore'):
             from .zk_observations import observer
@@ -960,9 +1331,10 @@ def main(argv=None):
             print(json.dumps(dict(attempt=worker.inbox.get("attempt"), last_status=worker.inbox.get("last_status"),
                 heartbeat=worker.inbox.get("heartbeat_status"),
                 automation=worker.inbox.get('automation_status'),archive_configured=bool(c.get('archive')),
+                need_history=worker.inbox.history_status(),
                 funding_coverage=dict(job=coverage['job'],state=coverage['state'],need_count=len(coverage['need_ids'])) if coverage else None,
                 reserved_cost_wei=str(sum(int(v) for _, v in worker.inbox.db.execute("SELECT * FROM reservations"))),
-                needs=[dict(service_job_id=k, status=s) for k, _, s in worker.inbox.needs()]))); return 0
+                needs=[dict(service_job_id=k, status=s) for k, _, s in worker.inbox.needs(active_only=True)]))); return 0
         run = getattr(worker, {"prepare": "prepare_service", "prove": "compute_local", "all": "tick"}[a.boundary])
         while True:
             try: result = run()

@@ -43,7 +43,7 @@ def registry_identity(w3, address, deposits, authorization, escrow, batches, dkg
 
 
 def configuration(w3, pool, number,*,verify_derivation=True):
-    checked_runtime(w3, pool.address, "MiningPoolV1", number)
+    checked_runtime(w3, pool.address, "MiningPoolV1", number, previous_build=True)
     deposits = read(pool, number, "deposits")
     common = w3.eth.contract(address=deposits, abi=artifact("BitcoinDepositRegistry")["abi"])
     checked_runtime(w3, deposits, "BitcoinDepositRegistry", number)
@@ -58,7 +58,7 @@ def configuration(w3, pool, number,*,verify_derivation=True):
     checked_runtime(w3, batches, "BitcoinBatchRegistry", number)
     for target, kind in ((pool.address, "MiningPoolV1"), (deposits, "BitcoinDepositRegistry"),
                          (escrow, "BitcoinWithdrawalEscrow"), (batches, "BitcoinBatchRegistry")):
-        prove_creation(w3, target, kind, None, number)
+        prove_creation(w3, target, kind, None, number, **({"previous_build": True} if kind == "MiningPoolV1" else {}))
     auth = read(pool, number, "authorization")
     if (read(common, number, "spendRecorder") != escrow or read(common, number, "authorization") != auth
             or read(esc, number, "depositRegistry") != deposits or read(batch, number, "withdrawalEscrow") != escrow
@@ -156,6 +156,7 @@ def receipt_claim(context, intent_id, txid, vout):
 
 def funding(context, bitcoin, txid, vout, intent_id, *, prove=True):
     """Validate Core bytes/UTXO/all inputs first. No SMP1 fallback and no paid work."""
+    from .bitcoin_funding import require_direct_deposit_quote
     from .funding_envelope import inspect_funding
     from .bitcoin_proofs import inclusion
     from .bitcoin_rpc import satoshis
@@ -171,6 +172,7 @@ def funding(context, bitcoin, txid, vout, intent_id, *, prove=True):
     claim = [intent_id, b["binding"], bytes.fromhex(txid)[::-1], vout, b["recipient"], int(output["amount"]),
              int(read(r, n, "custodyGeneration")), int(read(r, n, "derivationGeneration")), b["provenance"]]
     validate_claim(context, claim)
+    require_direct_deposit_quote(context["pool"], n, *claim[2:5], claim[5] * 10**10)
     utxo = bitcoin.call("gettxout", txid, vout, True)
     if (not utxo or output["script"] != b["script"].hex() or utxo["scriptPubKey"]["hex"] != output["script"]
             or satoshis(utxo["value"]) != claim[5]): raise ValueError("BTC_MINT_OUTPOINT_UNAVAILABLE")
@@ -299,7 +301,8 @@ def dispatch(a, manifest, key, registry, state):
         c = read(board, block.number, "getClaim", reference)
         if c[4]:
             original = list(read(board, block.number, "getAddressClaim", reference))
-            if (int(read(board, block.number, "claimModes", reference)) != 2 or int(c[4]) != deadline
+            if (int(read(board, block.number, "claimModes", reference)) != 2
+                    or int(read(board, block.number, "attempts", c[6])[3]) != deadline
                     or economics(original) != economics(proposed)):
                 raise ValueError("BTC_MINT_ECONOMIC_INTENT_CHANGED")
         retry = a.action == "btc-address-mint-retry"

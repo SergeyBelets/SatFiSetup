@@ -4,6 +4,7 @@ import json
 import pytest
 from web3 import Web3
 from web3.exceptions import ContractCustomError
+from signer_agent.bootstrap_formation import confederation_formation_hash, federation_formation_hash, share_token_hash
 from test_dkg_processes import deploy, tx, ceremony, RPC
 from test_bitcoin_processes import authorize
 from lifecycle_helpers import federation, contract, tx_from
@@ -53,11 +54,14 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
     ]:
         tx(w3, leaf.functions.setAuthorizedDeployer(parent.address, True))
     tx(w3, cf.functions.configureDeploymentFee("0x" + "00" * 20, 0, True))
-    tx(w3, cf.functions.reserveConfederationId(m.session_id, "integration-conf"))
     custodians = [
         ("custodian2", m.participants[1], b"\x02", True),
         ("custodian3", m.participants[2], b"\x02", True),
     ]
+    conf_metadata = ("Confederation Share", "CS")
+    tx(w3, cf.functions.reserveConfederationId(m.session_id, "integration-conf",
+        confederation_formation_hash(0, ["integration-fed"], custodians, m.threshold, 2),
+        share_token_hash(*conf_metadata)))
     receipt = w3.eth.wait_for_transaction_receipt(
         cf.functions.adoptConfederationDKG(
             m.session_id, ["integration-fed"], custodians, 3, 2, "integration-conf"
@@ -66,12 +70,12 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
     assert receipt.status == 1
     assert cf.functions.deploymentInitiator(m.session_id).call() == m.participants[0]
     with pytest.raises(ContractCustomError, match="ea8e4eb5"):
-        cf.functions.deployConfederation(m.session_id, "Attacker Share", "BAD").call(
+        cf.functions.deployConfederation(m.session_id, *conf_metadata).call(
             {"from": w3.eth.accounts[0]}
         )
     receipt = tx_from(
         w3,
-        cf.functions.deployConfederation(m.session_id, "Confederation Share", "CS"),
+        cf.functions.deployConfederation(m.session_id, *conf_metadata),
         m.participants[0],
     )
     event = cf.events.ConfederationDeployed().process_receipt(receipt)[0]["args"]
@@ -215,7 +219,9 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
         [paid.address, True],
     )
     tx(w3, router.functions.setPayer(paid.address, True, op))
-    tx(w3, paid.functions.reserveFederationId(fed.session_id, "paid-fed"))
+    paid_metadata = ("Paid Shares", "PS")
+    tx(w3, paid.functions.reserveFederationId(fed.session_id, "paid-fed",
+        federation_formation_hash(fed.participants, fed.threshold), share_token_hash(*paid_metadata)))
     receipt = w3.eth.wait_for_transaction_receipt(
         paid.functions.adoptFederationDKG(fed.session_id, "paid-fed").transact(
             {"from": fed.participants[0]}
@@ -229,7 +235,7 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
     treasury_before = usd.functions.balanceOf(treasury).call()
     assert paid.functions.deploymentInitiator(fed.session_id).call() == payer
     with pytest.raises(ContractCustomError, match="ea8e4eb5"):
-        paid.functions.deployFederation(fed.session_id, "Paid Shares", "PS").call(
+        paid.functions.deployFederation(fed.session_id, *paid_metadata).call(
             {"from": w3.eth.accounts[0]}
         )
     # Use the authorized deployer here: an outsider rejection would not exercise fee rollback.
@@ -237,11 +243,11 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
         text="ERC20InsufficientAllowance(address,uint256,uint256)"
     )[:4].hex()
     with pytest.raises(ContractCustomError, match=insufficient_allowance):
-        paid.functions.deployFederation(fed.session_id, "Paid Shares", "PS").call(
+        paid.functions.deployFederation(fed.session_id, *paid_metadata).call(
             {"from": payer}
         )
     failed = w3.eth.wait_for_transaction_receipt(
-        paid.functions.deployFederation(fed.session_id, "Paid Shares", "PS").transact(
+        paid.functions.deployFederation(fed.session_id, *paid_metadata).transact(
             {"from": payer, "gas": 16_000_000}
         )
     )
@@ -253,7 +259,7 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
     tx(w3, usd.functions.mint(payer, 100000))
     tx_from(w3, usd.functions.approve(paid.address, 100000), payer)
     tx_from(
-        w3, paid.functions.deployFederation(fed.session_id, "Paid Shares", "PS"), payer
+        w3, paid.functions.deployFederation(fed.session_id, *paid_metadata), payer
     )
     assert paid.functions.isFederationActive("paid-fed").call()
     assert usd.functions.balanceOf(vault.address).call() == before + 50000
@@ -265,7 +271,7 @@ def test_confederation_dkg_registers_dao_and_atomic_deploy_fee(
         ContractCustomError,
         match=Web3.keccak(text="FederationAlreadyDeployed()")[:4].hex(),
     ):
-        paid.functions.deployFederation(fed.session_id, "Paid Shares", "PS").call(
+        paid.functions.deployFederation(fed.session_id, *paid_metadata).call(
             {"from": payer}
         )
     assert usd.functions.balanceOf(vault.address).call() == before + 50000

@@ -12,12 +12,60 @@ from .operations import canonical
 from .bitcoin_network import is_public_network, relay_artifact
 
 
-def checked_runtime(w3, address, kind, block):
+LEGACY_CUSTODY_ARTIFACTS = frozenset((
+    "ConfederationBitcoinReserve", "ConfederationPoolV2", "ConfederationPoolV2Deployer",
+))
+LEGACY_DAO_EXIT_REFERENCES = {
+    **{kind: kind + "ExitLegacy2630366" for kind in (
+        "ConfederationDAOIncome", "ConfederationDAOStake", "ConfederationShareV2",
+        "CustodianDAOToken", "CustodianValidator", "DKGAuthorization", "DKGCoordinator",
+        "DKGOnchainBoard", "FederationFactory", "FROSTAuthorizationDeployer", "FROSTCoordinator",
+        "FROSTCustodianDeployer", "FROSTVerifier", "FundedFeeSale", "SimpleMultiPool",
+    )},
+    "ConfederationFactory": "ConfederationFactoryULRLegacy2630366",
+    "ConfederationPoolV2": "ConfederationPoolV2CustodyLegacy2630366",
+}
+_PREVIOUS_BUILD_DIGESTS = {
+    "ULRStaking": "f5ccc4f7abe402983d9223bcac938b08cbe8389644ebc16c5699a9d53db45c34",
+    "BitcoinMintAdmission": "5181fc13f78feb4b544db2cfff144fbc0fdd6105ecf1a3bd1ec40c277b1ab706",
+    "BitcoinMintAdmissionRetirementV1": "185535590120a01a46b714711c9c03db13d5d067be57b548f54d4984d0de462d",
+    "MiningPoolV1": "28968d764c2e256782d34d8582f71f75d6b99495a943c3d61dfe89b9a6c0bdda",
+    "ConfederationBitcoinReserve": "1041e814313e08765f8d5febf8d1d61ad29aec035eea09a694cfea8bf139338a",
+}
+
+
+def previous_artifact(kind):
+    """Return a pinned full compiler artifact for a supported previous build."""
+    expected = _PREVIOUS_BUILD_DIGESTS.get(kind)
+    if expected is None:
+        return None
+    name = kind if kind == "BitcoinMintAdmissionRetirementV1" else kind + "PreviousBuild"
+    path = Path(__file__).resolve().parents[1] / "contracts" / (name + ".json")
+    compiled = json.loads(path.read_text())
+    if hashlib.sha256(canonical(compiled).encode()).hexdigest() != expected:
+        raise ValueError("ARTIFACT_HASH_MISMATCH")
+    return compiled
+
+
+def previous_artifacts(kind):
+    """Enumerate only the explicitly pinned artifacts for an original kind."""
+    names = (kind, "BitcoinMintAdmissionRetirementV1") if kind == "BitcoinMintAdmission" else (kind,)
+    for name in names:
+        compiled = previous_artifact(name)
+        if compiled is not None:
+            yield name, compiled
+
+
+def checked_runtime(w3, address, kind, block, *, legacy_custody=False, previous_build=False):
     """Compare compiled instructions and require consistent immutable substitutions."""
-    return runtime_artifact(w3, address, kind, block)[0]
+    options = {"legacy_custody": True} if legacy_custody else {}
+    if previous_build:
+        options["previous_build"] = True
+    return runtime_artifact(w3, address, kind, block, **options)[0]
 
 
-def runtime_artifact(w3, address, kind, block):
+def runtime_artifact(w3, address, kind, block, *, legacy_custody=False, legacy_ulr_factory=False,
+                     legacy_dao_exit=False, previous_build=False):
     """Identify the exact reviewed build, including supported immutable ULR deployments."""
     compiled = artifact(kind)
     actual = bytes(w3.eth.get_code(address, block_identifier=block))
@@ -26,11 +74,32 @@ def runtime_artifact(w3, address, kind, block):
     except ValueError as error:
         if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
             raise
+        if previous_build:
+            for name, previous in previous_artifacts(kind):
+                try:
+                    _check_runtime(actual, previous["deployedBytecode"])
+                except ValueError as mismatch:
+                    if str(mismatch) != "BTC_CONTRACT_BUILD_MISMATCH":
+                        raise
+                    continue
+                suffix = "PreviousBuild" if name == kind else ""
+                return Web3.keccak(actual).hex(), dict(previous, legacy_reference=name + suffix)
         references = {
-            "ULRConfederationTreasury": ("ULRConfederationTreasuryV1", "ULRConfederationTreasuryLegacy"),
+            "ULRConfederationTreasury": (
+                "ULRConfederationTreasuryV2", "ULRConfederationTreasuryV1", "ULRConfederationTreasuryLegacy"
+            ),
             "ULRCustodianSnapshots": ("ULRCustodianSnapshotsLegacy",),
         }
-        for name in references.get(kind, ()):
+        archived = references.get(kind, ())
+        # Previous custody bytecode may only be admitted while recovering an
+        # already enrolled handover. New approvals keep the strict default.
+        if legacy_custody and kind in LEGACY_CUSTODY_ARTIFACTS:
+            archived = (kind + "CustodyLegacy2630366",)
+        elif legacy_ulr_factory and kind == "ConfederationFactory":
+            archived = ("ConfederationFactoryULRLegacy2630366",)
+        elif legacy_dao_exit and kind in LEGACY_DAO_EXIT_REFERENCES:
+            archived = (LEGACY_DAO_EXIT_REFERENCES[kind],)
+        for name in archived:
             path = Path(__file__).resolve().parents[1] / "contracts" / (name + ".json")
             legacy = json.loads(path.read_text())
             try:
@@ -68,11 +137,13 @@ def _check_runtime(actual, compiled):
 
 def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
                      bitcoin_network="regtest", bitcoin_policy=None, evm_confirmations="1", mint_only=False,
-                     address_signing=False):
+                     address_signing=False, bitcoin_recovery=None, public_wallet=False):
     """Read one block, validate the graph, and return public review data only."""
     if manifest.purpose != "BTC_SPEND":
         raise ValueError("WRONG_KEY_PURPOSE")
     if mint_only and address_signing: raise ValueError("BTC_REGISTRY_PROFILE_CONFLICT")
+    if bitcoin_recovery is None and key.get("bitcoin_recovery") is not None:
+        raise ValueError("BTC_RECOVERY_BINDING")
     if bitcoin_network not in ("regtest", "mainnet", "testnet4"):
         raise ValueError("BITCOIN_NETWORK_UNSUPPORTED")
     from .zk_spv import is_zk, inspect_binding
@@ -117,10 +188,15 @@ def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
     ):
         raise ValueError("BTC_WALLET_RESULT_MISMATCH")
     batches = contract("batches", batch_address, "BitcoinBatchRegistry")
+    initial_wallet_id = bytes(read(batches, "initialWalletId" if bitcoin_recovery is not None else "walletId"))
+    initial_wallet_result = bytes(read(batches, "initialWalletResult" if bitcoin_recovery is not None else "walletResult"))
+    successor = bitcoin_recovery is not None and manifest.session_id != initial_wallet_id
+    wallet_id = bytes(read(batches, "walletId")) if successor else initial_wallet_id
+    wallet_result = bytes(read(batches, "walletResult")) if successor else initial_wallet_result
     if (
         read(batches, "dkg") != manifest.registry
-        or bytes(read(batches, "walletId")) != manifest.session_id
-        or bytes(read(batches, "walletResult")).hex() != key["result_hash"]
+        or wallet_id != manifest.session_id
+        or wallet_result.hex() != key["result_hash"]
     ):
         raise ValueError("WALLET_REGISTRY_MISMATCH")
     auth = contract("authorization", read(batches, "authorization"), "DKGAuthorization")
@@ -154,6 +230,8 @@ def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
             raise
         escrow = contract("escrow", escrow_address, "BitcoinWithdrawalEscrowV2")
     user_funded = contracts["escrow"]["artifact"] == "BitcoinWithdrawalEscrowV2"
+    if user_funded and bitcoin_recovery is None and int(read(escrow, "recovery"), 16):
+        raise ValueError("BTC_RECOVERY_BINDING")
     deposits = contract(
         "deposits", read(escrow, "depositRegistry"), "BitcoinDepositRegistry"
     )
@@ -221,10 +299,61 @@ def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
         ),
         contracts=contracts,
     )
-    if is_public_network(bitcoin_network) or w3.eth.chain_id == 1 or evm_confirmations != "1":
+    if is_public_network(bitcoin_network) or w3.eth.chain_id == 1 or evm_confirmations != "1" or bitcoin_recovery is not None:
         graph.update(version="2", bitcoin_network=bitcoin_network, evm_confirmations=evm_confirmations)
         if is_public_network(bitcoin_network):
             graph["bitcoin_policy"] = bitcoin_policy
+    if bitcoin_recovery is not None:
+        from .bitcoin_recovery_policy import ARTIFACT, review_module, validate
+
+        validate(bitcoin_recovery, payment_depth=int(graph["bitcoin_confirmations"]["withdrawal"]))
+        if not user_funded or mint_only or address_signing:
+            raise ValueError("BTC_RECOVERY_BINDING")
+        fee_verifier = read(escrow, "feeVerifier")
+        if fee_verifier != read(batches, "withdrawalFeeVerifier"):
+            raise ValueError("BTC_RECOVERY_BINDING")
+        checked_runtime(w3, fee_verifier, "BitcoinWithdrawalFeeVerifier", block.number)
+        recovery_address = read(escrow, "recovery")
+        if not int(recovery_address, 16):
+            raise ValueError("BTC_RECOVERY_BINDING")
+        module = w3.eth.contract(address=recovery_address, abi=artifact(ARTIFACT)["abi"])
+        reserve_address = read(module, "reserve")
+        reserve_kind = "ConfederationBitcoinReserve"
+        checked_runtime(w3, reserve_address, reserve_kind, block.number)
+        reserve = w3.eth.contract(address=reserve_address, abi=artifact(reserve_kind)["abi"])
+        original = read(dkg, "getCompletedResult", initial_wallet_id) if successor else wallet
+        source_script = b"\x51\x20" + bytes(original[4])
+        source_hash = Web3.keccak(source_script)
+        active_script = bytes(read(reserve, "payoutScript"))
+        active_hash = Web3.keccak(active_script)
+        if (read(batches, "recoveryController") != module.address or read(reserve, "escrow") != escrow.address
+                or read(reserve, "deposits") != deposits.address
+                or original[1] != initial_wallet_result
+                or bytes(read(module, "sourceScriptHash")) != source_hash
+                or bytes(read(module, "activeScriptHash")) != active_hash
+                or bytes(read(deposits, "poolScripts", reserve.address)) != active_hash):
+            raise ValueError("BTC_RECOVERY_BINDING")
+        if successor:
+            expected = bitcoin_recovery.get("successor_dkg")
+            rotation_root = bytes(read(module, "rotationRoot"))
+            if (key.get("bitcoin_recovery") is not None
+                    or active_script.hex() != bitcoin_recovery["successor_script"]
+                    or active_script != b"\x51\x20" + bytes(wallet[4])
+                    or bytes(read(module, "successorWalletId")) != wallet_id
+                    or bytes(read(module, "successorWalletResult")) != wallet_result
+                    or not any(rotation_root) or read(module, "paused") is not True
+                    or read(module, "withdrawalsPaused") is not False
+                    or expected is not None and expected != {"registry": manifest.registry, "wallet_id": wallet_id.hex()}):
+                raise ValueError("BTC_RECOVERY_BINDING")
+            graph["bitcoin_recovery_rotation"] = dict(wallet_id=wallet_id.hex(), root=rotation_root.hex())
+        elif not public_wallet:
+            local_policy = key.get("bitcoin_recovery")
+            if (not local_policy or any(bitcoin_recovery.get(name) != local_policy.get(name)
+                    for name in ("height", "threshold", "keys"))
+                    or source_script.hex() != key["result"].get("recovery_descriptor", {}).get("script_pubkey")):
+                raise ValueError("BTC_RECOVERY_BINDING")
+        review_module(w3, escrow, reserve, module, block.number, bitcoin_recovery, source_hash=source_hash)
+        graph["bitcoin_recovery"] = bitcoin_recovery
     address_arguments = None
     if mint_only or address_signing:
         from .address_mint import registry_identity
@@ -269,7 +398,7 @@ def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
             verifier=[],
             relay=[],
             coordinator=[verifier.address],
-            batches=[auth.address, dkg.address, manifest.session_id],
+            batches=[auth.address, dkg.address, initial_wallet_id],
             authorization=[
                 coordinator.address,
                 evm_id,
@@ -319,16 +448,16 @@ def inspect_registry(manifest, key, registry, batch_address, *, prove=True,
     )
 
 
-def discover_registry(manifest, key, registry, board_address, *, address_signing=False):
+def discover_registry(manifest, key, registry, board_address, *, address_signing=False, public_wallet=False):
     """Find the uniquely approved binding from the board, without an external file."""
     from .onchain_transport import invitation
 
     w3 = registry.w3
     board, invite = invitation(w3, board_address)
-    if (
-        board.functions.registry().call() != manifest.registry
-        or invite["sessions"]["btc_ceremony"] != manifest.session_id.hex()
-    ):
+    source_id = invite["sessions"]["btc_ceremony"]
+    successor = source_id != manifest.session_id.hex()
+    if (board.functions.registry().call() != manifest.registry
+            or successor and "bitcoin_recovery" not in invite):
         raise ValueError("BTC_BOARD_WALLET_MISMATCH")
     latest = confirmed_block(w3, dict(evm_confirmations=invite.get("evm_confirmations", "1")))
     from .board_intents import intent_rows
@@ -344,8 +473,13 @@ def discover_registry(manifest, key, registry, board_address, *, address_signing
             raise ValueError("BTC_BOARD_INTENT_MISMATCH")
         options = invitation_options(invite)
         if address_signing: options["address_signing"] = True
-        reviewed = inspect_registry(manifest, key, registry, intent["target"], **options)
+        reviewed = inspect_registry(manifest, key, registry, intent["target"], public_wallet=public_wallet, **options)
         graph = reviewed["graph"]
+        if successor:
+            batches = w3.eth.contract(address=intent["target"], abi=artifact("BitcoinBatchRegistry")["abi"])
+            if ("bitcoin_recovery_rotation" not in graph or bytes(batches.functions.initialWalletId().call(
+                    block_identifier=int(reviewed["anchor"]["number"]))).hex() != source_id):
+                raise ValueError("BTC_BOARD_WALLET_MISMATCH")
         expected_policy = {name: invite[name] for name in ("min_p2wpkh_sats", "min_p2tr_sats")}
         if invite.get("ulr", {}).get("version") == "3":
             expected_policy["default_miner_fee_sats"] = invite["ulr"]["default_miner_fee_sats"]
@@ -443,16 +577,17 @@ def require_registry(manifest, key, registry, state, address, *, mint_only=False
 
 def invitation_options(invite):
     network = invite["bitcoin_network"]
+    recovery = {"bitcoin_recovery": invite["bitcoin_recovery"]} if "bitcoin_recovery" in invite else {}
     if network == "regtest":
         if invite["version"] == "6":
-            return dict(bitcoin_network="regtest", evm_confirmations=invite["evm_confirmations"])
+            return dict(bitcoin_network="regtest", evm_confirmations=invite["evm_confirmations"], **recovery)
         return {}
     if invite["version"] not in ("4", "5", "6") or not is_public_network(network):
         raise ValueError("BTC_NETWORK_INVITATION_REQUIRED")
     from .bitcoin_network import validate_policy
     policy = validate_policy(invite["bitcoin_policy"], network)
     return dict(bitcoin_network=network, bitcoin_policy=policy,
-                evm_confirmations=invite["evm_confirmations"])
+                evm_confirmations=invite["evm_confirmations"], **recovery)
 
 
 def board_options(manifest, registry, board_address):
@@ -462,25 +597,27 @@ def board_options(manifest, registry, board_address):
 
     board, invite = invitation(registry.w3, board_address)
     if (board.functions.registry().call() != manifest.registry
-            or invite["sessions"]["btc_ceremony"] != manifest.session_id.hex()):
+            or (invite["sessions"]["btc_ceremony"] != manifest.session_id.hex()
+                and "bitcoin_recovery" not in invite)):
         raise ValueError("BTC_BOARD_WALLET_MISMATCH")
     return invitation_options(invite)
 
 
 def graph_options(graph):
     network = graph.get("bitcoin_network", "regtest")
+    recovery = {"bitcoin_recovery": graph["bitcoin_recovery"]} if "bitcoin_recovery" in graph else {}
     if network == "regtest":
         if "bitcoin_policy" in graph:
             raise ValueError("REGTEST_POLICY_FORBIDDEN")
         if graph.get("version") == "2":
-            return dict(bitcoin_network="regtest", evm_confirmations=graph["evm_confirmations"])
+            return dict(bitcoin_network="regtest", evm_confirmations=graph["evm_confirmations"], **recovery)
         return {}
     if graph.get("version") != "2" or not is_public_network(network):
         raise ValueError("BTC_NETWORK_INVITATION_REQUIRED")
     from .bitcoin_network import validate_policy
     policy = validate_policy(graph["bitcoin_policy"], network)
     return dict(bitcoin_network=network, bitcoin_policy=policy,
-                evm_confirmations=graph["evm_confirmations"])
+                evm_confirmations=graph["evm_confirmations"], **recovery)
 
 
 def graph_network(graph):

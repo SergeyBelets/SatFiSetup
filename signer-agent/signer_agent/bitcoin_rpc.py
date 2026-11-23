@@ -57,6 +57,19 @@ def satoshis(value):
     return coefficient * 10 ** (exponent + 8)
 
 
+def mempool_fee_rates(info):
+    """Return Core's acceptance floor and replacement increment in sat/kvB."""
+    if not isinstance(info, dict) or info.get("loaded") is not True:
+        raise ValueError("BTC_MEMPOOL_POLICY_UNAVAILABLE")
+    try:
+        relay = satoshis(info.get("minrelaytxfee"))
+        mempool = satoshis(info.get("mempoolminfee"))
+        incremental = satoshis(info.get("incrementalrelayfee"))
+    except ValueError:
+        raise ValueError("BTC_MEMPOOL_POLICY_UNAVAILABLE") from None
+    return max(relay, mempool), incremental
+
+
 class _RPCFailure(Exception):
     """Internal errors carry only a fixed public code, never remote text."""
 

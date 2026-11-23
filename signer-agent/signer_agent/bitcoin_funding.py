@@ -47,7 +47,7 @@ def commitment_main(argv):
     parser.add_argument("--mining-pool", required=True)
     parser.add_argument("--vout", required=True, help="wallet deposit output index, not the OP_RETURN index")
     parser.add_argument("--recipient", dest="recipients", required=True, action="append")
-    parser.add_argument("--amount", dest="amounts", required=True, action="append", help="MP base units; 10^10 per satoshi")
+    parser.add_argument("--amount", dest="amounts", required=True, action="append", help="Gross MP or S base units; 10^10 per satoshi")
     args = parser.parse_args(argv)
     print(json.dumps(deposit_commitment(args.chain_id, args.mining_pool, args.vout, args.recipients, args.amounts), sort_keys=True))
     return 0
@@ -71,12 +71,12 @@ def _mining(registry, contracts, wallet_script, block):
     address = contracts["deposits"].functions.scriptPools(keccak(bytes.fromhex(wallet_script))).call(block_identifier=block.number)
     kind = "MiningPoolV1"
     try:
-        checked_runtime(registry.w3, address, kind, block.number)
+        checked_runtime(registry.w3, address, kind, block.number, previous_build=True)
     except ValueError as error:
         if str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
             raise
         kind = "ConfederationBitcoinReserve"
-        checked_runtime(registry.w3, address, kind, block.number)
+        checked_runtime(registry.w3, address, kind, block.number, previous_build=True)
     mining = _contract(registry, address, kind)
     read = lambda name: getattr(mining.functions, name)().call(block_identifier=block.number)
     if (read("deposits") != contracts["deposits"].address or read("escrow") != contracts["escrow"].address
@@ -85,13 +85,13 @@ def _mining(registry, contracts, wallet_script, block):
         raise ValueError("BTC_MINT_POOL_BINDING")
     if kind == "ConfederationBitcoinReserve":
         prove_creation(registry.w3, address, kind, [read("poolId"), contracts["deposits"].address,
-            contracts["escrow"].address, read("confederationPool")], block.number)
+            contracts["escrow"].address, read("confederationPool")], block.number, previous_build=True)
         return mining
     token = _contract(registry, read("mpToken"), "PoolMpToken")
     prove_creation(registry.w3, address, "MiningPoolV1", [read("poolId"),
         contracts["deposits"].address, contracts["escrow"].address,
         token.functions.name().call(block_identifier=block.number),
-        token.functions.symbol().call(block_identifier=block.number)], block.number)
+        token.functions.symbol().call(block_identifier=block.number)], block.number, previous_build=True)
     return mining
 
 
@@ -121,7 +121,29 @@ def _has_deposit_marker(script_hex):
     return offset is not None and script[offset:offset + 4] == b"SMP1"
 
 
-def _deposit_allocation(target, args, transaction):
+def direct_deposit_quote(target, block_number, txid, vout, recipient, sats):
+    fee, net = target.functions.directDepositQuote(txid, vout, recipient, sats).call(block_identifier=block_number)
+    fee, net = int(fee), int(net)
+    if fee == 0 and net == 0:
+        return None
+    if net <= 0 or fee < 0 or fee + net != sats * 10**10:
+        raise ValueError("BTC_S_DEPOSIT_QUOTE_MISMATCH")
+    return dict(fee_s=str(fee), net_s=str(net))
+
+
+def require_direct_deposit_quote(target, block_number, txid, vout, recipient, gross):
+    # Only the V3 confederation reserve has this entrypoint. Federation MP
+    # issuance uses the same funding review without a confederation S fee.
+    if any(row.get("type") == "function" and row.get("name") == "directDepositQuote"
+            for row in getattr(target, "abi", ())):
+        sats, remainder = divmod(gross, 10**10)
+        if remainder or not 0 < sats <= MAX_MONEY:
+            raise ValueError("BTC_MINT_PROOF_OR_ALLOCATION")
+        if direct_deposit_quote(target, block_number, txid, vout, recipient, sats) is None:
+            raise ValueError("BTC_S_DEPOSIT_QUOTE_REQUIRED")
+
+
+def _deposit_allocation(target, args, transaction, block_number):
     coinbase = len(transaction["vin"]) == 1 and "coinbase" in transaction["vin"][0]
     if len(transaction["vout"]) > 32:
         raise ValueError("BTC_MINT_DEPOSIT_OUTPUTS")
@@ -131,6 +153,7 @@ def _deposit_allocation(target, args, transaction):
         if not any(item["scriptPubKey"]["hex"] == commitment["script"]
                 and satoshis(item["value"]) == 0 for item in transaction["vout"]):
             raise ValueError("BTC_MINT_DEPOSIT_COMMITMENT")
+        require_direct_deposit_quote(target, block_number, *args[:2], args[2][0], args[3][0])
     return coinbase
 
 
@@ -142,7 +165,7 @@ def _mint_proof(a, bitcoin, contracts, target, args, block):
     except StopIteration:
         raise ValueError("BTC_MINT_OUTPUT") from None
     wallet_script = bytes(target.functions.payoutScript().call(block_identifier=block.number)).hex()
-    coinbase = _deposit_allocation(target, args, transaction)
+    coinbase = _deposit_allocation(target, args, transaction, block.number)
     utxo = bitcoin.call("gettxout", a.txid.removeprefix("0x"), args[1], True)
     if not utxo or utxo["scriptPubKey"]["hex"] != wallet_script or satoshis(utxo["value"]) != satoshis(output["value"]):
         raise ValueError("BTC_MINT_OUTPOINT_UNAVAILABLE")
@@ -217,10 +240,10 @@ def _mint_session_deadline(registry, contracts, graph, cached, expected, *, requ
     return deadline
 
 
-def consumer_readiness(a,graph,bitcoin,target,args):
+def consumer_readiness(a,graph,bitcoin,target,args,block):
     if not (getattr(a,'zk_worker_config',None) or getattr(a,'zk_transport_config',None)):return None
     if getattr(a,'zk_worker_config',None) and getattr(a,'zk_transport_config',None):raise ValueError('ZK_REQUEST_ROUTE_CONFLICT')
-    _deposit_allocation(target,args,bitcoin.call('getrawtransaction',a.txid.removeprefix('0x'),True))
+    _deposit_allocation(target,args,bitcoin.call('getrawtransaction',a.txid.removeprefix('0x'),True),block.number)
     need=dict(kind='deposit',consumer=target.address,txid=a.txid.removeprefix('0x'),vout=str(args[1]))
     if getattr(a,'zk_transport_config',None):
         from .zk_worker_transport import request_from_consumer
@@ -275,7 +298,7 @@ def dispatch(a, manifest, key, registry, state, board):
         # Only the two explicit deployed mint profiles are supported.
         raise ValueError("BTC_MINT_GENERATION_PROFILE_REQUIRED")
     bitcoin = _bitcoin(a, graph)
-    readiness=consumer_readiness(a,graph,bitcoin,target,args) if mint else None
+    readiness=consumer_readiness(a,graph,bitcoin,target,args,block) if mint else None
     if readiness and readiness['status']!='READY':return dict(status='AWAITING_ZK_STATE',spv=readiness)
     check_bitcoin_graph(registry, graph, bitcoin)
     execute_args = _mint_proof(a, bitcoin, contracts, target, args, block) if mint else args

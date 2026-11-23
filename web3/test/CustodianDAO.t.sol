@@ -101,6 +101,20 @@ contract DAOMockFactory {
 
 contract DAOMockCurvePool {}
 
+contract DAOPayoutAsset is DAOTestUSD {
+    bool private withhold;
+
+    function setWithholding(bool enabled) external { withhold = enabled; }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (withhold && from != address(0) && to != address(0) && value != 0) {
+            super._update(from, address(0), 1);
+            value -= 1;
+        }
+        super._update(from, to, value);
+    }
+}
+
 contract DAOMockClaimProtocol {
     DAOTestUSD public immutable rewardToken;
 
@@ -126,7 +140,7 @@ contract DAOMockConverter {
 
 contract CustodianDAOTest is Test {
     CustodianDAOToken token;
-    DAOTestUSD usd;
+    DAOPayoutAsset usd;
     CustodianValidator validator;
     CustodianDAOStaking staking;
     CustodianDAORateController controller;
@@ -143,7 +157,7 @@ contract CustodianDAOTest is Test {
         vm.warp(1000 days + 12 hours);
         startDay = block.timestamp / 1 days;
         token = new CustodianDAOToken("Custodian Governance", "CGOV", address(this));
-        usd = new DAOTestUSD();
+        usd = new DAOPayoutAsset();
         custodians = new address[](11);
         for (uint256 i = 0; i < 11; i++) {
             custodians[i] = address(uint160(0x1000 + i));
@@ -749,6 +763,48 @@ contract CustodianDAOTest is Test {
         days_[0] = day;
         staking.claim(days_);
         assertEq(usd.balanceOf(alice) - before, result.stakerIncome);
+    }
+
+    function test_InexactRewardAndLiquidityClaimsPreserveEntitlements() public {
+        address staker = address(0xAAA1);
+        address provider = address(0x2001);
+        token.transfer(staker, 100 ether);
+        vm.startPrank(staker);
+        token.approve(address(staking), 100 ether);
+        staking.stake(100 ether);
+        vm.stopPrank();
+
+        uint256 day = startDay + 1;
+        _setRounds(day);
+        vm.warp((day + 1) * 1 days);
+        _settle(_report(day, 100e6, 20e6), _roundIds());
+        uint256[] memory days_ = new uint256[](1);
+        days_[0] = day;
+        uint256 reward = staking.claimableReward(staker, days_);
+        uint256 liquidityIncome = settlement.lpClaimable(provider);
+        assertGt(reward, 1);
+        assertGt(liquidityIncome, 1);
+
+        usd.setWithholding(true);
+        vm.expectRevert(CustodianDAOStaking.InvalidTransfer.selector);
+        vm.prank(staker);
+        staking.claim(days_);
+        vm.expectRevert(CustodianDAODailySettlement.InvalidTransfer.selector);
+        vm.prank(provider);
+        settlement.claimLiquidityIncome();
+        assertFalse(staking.claimed(staker, day));
+        assertEq(staking.claimableReward(staker, days_), reward);
+        assertEq(settlement.lpClaimable(provider), liquidityIncome);
+        assertEq(usd.balanceOf(staker), 0);
+        assertEq(usd.balanceOf(provider), 0);
+
+        usd.setWithholding(false);
+        vm.prank(staker);
+        assertEq(staking.claim(days_), reward);
+        vm.prank(provider);
+        assertEq(settlement.claimLiquidityIncome(), liquidityIncome);
+        assertEq(usd.balanceOf(staker), reward);
+        assertEq(usd.balanceOf(provider), liquidityIncome);
     }
 
     function test_InsufficientIncomeUsesReserveWithoutStakerExcess() public {

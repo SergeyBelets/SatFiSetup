@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from web3 import Web3
+from .evm_rpc import evm_web3
 from .safe_errors import DiagnosticArgumentParser
 from . import family_registry as policy
 from .bootstrap import artifact
@@ -50,7 +51,7 @@ def main(argv):
     parser.add_argument('--output')
     args=parser.parse_args(argv)
     p=policy.validate(json.loads(Path(args.policy).read_text()))
-    w3=Web3(Web3.HTTPProvider(args.rpc,request_kwargs={'timeout':30}))
+    w3=evm_web3(args.rpc, timeout=30)
     board=Web3.to_checksum_address(args.board)
     at,bundle,fingerprint=origin(w3,p,board)
     result=dict(status='FAMILY_ROOT_REVIEWED',policy=p,original_board=board,fingerprint=fingerprint,ready=False)

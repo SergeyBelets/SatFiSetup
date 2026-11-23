@@ -168,6 +168,8 @@ contract ConfederationMultiPool is ReentrancyGuard {
     error OnlyRequester();
     error CancelDelayNotReached();
     error InexactTransfer();
+    error InvalidWithdrawalAuthorities();
+    error InvalidShareTokenBinding();
 
     // ======== CONSTRUCTOR ========
 
@@ -185,15 +187,14 @@ contract ConfederationMultiPool is ReentrancyGuard {
         address _shareToken
     ) {
         if (bytes(_confederationId).length == 0) revert EmptyConfederationId();
-        require(_frostMultisig != address(0), "Invalid FROST address");
-        require(_custodianValidator != address(0), "Invalid custodian validator");
+        if (_frostMultisig == address(0) || _custodianValidator == address(0)) revert InvalidWithdrawalAuthorities();
 
         confederationId = _confederationId;
         frostMultisig = FROSTAuthorization(_frostMultisig);
         custodianValidator = CustodianValidator(_custodianValidator);
 
         shareToken = ConfederationToken(_shareToken);
-        require(shareToken.confederationPool() == address(this), "Share token pool mismatch");
+        if (shareToken.confederationPool() != address(this)) revert InvalidShareTokenBinding();
     }
 
     // ======== FEE MANAGER SETUP ========

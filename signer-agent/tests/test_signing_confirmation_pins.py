@@ -89,10 +89,7 @@ def test_confirmation_floor_preserves_durable_profile_and_checks_receipt(tmp_pat
         height=100 if n=='latest' else n
         return NS(number=height,hash=height.to_bytes(32,'big'))
     eth=NS(chain_id=31337,block_number=100,get_block=block)
-    class Provider:
-        HTTPProvider=staticmethod(lambda *a,**k:None)
-        def __init__(self,*a):self.eth=eth
-    monkeypatch.setattr('signer_agent.bootstrap.Web3',Provider)
+    monkeypatch.setattr('signer_agent.bootstrap.evm_web3', lambda *a, **kw: NS(eth=eth))
     monkeypatch.setattr('signer_agent.bootstrap_recovery.check_receipt_binding',lambda *_:None)
     state=tmp_path/'signing.sqlite'
     profile=dict(deployment_id='signer-operation',chain_id='31337',mode='integration',

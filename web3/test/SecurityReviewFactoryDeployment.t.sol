@@ -87,7 +87,9 @@ contract SecurityReviewFactoryDeploymentTest is Test {
     }
 
     function testOutsiderCannotDeployAdoptedFederation() public {
-        factory.reserveFederationId(SESSION, "federation");
+        factory.reserveFederationId(
+            SESSION, "federation", keccak256(abi.encode(_members(), uint256(2))), keccak256(abi.encode("Share", "S"))
+        );
         vm.prank(ALICE);
         factory.adoptFederationDKG(SESSION, "federation");
         vm.prank(OUTSIDER);
@@ -96,12 +98,17 @@ contract SecurityReviewFactoryDeploymentTest is Test {
     }
 
     function testOutsiderCannotDeployAdoptedConfederation() public {
-        confederationFactory.reserveConfederationId(SESSION, "confederation");
+        confederationFactory.reserveConfederationId(
+            SESSION,
+            "confederation",
+            keccak256(abi.encode(uint8(0), _federations(), _custodians(), uint256(2), uint256(1))),
+            keccak256(abi.encode("Share", "S"))
+        );
         vm.prank(ALICE);
         confederationFactory.adoptConfederationDKG(SESSION, _federations(), _custodians(), 2, 1, "confederation");
         vm.prank(OUTSIDER);
         vm.expectRevert(ConfederationFactory.NotAuthorized.selector);
-        confederationFactory.deployConfederation(SESSION, "Attacker metadata", "BAD");
+        confederationFactory.deployConfederation(SESSION, "Share", "S");
     }
 
     function testOriginalInitiatorCanDeployFederation() public {

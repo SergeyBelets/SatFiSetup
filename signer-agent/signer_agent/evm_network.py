@@ -61,6 +61,35 @@ def verify_anchor(w3, number, expected_hash, *, safe=None):
     return block
 
 
+def verify_witness_anchor(witness, block, *, safe=None):
+    try:
+        observed = verify_anchor(witness, block.number, block.hash, safe=safe)
+    except ValueError as error:
+        if str(error) == "EVM_REORG_RECOVERY_REQUIRED":
+            raise ValueError("EVM_RPC_WITNESS_MISMATCH") from None
+        raise
+    if observed.number != block.number:
+        raise ValueError("EVM_RPC_WITNESS_MISMATCH")
+    return observed
+
+
+def read_common_block(w3, witness, confirmations, chain_id, *, minimum=None):
+    """Use the highest block confirmed by both RPCs, with no mixed-height reads."""
+    if w3.eth.chain_id != chain_id:
+        raise ValueError("CHAIN_MISMATCH")
+    if witness.eth.chain_id != chain_id:
+        raise ValueError("EVM_RPC_WITNESS_MISMATCH")
+    primary = read_block(w3, confirmations)
+    other = read_block(witness, confirmations)
+    height = min(primary.number, other.number)
+    if minimum is not None and height < minimum:
+        raise ValueError("EVM_RPC_BEHIND")
+    if primary.number == height:
+        verify_witness_anchor(witness, primary, safe=other)
+        return primary
+    return verify_witness_anchor(w3, other, safe=primary)
+
+
 def _limit(name):
     value = os.environ.get(name, "")
     if not re.fullmatch(r"[1-9][0-9]{0,77}", value) or int(value) >= 2**256:
@@ -88,6 +117,10 @@ def check_transaction_gas(w3, transaction):
         raise ValueError("ETHEREUM_TRANSACTION_GAS_LIMIT")
 
 
+def gas_with_margin(gas):
+    return max((gas * 130 + 99) // 100, gas + 125_000)
+
+
 def transaction_gas_with_margin(w3, transaction):
     """Pad a fresh estimate while preserving the mainnet spending limits.
 
@@ -101,7 +134,6 @@ def transaction_gas_with_margin(w3, transaction):
     if type(transaction.get("gas")) is not int or transaction["gas"] <= 0:
         raise ValueError("ETHEREUM_TRANSACTION_GAS_LIMIT")
     check_transaction_gas(w3, transaction)
-    padded = dict(transaction, gas=max((transaction["gas"] * 130 + 99) // 100,
-                                      transaction["gas"] + 125_000))
+    padded = dict(transaction, gas=gas_with_margin(transaction["gas"]))
     check_transaction_gas(w3, padded)
     return padded

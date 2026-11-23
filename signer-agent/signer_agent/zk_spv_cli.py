@@ -9,7 +9,7 @@ import json
 import sys
 from pathlib import Path
 
-from web3 import Web3
+from .evm_rpc import evm_web3
 
 from .bootstrap import Bootstrap
 from .bitcoin_network import validate_policy, check_core
@@ -98,7 +98,7 @@ def main(argv=None):
     a = parser.parse_args(argv)
     policy = validate_policy(json.loads(Path(a.policy).read_text()))
     network=policy['network']
-    w3 = Web3(Web3.HTTPProvider(a.rpc, request_kwargs={"timeout": 30}))
+    w3 = evm_web3(a.rpc, timeout=30)
     if w3.eth.chain_id != int(a.chain_id):
         raise ValueError("CHAIN_MISMATCH")
     from .bootstrap_policy import validate_confirmations

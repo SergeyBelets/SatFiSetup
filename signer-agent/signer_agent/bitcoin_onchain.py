@@ -9,6 +9,7 @@ from .bitcoin_onchain_plan import (MAX_PLAN_BYTES, decode_plan, serialize_plan,
 from .bitcoin_trust import (checked_runtime, require_registry, graph_network, bitcoin_for_graph,
                             check_bitcoin_graph, transaction_profile, confirmed_block)
 from .contract_provenance import prove_creation, check_proof_anchor
+from .evm_network import verify_anchor
 from .operations import canonical
 from .bitcoin_network import is_public_network, relay_artifact
 
@@ -49,8 +50,12 @@ def _send_profile(registry, profile):
 
 
 def snapshot_check(w3, block):
-    if w3.eth.get_block(block.number).hash != block.hash:
-        raise ValueError("BTC_BOARD_SNAPSHOT_REORG")
+    try:
+        verify_anchor(w3, block.number, block.hash)
+    except ValueError as error:
+        if str(error) == "EVM_REORG_RECOVERY_REQUIRED":
+            raise ValueError("BTC_BOARD_SNAPSHOT_REORG") from None
+        raise
 
 
 def checked_board(manifest, key, registry, state, address):
@@ -144,8 +149,9 @@ def packet_payload(plan, input_index, kind, signer, value, manifest):
                           value=validated)).encode()
 
 
-def collect(manifest, registry, board, plan):
-    block = confirmed_block(registry.w3, getattr(registry, "bitcoin_graph", {}))
+def collect(manifest, registry, board, plan, *, block=None):
+    if block is None:
+        block = confirmed_block(registry.w3, getattr(registry, "bitcoin_graph", {}))
     commitments, shares = [], []
     missing_commitments, missing_shares = [], []
     seen = set()
@@ -179,7 +185,7 @@ def collect(manifest, registry, board, plan):
     return commitments, shares, missing_commitments, missing_shares
 
 
-def publish_values(manifest, key, registry, board, plan, kind, values):
+def publish_values(manifest, key, registry, board, plan, kind, values, *, packet_anchor=None):
     if plan.get("version") in ("3", "4"):
         from .bitcoin_input_keys import guard
         guard(manifest,key,plan,registry,registry.bitcoin_graph)
@@ -189,6 +195,8 @@ def publish_values(manifest, key, registry, board, plan, kind, values):
         raise ValueError("BTC_PACKET_BINDING")
     payloads, missing = [], False
     block = confirmed_block(registry.w3, getattr(registry, "bitcoin_graph", {}))
+    if packet_anchor is not None:
+        verify_anchor(registry.w3, packet_anchor.number, packet_anchor.hash, safe=block)
     for i, value in enumerate(values):
         number = 0 if kind == "commitment" else 1
         raw = packet_payload(plan, i, kind, str(key["index"]), value, manifest)
@@ -202,14 +210,20 @@ def publish_values(manifest, key, registry, board, plan, kind, values):
     snapshot_check(registry.w3, block)
     if missing:
         from .bitcoin_onchain_payment import review_custody_outputs
+        from .bitcoin_worker import require_open_recovery_epoch
         review_custody_outputs(registry, getattr(registry, "bitcoin_graph", {}), plan, block)
+        if packet_anchor is not None:
+            verify_anchor(registry.w3, packet_anchor.number, packet_anchor.hash)
+            if block.number != packet_anchor.number:
+                verify_anchor(registry.w3, block.number, block.hash)
+        require_open_recovery_epoch(registry, key, plan, getattr(registry, "bitcoin_graph", {}), confirmed=block)
         # Include the identical full set on retries, including packets already
         # present. Never repartition a pending signed operation or reuse nonces.
         send(registry, board.address, "BitcoinSigningBoard", "publishBatch",
              [bytes.fromhex(plan["batch_id"]), number, payloads])
 
 
-def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=None):
+def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=None, *, packet_anchor=None):
     """Replay durable public packets, never create a nonce or compute a new share.
 
     load_plan and collect must authenticate the current board before this call.
@@ -217,6 +231,7 @@ def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=
     """
     from eth_abi import encode
     from eth_utils import keccak
+    from .secure_state import requires_independent_nonce_ledger
 
     serialize_plan(plan, manifest, allow_commitments=True)
     if action not in ("btc-commit", "btc-sign"):
@@ -234,6 +249,8 @@ def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=
                 any(value["status"] != "share-prepared" for value in saved)):
             return None
         pinned = require_registry(manifest, key, registry, state, plan["batch_registry"])
+        if requires_independent_nonce_ledger(manifest.chain_id, graph_network(pinned["graph"])):
+            state.require_nonce_ledger()
         if plan["network"] != graph_network(pinned["graph"]):
             raise ValueError("BITCOIN_NETWORK_MISMATCH")
         check_bitcoin_graph(registry, pinned["graph"], bitcoin)
@@ -243,6 +260,8 @@ def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=
             raise ValueError("BTC_PLAN_BINDING")
         h = onchain_plan_hash(manifest, plan)
         block = confirmed_block(registry.w3, pinned["graph"])
+        if packet_anchor is not None:
+            verify_anchor(registry.w3, packet_anchor.number, packet_anchor.hash, safe=block)
         batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
         approved = batches.functions.batches(bytes.fromhex(plan["batch_id"])).call(block_identifier=block.number)
         if (bytes(approved[0]) != h or bytes(approved[1]).hex() != key["result_hash"]
@@ -288,6 +307,8 @@ def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=
             outputs.append(crypto.call("inspect_bitcoin_packet", kind="share", value=stored["share"])["value"])
         guard(manifest,key,plan,registry,pinned["graph"],state)
         snapshot_check(registry.w3, block)
+        if packet_anchor is not None and packet_anchor.number != block.number:
+            verify_anchor(registry.w3, packet_anchor.number, packet_anchor.hash)
         return dict(status="COMMITTED" if action == "btc-commit" else "SIGNED",
                     participant_index=key["index"], values=outputs, plan_hash=h.hex())
 
@@ -295,9 +316,11 @@ def cached_transport_step(action, manifest, key, plan, registry, state, bitcoin=
 def pending(a, registry):
     from .onchain_transport import board_at
     from .board_intents import decode_intent, intent_rows
-    if not a.board:
+    from .bitcoin_onchain_payment import CANCEL_HELPER
+    address = getattr(a, "recovery_board", None) or a.board
+    if not address:
         raise ValueError("DKG_BOARD_REQUIRED")
-    board = board_at(registry.w3, a.board)
+    board = board_at(registry.w3, address)
     block = confirmed_block(registry.w3, getattr(registry, "bitcoin_graph", {}))
     explicit_session = a.session is not None
     latest = a.session if explicit_session else board.functions.latestSession().call(block_identifier=block.number)
@@ -320,6 +343,9 @@ def pending(a, registry):
                     yield int(row["session"]), row["intent"]
 
     for session, candidate in candidates():
+        if ((candidate.get("artifact"), candidate.get("hash_method")) == ("BitcoinBatchRegistry", CANCEL_HELPER)
+                and getattr(a, "operation", None) != "cancel"):
+            continue
         public_plan = candidate.get("bitcoin_plan")
         if not public_plan:
             continue
@@ -565,6 +591,13 @@ def _observed_broadcast(a, manifest, registry, state, plan, graph):
 
 
 def dispatch(a, manifest, key, registry, state):
+    resume_expired = getattr(a, "resume_expired", False)
+    if resume_expired and (a.action not in ("btc-commit", "btc-sign") or not a.signing_board or not a.batch
+                           or getattr(a, "package", None)):
+        raise ValueError("BTC_EXPIRED_SIGNING_REQUIRES_IDS")
+    signed_out = getattr(a, "signed_out", None)
+    if signed_out is not None and (a.action != "btc-broadcast" or not a.signing_board or not a.batch):
+        raise ValueError("BTC_SIGNED_EXPORT_REQUIRES_IDS")
     if a.action.startswith("btc-address-mint-"):
         from .address_mint import dispatch as address_dispatch
         return address_dispatch(a, manifest, key, registry, state)
@@ -580,7 +613,7 @@ def dispatch(a, manifest, key, registry, state):
     graph = require_registry(manifest, key, registry, state,
                              pinned["graph"]["contracts"]["batches"]["address"], **options)["graph"]
     registry.bitcoin_graph = graph
-    if a.action in ("btc-mint-status", "btc-mint-retire", "btc-mint-transfer-propose",
+    if a.action in ("btc-mint-status", "btc-mint-retire", "btc-mint-renew", "btc-mint-transfer-propose",
                     "btc-mint-transfer-execute", "btc-mint-transfer-retire"):
         from .mint_admission_client import management
         return management(a, manifest, key, registry, state, graph)
@@ -593,7 +626,9 @@ def dispatch(a, manifest, key, registry, state):
     bitcoin = None
     # Observation and checked recovery need the pinned escrow and exact Core
     # proof, even when the relay has fallen behind during an outage.
-    if is_public_network(graph_network(graph)) and a.action not in ("btc-status", "btc-recover", "btc-broadcast"):
+    cancelling = a.action in ("btc-propose", "btc-execute") and getattr(a, "operation", None) == "cancel"
+    if (not cancelling and is_public_network(graph_network(graph))
+            and a.action not in ("btc-status", "btc-recover", "btc-broadcast")):
         bitcoin = bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
         if a.action not in ("btc-settle","btc-mint-propose","btc-mint-execute","btc-mint-retry",
                              "btc-treasury-propose","btc-treasury-execute"):
@@ -664,7 +699,7 @@ def dispatch(a, manifest, key, registry, state):
         if observed and observed["status"] == "PAID":
             return dict(observed, status="PAYMENTS_RESUMED", batch=plan["batch_id"])
         return observed
-    if a.action == "btc-broadcast":
+    if a.action == "btc-broadcast" and signed_out is None:
         observed = _observed_broadcast(a, manifest, registry, state, plan, graph)
         if observed:
             return observed
@@ -695,7 +730,14 @@ def dispatch(a, manifest, key, registry, state):
             else:send(registry, board.address, "BitcoinSigningBoard", "publishPlan", [bytes.fromhex(a.batch), raw])
         load_plan(manifest, key, registry, state, board.address, a.batch)
         return dict(status="PLAN_PUBLISHED", plan_hash=onchain_plan_hash(manifest, plan).hex())
-    commitments, shares, missing_c, missing_s = collect(manifest, registry, board, plan)
+    packet_options = {}
+    if not resume_expired:
+        if a.action == "btc-sign":
+            packet_anchor = confirmed_block(registry.w3, graph)
+            packet_options = {"packet_anchor": packet_anchor}
+            commitments, shares, missing_c, missing_s = collect(manifest, registry, board, plan, block=packet_anchor)
+        else:
+            commitments, shares, missing_c, missing_s = collect(manifest, registry, board, plan)
     if a.action == "btc-status":
         batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
         batch_state = batches.functions.batchState(bytes.fromhex(a.batch)).call()
@@ -712,19 +754,24 @@ def dispatch(a, manifest, key, registry, state):
     if a.action in ("btc-commit", "btc-sign"):
         if str(key["index"]) not in plan["signers"] or registry.account.address != key["participant"]:
             raise ValueError("BTC_NOT_SELECTED_SIGNER")
-        if a.action == "btc-sign" and missing_c:
+        if a.action == "btc-sign" and not resume_expired and missing_c:
             raise ValueError("BTC_COMMITMENTS_MISSING")
-        work = dict(plan, commitments=commitments) if a.action == "btc-sign" else plan
-        result = cached_transport_step(a.action, manifest, key, work, registry, state, bitcoin)
+        work = dict(plan, commitments=commitments) if a.action == "btc-sign" and not resume_expired else plan
+        result = None if resume_expired else cached_transport_step(
+            a.action, manifest, key, work, registry, state, bitcoin, **packet_options,
+        )
         if result is None:
             bitcoin = bitcoin or bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
-            result = sign_step(a.action, manifest, key, work, registry, state, bitcoin)
+            options = {"resume_board": board} if resume_expired else packet_options
+            result = sign_step(a.action, manifest, key, work, registry, state, bitcoin, **options)
         publish_values(manifest, key, registry, board, plan,
-                       "commitment" if a.action == "btc-commit" else "share", result["values"])
+                       "commitment" if a.action == "btc-commit" else "share", result["values"], **packet_options)
         return dict(status=result["status"], participant_index=result["participant_index"],
                     plan_hash=result["plan_hash"], published=len(result["values"]))
     if a.action != "btc-broadcast":
         raise ValueError("BTC_ACTION_UNSUPPORTED")
+    if signed_out is not None and plan["version"] != "5":
+        raise ValueError("BTC_WITHDRAWAL_FEE_PROFILE")
     if missing_c or missing_s:
         raise ValueError("BTC_SIGNATURE_PACKETS_MISSING")
     bitcoin = bitcoin or bitcoin_for_graph(graph, a.bitcoin_rpc, a.bitcoin_cookie)
@@ -746,11 +793,24 @@ def dispatch(a, manifest, key, registry, state):
     batches = contract(registry, plan["batch_registry"], "BitcoinBatchRegistry")
     if batches.functions.batchState(bytes.fromhex(a.batch)).call() != 2:
         raise ValueError("BTC_BATCH_NOT_SIGNING")
-    worker = BitcoinWorker(a.state + ".bitcoin.sqlite", bitcoin)
     guard(manifest,key,plan,registry,graph)
-    from .bitcoin_onchain_payment import _previous
+    from .bitcoin_onchain_payment import _previous, confirmed_v5_broadcast
     previous = _previous(plan)
-    txid = worker.broadcast(a.batch, signed, **({"replaces": previous.hex()} if any(previous) else {}))
+    replacement = None
+    if plan["version"] == "5" and (signed_out is not None or any(previous)):
+        replacement, recheck = confirmed_v5_broadcast(manifest, registry, graph, plan, signed["txid"])
+        if signed_out is not None:
+            from .dkg import atomic_private
+
+            recheck()
+            parent = {field: signed[field] for field in ("signed", "txid", "wtxid")}
+            atomic_private(signed_out, canonical(parent).encode())
+            return dict(status="BTC_SIGNED_EXPORTED", txid=parent["txid"], wtxid=parent["wtxid"])
+    worker = BitcoinWorker(a.state + ".bitcoin.sqlite", bitcoin)
+    if replacement is not None:
+        txid = worker.broadcast_confirmed_replacement(a.batch, signed, replacement, recheck)
+    else:
+        txid = worker.broadcast(a.batch, signed, **({"replaces": previous.hex()} if any(previous) else {}))
     return dict(status="BROADCAST", txid=txid, wtxid=signed["wtxid"])
 
 

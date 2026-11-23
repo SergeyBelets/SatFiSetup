@@ -335,12 +335,21 @@ def test_enrolled_epoch_is_checked_before_actual_bitcoin_nonce_creation(signing,
     assert state.get('btc-epoch-service:'+e.manifest.context.hex())==marker
 
 
-def test_stale_encrypted_signer_backup_cannot_remove_independent_epoch_enrollment(epoch):
-    e=epoch;state=SecureState(str(e.tmp_path/'retained-signer'/'state'),'test password')
-    with state._journal():pass
+@pytest.mark.parametrize("guarded", [False, True])
+def test_stale_encrypted_signer_backup_cannot_remove_independent_epoch_enrollment(epoch, guarded):
+    e=epoch; path = e.tmp_path / 'retained-signer' / 'state'
+    if guarded:
+        volume = e.tmp_path / 'external'
+        volume.mkdir(mode=0o700)
+        state = SecureState(path, 'test password', nonce_ledger=volume / 'spent.sqlite')
+        state.initialize_nonce_ledger()
+    else:
+        state = SecureState(path, 'test password')
+        with state._journal():pass
     before=state.path.read_bytes();marker=dict(fleet_id=e.policy['fleet_id'],configuration=e.config_file)
     m.signer_enrollment(state,e.manifest.context.hex(),binding=marker)
     state.path.write_bytes(before)
+    state = SecureState(path, 'test password')
     assert state.get('btc-epoch-service:'+e.manifest.context.hex()) is None
     assert m.signer_enrollment(state,e.manifest.context.hex())==marker
     with pytest.raises(ValueError,match='EPOCH_BINDING_CHANGED'):

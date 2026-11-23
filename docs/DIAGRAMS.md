@@ -1,20 +1,37 @@
 # Схемы текущей системы
 
-Актуализация: 21 ноября 2026. [Холодный старт](COLD_START.md) ·
+Актуализация: 23 ноября 2026. [Холодный старт](COLD_START.md) ·
 [Архитектура](ARCHITECTURE.md) · [NFT](NFT_CONFIGURATION.md).
 
+[Холодное восстановление S → BTC](BITCOIN_WITHDRAWAL_RECOVERY.md) показывает
+привязку CLTV к старту V3, судьбу исходной выплаты, оплату комиссии спонсором
+и возобновление вывода с преемника. [Манифест схем](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/manifest.json).
+
+| Схема холодного восстановления | SVG | PNG |
+| --- | --- | --- |
+| CLTV, Bitcoin DKG и привязка модуля | [SVG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_1.svg) | [PNG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_1.png) |
+| Расчёт выплаты или перенос покрытия и возврат S | [SVG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_2.svg) | [PNG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_2.png) |
+| [Ротация кошелька и возобновление вывода](BITCOIN_WITHDRAWAL_RECOVERY.md#ротация-после-переноса) | [SVG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_3.svg) | [PNG](../ops/artifacts/bitcoin-recovery-cltv-20261123/diagrams/png/docs_BITCOIN_WITHDRAWAL_RECOVERY_md_3.png) |
+
 Публичный архив ZK-перехода используется отдельно от поставки исходников.
-Схемы показывают подготовку без proving, расчёт с экспортом и независимую
-проверку ZIP через закреплённый EVM verifier. Обычная публикация использует
-собственный результат worker. [Режимы запуска](ZK_SPV_WORKER.md#worker-modes-and-transition-archives) ·
-[Манифест экспорта](../ops/artifacts/zk-worker-modes-20261121/diagrams/manifest.json).
+В CREATE сначала развёртывается state. Prover связывает переход с
+подтверждённым адресом из partial manifest. При необходимости оператор
+достраивает consumers через defer. Затем мощный ПК готовит proof и ZIP,
+участники FROST проверяют архив через свои RPC, а publisher отдельно
+отправляет собственный proof. После Fresh оператор возобновляет и
+проверяет bootstrap. [Холодный старт ZK](COLD_START.md#zk-первый-state-и-собственный-proof) ·
+[Манифест схем CREATE](../ops/artifacts/zk-state-first-20261122/diagrams/manifest.json) ·
+[Экспорт схем режимов от 21 ноября](../ops/artifacts/zk-worker-modes-20261121/diagrams/manifest.json).
 
 | Схема режимов ZK | SVG | PNG |
 | --- | --- | --- |
 | Исходная поставка и подготовка хоста по роли | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_DISTRIBUTION_md_1.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_DISTRIBUTION_md_1.png) |
-| Подготовка, расчёт и публичный ZIP перехода | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_DISTRIBUTION_md_3.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_DISTRIBUTION_md_3.png) |
+| CREATE state, proving и публичный ZIP перехода | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_DISTRIBUTION_md_3.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_DISTRIBUTION_md_3.png) |
 | Собственный cache, origin и отдельная публикация | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_DISTRIBUTION_md_4.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_DISTRIBUTION_md_4.png) |
 | Архитектурный маршрут ZK и проверка ZIP | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_ARCHITECTURE_md_2.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_ARCHITECTURE_md_2.png) |
+| Consumer, расчёт, публикация и денежные проверки | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_2.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_2.png) |
+| Публикация по частям и сохранение принятого архива | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_10.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_10.png) |
+| Согласование параметров, CREATE и разные контуры | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_SPV_ARCHITECTURE_md_11.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_SPV_ARCHITECTURE_md_11.png) |
 
 Схема продажи комиссий показывает запас из собранных wrap/unwrap-комиссий
 в S или MP, заявку с внесённым стейблкоином и точный расчёт после FROST.
@@ -22,15 +39,18 @@
 DAO конфедерации учитывает выручку в сутки исполнения. Казна федерации
 получает остаток MP и стейблкоин от продажи.
 [Продажа комиссий S и MP](FEE_FLOW.md#продажа-комиссий-s-и-mp) ·
-[Манифест экспорта](../ops/artifacts/fee-sale-20261121/diagrams/manifest.json).
+[Текущий экспорт](../ops/artifacts/security-sf04-11-20261122/diagrams/manifest.json).
 
 | Схема продажи комиссий | SVG | PNG |
 | --- | --- | --- |
-| Доля комиссии, финансирование заявки, расчёт и возврат | [SVG](../ops/artifacts/fee-sale-20261121/diagrams/docs_FEE_FLOW_md_4.svg) | [PNG](../ops/artifacts/fee-sale-20261121/diagrams/png/docs_FEE_FLOW_md_4.png) |
+| Доля комиссии, финансирование заявки, расчёт и возврат | [SVG](../ops/artifacts/security-sf04-11-20261122/diagrams/docs_FEE_FLOW_md_4.svg) | [PNG](../ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_FEE_FLOW_md_4.png) |
 
-[Восстановление SDK](RECOVERY.md) включает пять схем. Они показывают гонку
+[Восстановление SDK](RECOVERY.md) включает восемь схем. Они показывают гонку
 `finalizeSession`, проверку Bitcoin-платежа после settlement, повтор
-исполненного intent, замену ожидающей EIP-1559 транзакции и обработку отставания RPC.
+исполненного intent, замену ожидающей EIP-1559 транзакции, обработку отставания RPC,
+выходы после деактивации, смену EVM RPC для DAO и продажи комиссий, а также
+продолжение частично подписанного платежа S → BTC после дедлайна и перенос
+резервации ID после окончательной остановки DKG.
 [Манифест первых экспортов](../ops/artifacts/sdk-recovery-20261121/diagrams/manifest.json) ·
 [Манифест схем RPC](../ops/artifacts/rpc-lag-20261121/diagrams/manifest.json).
 
@@ -41,20 +61,29 @@ DAO конфедерации учитывает выручку в сутки и�
 | Повтор исполненного intent, включая ULR | [SVG](../ops/artifacts/sdk-recovery-20261121/diagrams/docs_RECOVERY_md_3.svg) | [PNG](../ops/artifacts/sdk-recovery-20261121/diagrams/png/docs_RECOVERY_md_3.png) |
 | Замена EIP-1559 и повтор отправки | [SVG](../ops/artifacts/sdk-recovery-20261121/diagrams/docs_RECOVERY_md_4.svg) | [PNG](../ops/artifacts/sdk-recovery-20261121/diagrams/png/docs_RECOVERY_md_4.png) |
 | Отставание EVM и Bitcoin RPC у участников | [SVG](../ops/artifacts/rpc-lag-20261121/diagrams/docs_RECOVERY_md_5.svg) | [PNG](../ops/artifacts/rpc-lag-20261121/diagrams/png/docs_RECOVERY_md_5.png) |
+| Выходы после деактивации и смена RPC | [SVG](../ops/artifacts/security-sf04-11-20261122/diagrams/docs_RECOVERY_md_6.svg) | [PNG](../ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_RECOVERY_md_6.png) |
+| [Восстановление S → BTC после частичной подписи](RECOVERY.md#expired-s-btc-recovery) | [SVG](../ops/artifacts/mainnet-blockers-20261122/diagrams/docs_RECOVERY_md_7.svg) | [PNG](../ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_RECOVERY_md_7.png) |
+| [Перенос резервации ID после остановки DKG](RECOVERY.md#unused-factory-id-recovery) | [SVG](../ops/artifacts/security-rr-20261123/diagrams/docs_RECOVERY_md_8.svg) | [PNG](../ops/artifacts/security-rr-20261123/diagrams/png/docs_RECOVERY_md_8.png) |
 
 | Связанные схемы RPC | SVG | PNG |
 | --- | --- | --- |
 | [Bitcoin-watch, отставание Core и сверка хеша](ADDRESS_REQUESTS_WATCH.md#working-without-a-local-bitcoin-node) | [SVG](../ops/artifacts/rpc-lag-20261121/diagrams/docs_ADDRESS_REQUESTS_WATCH_md_1.svg) | [PNG](../ops/artifacts/rpc-lag-20261121/diagrams/png/docs_ADDRESS_REQUESTS_WATCH_md_1.png) |
 | [Этапы ZK-контура и ожидание receipt](ZKSPV_CONTOUR.md#plan-and-execution) | [SVG](../ops/artifacts/rpc-lag-20261121/diagrams/docs_ZKSPV_CONTOUR_md_1.svg) | [PNG](../ops/artifacts/rpc-lag-20261121/diagrams/png/docs_ZKSPV_CONTOUR_md_1.png) |
+| [Два независимых EVM RPC для проверки ZK ZIP](ZK_SPV_WORKER.md#evm-transport-and-independent-verification) | [SVG](../ops/artifacts/security-sf04-11-20261122/diagrams/docs_ZK_SPV_WORKER_md_1.svg) | [PNG](../ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_ZK_SPV_WORKER_md_1.png) |
+| [Независимый журнал nonce подписанта](SIGNING_PROTOCOL.md#independent-nonce-ledger) | [SVG](../ops/artifacts/mainnet-blockers-20261122/diagrams/docs_SIGNING_PROTOCOL_md_1.svg) | [PNG](../ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_SIGNING_PROTOCOL_md_1.png) |
+| [Пополнение персональной комиссии с порогом coinbase](WITHDRAWAL_FEE_SUBSIDY.md) | [SVG](../ops/artifacts/security-sf04-11-20261122/diagrams/docs_WITHDRAWAL_FEE_SUBSIDY_md_2.svg) | [PNG](../ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_WITHDRAWAL_FEE_SUBSIDY_md_2.png) |
 
 Схемы локальных проверок показывают выбор операции по политике API, проверку
-полноты дневного снимка ULR и передачу cookie после проверки TLS.
+полноты дневного снимка ULR, восстановление остатка после деактивации и
+передачу cookie после проверки TLS.
 [Манифест экспортов](../ops/artifacts/api-ulr-tls-20261121/diagrams/manifest.json).
 
 | Схема API, ULR и TLS | SVG | PNG |
 | --- | --- | --- |
-| [Рабочий API и восстановление операции](OPERATIONAL_API.md) | [SVG](../ops/artifacts/api-ulr-tls-20261121/diagrams/docs_OPERATIONAL_API_md_1.svg) | [PNG](../ops/artifacts/api-ulr-tls-20261121/diagrams/png/docs_OPERATIONAL_API_md_1.png) |
+| [Рабочий API и восстановление операции](OPERATIONAL_API.md) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_2.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_OPERATIONAL_API_md_2.png) |
 | [Дневной снимок ULR и исторический состав казн](ULR_TREASURIES.md#границы-расчёта-и-авторизации) | [SVG](../ops/artifacts/ulr-roster-20261121/diagrams/docs_ULR_TREASURIES_md_1.svg) | [PNG](../ops/artifacts/ulr-roster-20261121/diagrams/png/docs_ULR_TREASURIES_md_1.png) |
+| [Вывод остатка после деактивации казны ULR](ULR_TREASURIES.md#вывод-остатка-после-деактивации) | [SVG](../ops/artifacts/security-sf01-03-20261122/diagrams/docs_ULR_TREASURIES_md_2.svg) | [PNG](../ops/artifacts/security-sf01-03-20261122/diagrams/png/docs_ULR_TREASURIES_md_2.png) |
+| [Проверка регистрации перед пополнением ULR-казны](ULR_TREASURIES.md#проверка-регистрации-перед-пополнением) | [SVG](../ops/artifacts/mainnet-blockers-20261122/diagrams/docs_ULR_TREASURIES_md_3.svg) | [PNG](../ops/artifacts/mainnet-blockers-20261122/diagrams/png/docs_ULR_TREASURIES_md_3.png) |
 | [TLS удалённого Bitcoin RPC](PEER_TESTING.md#как-sdk-проверяет-https-для-bitcoin-rpc) | [SVG](../ops/artifacts/api-ulr-tls-20261121/diagrams/docs_PEER_TESTING_md_2.svg) | [PNG](../ops/artifacts/api-ulr-tls-20261121/diagrams/png/docs_PEER_TESTING_md_2.png) |
 
 [Манифест схемы состава казн ULR](../ops/artifacts/ulr-roster-20261121/diagrams/manifest.json).
@@ -64,28 +93,34 @@ RPC, `VERIFIED` для локального relay и отдельный пере
 графа к Fresh. В V3 покупатель получает NFT за S по утверждённому тарифу и
 котировке оператора. Владелец NFT применяет скидку в пределах своего лимита.
 DAO сначала резервирует возмещение газа, затем начисляет награду владельцам
-стейка за полные UTC-сутки. Схема переноса в V3 показывает проверку группы
-заявок до подписи и приём точного Bitcoin-выхода после погашения MP. На схеме
-погашения выплата и комиссия майнеров уменьшают один BTC-резерв.
+стейка за полные UTC-сутки. Схема переноса в V3 показывает допуск источника
+после сверки сети SPV, фиксацию чистого S и комиссии с резервом квоты NFT,
+проверку группы до подписи и приём точного Bitcoin-выхода после погашения MP.
+На схеме погашения выплата и комиссия майнеров уменьшают один BTC-резерв.
 [Перенос MP → S → BTC](BITCOIN_CUSTODY_TRANSFER.md#профиль-v3-с-прямым-btc-резервом) ·
 [Учёт DAO и погашение S](CONFEDERATION_DAO_IN_KIND.md).
 
 | Схема V3 и ZK 3.1.0 | SVG | PNG |
 | --- | --- | --- |
-| Перенос MP, отдельный Bitcoin-выход и расчёт BTC | [SVG](../ops/artifacts/v3-safety-20261121/diagrams/docs_BITCOIN_CUSTODY_TRANSFER_md_1.svg) | [PNG](../ops/artifacts/v3-safety-20261121/diagrams/png/docs_BITCOIN_CUSTODY_TRANSFER_md_1.png) |
-| Доход DAO, продажа части S, возмещение газа и claim | [SVG](../ops/artifacts/fee-sale-20261121/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_1.svg) | [PNG](../ops/artifacts/fee-sale-20261121/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_1.png) |
-| V3 NFT: FROST-тариф, котировка оператора и квота владельца | [SVG](../ops/artifacts/cold-start-local-20261121/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_3.svg) | [PNG](../ops/artifacts/cold-start-local-20261121/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_3.png) |
-| Погашение S и перерасчёт комиссии при RBF | [SVG](../ops/artifacts/mp-s-btc-20261121/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_2.svg) | [PNG](../ops/artifacts/mp-s-btc-20261121/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_2.png) |
-| Маршрут проверки V3 на Sepolia и testnet4 | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_ZK_TESTNET4_SEPOLIA_md_1.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_ZK_TESTNET4_SEPOLIA_md_1.png) |
+| Перенос MP, закреплённая комиссия S и погашение с минимумом BTC | [SVG](../ops/artifacts/mainnet-mn04-20261123/diagrams/docs_BITCOIN_CUSTODY_TRANSFER_md_1.svg) | [PNG](../ops/artifacts/mainnet-mn04-20261123/diagrams/png/docs_BITCOIN_CUSTODY_TRANSFER_md_1.png) |
+| Доход DAO, покрытие активов, возмещение газа и claim | [SVG](../ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_1.svg) | [PNG](../ops/artifacts/security-rr-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_1.png) |
+| V3 NFT: тариф FROST, смена ключа и квота по операциям | [SVG](../ops/artifacts/security-sf04-11-20261122/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_3.svg) | [PNG](../ops/artifacts/security-sf04-11-20261122/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_3.png) |
+| Минимум BTC при погашении S, расчёт комиссии и RBF | [SVG](../ops/artifacts/security-rr-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_2.svg) | [PNG](../ops/artifacts/security-rr-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_2.png) |
+| [Фиксация комиссии прямого BTC → S](CONFEDERATION_DAO_IN_KIND.md#прямой-депозит-btc--s) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_5.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_5.png) |
+| Маршрут проверки V3 на Sepolia и testnet4 | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_ZK_TESTNET4_SEPOLIA_md_1.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_ZK_TESTNET4_SEPOLIA_md_1.png) |
 | Локальные инструменты ZK и проверка prover | [SVG](../ops/artifacts/mp-s-btc-20261121/diagrams/docs_ZK_PROVER_LINUX_md_1.svg) | [PNG](../ops/artifacts/mp-s-btc-20261121/diagrams/png/docs_ZK_PROVER_LINUX_md_1.png) |
-| Подготовка нового стенда и режимы ZK | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_LAUNCH_READINESS_md_1.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_LAUNCH_READINESS_md_1.png) |
-| FROST, независимая проверка ZIP и публикация | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_FROST_ZK_LIFECYCLE_md_3.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_FROST_ZK_LIFECYCLE_md_3.png) |
+| Подготовка нового стенда и режимы ZK | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_LAUNCH_READINESS_md_1.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_LAUNCH_READINESS_md_1.png) |
+| FROST, независимая проверка ZIP и публикация | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_FROST_ZK_LIFECYCLE_md_3.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_FROST_ZK_LIFECYCLE_md_3.png) |
 | Bitcoin-платёж, ZK и подтверждение включения | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_FROST_ZK_LIFECYCLE_md_4.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_FROST_ZK_LIFECYCLE_md_4.png) |
 | Холодный старт: ETH funding, ULR и источники выплат | [SVG](../ops/artifacts/cold-start-local-20261121/diagrams/docs_COLD_START_md_1.svg) | [PNG](../ops/artifacts/cold-start-local-20261121/diagrams/png/docs_COLD_START_md_1.png) |
 | Выпуск NFT прежнего профиля: отдельные create и mint | [SVG](../ops/artifacts/cold-start-local-20261121/diagrams/docs_COLD_START_md_2.svg) | [PNG](../ops/artifacts/cold-start-local-20261121/diagrams/png/docs_COLD_START_md_2.png) |
-| Холодный старт V3, relay и ZK | [SVG](../ops/artifacts/zk-worker-modes-20261121/diagrams/docs_COLD_START_md_3.svg) | [PNG](../ops/artifacts/zk-worker-modes-20261121/diagrams/png/docs_COLD_START_md_3.png) |
+| Холодный старт V3, relay и ZK | [SVG](../ops/artifacts/zk-state-first-20261122/diagrams/docs_COLD_START_md_3.svg) | [PNG](../ops/artifacts/zk-state-first-20261122/diagrams/png/docs_COLD_START_md_3.png) |
 
 Манифесты экспорта содержат хеши исходников и SVG.
+[Схемы минимальной выплаты BTC](../ops/artifacts/mainnet-mn04-20261123/diagrams/manifest.json) ·
+[Схемы исправлений MN-01, MN-02, MN-03 и MN-05](../ops/artifacts/mainnet-blockers-20261122/diagrams/manifest.json) ·
+[Схемы исправлений SF-04–SF-11](../ops/artifacts/security-sf04-11-20261122/diagrams/manifest.json) ·
+[Перенос MP и вывод остатка казны](../ops/artifacts/security-sf01-03-20261122/diagrams/manifest.json) ·
 [Холодный старт, NFT и claim](../ops/artifacts/cold-start-local-20261121/diagrams/manifest.json) ·
 [Экспорт проверок безопасности V3](../ops/artifacts/v3-safety-20261121/diagrams/manifest.json) ·
 [Предыдущий экспорт V3 и ZK](../ops/artifacts/mp-s-btc-20261121/diagrams/manifest.json).
@@ -100,6 +135,20 @@ snapshots, их нельзя считать текущей моделью по �
 поставки участникам. После распаковки source archive открывайте схемы на
 исходных страницах; ссылки на developer-экспорты ниже требуют полного checkout.
 
+Схемы технических исправлений показывают закрытие дневных отчётов и FIFO-расчёт
+после деактивации DAO, восстановление архива заявок ZK после реорга, проверку
+обоих журналов расхода nonce, фиксацию хеша нативного FROST-бинарника и проверку
+полномочий при замене комиссии API-операции.
+[Манифест экспорта](../ops/artifacts/audit-remediations-20261123/diagrams/manifest.json).
+
+| Схема технических исправлений | SVG | PNG |
+| --- | --- | --- |
+| [Расчёт DAO после деактивации по курсам дня выплаты](CONFEDERATION_DAO_IN_KIND.md) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_CONFEDERATION_DAO_IN_KIND_md_4.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CONFEDERATION_DAO_IN_KIND_md_4.png) |
+| [Архив ZK-заявок и перепроверка после реорга](ZK_SPV_WORKER.md#limits-recovery-and-state-changes) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_ZK_SPV_WORKER_md_2.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_ZK_SPV_WORKER_md_2.png) |
+| [Независимый HTTPS-якорь расхода FROST nonce](SIGNING_PROTOCOL.md#off-host-nonce-anchor) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_SIGNING_PROTOCOL_md_2.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_SIGNING_PROTOCOL_md_2.png) |
+| [Проверка целостности FROST и Python-поставки](CROSS_PLATFORM_QUICKSTART.md#4-один-и-тот-же-код-и-сборка-у-каждого) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_CROSS_PLATFORM_QUICKSTART_md_2.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_CROSS_PLATFORM_QUICKSTART_md_2.png) |
+| [Замена EIP-1559 комиссии операции API](OPERATIONAL_API.md#replace-the-fee-caps-of-a-pending-api-operation) | [SVG](../ops/artifacts/audit-remediations-20261123/diagrams/docs_OPERATIONAL_API_md_1.svg) | [PNG](../ops/artifacts/audit-remediations-20261123/diagrams/png/docs_OPERATIONAL_API_md_1.png) |
+
 Экспорты ниже зафиксировали документацию на 12 ноября 2026 года. Индексы и хеши
 схем относятся к этой версии. [Архивный manifest](../ops/artifacts/security-remediation-20261112/current-diagrams.json) ·
 [Холодный старт: проверка полного NFT-порядка](../ops/artifacts/cold-start-nft-20261105/README.md) ·
@@ -109,6 +158,18 @@ snapshots, их нельзя считать текущей моделью по �
 и финансирование нового конвертера в `reuse`. Схема расширения общей factory
 и схемы холодного старта, конфигуратора, архитектуры и установки показывают
 закрепление ID федерации и конфедерации за их EVM_AUTH до adoption.
+Актуальная схема общей factory показывает также оба хеша в резервации,
+проверку состава при adoption и метаданных при выпуске share-токена.
+[SVG](../ops/artifacts/mainnet-mn07-20261123/diagrams/docs_FEDERATION_CONFEDERATION_SETUP_md_1.svg) ·
+[PNG](../ops/artifacts/mainnet-mn07-20261123/diagrams/png/docs_FEDERATION_CONFEDERATION_SETUP_md_1.png) ·
+[Хеши экспорта](../ops/artifacts/mainnet-mn07-20261123/diagrams/manifest.json).
+
+| Схема резервации и развёртывания | SVG | PNG |
+| --- | --- | --- |
+| Формирование федерации и конфедерации | [SVG](../ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_1.svg) | [PNG](../ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_ARCHITECTURE_md_1.png) |
+| Платный deploy и проверка условий | [SVG](../ops/artifacts/mainnet-mn06-20261123/diagrams/docs_ARCHITECTURE_md_3.svg) | [PNG](../ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_ARCHITECTURE_md_3.png) |
+| Конфигуратор, приглашение и резервации | [SVG](../ops/artifacts/mainnet-mn06-20261123/diagrams/docs_LAUNCH_CONFIGURATOR_md_1.svg) | [PNG](../ops/artifacts/mainnet-mn06-20261123/diagrams/png/docs_LAUNCH_CONFIGURATOR_md_1.png) |
+
 Схема платного развёртывания отделяет adoption от списания deployment fee.
 Схема восстановления withdrawal CREATE показывает две отдельные проверки
 оператором и возврат к прежнему DKG. Карта холодного старта ведёт к этой ветке
@@ -142,7 +203,7 @@ flowcharts, для допустимых переходов — state diagrams. �
 - Bitcoin mainnet и testnet4 используют разные ZK guests/state/adapters; regtest — relay.
 - Plain bootstrap и полный `--system-policy` имеют разный состав address graph;
   конфигурация кандидата не означает Ready или квалификацию.
-- У каждого ZK-участника собственный рабочий proof; publisher выбран явно.
+- Publisher отправляет свой ZK proof. Участники FROST могут независимо проверить публичный ZIP через свой EVM RPC.
 
 ## Индекс экспортов от 12 ноября 2026 года
 

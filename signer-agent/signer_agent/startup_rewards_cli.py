@@ -1,6 +1,6 @@
 """Inspect/simulate daily introductory payouts; sends only with explicit --send."""
 import json
-from web3 import Web3
+from .evm_rpc import evm_web3
 from .safe_errors import DiagnosticArgumentParser
 from . import ulr_treasury as p
 from .evm_network import read_block
@@ -18,7 +18,7 @@ def main(argv=None):
     confirmations=p.number(a.evm_confirmations)
     if not (12 if a.chain_id=='1' else 1)<=confirmations<=256:raise ValueError('ULR_FINALITY_POLICY')
     if a.send and (a.action=='status' or not a.identity_file or not a.state or not a.id):raise ValueError('STARTUP_EXPLICIT_SEND_INPUTS_REQUIRED')
-    w3=Web3(Web3.HTTPProvider(a.rpc));block=read_block(w3,confirmations);at=block.number
+    w3=evm_web3(a.rpc);block=read_block(w3,confirmations);at=block.number
     if str(w3.eth.chain_id)!=a.chain_id:raise ValueError('ULR_CHAIN_MISMATCH')
     program=p.contract(w3,'ULRStartupRewards',address(a.program))
     read=lambda c,name,*args:p.read(c,at,name,*args)

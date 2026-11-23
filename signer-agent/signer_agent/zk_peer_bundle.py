@@ -15,7 +15,8 @@ from web3.exceptions import ContractLogicError
 
 from .bootstrap import artifact
 from .bootstrap_policy import validate_confirmations
-from .evm_network import read_block, verify_anchor
+from .evm_network import read_block, read_common_block, verify_anchor, verify_witness_anchor
+from .evm_rpc import witness_web3
 from .operations import canonical
 from .zk_spv import VERIFIER_SELECTOR, VERIFIER_VERSION, checkpoint_descriptor, inspect_binding
 from .zk_spv_cli import validate_transition_journal
@@ -245,31 +246,47 @@ def _review_context(current, journal, has_proof):
     return "MATCHES_PREDECESSOR", "REVIEW_WITH_FROST" if has_proof else "COMPUTE_LOCAL_PROOF"
 
 
+def _read_review(w3, config, block, journal, seal):
+    state, _, records, _ = inspect_binding(w3, config["zk_state"], config["bitcoin_policy"], block)
+    if seal is not None:
+        verifier = w3.eth.contract(address=records["zk_verifier"]["address"],
+                                   abi=artifact("RiscZeroGroth16Verifier")["abi"])
+        image = bytes.fromhex(config["bitcoin_policy"]["zk_spv"]["program_image_id"])
+        journal_digest = hashlib.sha256(journal).digest()
+        try:
+            verifier.functions.verify(seal, image, journal_digest).call(block_identifier=block)
+        except ContractLogicError:
+            raise ValueError("ZK_PEER_BUNDLE_PROOF_INVALID") from None
+    return (state.functions.getState().call(block_identifier=block),
+            state.functions.isFresh().call(block_identifier=block))
+
+
 def verify_bundle(worker, source, *, require_proof=False):
     """Review evidence via confirmed EVM reads without loading an operational worker."""
     config, w3 = worker.c, worker.w3
     scope = _scope(config)
     data = _read_regular(source, BUNDLE_LIMIT, "ZK_PEER_BUNDLE_ARCHIVE_INVALID")
     attempt, journal, seal = _review_files(_unpack(data), config, scope, require_proof)
-    if w3.eth.chain_id != int(config["chain_id"]):
-        raise ValueError("CHAIN_MISMATCH")
-    block = read_block(w3, int(config["evm_confirmations"]))
-    state, _, records, _ = inspect_binding(w3, config["zk_state"], config["bitcoin_policy"], block.number)
-    if seal is not None:
-        verifier = w3.eth.contract(address=records["zk_verifier"]["address"],
-                                   abi=artifact("RiscZeroGroth16Verifier")["abi"])
-        image = bytes.fromhex(scope["program_image_id"])
-        journal_digest = hashlib.sha256(journal).digest()
-        try:
-            verifier.functions.verify(seal, image, journal_digest).call(block_identifier=block.number)
-        except ContractLogicError:
-            raise ValueError("ZK_PEER_BUNDLE_PROOF_INVALID") from None
-    current = state.functions.getState().call(block_identifier=block.number)
-    fresh = state.functions.isFresh().call(block_identifier=block.number)
-    verify_anchor(w3, block.number, block.hash)
+    chain_id, confirmations = int(config["chain_id"]), int(config["evm_confirmations"])
+    witness = witness_web3(config, timeout=30) if "evm_witness_rpc" in config else None
+    if witness is None:
+        if w3.eth.chain_id != chain_id:
+            raise ValueError("CHAIN_MISMATCH")
+        block = read_block(w3, confirmations)
+    else:
+        block = read_common_block(w3, witness, confirmations, chain_id)
+    current, fresh = _read_review(w3, config, block.number, journal, seal)
+    if witness is not None:
+        if _read_review(witness, config, block.number, journal, seal) != (current, fresh):
+            raise ValueError("EVM_RPC_WITNESS_MISMATCH")
+        verify_witness_anchor(witness, block)
+        verify_witness_anchor(w3, block)
+    else:
+        verify_anchor(w3, block.number, block.hash)
     relation, next_action = _review_context(current, journal, seal is not None)
     return dict(status="ZK_BUNDLE_PROOF_VERIFIED" if seal is not None else "ZK_BUNDLE_PREPARATION_REVIEWED",
                 proving_attempt_id=attempt, bundle_sha256=_digest(data), journal_sha256=_digest(journal),
-                scope=scope, proof_verified=seal is not None, publication_authorized=False, published=False,
+                scope=scope, proof_verified=seal is not None, independent_rpc_confirmed=witness is not None,
+                publication_authorized=False, published=False,
                 onchain_state_relation=relation, onchain_fresh=fresh, onchain_halted=current[8], next_action=next_action,
                 evm_block_number=block.number, evm_block_hash="0x" + bytes(block.hash).hex())

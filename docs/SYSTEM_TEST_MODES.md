@@ -6,10 +6,14 @@
 окружения с установленным `signer-agent[test,evm-test]`.
 
 ```sh
-python -m pip install -e './signer-agent[test,evm-test]'
+python ops/bootstrap_host.py build
+python -m pip install --no-build-isolation -e './signer-agent[test,evm-test]'
 python -m ops.system_modes preflight --mode all
 python -m ops.system_modes run --mode local --output /absolute/new-test-run
 ```
+
+Первый шаг ставит зависимости по `requirements.lock`. Второй добавляет
+зависимости локального EVM-стенда в то же тестовое окружение.
 
 `local` включает пять локальных developer-слоёв, включая исторические fixtures.
 Они не входят в [поставку участникам](DISTRIBUTION.md); для неё используйте
@@ -28,7 +32,7 @@ EVM и Core. `--mode signer` отдельно проверяет SDK без ло
 cache проверяйте повтором `zk_worker prove` до публикации.
 Сборку новой машины и настройки других участников описывает
 [полная инструкция](CROSS_PLATFORM_QUICKSTART.md). Установленный Foundry solc
-также ищется в `$SVM_HOME/0.8.30/solc-0.8.30` (по умолчанию `~/.svm`).
+также ищется в `$SVM_HOME/0.8.39/solc-0.8.39` (по умолчанию `~/.svm`).
 
 [Начало тестов для коллег](PEER_TESTING.md) выделяет обязательный короткий
 `signer` и последующий полный `relay`. Чистая Ubuntu 24.04 x86-64 сборка и
@@ -43,6 +47,7 @@ cache проверяйте повтором `zk_worker prove` до публик�
 | `zk-testnet4` | Testnet4 native worker, bootstrap create/reuse и отказ real verifier на локальном Sepolia chain ID | Исторические Core-наблюдения; без ready receipts, fresh proof и public deployment |
 | `zk-cached` | Developer-only. Отказ историческому mainnet receipt, граф EVM consumers и проверка происхождения proof | Для положительного прогона задайте `SATOHSI_ZK_ACCEPTANCE_RECEIPT_DIR` с локально рассчитанным 3.1.0 proof на соответствующем тестовом входе. Bitcoin-наблюдения заданы fixtures |
 | `bitcoin` | Реальные локальные Core 30.3, FROST и EVM: существующий lifecycle-набор, mint, MP/S/BTC, вывод, комиссии, отмены, восстановление и сетевые профили | Bitcoin работает в regtest; mainnet/testnet4 в матрице проверяются на локальной EVM с явно заданными границами |
+| `t02-relay` | Свежий bootstrap, восстановление CLTV, возврат S, ротация и подтверждение BTC-вывода с кошелька-преемника | Только локальные Anvil и Bitcoin Core regtest |
 | `zk-fresh` | Preflight привязанного оператором `MAINNET_CANDIDATE` contour | Сам runner не запускает денежные действия и новое proving; используется отдельный durable contour |
 
 Solidity проверяет UTC, claim, кандидатов, делегирование, казначейства,
@@ -64,6 +69,30 @@ Bitcoin `mainnet`, `testnet4`, `regtest`; для ZK — Bitcoin `mainnet` и `te
 с отдельными pinned guests. Это 15 пар backend/сетей, каждая в `create` и `reuse`. Проверка
 профилей не является подтверждением развёртывания или операций в публичных сетях.
 
+## Полное восстановление Т02 через relay
+
+Запустите из корня репозитория после сборки SDK и контрактов. Нужны Anvil,
+Bitcoin Core 30.3, FROST и 128 МиБ свободного места в каталоге результатов.
+Runner создаёт изолированные Anvil и Core с `txindex=1` на loopback и запускает
+полный сценарий Т‑02. Для этого прогона достаточно обычной сборки контрактов.
+
+```sh
+python -m ops.system_modes preflight --mode t02-relay
+python -m ops.system_modes run --mode t02-relay --output /absolute/new-t02-relay-run
+```
+
+Время работы pytest по умолчанию ограничено 1 800 секундами (30 минут).
+Параметр `--timeout-seconds` позволяет увеличить его для медленной машины.
+Сроки FROST-сессий, CLTV и отдельных операций определяются сценарием и протоколом.
+Например, `--timeout-seconds 2700` отведёт прогону 45 минут.
+
+Сводный статус и таймаут записываются в `report.json`. В подкаталоге `t02-relay`
+хранятся `command.log`, журналы узлов и `pytest.xml` завершённого теста. Для
+успешного вывода в JUnit записываются Bitcoin txid, число подтверждений, сумма
+выплаты, комиссия майнерам и остаток обеспечения. При
+истечении лимита в отчёте фиксируется `COMMAND_TIMED_OUT`, а журналы остаются
+в каталоге прогона. Bitcoin Core и Anvil останавливаются при выходе runner.
+
 ## Инструменты и ресурсы
 
 Runner находит инструменты через PATH, перечисленные переменные или существующие
@@ -74,7 +103,7 @@ Runner находит инструменты через PATH, перечисле
 export SATOHSI_BITCOIND=/absolute/bitcoin-30.3/bin/bitcoind
 export SATOHSI_ANVIL=/absolute/anvil
 export SATOHSI_FORGE=/absolute/forge
-export SATOHSI_SOLC=/absolute/solc-0.8.30
+export SATOHSI_SOLC=/absolute/solc-0.8.39
 export SATOHSI_CRYPTO_BIN=/absolute/satohsi-frost-crypto
 export SATOHSI_ZK_WORKER_HOST=/absolute/satoshifi-zk-worker-host
 export SATOHSI_ZK_TESTNET4_WORKER_HOST=/absolute/satoshifi-testnet4-zk-worker-host

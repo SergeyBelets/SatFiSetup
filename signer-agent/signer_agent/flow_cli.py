@@ -26,7 +26,7 @@ PENDING_ERRORS = frozenset((
 ))
 BITCOIN_POLL_ACTIONS = frozenset(("btc-commit", "btc-sign", "btc-broadcast", "btc-settle", "btc-relay"))
 BITCOIN_POLL_ERRORS = frozenset(("BITCOIN_RPC_FAILED", "BITCOIN_RPC_REJECTED", "MAINNET_CORE_REORG_DURING_CHECK",
-                               "BTC_RECOVERY_CHANGED"))
+                               "BTC_RECOVERY_CHANGED", "BTC_PLAN_BELOW_MEMPOOL_FEE", "BTC_MEMPOOL_POLICY_UNAVAILABLE"))
 
 
 def invoke(group, arguments):

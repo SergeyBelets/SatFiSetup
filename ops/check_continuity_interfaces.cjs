@@ -1,7 +1,7 @@
 // Type/ABI compilation of all ordinary Solidity tests; no test execution claim.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const [modulePath,output]=process.argv.slice(2);const solc=require(path.resolve(modulePath));
-if(solc.version()!=='0.8.30+commit.73712a01.Emscripten.clang')throw Error('SOLC_PIN');
+if(solc.version()!=='0.8.39+commit.ce47f2c8.Emscripten.clang')throw Error('SOLC_PIN');
 const root=path.resolve('web3');
 const walk=p=>fs.readdirSync(path.join(root,p),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):e.name.endsWith('.sol')?[p+'/'+e.name]:[]);
 const sources={},hashes={};for(const p of [...walk('contracts/src'),...walk('test')]){

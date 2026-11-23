@@ -29,7 +29,7 @@ def policy(profile, participant_minimum, operator_minimum):
 
 def snapshot(bootstrap, terms):
     w3=bootstrap.w3
-    block=read_block(w3,int(bootstrap.profile.get('evm_confirmations','12' if w3.eth.chain_id==1 else '1')))
+    block=read_block(w3,bootstrap.evm_confirmations)
     rows=[]
     for member in terms['participants']:
         confirmed=w3.eth.get_balance(member,block_identifier=block.number)

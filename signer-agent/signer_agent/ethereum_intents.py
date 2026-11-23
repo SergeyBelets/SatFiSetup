@@ -53,7 +53,7 @@ def validate_signing_binding(intent, bundle, coordinator_address, *, allow_legac
         raise ValueError("POLICY_MISMATCH")
 
 
-def _prove_pool(w3, target, kind, operator, number):
+def _prove_pool(w3, target, kind, operator, number, *, legacy_custody=False):
     """Authenticate a pool created internally by its canonical direct leaf."""
     from eth_utils.abi import collapse_if_tuple
     from web3._utils.events import get_event_data
@@ -67,7 +67,13 @@ def _prove_pool(w3, target, kind, operator, number):
                                 [("shareTokenDeployer", "ConfederationShareV2Deployer")]),
     }[kind]
     from . import verified_cache
-    cache_key = [target.address, kind, operator, Web3.keccak(hexstr=artifact(kind)["bytecode"]["object"]).hex()]
+    options = {"legacy_custody": True} if legacy_custody and kind == "ConfederationPoolV2" else {}
+    if options:
+        from .bitcoin_trust import runtime_artifact
+        _, compiled = runtime_artifact(w3, target.address, kind, number, **options)
+    else:
+        compiled = artifact(kind)
+    cache_key = [target.address, kind, operator, Web3.keccak(hexstr=compiled["bytecode"]["object"]).hex()]
     cached = verified_cache.get(w3, "pool-origin", cache_key)
     if cached:
         if (int(cached["number"]) > number
@@ -77,7 +83,7 @@ def _prove_pool(w3, target, kind, operator, number):
             proof = prove_creation(w3, child, child_kind, [], number)
             if proof.get("method") != "direct" or proof.get("sender") != operator:
                 raise ValueError("ETHEREUM_BOOTSTRAP_ORIGIN")
-        proof = prove_creation(w3, cached["leaf"], leaf_kind, cached["args"], number)
+        proof = prove_creation(w3, cached["leaf"], leaf_kind, cached["args"], number, **options)
         leaf = w3.eth.contract(address=cached["leaf"], abi=artifact(leaf_kind)["abi"])
         if (proof.get("method") != "direct" or proof.get("sender") != operator
                 or leaf.functions.deployerOwner().call(block_identifier=number) != operator):
@@ -104,7 +110,7 @@ def _prove_pool(w3, target, kind, operator, number):
             except Exception:
                 continue
             leaf_address = Web3.to_checksum_address(log["address"])
-            checked_runtime(w3, leaf_address, leaf_kind, number)
+            checked_runtime(w3, leaf_address, leaf_kind, number, **options)
             leaf = w3.eth.contract(address=leaf_address, abi=artifact(leaf_kind)["abi"])
             args = []
             for getter, child_kind in children:
@@ -113,7 +119,7 @@ def _prove_pool(w3, target, kind, operator, number):
                 if proof.get("method") != "direct" or proof.get("sender") != operator:
                     raise ValueError("ETHEREUM_BOOTSTRAP_ORIGIN")
                 args.append(child)
-            proof = prove_creation(w3, leaf_address, leaf_kind, args, number)
+            proof = prove_creation(w3, leaf_address, leaf_kind, args, number, **options)
             if (proof.get("method") != "direct" or proof.get("sender") != operator
                     or leaf.functions.deployerOwner().call(block_identifier=number) != operator):
                 raise ValueError("ETHEREUM_BOOTSTRAP_ORIGIN")
@@ -343,15 +349,19 @@ def review_project_payer(w3, intent, bundle, block_identifier):
             or read(router, "wrapStakerBps") != 0 or read(router, "deployStakerBps") != 0):
         raise ValueError("ETHEREUM_PROJECT_FEE_POLICY")
 
+    from .bootstrap_confederation_dao import enabled as in_kind_dao
+
+    conf_pool, conf_share = (("ConfederationPoolV2Deployer", "ConfederationShareV2Deployer")
+                            if in_kind_dao(invite) else ("MultiPoolDeployer", "ConfederationTokenDeployer"))
     dependencies = {
         "FederationFactory": [("dkgCoordinator", "DKGCoordinator"), ("deployer", "FederationDeployer"), ("frostCoordinator", "FROSTCoordinator")],
         "ConfederationFactory": [("federationFactory", "FederationFactory"), ("dkgCoordinator", "DKGCoordinator"),
                                   ("deployer", "ConfederationDeployer"), ("frostCoordinator", "FROSTCoordinator")],
         "FederationDeployer": [("multiPoolDeployer", "SimpleMultiPoolDeployer"), ("feeSystemDeployer", "FeeSystemDeployer")],
-        "ConfederationDeployer": [("frostCustodianDeployer", "FROSTCustodianDeployer"), ("multiPoolDeployer", "MultiPoolDeployer"),
+        "ConfederationDeployer": [("frostCustodianDeployer", "FROSTCustodianDeployer"), ("multiPoolDeployer", conf_pool),
                                  ("feeSystemDeployer", "FeeSystemDeployer")],
         "SimpleMultiPoolDeployer": [("frostDeployer", "FROSTAuthorizationDeployer"), ("shareTokenDeployer", "MultiPoolShareTokenDeployer")],
-        "MultiPoolDeployer": [("shareTokenDeployer", "ConfederationTokenDeployer")],
+        conf_pool: [("shareTokenDeployer", conf_share)],
         "FeeSystemDeployer": [("feeManagerDeployer", "FederationFeeManagerDeployer"), ("feeDistributorDeployer", "FeeDistributionCalculatorDeployer"),
                               ("nftModifierDeployer", "FederationNFTModifierDeployer"), ("walletRegistryDeployer", "ProjectWalletRegistryDeployer")],
     }

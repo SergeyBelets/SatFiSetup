@@ -152,8 +152,7 @@ class Log:
                 row=self.db.execute('SELECT body FROM needs WHERE id=?',(key,)).fetchone()
                 if row and json.loads(row[0])!=p['request']:raise ValueError('ZK_OBSERVATION_OUTBOX_CONFLICT')
                 if not row:
-                    if self.db.execute('SELECT COUNT(*) FROM needs').fetchone()[0]>=int(self.box.config['max_pending']):raise ValueError('ZK_WORKER_INBOX_FULL')
-                    self.db.execute('INSERT INTO needs VALUES(?,?,?)',(key,canonical(p['request']),p['status']))
+                    self.box.insert_need(key,p['request'],p['status'])
                 if p['local']:
                     k='obligation:'+key;v=self.box.get(k) or dict(created_at=p['created_at'],deadline=p['deadline'],origins={})
                     old=v['origins'].get('local')

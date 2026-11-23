@@ -40,15 +40,28 @@ def _canonical_snapshot(w3, block):
         raise ValueError("ONCHAIN_ORIGIN_REORG")
 
 
-def _board_and_invitation(w3, address, block, *, birth_hint=None, pinned=False):
+def _origin_artifact(w3, address, kind, number, error_code, legacy_dao_exit):
+    if legacy_dao_exit:
+        from .bitcoin_trust import runtime_artifact
+        try:
+            return runtime_artifact(w3, address, kind, number, legacy_dao_exit=True)[1]
+        except ValueError as error:
+            if str(error) == "BTC_CONTRACT_BUILD_MISMATCH":
+                raise ValueError(error_code) from None
+            raise
+    compiled = artifact(kind)
+    expected = bytes.fromhex(compiled["deployedBytecode"]["object"].removeprefix("0x"))
+    if bytes(w3.eth.get_code(address, block_identifier=number)) != expected:
+        raise ValueError(error_code)
+    return compiled
+
+
+def _board_and_invitation(w3, address, block, *, birth_hint=None, pinned=False, legacy_dao_exit=False):
     from .onboarding import validate_invite
     from .contract_provenance import prove_creation
 
     address = Web3.to_checksum_address(address)
-    a = artifact("DKGOnchainBoard")
-    expected = bytes.fromhex(a["deployedBytecode"]["object"].removeprefix("0x"))
-    if bytes(w3.eth.get_code(address, block_identifier=block["number"])) != expected:
-        raise ValueError("BOARD_BUILD_MISMATCH")
+    a = _origin_artifact(w3, address, "DKGOnchainBoard", block["number"], "BOARD_BUILD_MISMATCH", legacy_dao_exit)
     board = w3.eth.contract(address=address, abi=a["abi"])
 
     def read(method, *args):
@@ -69,9 +82,11 @@ def _board_and_invitation(w3, address, block, *, birth_hint=None, pinned=False):
         raise ValueError("BOARD_ROSTER_MISMATCH")
     # Runtime/getters alone cannot authenticate constructor-initialized storage.
     # Exact constructor args also exclude extra invited addresses not in the JSON.
+    options = {"legacy_dao_exit": True} if legacy_dao_exit else {}
+    if birth_hint is not None:
+        options["birth_hint"] = birth_hint
     proof = prove_creation(w3, address, "DKGOnchainBoard",
-                           [raw_invite, invite["participants"]], block["number"],
-                           **({"birth_hint": birth_hint} if birth_hint is not None else {}))
+                           [raw_invite, invite["participants"]], block["number"], **options)
     if Web3.to_checksum_address(proof["sender"]) != invite["operator"]:
         raise ValueError("BOARD_CREATOR_MISMATCH")
     if not pinned and invite["version"] in ("4", "5", "6"):
@@ -81,7 +96,8 @@ def _board_and_invitation(w3, address, block, *, birth_hint=None, pinned=False):
         if int(proof["block_number"]) > safe["number"]:
             raise ValueError("EVM_CONFIRMATIONS_PENDING")
         if block["number"] > safe["number"]:
-            return _board_and_invitation(w3, address, safe, birth_hint=birth_hint)
+            return _board_and_invitation(w3, address, safe, birth_hint=birth_hint,
+                                         **({"legacy_dao_exit": True} if legacy_dao_exit else {}))
     _canonical_snapshot(w3, block)
     return board, invite
 
@@ -90,17 +106,15 @@ def board_at(w3, address, block=None):
     return _board_and_invitation(w3, address, block or _transport_block(w3))[0]
 
 
-def registry_at(w3, address, block=None):
+def registry_at(w3, address, block=None, *, legacy_dao_exit=False):
     """Authenticate the no-argument registry constructor before trusting its state."""
     from .contract_provenance import prove_creation
 
     block = block or _transport_block(w3)
     address = Web3.to_checksum_address(address)
-    a = artifact("DKGCoordinator")
-    expected = bytes.fromhex(a["deployedBytecode"]["object"].removeprefix("0x"))
-    if bytes(w3.eth.get_code(address, block_identifier=block["number"])) != expected:
-        raise ValueError("REGISTRY_BUILD_MISMATCH")
-    prove_creation(w3, address, "DKGCoordinator", [], block["number"])
+    a = _origin_artifact(w3, address, "DKGCoordinator", block["number"], "REGISTRY_BUILD_MISMATCH", legacy_dao_exit)
+    options = {"legacy_dao_exit": True} if legacy_dao_exit else {}
+    prove_creation(w3, address, "DKGCoordinator", [], block["number"], **options)
     _canonical_snapshot(w3, block)
     return w3.eth.contract(address=address, abi=a["abi"])
 
@@ -133,15 +147,19 @@ def transact(w3, identity_file, state, board, method, args):
     return result
 
 
-def invitation(w3, address, *, birth_hint=None):
-    return _board_and_invitation(w3, address, _transport_block(w3), birth_hint=birth_hint)
+def invitation(w3, address, *, birth_hint=None, **options):
+    return _board_and_invitation(w3, address, _transport_block(w3), birth_hint=birth_hint, **options)
 
 
-def assembled_profile(w3, address):
+def assembled_profile(w3, address, *, snapshot=None, **options):
     from .onboarding import assemble
 
-    board, invite = invitation(w3, address)
-    block = _transport_block(w3, int(invite.get("evm_confirmations", "12" if w3.eth.chain_id == 1 else "1")))
+    if snapshot is None:
+        board, invite = invitation(w3, address, **options)
+        block = _transport_block(w3, int(invite.get("evm_confirmations", "12" if w3.eth.chain_id == 1 else "1")))
+    else:
+        board, invite = _board_and_invitation(w3, address, snapshot, pinned=True, **options)
+        block = snapshot
     enrollments = []
     for address in invite["participants"]:
         data = board.functions.enrollment(address).call(block_identifier=block["number"])
@@ -163,16 +181,17 @@ def assembled_profile(w3, address):
     return profile
 
 
-def ceremony_bundle(w3, address, role):
+def ceremony_bundle(w3, address, role, *, legacy_dao_exit=False):
     from .onboarding import make_manifest
 
-    board, invite = invitation(w3, address)
+    options = {"legacy_dao_exit": True} if legacy_dao_exit else {}
+    board, invite = invitation(w3, address, **options)
     snapshot = _transport_block(w3, int(invite.get("evm_confirmations", "12" if w3.eth.chain_id == 1 else "1")))
     registry = board.functions.registry().call(block_identifier=snapshot["number"])
     if registry == ZERO:
         raise ValueError("REGISTRY_NOT_BOUND")
-    registry_at(w3, registry, snapshot)
-    profile = assembled_profile(w3, address)
+    registry_at(w3, registry, snapshot, **options)
+    profile = assembled_profile(w3, address, **options)
     deployment = dict(
         contracts={
             "dkg": dict(
@@ -181,7 +200,7 @@ def ceremony_bundle(w3, address, role):
             )
         }
     )
-    bundle = make_manifest(profile, deployment, role, w3.provider.endpoint_uri)
+    bundle = make_manifest(profile, deployment, role, w3.provider.endpoint_uri, **options)
     binding_number = board.functions.registryBlock().call(block_identifier=snapshot["number"])
     if binding_number > snapshot["number"]:
         raise ValueError("EVM_CONFIRMATIONS_PENDING")

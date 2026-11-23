@@ -6,7 +6,7 @@ from pathlib import Path
 from .dkg import Participant, Registry, atomic_private
 from .dkg_protocol import Manifest
 from .dkg_transport import Mailbox
-from .secure_state import SecureState
+from .secure_state import SecureState, requires_independent_nonce_ledger
 from .safe_errors import DiagnosticArgumentParser, emit_debug
 from . import crypto
 
@@ -23,9 +23,45 @@ def signing_confirmations(enrolled, *, nft_config=None, ulr_config=None, fee_sal
     return depth
 
 
+def _check_local_share(key):
+    local_point = crypto.call("public_share", share=key["result"]["signing_share"])["public"]
+    if local_point != key["result"]["public_share"]:
+        raise ValueError("SHARE_MISMATCH")
+
+
+def _review_bitcoin_approval(intent, manifest, key, registry, state, args, *, enrolled):
+    from .bitcoin_onchain_payment import APPROVAL_OPERATIONS, CANCEL_HELPER, review_intent
+
+    pair = (intent.get("artifact"), intent.get("hash_method"))
+    cancelling = pair == ("BitcoinBatchRegistry", CANCEL_HELPER)
+    legacy_file = args.package and manifest.chain_id == 31337 and not enrolled
+    if "bitcoin_plan" not in intent:
+        if pair in APPROVAL_OPERATIONS and (cancelling or not legacy_file):
+            raise ValueError("BTC_PUBLIC_PLAN_REQUIRED")
+        return None
+    if cancelling and (args.package or not args.board):
+        raise ValueError("BTC_CANCEL_REQUIRES_BOARD_INTENT")
+
+    def review():
+        review_intent(intent, manifest, key, registry, state, board_address=args.board,
+                      bitcoin_rpc=args.bitcoin_rpc, bitcoin_cookie=args.bitcoin_cookie)
+
+    review()
+    return intent["operation_hash"].removeprefix("0x"), review
+
+
 def main(argv):
     p = DiagnosticArgumentParser(prog="frost-signer dkg")
     sub = p.add_subparsers(dest="action", required=True)
+    from .bitcoin_successor_ceremony import add_parser as add_successor_ceremony
+    add_successor_ceremony(sub)
+    ledger = sub.add_parser("nonce-ledger-init", help="Bind a fresh signing state to an independent spent ledger")
+    ledger.add_argument("--state", required=True)
+    ledger.add_argument("--password-file", required=True)
+    ledger.add_argument("--nonce-ledger", required=True, help="Absolute file path on independent storage")
+    ledger.add_argument("--nonce-anchor-config", help="Private client configuration for the off-host nonce anchor")
+    ledger.add_argument("--evm-auth", action="store_true",
+                        help="Bind a fresh EVM_AUTH role and its .signing state to the same ledger")
     for action in (
         "transport-init",
         "create",
@@ -64,6 +100,7 @@ def main(argv):
         "btc-address-mint-retry",
         "btc-mint-status",
         "btc-mint-retire",
+        "btc-mint-renew",
         "btc-mint-transfer-propose",
         "btc-mint-transfer-execute",
         "btc-mint-transfer-retire",
@@ -74,6 +111,8 @@ def main(argv):
     ):
         c = sub.add_parser(action)
         c.add_argument("--board")
+        if action.startswith("btc-") or action in ("inspect-bitcoin-registry", "trust-bitcoin-registry"):
+            c.add_argument("--recovery-board", help="Original CLTV deployment board for a rotated Bitcoin DKG")
         c.add_argument(
             "--role", choices=["evm_ceremony", "conf_ceremony", "btc_ceremony"]
         )
@@ -82,6 +121,8 @@ def main(argv):
         c.add_argument("--identity-file")
         c.add_argument("--state")
         c.add_argument("--password-file")
+        c.add_argument("--nonce-ledger", help="Assert the independent spent ledger bound to this state")
+        c.add_argument("--nonce-anchor-config", help="Use the off-host nonce anchor pinned to this state")
         c.add_argument("--mailbox")
         if action == "run-once":
             c.add_argument("--confirm-abort", help="Confirm the reviewed DKG abort fingerprint")
@@ -107,7 +148,7 @@ def main(argv):
         c.add_argument("--session", type=int)
         c.add_argument("--package")
         c.add_argument("--mint-admission")
-        if action in ("inspect-bitcoin-registry", "trust-bitcoin-registry", "btc-mint-status", "btc-mint-retire",
+        if action in ("inspect-bitcoin-registry", "trust-bitcoin-registry", "btc-mint-status", "btc-mint-retire", "btc-mint-renew",
                       "btc-mint-transfer-propose", "btc-mint-transfer-execute", "btc-mint-transfer-retire"):
             c.add_argument("--mint-only", action="store_true", help="Separate graph trust for mint; never permits Bitcoin signing")
         if action in ("inspect-bitcoin-registry", "trust-bitcoin-registry"):
@@ -122,10 +163,16 @@ def main(argv):
         c.add_argument("--accept-fingerprint")
         c.add_argument("--signing-board")
         c.add_argument("--batch")
+        if action in ("btc-commit", "btc-sign"):
+            c.add_argument("--resume-expired", action="store_true",
+                           help="Resume the exact expired S to BTC batch already in Signing")
+        if action == "btc-broadcast":
+            c.add_argument("--signed-out", help="Export the exact bound V5 Bitcoin payment without broadcasting")
         c.set_defaults(operation=None, inputs=None, withdrawals=None, fee=None,
                        max_fee=None, deadline=None, signers=None, max_packet_bytes=None)
         if action in ("btc-propose", "btc-execute"):
-            c.add_argument("--operation", choices=["reserve", "bind"])
+            c.add_argument("--operation", choices=["reserve", "bind", "cancel"])
+            c.add_argument("--deadline", help="Fresh EVM authorization deadline for a Reserved batch cancellation")
         if action == "btc-prepare":
             c.add_argument("--input", dest="inputs", action="append")
             c.add_argument("--withdrawal", dest="withdrawals", action="append")
@@ -149,6 +196,8 @@ def main(argv):
         if action == "btc-mint-transfer-propose":
             c.add_argument("--new-operator", required=True)
             c.add_argument("--deadline", required=True)
+        if action == "btc-mint-renew":
+            c.add_argument("--deadline", required=True, help="Fresh Unix deadline within seven days for an expired mint")
         if action.startswith("btc-treasury-"):
             c.add_argument("--request-id", required=True)
             c.add_argument("--satoshis", required=True)
@@ -160,18 +209,48 @@ def main(argv):
     a = p.parse_args(argv)
     from .verified_cache import cache_state
     cache_token = cache_state.set(None)
+    pin_token = crypto.pin_required.set(crypto.pin_required.get())
     try:
+        if a.action == "successor-create":
+            from .bitcoin_successor_ceremony import run
+
+            print(json.dumps(run(a), sort_keys=True))
+            return 0
+        if getattr(a, "resume_expired", False) and (a.package or not a.signing_board or not a.batch):
+            raise ValueError("BTC_EXPIRED_SIGNING_REQUIRES_IDS")
+        if (a.action in ("btc-propose", "btc-execute") and a.operation == "cancel"
+                and (not a.signing_board or not a.batch)):
+            raise ValueError("BTC_CANCEL_REQUIRES_IDS")
         if a.action.startswith("btc-") and a.package and (
             a.action not in ("btc-commit", "btc-sign") or a.signing_board or a.batch
         ):
             raise ValueError("BTC_FILE_AND_ONCHAIN_MODES_CONFLICT")
         from .onboarding import read_private, password_file, validate_bundle
 
-        state = None
+        nonce_anchor = None
+        if a.nonce_anchor_config:
+            from .nonce_anchor import NonceAnchor
+            nonce_anchor = NonceAnchor.from_file(a.nonce_anchor_config)
+        if a.action == "nonce-ledger-init":
+            password = password_file(a.password_file)
+            role_state = SecureState(a.state, password, nonce_ledger=a.nonce_ledger, nonce_anchor=nonce_anchor)
+            signing_state = SecureState(a.state + ".signing", password, nonce_anchor=nonce_anchor) if a.evm_auth else None
+            role_state.initialize_nonce_ledger(evm_signing_state=signing_state)
+            print(json.dumps(dict(status="NONCE_LEDGER_READY")))
+            return 0
+        state = signing_state = None
+        evm_nonce_ledger = None
         if a.state:
             password = password_file(a.password_file)
-            state = SecureState(a.state, password)
+            state = SecureState(a.state, password, nonce_ledger=a.nonce_ledger, nonce_anchor=nonce_anchor)
+            if a.action == "sign-evm":
+                signing_state = SecureState(a.state + ".signing", password, nonce_anchor=nonce_anchor)
+                evm_nonce_ledger = state.evm_nonce_ledger(signing_state)
+            elif a.nonce_ledger is not None or nonce_anchor is not None:
+                state.require_nonce_ledger()
             cache_state.set(SecureState(a.state + ".public-cache", password))
+        elif a.nonce_ledger is not None or nonce_anchor is not None:
+            raise ValueError("NONCE_LEDGER_STATE_REQUIRED")
         if a.action == "transport-init":
             with state.exclusive():
                 if state.get("transport"):
@@ -182,12 +261,30 @@ def main(argv):
             return 0
         if a.board:
             from .onchain_transport import ceremony_bundle
-            from web3 import Web3
+            from .evm_rpc import evm_web3
 
-            bundle = ceremony_bundle(Web3(Web3.HTTPProvider(a.rpc)), a.board, a.role)
+            bundle = ceremony_bundle(evm_web3(a.rpc), a.board, a.role)
         else:
             bundle = json.loads(Path(a.manifest).read_text())
         m = Manifest.from_dict(bundle)
+        if getattr(a, "recovery_board", None) and (m.purpose != "BTC_SPEND" or not a.board
+                                                  or a.recovery_board == a.board):
+            raise ValueError("BTC_RECOVERY_BINDING")
+        enrolled = "onboarding" in bundle
+        invite = bundle.get("onboarding", {}).get("invitation", {})
+        signing = a.action in ("sign-evm", "btc-commit", "btc-sign")
+        if signing and not enrolled and state is not None and state.get("enrollment"):
+            raise ValueError("ENROLLED_MANIFEST_REQUIRED")
+        if requires_independent_nonce_ledger(m.chain_id, invite.get("bitcoin_network")):
+            crypto.pin_required.set(True)
+            if a.action == "import":
+                raise ValueError("MAINNET_KEY_IMPORT_REQUIRES_ORIGINAL_STATE")
+            if signing:
+                if state is None:
+                    raise ValueError("NONCE_LEDGER_STATE_REQUIRED")
+                state.require_nonce_ledger()
+                if a.action == "sign-evm" and evm_nonce_ledger is None:
+                    raise ValueError("EVM_NONCE_LEDGER_NOT_BOUND_RECOVERY_REQUIRED")
         identity = (
             json.loads(read_private(a.identity_file))["private_key"]
             if a.identity_file
@@ -275,7 +372,12 @@ def main(argv):
                 )
             else:
                 mailbox = Mailbox(a.mailbox)
-            result = Participant(m, registry, state, mailbox).run_once(a.confirm_abort)
+            recovery = invite.get("bitcoin_recovery") if m.purpose == "BTC_SPEND" else None
+            if recovery is None:
+                participant = Participant(m, registry, state, mailbox)
+            else:
+                participant = Participant(m, registry, state, mailbox, bitcoin_recovery=recovery)
+            result = participant.run_once(a.confirm_abort)
         else:
             registry.check(m)
             key = state.get(m.context.hex())
@@ -284,13 +386,8 @@ def main(argv):
             result_data = registry.read("getCompletedResult", m.session_id)
             if bytes(result_data[1]).hex() != key["result_hash"]:
                 raise ValueError("TRANSCRIPT_MISMATCH")
-            if (
-                crypto.call("public_share", share=key["result"]["signing_share"])[
-                    "public"
-                ]
-                != key["result"]["public_share"]
-            ):
-                raise ValueError("SHARE_MISMATCH")
+            if a.action != "sign-evm":
+                _check_local_share(key)
             if key["participant"] != m.participants[key["index"] - 1]:
                 raise ValueError("PARTICIPANT_MISMATCH")
             if a.action.startswith("gas-"):
@@ -304,7 +401,9 @@ def main(argv):
                 from .bitcoin_trust import (inspect_registry, pin_registry, discover_registry,
                     board_options, invitation_options, bitcoin_for_graph, check_bitcoin_graph)
 
-                options = (board_options(m, registry, a.board) if a.board else
+                recovery_board = getattr(a, "recovery_board", None)
+                primary = recovery_board or a.board
+                options = (board_options(m, registry, primary) if primary else
                            invitation_options(bundle["onboarding"]["invitation"])
                            if bundle.get("onboarding") else {})
                 if a.mint_only:
@@ -315,8 +414,12 @@ def main(argv):
                     options["address_signing"] = True
                     if not a.batch_registry: raise ValueError("BTC_REGISTRY_ADDRESS_REQUIRED")
 
-                if not a.batch_registry and a.board:
-                    a.batch_registry = discover_registry(m, key, registry, a.board)
+                if primary and (not a.batch_registry or recovery_board):
+                    reviewed_address = discover_registry(m, key, registry, primary,
+                                                         address_signing=a.address_signing)
+                    if a.batch_registry and a.batch_registry != reviewed_address:
+                        raise ValueError("BTC_REGISTRY_NOT_TRUSTED")
+                    a.batch_registry = reviewed_address
                 if not a.batch_registry:
                     raise ValueError("BTC_REGISTRY_ADDRESS_REQUIRED")
                 if a.action == "inspect-bitcoin-registry":
@@ -364,6 +467,8 @@ def main(argv):
                         internal_key=key["result"]["internal_key"],
                         taproot_tweak=key["result"]["taproot_tweak"],
                     )
+                    if key["result"].get("recovery_descriptor") is not None:
+                        public["recovery_descriptor"] = key["result"]["recovery_descriptor"]
                     atomic_private(
                         a.output, (json.dumps(public, indent=2) + "\n").encode()
                     )
@@ -429,6 +534,7 @@ def main(argv):
                     priority_fee_gwei=1,
                     auto_sign=False,
                     auto_finalize=True,
+                    nonce_ledger=evm_nonce_ledger,
                 )
                 client = CoordinatorClient(cfg)
                 client.continuity_identity_file=a.identity_file
@@ -472,6 +578,7 @@ def main(argv):
                     "ConfederationMultiPool",
                     "ConfederationPoolV2",
                     "BitcoinWithdrawalEscrowV2",
+                    "BitcoinWithdrawalRecovery",
                     "ConfederationDAOIncome",
                     "ConfederationNFTPass",
                     "FederationFactory",
@@ -535,8 +642,8 @@ def main(argv):
                     client.family_registry_context=(intent,bundle)
                     client.family_registry_state=state
                 from .bootstrap_tokens import review_intent as review_token_metadata
-                review_token_metadata(client.w3, intent, bundle, read_number)
-                if "token_metadata" in bundle.get("onboarding", {}).get("invitation", {}):
+                formation_checked = review_token_metadata(client.w3, intent, bundle, read_number)
+                if formation_checked or "token_metadata" in bundle.get("onboarding", {}).get("invitation", {}):
                     client.token_metadata_context = (intent, bundle)
                 from . import fee_sale_governance as fee_sale
                 if fee_sale.matches(intent):
@@ -654,11 +761,43 @@ def main(argv):
                     review(registry.w3, intent, bundle, read_number, session=a.session)
                     client.gas_intent_context = (intent, bundle)
                 helper = intent.get("hash_method", "")
+                rotation = artifact == "BitcoinWithdrawalRecovery"
+                if rotation:
+                    if (a.package or not a.board or bundle.get("onchain_board") != a.board
+                            or bundle.get("role") != "conf_ceremony"
+                            or helper != "getRotateOperationHash" or intent.get("bitcoin_rotation") != "1"):
+                        raise ValueError("BTC_RECOVERY_ROTATION_INTENT")
+                    from .bitcoin_recovery_cli import review_rotation_intent
+                    from .evm_network import verify_anchor
+
+                    def review_rotation():
+                        confirmed = read_block(client.w3, depth)
+                        verify_anchor(client.w3, read_number, anchor.hash, safe=confirmed)
+                        reviewed = review_rotation_intent(client.w3, intent, bundle, confirmed.number)
+                        latest = client.w3.eth.get_block("latest")
+                        if latest.number != confirmed.number:
+                            live = review_rotation_intent(client.w3, intent, bundle, latest.number, finalized=False)
+                            if live.complete != reviewed.complete:
+                                raise ValueError("EVM_CONFIRMATIONS_PENDING")
+                        verify_anchor(client.w3, latest.number, latest.hash)
+                        return reviewed, confirmed
+
+                    reviewed, rotation_anchor = review_rotation()
+                    if reviewed.complete:
+                        from .operation_status import verify_executed_session
+
+                        verify_executed_session(reviewed.auth, client.contract, target_contract.address, reviewed.op,
+                                                a.session, rotation_anchor.number)
+                        verify_anchor(client.w3, rotation_anchor.number, rotation_anchor.hash)
+                        print(json.dumps(dict(status="ALREADY_EXECUTED", session=str(a.session),
+                            operation_hash=intent["operation_hash"], target=target_contract.address)))
+                        return 0
                 if helper not in ("hashOperation", "operationHash") and not (
                     helper.startswith("get") and helper.endswith("OperationHash")
                 ):
                     raise ValueError("POLICY_HASH_HELPER")
                 from .bootstrap import encode_args
+                from .bitcoin_onchain_payment import CANCEL_HELPER
 
                 def integer_strings(value):
                     if isinstance(value, bool):
@@ -669,17 +808,28 @@ def main(argv):
                         return [integer_strings(x) for x in value]
                     return value
 
-                helper_abi = next(
-                    x
-                    for x in abi
-                    if x.get("type") == "function" and x.get("name") == helper
-                )
-                typed_args = encode_args(
-                    helper_abi["inputs"], integer_strings(intent["hash_args"])
-                )
-                computed = getattr(target_contract.functions, helper)(
-                    *typed_args
-                ).call(block_identifier=read_number)
+                cancelling = (artifact, helper) == ("BitcoinBatchRegistry", CANCEL_HELPER)
+                if cancelling:
+                    if str(session.deadline) != intent.get("cancel_deadline"):
+                        raise ValueError("BTC_CANCEL_DEADLINE_MISMATCH")
+                    # This deployed registry commits to cancel(bytes32,bytes32)
+                    # inside the mutating entry point, with no public hash getter.
+                    # The strict public-plan reviewer reads its exact on-chain
+                    # batch, reservation and nonce before supplying the hash.
+                    bitcoin_review = _review_bitcoin_approval(
+                        intent, m, key, registry, state, a, enrolled=enrolled,
+                    )
+                    computed = bytes.fromhex(bitcoin_review[0])
+                    typed_args = []
+                else:
+                    helper_abi = next(
+                        x for x in abi
+                        if x.get("type") == "function" and x.get("name") == helper
+                    )
+                    typed_args = encode_args(helper_abi["inputs"], integer_strings(intent["hash_args"]))
+                    computed = getattr(target_contract.functions, helper)(
+                        *typed_args
+                    ).call(block_identifier=read_number)
                 if bytes(computed) != session.message_hash:
                     raise ValueError("OPERATION_PARAMETERS_MISMATCH")
                 if (artifact,helper)==("BitcoinBatchRegistry","getSetFeeReserveOperationHash"):
@@ -690,23 +840,17 @@ def main(argv):
                     from .withdrawal_fee_policy import review_binding
                     review_binding(client.w3,intent,read_number)
                     client.withdrawal_fee_binding=intent
-                if "bitcoin_plan" in intent or (not a.package and (artifact, helper) in {
-                    ("BitcoinBatchRegistry", "operationHash"),
-                    ("BitcoinWithdrawalEscrow", "getBindOperationHash"),
-                    ("BitcoinBatchRegistry", "getReplacementOperationHash"),
-                    ("BitcoinWithdrawalEscrow", "getBindReplacementOperationHash"),
-                    ("BitcoinWithdrawalEscrowV2", "getBindUserFundedOperationHash"),
-                    ("BitcoinWithdrawalEscrowV2", "getBindUserFundedReplacementOperationHash"),
-                }):
-                    from .bitcoin_onchain_payment import review_intent
+                client.bitcoin_plan_review = bitcoin_review if cancelling else _review_bitcoin_approval(
+                    intent, m, key, registry, state, a, enrolled=enrolled,
+                )
+                if rotation:
+                    def guard_rotation():
+                        current, _ = review_rotation()
+                        if current.complete:
+                            raise ValueError("BTC_OPERATION_CHANGED")
 
-                    review_intent(intent, m, key, registry, state, board_address=a.board,
-                                  bitcoin_rpc=a.bitcoin_rpc, bitcoin_cookie=a.bitcoin_cookie)
-                    if intent.get("bitcoin_plan", {}).get("version") in ("3","4","5"):
-                        client.bitcoin_plan_review = (intent["operation_hash"].removeprefix("0x"),
-                            lambda: review_intent(intent, m, key, registry, state, board_address=a.board,
-                                bitcoin_rpc=a.bitcoin_rpc, bitcoin_cookie=a.bitcoin_cookie))
-                if m.chain_id == 1 and dao_scope is None and not hasattr(client, "ulr_intent_context"):
+                    client.bitcoin_plan_review = (session.message_hash.hex(), guard_rotation)
+                if m.chain_id == 1 and dao_scope is None and not hasattr(client, "ulr_intent_context") and not rotation:
                     from .ethereum_intents import review_bootstrap_intent
                     review_bootstrap_intent(registry.w3, intent, bundle, read_number)
                 elif artifact in ("BitcoinWithdrawalEscrow", "BitcoinWithdrawalEscrowV2") and helper == "getSetCallbackPoolRegistryOperationHash":
@@ -722,11 +866,14 @@ def main(argv):
                         expected_pool=target_contract.address, require_bound=False)
                 client.bitcoin_graph = getattr(registry, "bitcoin_graph", {})
                 client.identity_file = a.identity_file
+                client.base_mint_funding = (bundle, a.bitcoin_rpc, a.bitcoin_cookie)
                 if client.bitcoin_graph.get("usage") == "MINT_ONLY_V1":
                     from .bitcoin_trust import bitcoin_for_graph
                     client.address_mint_bitcoin = bitcoin_for_graph(client.bitcoin_graph, a.bitcoin_rpc, a.bitcoin_cookie)
                 client.transaction_journal = registry.transaction_journal
-                result = SigningService(cfg, client).approve(session).to_dict()
+                _check_local_share(key)
+                result = SigningService(cfg, client, state=signing_state,
+                                        reviewed_session_id=session.session_id).approve(session).to_dict()
             else:
                 from .bitcoin_worker import sign_step
                 from .bitcoin_trust import require_registry, bitcoin_for_graph
@@ -770,3 +917,4 @@ def main(argv):
         return 2
     finally:
         cache_state.reset(cache_token)
+        crypto.pin_required.reset(pin_token)

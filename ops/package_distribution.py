@@ -11,12 +11,20 @@ import json
 from pathlib import Path, PurePosixPath
 import subprocess
 import tarfile
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_GUEST = 'rust/zkspv/guest-integration/evidence/mainnet-transition.r0bf'
 TESTNET4_GUEST = 'rust/zkspv/testnet4-integration/evidence/testnet4-transition.r0bf'
 STATIC_PATCH = 'rust/zkspv/header-qualification/evidence/native-test-adjustment.patch'
 STATIC_LOCKS = {'ops/artifacts/zkspv/upstream-lock.json', 'ops/artifacts/zkspv/candidate-manifest.json'}
+TESTNET4_PUBLIC_CONFIGS = (
+    'config/bitcoin-policy-zk-testnet4.example.json',
+    'config/system-bootstrap-zk-testnet4.example.json',
+    'config/zkspv-testnet4-worker.example.json',
+)
+RPC_FIELDS = {'evm_rpc', 'evm_witness_rpc', 'bitcoin_rpc', 'btc_rpc', 'evm_rpc_url', 'rpc_url', 'rpc'}
+RPC_PLACEHOLDERS = {'REPLACE_WITH_EVM_RPC', 'REPLACE_EVM_RPC', 'REPLACE_WITH_BITCOIN_RPC'}
 EXCLUDED_PARTS = {'.git','.venv','__pycache__','.pytest_cache','node_modules','target','out','cache',
     'broadcast','.local-tools','.state','runtime','receipt-cache','attempts','verified','local-result'}
 NEW_SOURCES = ('signer-agent/signer_agent/bootstrap_custody.py',
@@ -27,6 +35,17 @@ NEW_SOURCES = ('signer-agent/signer_agent/bootstrap_custody.py',
     'config/bitcoin-custody.example.json','docs/BITCOIN_CUSTODY_TRANSFER.md',
     'signer-agent/contracts/BitcoinCustodyTransfer.json',
     'signer-agent/signer_agent/bootstrap_tokens.py',
+    'signer-agent/signer_agent/bootstrap_formation.py',
+    'signer-agent/signer_agent/bootstrap_formation_signing.py',
+    'signer-agent/signer_agent/reservation_transfer_cli.py',
+    'signer-agent/signer_agent/reservation_ceremony.py',
+    'signer-agent/tests/test_reservation_transfer_cli.py',
+    'signer-agent/tests/test_bootstrap_formation_signing.py',
+    'web3/test/FederationReservationTerms.t.sol',
+    'web3/test/ConfederationReservationTransfer.t.sol',
+    'web3/contracts/src/federation/CustodianDAOConfigValidator.sol',
+    'tests/e2e/test_factory_reservation_transfer.py',
+    'tests/e2e/test_reservation_ceremony.py',
     'signer-agent/tests/test_bootstrap_tokens.py','config/token-metadata.example.json',
     'tests/e2e/test_bootstrap_tokens.py','ops/package_distribution.py','ops/zkspv/participant_build.py','docs/DISTRIBUTION.md',
     'signer-agent/signer_agent/zk_local_proofs.py','tests/ops/test_package_distribution.py',
@@ -46,6 +65,7 @@ NEW_SOURCES = ('signer-agent/signer_agent/bootstrap_custody.py',
     'rust/zkspv/vendor/risc0-ethereum-3.1.0/contracts/src/groth16/RiscZeroGroth16Verifier.sol',
     'signer-agent/contracts/ULRConfederationTreasuryLegacy.json',
     'signer-agent/contracts/ULRConfederationTreasuryV1.json',
+    'signer-agent/contracts/ULRConfederationTreasuryV2.json',
     'signer-agent/contracts/ULRCustodianSnapshotsLegacy.json',
     'signer-agent/tests/test_zk_linux_port.py',
     'signer-agent/tests/test_signing_target_substitution.py',
@@ -103,12 +123,67 @@ NEW_SOURCES += (
     'web3/test/ConfederationDAOIncome.t.sol')
 NEW_SOURCES += ('docs/RECOVERY.md',)
 NEW_SOURCES += (
+    'docs/BITCOIN_WITHDRAWAL_RECOVERY.md',
+    'signer-agent/signer_agent/bitcoin_recovery_cli.py',
+    'signer-agent/signer_agent/bitcoin_recovery_policy.py',
+    'signer-agent/signer_agent/bitcoin_successor_ceremony.py',
+    'signer-agent/tests/test_bitcoin_recovery_policy.py',
+    'signer-agent/tests/test_bitcoin_recovery_signer.py',
+    'signer-agent/tests/test_crypto_integrity.py',
+    'signer-agent/signer_agent/spv_history.py',
+    'signer-agent/signer_agent/nonce_anchor.py',
+    'signer-agent/tests/test_nonce_anchor.py',
+    'tests/e2e/test_bitcoin_cltv_wallet.py',
+    'tests/e2e/test_bitcoin_recovery_bootstrap.py',
+    'tests/e2e/test_bitcoin_successor_ceremony.py',
+    'tests/e2e/test_bitcoin_t02_relay.py',
+    'frost-crypto/src/bitcoin_recovery.rs',
+    'web3/contracts/src/federation/BitcoinWithdrawalRecovery.sol',
+    'web3/contracts/src/federation/BitcoinWithdrawalRecoveryFactory.sol',
+    'web3/contracts/src/federation/BitcoinWithdrawalFeeVerifier.sol',
+    'web3/test/BitcoinWithdrawalRecoveryFixture.sol',
+    'web3/test/BitcoinWithdrawalRecovery.t.sol',
+    'rust/zkspv/state-adapter/recovery-test/BitcoinWithdrawalRecovery.t.sol',
+)
+NEW_SOURCES += (
+    'ops/check_bitcoin_custody_spv_pins.py',
+    'rust/zkspv/state-adapter/test/BitcoinCustodyNetwork.t.sol',
+    'signer-agent/contracts/BitcoinMintAdmissionPreviousBuild.json',
+    'signer-agent/contracts/BitcoinMintAdmissionRetirementV1.json',
+    'signer-agent/contracts/ConfederationBitcoinReservePreviousBuild.json',
+    'signer-agent/contracts/MiningPoolV1PreviousBuild.json',
+    'signer-agent/contracts/ConfederationBitcoinReserveCustodyLegacy2630366.json',
+    'signer-agent/contracts/ConfederationDAOIncomeExitLegacy2630366.json',
+    'signer-agent/contracts/ConfederationDAOStakeExitLegacy2630366.json',
+    'signer-agent/contracts/ConfederationFactoryULRLegacy2630366.json',
+    'signer-agent/contracts/ConfederationPoolV2CustodyLegacy2630366.json',
+    'signer-agent/contracts/ConfederationPoolV2DeployerCustodyLegacy2630366.json',
+    'signer-agent/contracts/ConfederationShareV2ExitLegacy2630366.json',
+    'signer-agent/contracts/CustodianDAOTokenExitLegacy2630366.json',
+    'signer-agent/contracts/CustodianValidatorExitLegacy2630366.json',
+    'signer-agent/contracts/DKGAuthorizationExitLegacy2630366.json',
+    'signer-agent/contracts/DKGCoordinatorExitLegacy2630366.json',
+    'signer-agent/contracts/DKGOnchainBoardExitLegacy2630366.json',
+    'signer-agent/contracts/FROSTAuthorizationDeployerExitLegacy2630366.json',
+    'signer-agent/contracts/FROSTCoordinatorExitLegacy2630366.json',
+    'signer-agent/contracts/FROSTCustodianDeployerExitLegacy2630366.json',
+    'signer-agent/contracts/FROSTVerifierExitLegacy2630366.json',
+    'signer-agent/contracts/FederationFactoryExitLegacy2630366.json',
     'signer-agent/contracts/FundedFeeSale.json',
+    'signer-agent/contracts/FundedFeeSaleExitLegacy2630366.json',
+    'signer-agent/contracts/SimpleMultiPoolExitLegacy2630366.json',
+    'signer-agent/contracts/ULRStakingPreviousBuild.json',
+    'signer-agent/signer_agent/custody_network.py',
+    'signer-agent/signer_agent/evm_rpc.py',
     'signer-agent/signer_agent/fee_sale_cli.py',
     'signer-agent/signer_agent/fee_sale_governance.py',
     'signer-agent/signer_agent/zk_peer_bundle.py',
+    'signer-agent/tests/test_custody_network.py',
+    'signer-agent/tests/test_dao_exit_resume.py',
+    'signer-agent/tests/test_evm_rpc.py',
     'signer-agent/tests/test_fee_sale_governance.py',
     'signer-agent/tests/test_zk_peer_bundle.py',
+    'web3/contracts/src/federation/BitcoinCustodyNetwork.sol',
     'web3/contracts/src/federation/FundedFeeSale.sol',
     'web3/test/FundedFeeSale.t.sol',
 )
@@ -144,12 +219,15 @@ def reason(name):
 
 
 def public_content(name,data):
-    """Do not let ready proof bytes leak through a renamed JSON fixture."""
+    """Reject proof payloads and private endpoints in public configuration."""
     if PurePosixPath(name).suffix!='.json':return
     value=json.loads(data)
     def visit(item):
         if isinstance(item,dict):
             for key,child in item.items():
+                if name.startswith('config/') and key.lower() in RPC_FIELDS and isinstance(child,str):
+                    if child not in RPC_PLACEHOLDERS and not _public_rpc_example(child):
+                        raise ValueError('PRIVATE_OR_PROOF_CONTENT:'+name)
                 if key=='private_key' or key in ('receipt_bytes','proof_bytes','journal_bytes') and not isinstance(child,int):
                     raise ValueError('PRIVATE_OR_PROOF_CONTENT:'+name)
                 if key in ('pi_a','pi_b','pi_c') or key in ('seal','receipt','proof') and isinstance(child,(list,dict)) and child:
@@ -163,15 +241,29 @@ def public_content(name,data):
     visit(value)
 
 
+def _public_rpc_example(value):
+    try:
+        url = urlsplit(value)
+        return (
+            url.scheme in ('http', 'https') and url.hostname in ('localhost', '127.0.0.1', '::1')
+            and url.port is not None and 0 < url.port <= 65535 and url.username is None
+            and url.password is None and not url.query and not url.fragment
+            and url.path in ('', '/', '/wallet/funding')
+        )
+    except ValueError:
+        return False
+
+
 def inventory(root,extra=()):
     names=set(subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('\0'))-{''}
     names.update(extra)
     names.update(name for name in NEW_SOURCES if (root/name).is_file())
+    names.update(name for name in TESTNET4_PUBLIC_CONFIGS if (root/name).is_file())
     for folder in ('rust/zkspv/testnet4-integration','rust/zkspv/testnet4-worker-host'):
         names.update(str(p.relative_to(root)) for p in (root/folder).rglob('*') if p.is_file())
     for pattern in ('ops/zkspv/testnet4_*.py','signer-agent/signer_agent/zk_profiles.py',
                     'signer-agent/tests/test_zk_testnet4.py','tests/e2e/test_zk_testnet4_e2e.py',
-                    'tests/ops/test_testnet4*.py','config/*testnet4*.json','docs/ZK_TESTNET4_SEPOLIA.md',
+                    'tests/ops/test_testnet4*.py','docs/ZK_TESTNET4_SEPOLIA.md',
                     'rust/zkspv/state-adapter/contracts/*Testnet4*.sol',
                     'rust/zkspv/state-adapter/fixtures/testnet4-state-v2.json',
                     'rust/zkspv/state-adapter/test/Testnet4State.t.sol',

@@ -57,6 +57,7 @@ contract FundedFeeSale is ReentrancyGuard {
     error InvalidTransfer();
     error InvalidClaim();
     error InsufficientInventory();
+    error EscrowShortfall(uint256 held, uint256 escrowed);
 
     event SellBpsSet(uint256 previousBps, uint256 newBps);
     event FeeRecorded(uint256 amount);
@@ -172,9 +173,9 @@ contract FundedFeeSale is ReentrancyGuard {
         returns (uint256 id)
     {
         if (feeAmount == 0 || stableAmount == 0 || deadline <= block.timestamp) revert InvalidBid();
-        uint256 beforeSale = stablecoin.balanceOf(address(this));
+        uint256 beforeSale = _coveredEscrow();
         uint256 beforeBuyer = stablecoin.balanceOf(msg.sender);
-        if (beforeSale < stableEscrow || beforeBuyer < stableAmount) revert InvalidTransfer();
+        if (beforeBuyer < stableAmount) revert InvalidTransfer();
         stablecoin.safeTransferFrom(msg.sender, address(this), stableAmount);
         if (
             stablecoin.balanceOf(address(this)) != beforeSale + stableAmount
@@ -223,9 +224,14 @@ contract FundedFeeSale is ReentrancyGuard {
     }
 
     function _closeBid(uint256 id, uint256 amount) private {
-        if (stablecoin.balanceOf(address(this)) < stableEscrow) revert InvalidTransfer();
+        _coveredEscrow();
         stableEscrow -= amount;
         delete bids[id];
+    }
+
+    function _coveredEscrow() private view returns (uint256 held) {
+        held = stablecoin.balanceOf(address(this));
+        if (held < stableEscrow) revert EscrowShortfall(held, stableEscrow);
     }
 
     function _authorize(bytes32 op, bytes32 expected) private {

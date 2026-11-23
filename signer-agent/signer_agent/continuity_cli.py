@@ -50,9 +50,9 @@ def main(argv=None):
         from .onboarding import read_private
         if source is not None:w3=source.w3;identity=source.c['identity_file'];confirmations=source.c['evm_confirmations']
         else:
-            from web3 import Web3
+            from .evm_rpc import evm_web3
             if not a.evm_rpc or a.action=='pin-root' and not a.identity_file:raise ValueError('FAMILY_ROOT_POLICY')
-            w3=Web3(Web3.HTTPProvider(a.evm_rpc,request_kwargs={'timeout':30}));identity=a.identity_file;confirmations=a.evm_confirmations
+            w3=evm_web3(a.evm_rpc, timeout=30);identity=a.identity_file;confirmations=a.evm_confirmations
         from .evm_network import read_block
         b=read_block(w3,int(confirmations))
         if a.action=='pin-root':result=install(w3,Catalog(identity_file=identity),json.loads(read_private(a.root_policy)),b.number)

@@ -23,12 +23,22 @@ contract CustodianMonetaryEpochTest is ConfederationEpochFixture {
         a = new address[](2); a[0] = address(0x200); a[1] = address(0x201);
     }
     function sources() private pure returns(string[] memory s) { s = new string[](1); s[0] = "source"; }
+    function _reserve(bytes32 session, string memory id, IConfederationFactory.CustodianMember[] memory custodians)
+        private
+    {
+        factory.reserveConfederationId(
+            session,
+            id,
+            keccak256(abi.encode(uint8(2), sources(), custodians, uint256(2), uint256(2))),
+            keccak256(abi.encode("Custodian shares", "CUST"))
+        );
+    }
     function testSeparateCustodianDKGContainsNoFederationShare() public {
         _completeCeremony(EPOCH, roster(), 2, keccak256("EVM_AUTH"), GX);
         vm.prank(address(0x200));
         vm.expectRevert(ConfederationFactory.InvalidConfederationReservation.selector);
         factory.adoptCustodianConfederationDKG(EPOCH, sources(), _custodians(2), 2, 2, "custodian-only");
-        factory.reserveConfederationId(EPOCH, "custodian-only");
+        _reserve(EPOCH, "custodian-only", _custodians(2));
         bytes32 other = keccak256("other custody epoch");
         IConfederationFactory.CustodianMember[] memory otherCustodians = _custodians(2);
         otherCustodians[0].signerAddress = OUTSIDER;
@@ -48,19 +58,19 @@ contract CustodianMonetaryEpochTest is ConfederationEpochFixture {
         assertEq(factory.getConfederation("custodian-only").minCustodians, 2);
     }
     function testRepresentativeCannotBeAddedToTheCustodianEpoch() public {
-        factory.reserveConfederationId(EPOCH, "bad");
         IConfederationFactory.CustodianMember[] memory custodians = _custodians(2);
         custodians[0].signerAddress = REPRESENTATIVE;
+        _reserve(EPOCH, "bad", custodians);
         vm.expectRevert("founder is not custodian");
         factory.adoptCustodianConfederationDKG(EPOCH, sources(), custodians, 2, 2, "bad");
     }
     function testCustodyAdoptionRejectsLegacyRosterAndWrongPurpose() public {
-        factory.reserveConfederationId(EPOCH, "bad");
+        _reserve(EPOCH, "bad", _custodians(2));
         _completeCeremony(EPOCH, _roster(1,2), 3, keccak256("EVM_AUTH"), GX);
         vm.prank(REPRESENTATIVE); vm.expectRevert("DKG roster");
         factory.adoptCustodianConfederationDKG(EPOCH, sources(), _custodians(2), 2, 2, "bad");
         _completeCeremony(bytes32(uint256(112)), roster(), 2, keccak256("BTC_SPEND"), GX);
-        factory.reserveConfederationId(bytes32(uint256(112)), "bad2");
+        _reserve(bytes32(uint256(112)), "bad2", _custodians(2));
         vm.prank(REPRESENTATIVE); vm.expectRevert("DKG roster");
         factory.adoptCustodianConfederationDKG(bytes32(uint256(112)), sources(), _custodians(2), 2, 2, "bad2");
     }

@@ -8,6 +8,7 @@ import secrets
 from eth_abi import encode
 from eth_account import Account
 from web3 import Web3
+from .evm_rpc import evm_web3
 from . import crypto
 from .address_watch import Store, digest, trusted_remote_filters
 from .bootstrap import Bootstrap, artifact
@@ -80,7 +81,7 @@ class Client:
     def seal_packet(self,*args):return seal(*args)
     def open_message(self,*args):return open_packet(*args)
     def __init__(self,c,w3=None):
-        self.c=c;self.w3=w3 or Web3(Web3.HTTPProvider(c["evm_rpc"],request_kwargs={"timeout":30}))
+        self.c=c;self.w3=w3 or evm_web3(c["evm_rpc"], timeout=30)
         self.account=Account.from_key(json.loads(read_private(c["identity_file"]))["private_key"])
         b,pool,ctx,board,domain=self.context()
         r=ctx["registry"]

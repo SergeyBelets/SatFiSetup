@@ -130,6 +130,83 @@ def test_mainnet_evm_approval_rechecks_core_and_utxos_before_returning_verified(
     assert seen == ["enrolled-options", "local-core", "readiness", "utxo-review"]
 
 
+@pytest.mark.parametrize("condition", ["reserved", "signing", "lost-reservation", "spent-intent", "fee-reserve"])
+def test_reserved_root_cancellation_uses_exact_typed_operation_without_core(
+        bitcoin_reserve_intent, graph, monkeypatch, condition):
+    from signer_agent.bitcoin_onchain_plan import onchain_plan_hash
+    from signer_agent.bitcoin_worker import outpoint_hash
+    from signer_agent.bootstrap import Bootstrap
+    from signer_agent.participant_cli import _review_bitcoin_approval
+
+    item = bitcoin_reserve_intent
+    configure_mainnet_review(item, graph, monkeypatch)
+    plan = item.intent["bitcoin_plan"]
+    batch = bytes.fromhex(plan["batch_id"])
+    batch_state = 2 if condition == "signing" else 1
+    methods = graph.methods["batches"]
+    methods.update(
+        batches=[onchain_plan_hash(graph.manifest, plan), bytes.fromhex(plan["wallet_result"]),
+                 int(plan["deadline"]), batch_state],
+        batchState=batch_state,
+        getInputs=[outpoint_hash(row["outpoint"]) for row in plan["inputs"]],
+        reservationRoot=batch, replacementOf=bytes(32), versionCount=1, nonce=7,
+        reservations=bytes(32) if condition == "lost-reservation" else batch)
+    if condition == "fee-reserve":
+        methods["feeReserve"] = graph.names["escrow"]
+    authorization = Web3.keccak(text="cancel(bytes32,bytes32)")[:4]
+    params = Web3.keccak(encode(["bytes32"], [batch]))
+    expected = Web3.keccak(encode(["address", "bytes4", "bytes32", "uint256"],
+                                  [graph.names["batches"], authorization, params, 7]))
+    expected = expected.hex()
+
+    def operation(target, selector, encoded, nonce):
+        assert target == graph.names["batches"] and selector == authorization and encoded == params and nonce == 7
+        return bytes.fromhex(expected)
+
+    graph.methods["authorization"]["hashOperation"] = operation
+    item.intent.update(hash_method=payment.CANCEL_HELPER, hash_args=Bootstrap.wire([batch]),
+        operation_hash=expected if condition != "spent-intent" else "00" * 32, cancel_deadline="2000000100")
+    monkeypatch.setattr(payment, "bitcoin_for_graph", lambda *_: pytest.fail("Core needed for Reserved cancel"))
+    args = SimpleNamespace(package=None, board="known-original-board", bitcoin_rpc=None, bitcoin_cookie=None)
+    if condition == "reserved":
+        declared, recheck = _review_bitcoin_approval(
+            item.intent, item.manifest, item.key, item.registry, None, args, enrolled=True)
+        assert declared == expected
+        methods["batchState"] = 2
+        with pytest.raises(ValueError, match="BTC_CANCEL_REQUIRES_RESERVED_ROOT"):
+            recheck()
+    else:
+        with pytest.raises(ValueError, match="BATCH_APPROVAL_MISMATCH|BTC_CANCEL_|BTC_PUBLIC_PLAN_OPERATION_MISMATCH"):
+            _review_bitcoin_approval(item.intent, item.manifest, item.key, item.registry, None, args, enrolled=True)
+    assert item.checked_terms == []
+
+
+def test_cancel_rejects_file_intent_even_with_plan(bitcoin_reserve_intent):
+    from signer_agent.participant_cli import _review_bitcoin_approval
+
+    item = bitcoin_reserve_intent
+    item.intent["hash_method"] = payment.CANCEL_HELPER
+    with pytest.raises(ValueError, match="BTC_CANCEL_REQUIRES_BOARD_INTENT"):
+        _review_bitcoin_approval(item.intent, item.manifest, item.key, item.registry, None,
+                                 SimpleNamespace(package="local.json", board=None), enrolled=False)
+
+
+def test_payout_discovery_ignores_cancellation_intents(bitcoin_reserve_intent, graph, monkeypatch):
+    from signer_agent import bitcoin_onchain, board_intents, onchain_transport
+    from signer_agent.operations import canonical
+
+    item = bitcoin_reserve_intent
+    cancelled = dict(item.intent, hash_method=payment.CANCEL_HELPER, session="2")
+    board = SimpleNamespace(functions=SimpleNamespace(latestSession=lambda: call(2),
+        intents=lambda session: call(canonical(cancelled).encode())))
+    monkeypatch.setattr(onchain_transport, "board_at", lambda *_: board)
+    monkeypatch.setattr(board_intents, "intent_rows", lambda *_: [dict(session="1", intent=item.intent)])
+    args = SimpleNamespace(board="known-original-board", session=None, batch=None, signing_board=None, operation=None)
+    assert bitcoin_onchain.pending(args, item.registry)["session"] == "1"
+    args.operation = "cancel"
+    assert bitcoin_onchain.pending(args, item.registry)["session"] == "2"
+
+
 @pytest.fixture
 def settlement(monkeypatch, tmp_path):
     graph = mainnet_graph()

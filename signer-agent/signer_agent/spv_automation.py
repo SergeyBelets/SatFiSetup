@@ -126,8 +126,12 @@ def payer_tick(transport,*,routes=None,recover_only=False,before_submit=None):
     if not p.get('enabled'):return dict(status='DISABLED')
     client=GasTreasuryClient(transport.w3,p['binding'])
     # Stable private journal is per payer identity, not a resettable transport directory.
-    rows=transport.store.incoming('STATUS');processed=0
     check_block,_,_=transport.context()
+    if transport.c.get("history_max_bytes") is not None:
+        anchor=transport.store.get("reply-history-anchor")
+        if not anchor or transport.store.get("reply-history-recheck") or transport.anchor_reorg(anchor,check_block):
+            raise ValueError("SPV_REPLY_HISTORY_RECHECK_REQUIRED")
+    rows=transport.store.incoming('STATUS');processed=0
     for message_id,record,state in rows:
         body=record.get('body',{})
         if routes is not None and record.get('header',{}).get('route') not in routes:continue

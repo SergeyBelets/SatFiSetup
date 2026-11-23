@@ -81,7 +81,8 @@ def _receipt(w3, transaction, block):
     return receipt
 
 
-def prove_creation(w3, address, kind, args, latest, *, birth_hint=None):
+def prove_creation(w3, address, kind, args, latest, *, birth_hint=None, legacy_custody=False,
+                   legacy_ulr_factory=False, legacy_dao_exit=False, previous_build=False):
     """Prove the constructor ran; args=None accepts any canonical constructor arguments.
 
     Callers still validate the deployment's business configuration and bindings.
@@ -90,17 +91,28 @@ def prove_creation(w3, address, kind, args, latest, *, birth_hint=None):
     Direct CREATE is established from its canonical receipt and exact initcode;
     replaying that evidence does not require historical Ethereum state.
     """
-    from .bitcoin_trust import checked_runtime, runtime_artifact
+    from .bitcoin_trust import LEGACY_CUSTODY_ARTIFACTS, LEGACY_DAO_EXIT_REFERENCES, checked_runtime, runtime_artifact
 
     address = Web3.to_checksum_address(address)
     hint = None if birth_hint is None else int(birth_hint)
     if hint is not None and not 1 <= hint <= latest:
         raise ValueError("BTC_CREATION_BLOCK_MISMATCH")
-    if kind in ("ULRConfederationTreasury", "ULRCustodianSnapshots"):
+    if legacy_custody and kind in LEGACY_CUSTODY_ARTIFACTS:
+        runtime_hash, compiled = runtime_artifact(w3, address, kind, latest, legacy_custody=True,
+                                                 previous_build=previous_build)
+    elif legacy_ulr_factory and kind == "ConfederationFactory":
+        runtime_hash, compiled = runtime_artifact(w3, address, kind, latest, legacy_ulr_factory=True)
+    elif legacy_dao_exit and kind in LEGACY_DAO_EXIT_REFERENCES:
+        runtime_hash, compiled = runtime_artifact(w3, address, kind, latest, legacy_dao_exit=True)
+    elif previous_build:
+        runtime_hash, compiled = runtime_artifact(w3, address, kind, latest, previous_build=True)
+    elif kind in ("ULRConfederationTreasury", "ULRCustodianSnapshots"):
         runtime_hash, compiled = runtime_artifact(w3, address, kind, latest)
     else:
         runtime_hash = checked_runtime(w3, address, kind, latest)
         compiled = artifact(kind)
+    if "bytecode" not in compiled:
+        raise ValueError("BTC_CANONICAL_CREATION_NOT_FOUND")
     cache_key = (
         address,
         kind,
@@ -298,8 +310,9 @@ def prove_creation(w3, address, kind, args, latest, *, birth_hint=None):
                     # Unrelated contracts may emit incompatible event payloads.
                     continue
                 try:
-                    runtime_hash = checked_runtime(w3, leaf_address, leaf_kind, number)
-                    leaf = prove_creation(w3, leaf_address, leaf_kind, [], number)
+                    options = {"legacy_dao_exit": True} if legacy_dao_exit else {}
+                    leaf = prove_creation(w3, leaf_address, leaf_kind, [], number, **options)
+                    runtime_hash = leaf["runtime_hash"]
                 except ValueError as error:
                     # Keep looking for verified evidence, but retain a concrete
                     # verification failure if no canonical candidate succeeds.

@@ -39,6 +39,34 @@ def test_inventory_never_reads_excluded_receipt_or_secret(tmp_path,monkeypatch):
     assert set(files)=={'code.py'} and excluded==[{'path':'receipt.bin','reason':'binary_or_proof'}]
 
 
+def test_testnet4_inventory_only_auto_selects_exact_public_config_names(tmp_path, monkeypatch):
+    local = 'config/testnet4-operator.json'
+    public = 'config/zkspv-testnet4-worker.example.json'
+    (tmp_path / 'config').mkdir()
+    (tmp_path / local).write_text('{"evm_rpc":"https://rpc.example.invalid/private"}')
+    (tmp_path / public).write_text('{"evm_rpc":"REPLACE_WITH_EVM_RPC","bitcoin_rpc":"http://127.0.0.1:48332"}')
+    monkeypatch.setattr(d.subprocess, 'check_output', lambda *a, **k: b'')
+
+    files, excluded = d.inventory(tmp_path)
+    assert set(files) == {public}
+    assert excluded == []
+
+    files, excluded = d.inventory(tmp_path, extra=[local])
+    assert set(files) == {public}
+    assert excluded == [{'path': local, 'reason': 'private_or_proof_payload'}]
+
+
+@pytest.mark.parametrize('endpoint', [
+    'https://rpc.example.invalid',
+    'http://user:fixture@localhost:48332',
+    'http://127.0.0.1:48332/?access=fixture',
+])
+def test_even_an_allowlisted_example_cannot_ship_a_private_rpc(endpoint):
+    with pytest.raises(ValueError, match='PRIVATE_OR_PROOF_CONTENT'):
+        d.public_content('config/zkspv-testnet4-worker.example.json',
+                         json.dumps({'rpc_sources': [{'bitcoin_rpc': endpoint}]}).encode())
+
+
 def test_remote_launch_module_is_delivered_before_it_is_tracked(tmp_path, monkeypatch):
     paths = ('signer-agent/signer_agent/launch_configurator.py', 'signer-agent/signer_agent/launch_rpc.py')
     for name in paths:

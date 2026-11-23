@@ -8,18 +8,22 @@ from .zk_archive import ArchiveStore
 from .zk_worker import state_wire
 
 
+def backup_file_limit(archive):
+    return int(archive.get("max_backup_bytes", archive["max_bytes"]))
+
+
 def backup(worker,path):
     with worker.exclusive():
         block,state,_,_,_=worker.context(allow_halt=True)
         # Backup may retain historical branches; the live target must be present.
         current=state_wire(state.functions.getState().call(block_identifier=block.number));worker.stable(block)
         worker.archive_ref(current)
-        return worker.archive_store().backup(path)
+        return worker.archive_store().backup(path,max_file_bytes=backup_file_limit(worker.c["archive"]))
 
 
 def restore(worker,path):
     path=Path(path);a=worker.c['archive']
-    if path.is_symlink() or not path.is_file() or path.stat().st_size>int(a['max_bytes']):raise ValueError('ZK_ARCHIVE_BACKUP_LIMIT')
+    if path.is_symlink() or not path.is_file() or path.stat().st_size>backup_file_limit(a):raise ValueError('ZK_ARCHIVE_BACKUP_LIMIT')
     with worker.exclusive():
         block,state,_,_,_=worker.context(allow_halt=True)
         expected=state_wire(state.functions.getState().call(block_identifier=block.number));worker.stable(block)

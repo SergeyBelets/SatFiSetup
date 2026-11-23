@@ -23,6 +23,9 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 GIB = 1024**3
 LAYERS = ("python", "contracts", "evm", "zk-cached", "bitcoin", "zk-testnet4", "zk-fresh")
+CORE_TEST_MODES = ("bitcoin", "t02-relay")
+T02_RELAY_TIMEOUT_SECONDS = 1800
+LAYER_TIMEOUT_SECONDS = 14400
 SIGNER_TESTS = ("test_dkg_protocol.py", "test_signing_service.py", "test_secure_state.py",
     "test_security_crypto_review.py", "test_onboarding.py", "test_onboarding_policy_v3.py",
     "test_bootstrap_ulr.py", "test_bootstrap_system.py", "test_bootstrap_custody.py", "test_ulr_treasury.py", "test_family_registry_policy.py",
@@ -30,7 +33,7 @@ SIGNER_TESTS = ("test_dkg_protocol.py", "test_signing_service.py", "test_secure_
 TOOLS = {
     "anvil": ("SATOHSI_ANVIL", "ops/.local-tools/acceptance-20261102/anvil"),
     "forge": ("SATOHSI_FORGE", "ops/.local-tools/acceptance-20261102/forge"),
-    "solc": ("SATOHSI_SOLC", "ops/.local-tools/acceptance-20261102/solc"),
+    "solc": ("SATOHSI_SOLC", None),
     "bitcoind": ("SATOHSI_BITCOIND", "ops/.local-tools/bitcoin-core-30.3/bin/bitcoind"),
     "crypto": ("SATOHSI_CRYPTO_BIN", "frost-crypto/target/debug/satohsi-frost-crypto"),
     "zk-testnet4-host": ("SATOHSI_ZK_TESTNET4_WORKER_HOST", "ops/.local-tools/zk-worker/satoshifi-testnet4-zk-worker-host"),
@@ -41,12 +44,14 @@ CACHED_ZK_EVIDENCE = "rust/zkspv/state-proof-integration/evidence/local-state"
 REQUIRED = {"python": ("crypto", "zk-host"), "contracts": ("forge", "solc"),
     "evm": ("anvil", "crypto"), "zk-cached": ("anvil", "crypto", "zk-host"),
     "zk-testnet4": ("anvil", "crypto", "zk-testnet4-host"),
-    "bitcoin": ("anvil", "bitcoind", "crypto"), "zk-fresh": ("zk-host",), "signer": ("crypto",)}
+    **dict.fromkeys(CORE_TEST_MODES, ("anvil", "bitcoind", "crypto")),
+    "zk-fresh": ("zk-host",), "signer": ("crypto",)}
 SCOPE = {"python": "SDK unit fixtures and supported deployment profile matrix",
     "contracts": "all discoverable Solidity tests; qualified derivation only in test fixtures",
     "evm": "full relay/regtest graph create/reuse with independent native FROST processes and ULR owner CLI",
     "zk-cached": "historical mainnet receipt refusal by the active verifier on local EVM; optional locally generated 3.1 proof",
     "bitcoin": "isolated real Core regtest, native FROST and EVM lifecycle suite",
+    "t02-relay": "fresh relay bootstrap, CLTV recovery, wallet rotation and confirmed successor payout on Core regtest",
     "zk-fresh": "operator-bound live MAINNET_CANDIDATE contour; fresh proof and observations",
     "zk-testnet4": "testnet4 historical native worker and real verifier refusal on local Sepolia chain ID; no fresh proof",
     "signer": "portable signer/ULR/bootstrap SDK subset; no local prover required"}
@@ -66,7 +71,7 @@ def tool(name):
     path = explicit or shutil.which(executable) or (str(ROOT / fallback) if fallback else None)
     if not explicit and name=='solc' and (not path or not Path(path).is_file()):
         svm = Path(os.environ.get('SVM_HOME',str(Path.home()/'.svm')))
-        path = str(svm/'0.8.30/solc-0.8.30')
+        path = str(svm/'0.8.39/solc-0.8.39')
     return str(Path(path).resolve()) if path and Path(path).is_file() and os.access(path, os.X_OK) else None
 
 
@@ -114,7 +119,8 @@ def preflight(modes, directory, suite_plan=None):
     free = shutil.disk_usage(directory).free
     # Explicit harness resource floors, not a guarantee of proof capacity.
     minimum = {"python": GIB//4, "contracts": 2*GIB, "evm": GIB//2,
-        "zk-cached": GIB//2, "bitcoin": GIB, "zk-testnet4": GIB//2, "zk-fresh": 8*GIB, "signer": GIB//4}
+        "zk-cached": GIB//2, "bitcoin": GIB, "t02-relay": GIB//8,
+        "zk-testnet4": GIB//2, "zk-fresh": 8*GIB, "signer": GIB//4}
     deps = [n for n in ("pytest", "web3", "eth_tester", "cryptography") if importlib.util.find_spec(n) is None]
     rows = []
     for mode in modes:
@@ -125,9 +131,10 @@ def preflight(modes, directory, suite_plan=None):
         if mode in ('zk-cached','zk-fresh') and not platform['local_prover_supported']:
             missing.append('platform:local prover requires macOS arm64 or Linux/WSL2 x86-64')
         if mode != "contracts":
-            missing += ["python:"+n for n in deps if n != "eth_tester" or not mode.startswith("zk-")]
+            needs_eth_tester = mode != "t02-relay" and not mode.startswith("zk-")
+            missing += ["python:"+n for n in deps if n != "eth_tester" or needs_eth_tester]
         if free < minimum[mode]: missing.append("disk:"+str(minimum[mode]))
-        if mode in ("evm", "bitcoin") and not Path(sys.executable).with_name("frost-signer").is_file():
+        if mode in ("evm", *CORE_TEST_MODES) and not Path(sys.executable).with_name("frost-signer").is_file():
             missing.append("installed:frost-signer (pip install --no-deps -e ./signer-agent)")
         if mode != "contracts":
             artifacts = [ROOT / "web3/contracts/out/ULRStaking.sol/ULRStaking.json"]
@@ -146,7 +153,7 @@ def preflight(modes, directory, suite_plan=None):
             if not supplied:
                 files += ("groth16/receipt.bin", "state.input")
             missing += ["receipt:"+f for f in files if not (evidence / f).is_file()]
-        if mode == "bitcoin" and tools["bitcoind"]:
+        if mode in CORE_TEST_MODES and tools["bitcoind"]:
             v = subprocess.run([tools["bitcoind"], "-version", "-nosettings"], capture_output=True, text=True, timeout=10)
             if v.returncode or "v30.3" not in v.stdout: missing.append("Core:30.3 required")
         if mode == "zk-fresh":
@@ -232,9 +239,11 @@ def nodes(directory, env, bitcoin=False):
             for f in logs: f.close()
 
 
-def execute(mode, directory, environment, suite_plan=None):
+def execute(mode, directory, environment, suite_plan=None, timeout_seconds=None):
     env = dict(environment)
     scope = SCOPE[mode]
+    if timeout_seconds is None:
+        timeout_seconds = T02_RELAY_TIMEOUT_SECONDS if mode == "t02-relay" else LAYER_TIMEOUT_SECONDS
     junit = directory / "pytest.xml"
     base = [sys.executable, "-m", "pytest", "-x", "-q", "-o", "junit_family=legacy",
         "--basetemp="+str(directory/"pytest"), "--junitxml="+str(junit)]
@@ -252,34 +261,48 @@ def execute(mode, directory, environment, suite_plan=None):
     elif mode == "bitcoin":
         excluded = ("test_zk_testnet4_e2e.py", "test_system_bootstrap.py", "test_zk_bootstrap_e2e.py", "test_zk_worker_e2e.py")
         command = base + [str(p.relative_to(ROOT)) for p in sorted((ROOT/"tests/e2e").glob("test_*.py")) if p.name not in excluded]
+    elif mode == "t02-relay": command = base + ["tests/e2e/test_bitcoin_t02_relay.py"]
     elif mode == "contracts": command = [sys.executable, "-m", "ops.system_modes", "_contracts", "--output", str(directory)]
     else:
         raise ValueError("Fresh proving uses the operator's durable contour; use its explicit run command after preflight")
     def run():
         with (directory/"command.log").open("w") as output:
-            result = subprocess.run(command, cwd=ROOT, env=env, stdout=output, stderr=subprocess.STDOUT, timeout=14400)
+            result = subprocess.run(command, cwd=ROOT, env=env, stdout=output, stderr=subprocess.STDOUT, timeout=timeout_seconds)
         if result.returncode: raise RuntimeError("COMMAND_FAILED: "+str(result.returncode)+"; see command.log")
-    if mode in ("evm", "bitcoin"):
-        with nodes(directory, env, bitcoin=mode=="bitcoin"):
-            if mode == "bitcoin": prepare_gas_tests(directory, env)
-            run()
-    else: run()
+    try:
+        if mode in ("evm", *CORE_TEST_MODES):
+            with nodes(directory, env, bitcoin=mode in CORE_TEST_MODES):
+                if mode == "bitcoin": prepare_gas_tests(directory, env)
+                run()
+        else: run()
+    except subprocess.TimeoutExpired:
+        return dict(status="FAILED", error="COMMAND_TIMED_OUT; see command.log", timeout_seconds=timeout_seconds)
     if mode == "contracts":
         report = json.loads((directory/"solidity.json").read_text())
         if report.get("status") != "passed" or not report.get("passed") or report.get("skipped"):
             raise RuntimeError("SOLIDITY_INCOMPLETE")
         count = report["passed"]
     else: count = check_junit(junit)
-    return dict(status="PASSED", tests=count, command=command, scope=scope)
+    result = dict(status="PASSED", tests=count, command=command, scope=scope)
+    if mode == "t02-relay":
+        result["timeout_seconds"] = timeout_seconds
+    return result
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("preflight", "run", "_contracts"))
-    parser.add_argument("--mode", choices=(*LAYERS, "signer", "relay", "local", "all"), default="all")
+    parser.add_argument("--mode", choices=(*LAYERS, "signer", "relay", "t02-relay", "local", "all"), default="all")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--suite-plan", type=Path)
+    parser.add_argument("--timeout-seconds", type=int,
+        help=f"Override the t02-relay pytest timeout (default: {T02_RELAY_TIMEOUT_SECONDS} seconds)")
     args = parser.parse_args(argv)
+    if args.timeout_seconds is not None:
+        if args.action != "run" or args.mode != "t02-relay":
+            parser.error("--timeout-seconds is only supported by run --mode t02-relay")
+        if args.timeout_seconds < 1:
+            parser.error("--timeout-seconds must be a positive integer")
     if args.action == "_contracts":
         from ops.local_acceptance import run_solidity_suites
         run_solidity_suites(args.output / "solidity.json")
@@ -318,7 +341,7 @@ def main(argv=None):
                 if source_hashes() != initial: raise RuntimeError("SOURCE_CHANGED")
                 if any(s and sha(s["path"]) != s["sha256"] for s in report["tools"].values()): raise RuntimeError("TOOL_CHANGED")
                 print("RUN "+mode, flush=True)
-                result = execute(mode, directory/mode, environment, args.suite_plan)
+                result = execute(mode, directory/mode, environment, args.suite_plan, args.timeout_seconds)
                 if source_hashes() != initial: raise RuntimeError("SOURCE_CHANGED")
                 report["results"][mode] = result
             except (RuntimeError, OSError, subprocess.TimeoutExpired) as e:

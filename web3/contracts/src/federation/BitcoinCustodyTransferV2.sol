@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 import "./MiningPoolV1.sol";
 import "./ConfederationPoolV2.sol";
 import "./ConfederationBitcoinReserve.sol";
+import {BitcoinCustodyNetwork} from "./BitcoinCustodyNetwork.sol";
 
 /// @notice Burns the federation MP and proves its BTC transfer before issuing the confederation S.
 /// @dev Source graphs are immutable, pinned at deployment and on the same EVM chain.
@@ -31,13 +32,16 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
     ConfederationBitcoinReserve public immutable mining;
     ConfederationPoolV2 public immutable pool;
     bytes public destinationScript;
+    bytes32 public immutable bitcoinGenesis;
     Source[] private sources;
     mapping(uint256 => Transfer) public transfers;
+    mapping(uint256 => uint256) public quotedShares;
     uint256 public nextId;
     event Requested(uint256 indexed id, uint256 indexed source, address indexed owner,
         address recipient, uint256 amount, uint256 minShares, bytes32 requestKey);
     event Completed(uint256 indexed id, bytes32 indexed txid, uint32 vout, uint256 shares);
     event Cancelled(uint256 indexed id);
+    event IssuanceQuoted(uint256 indexed id, uint256 protocolFee, uint256 netShares);
 
     constructor(address mining_, address pool_, Source[] memory sources_) {
         mining = ConfederationBitcoinReserve(mining_);
@@ -45,9 +49,11 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
         require(address(pool.withdrawalEscrow()) == address(mining.escrow())
             && address(pool.frostMultisig()) == address(mining.authorization()), "transfer destination graph");
         destinationScript = mining.payoutScript();
+        bitcoinGenesis = BitcoinCustodyNetwork.genesis(address(mining.escrow().spv()));
         require(sources_.length <= 16, "transfer source limit");
         for (uint256 i; i < sources_.length; ++i) {
             _checkSource(sources_[i]);
+            BitcoinCustodyNetwork.requireMatch(address(BitcoinWithdrawalEscrow(sources_[i].escrow).spv()), bitcoinGenesis);
             for (uint256 j; j < i; ++j)
                 require(sources_[i].token != sources_[j].token, "duplicate transfer source");
             sources.push(sources_[i]);
@@ -102,6 +108,8 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
         Source memory s = sources[source];
         _checkSource(s);
         id = ++nextId;
+        uint256 net = mining.lockCustodyQuote(id, msg.sender, recipient, amount, minShares);
+        quotedShares[id] = net;
         transfers[id] = Transfer(msg.sender, recipient, source, amount, minShares, State.Waiting);
         IERC20 token = IERC20(s.token);
         uint256 beforeBalance = token.balanceOf(address(this));
@@ -112,11 +120,12 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
         token.forceApprove(s.escrow, 0);
         emit Requested(id, source, msg.sender, recipient, amount, minShares,
             BitcoinWithdrawalEscrow(s.escrow).requestKey(address(this), id));
+        emit IssuanceQuoted(id, amount - net, net);
     }
 
     function setMinimumShares(uint256 id, uint256 minimum) external {
         Transfer storage t = transfers[id];
-        require(t.owner == msg.sender && t.state == State.Waiting && minimum > 0 && minimum <= t.amount,
+        require(t.owner == msg.sender && t.state == State.Waiting && minimum > 0 && minimum <= quotedShares[id],
             "transfer owner/state");
         t.minShares = minimum;
     }
@@ -129,6 +138,7 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
         // Source escrow refuses refunds once signing may have begun, even on timeout.
         BitcoinWithdrawalEscrow(s.escrow).refund(BitcoinWithdrawalEscrow(s.escrow).requestKey(address(this), id));
         t.state = State.Cancelled;
+        mining.cancelCustodyQuote(id);
         IERC20(s.token).safeTransfer(t.owner, t.amount);
         emit Cancelled(id);
     }
@@ -166,18 +176,15 @@ contract BitcoinCustodyTransferV2 is ReentrancyGuard {
         bytes32 claim = keccak256(abi.encode(address(this), ids, paidBatch, txid, vout));
         address[] memory recipients = new address[](ids.length);
         uint256[] memory amounts = new uint256[](ids.length);
-        bool[] memory selfWraps = new bool[](ids.length);
         for (uint256 i; i < ids.length; ++i) {
             Transfer storage t = transfers[ids[i]];
             recipients[i] = t.recipient;
             amounts[i] = t.amount;
-            // Only the owner who opened this transfer may consume their wrap pass.
-            selfWraps[i] = t.owner == t.recipient;
         }
         uint256[] memory shares = mining.mintFromCustodyTransfer(raw, vout, claim, blockHash, siblings, index,
-            recipients, amounts, selfWraps);
+            ids, recipients, amounts);
         for (uint256 i; i < ids.length; ++i) {
-            require(shares[i] >= transfers[ids[i]].minShares, "transfer minimum shares");
+            require(shares[i] == quotedShares[ids[i]], "transfer quote mismatch");
             emit Completed(ids[i], txid, vout, shares[i]);
         }
     }

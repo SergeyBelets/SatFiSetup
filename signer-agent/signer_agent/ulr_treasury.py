@@ -30,6 +30,7 @@ MAX_INLINE_SNAPSHOT_BYTES = 16 * 1024
 MAX_SNAPSHOT_INTENT_BYTES = 4 * 1024 * 1024
 SNAPSHOT_METHOD = "getPublishDayOperationHash"
 ACTIVATE_TREASURY_METHOD = "getActivateTreasuryOperationHash"
+INACTIVE_RECOVERY_METHOD = "getRecoverInactiveOperationHash"
 SNAPSHOT_INTENT_HASH = "ulr_snapshot_intent_sha256"
 
 
@@ -90,22 +91,31 @@ def read(target, at, method, *args):
     return getattr(target.functions, method)(*args).call(block_identifier=at)
 
 
-def proven(w3, kind, target, at, args=None):
+def proven(w3, kind, target, at, args=None, *, previous_build=False):
     target = contract(w3, kind, target)
-    checked_runtime(w3, target.address, kind, at)
-    prove_creation(w3, target.address, kind, args, at)
+    if previous_build:
+        prove_creation(w3, target.address, kind, args, at, previous_build=True)
+    else:
+        checked_runtime(w3, target.address, kind, at)
+        prove_creation(w3, target.address, kind, args, at)
     return target
 
 
-def authority_context(w3, target, at):
+def authority_context(w3, target, at, *, legacy_dao_exit=False):
+    def confirm(kind, addr, args):
+        if not legacy_dao_exit:
+            return proven(w3, kind, addr, at, args)
+        prove_creation(w3, addr, kind, args, at, legacy_dao_exit=True)
+        return contract(w3, kind, addr)
+
     auth = contract(w3, "DKGAuthorization", target)
     coordinator_address = read(auth, at, "coordinator")
     coordinator = contract(w3, "FROSTCoordinator", coordinator_address)
     verifier = read(coordinator, at, "defaultVerifier")
-    proven(w3, "FROSTVerifier", verifier, at, [])
-    proven(w3, "FROSTCoordinator", coordinator_address, at, [verifier])
+    confirm("FROSTVerifier", verifier, [])
+    confirm("FROSTCoordinator", coordinator_address, [verifier])
     registry_address = read(auth, at, "registry")
-    registry = proven(w3, "DKGCoordinator", registry_address, at, [])
+    registry = confirm("DKGCoordinator", registry_address, [])
     dkg_id = read(auth, at, "dkgId")
     completed = read(registry, at, "getCompletedResult", dkg_id)
     if (read(auth, at, "verifier") != verifier
@@ -116,8 +126,8 @@ def authority_context(w3, target, at):
             or list(read(auth, at, "getParticipants")) != list(completed[5])
             or read(auth, at, "threshold") != completed[6]):
         raise ValueError("ULR_AUTHORIZATION_DKG_BINDING")
-    proven(w3, "DKGAuthorization", target, at,
-           [coordinator_address, dkg_id, bytes(completed[4]), list(completed[5]), int(completed[6])])
+    confirm("DKGAuthorization", target,
+            [coordinator_address, dkg_id, bytes(completed[4]), list(completed[5]), int(completed[6])])
     return auth
 
 
@@ -129,11 +139,12 @@ def treasury_args(treasury, at):
     return [read(treasury, at, name) for name in ("factory", "confederationId", "snapshots", "reserveFloor", "payoutBps")]
 
 
-def configuration(w3, pin, at):
+def configuration(w3, pin, at, *, previous_staking=False):
     if str(w3.eth.chain_id) != pin["chain_id"]:
         raise ValueError("ULR_CHAIN_MISMATCH")
     staking = contract(w3, "ULRStaking", pin["staking"])
-    proven(w3, "ULRStaking", staking.address, at, staking_args(staking, at))
+    options = {"previous_build": True} if previous_staking else {}
+    proven(w3, "ULRStaking", staking.address, at, staking_args(staking, at), **options)
     registry = contract(w3, "ULRCustodianSnapshots", pin["snapshots"])
     authority = read(registry, at, "authorization")
     if read(registry, at, "staking") != staking.address:
@@ -143,7 +154,7 @@ def configuration(w3, pin, at):
     return registry, staking
 
 
-def treasury_context(w3, pin, target, at, *, configured=None, require_active=True):
+def treasury_context(w3, pin, target, at, *, configured=None, require_active=True, legacy_factory=False):
     registry, staking = configured or configuration(w3, pin, at)
     if target not in pin["treasuries"]:
         raise ValueError("ULR_TREASURY_NOT_PINNED")
@@ -151,7 +162,20 @@ def treasury_context(w3, pin, target, at, *, configured=None, require_active=Tru
     factory = read(treasury, at, "factory")
     conf_id = read(treasury, at, "confederationId")
     proven(w3, "ULRConfederationTreasury", target, at, treasury_args(treasury, at))
-    factory = proven(w3, "ConfederationFactory", factory, at)
+    try:
+        factory = proven(w3, "ConfederationFactory", factory, at)
+    except ValueError as error:
+        if not legacy_factory or str(error) != "BTC_CONTRACT_BUILD_MISMATCH":
+            raise
+        # Only the already enrolled treasury can authorize reads through the
+        # archived factory. Discovering or enrolling a new graph stays strict.
+        if (recovery_supported(w3, treasury, at)
+                or read(registry, at, "treasuries", read(treasury, at, "scope")) != treasury.address):
+            raise
+        proof = prove_creation(w3, factory, "ConfederationFactory", None, at, legacy_ulr_factory=True)
+        if proof.get("method") != "direct":
+            raise ValueError("ULR_CONFEDERATION_BINDING")
+        factory = contract(w3, "ConfederationFactory", factory)
     conf = read(factory, at, "getConfederation", conf_id)
     if ((require_active and not conf[-1]) or read(treasury, at, "snapshots") != registry.address
             or read(treasury, at, "staking") != staking.address
@@ -162,6 +186,11 @@ def treasury_context(w3, pin, target, at, *, configured=None, require_active=Tru
     authority_context(w3, conf[7], at)
     proven(w3, "CustodianValidator", conf[8], at)
     return registry, staking, treasury, factory, conf_id, conf
+
+
+def recovery_supported(w3, treasury, at):
+    _, built = runtime_artifact(w3, treasury.address, "ULRConfederationTreasury", at)
+    return "legacy_reference" not in built
 
 
 def snapshot_treasuries(w3, registry, day, anchor, *, pin, at):
@@ -323,12 +352,15 @@ def snapshot_arguments(w3, pin, inputs, at):
 
 
 def snapshot_calldata_limit(w3, registry, args, operation, block):
-    """Reject transactions whose calldata alone exceeds the network gas cap."""
-    from .evm_network import MAX_TRANSACTION_GAS
+    """Reject calldata that cannot fit even before accounting for execution."""
+    from .evm_network import MAX_TRANSACTION_GAS, gas_with_margin
 
     data = bytes.fromhex(registry.encode_abi("publishDay", args=[*args, operation]).removeprefix("0x"))
     tokens = len(data) + 3 * (len(data) - data.count(0))
-    if 21_000 + 10 * tokens >= min(MAX_TRANSACTION_GAS, w3.eth.get_block(block).gasLimit):
+    floor = 21_000 + 10 * tokens
+    if w3.eth.chain_id == 1:
+        floor = gas_with_margin(floor)
+    if floor >= min(MAX_TRANSACTION_GAS, w3.eth.get_block(block).gasLimit):
         raise ValueError("ULR_SNAPSHOT_TRANSACTION_GAS")
 
 
@@ -409,7 +441,8 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
     from .dkg_protocol import Manifest
     from .ethereum_intents import validate_signing_binding
 
-    at = w3.eth.get_block(at).number
+    anchor = w3.eth.get_block(at)
+    at = anchor.number
     if "ulr_bootstrap" in intent:
         from .bootstrap_ulr import enrolled_pin
         if pin != enrolled_pin(w3, intent, bundle, at):
@@ -423,6 +456,7 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
         ("ULRCustodianSnapshots", "getEnrollTreasuryOperationHash"),
         ("ULRCustodianSnapshots", ACTIVATE_TREASURY_METHOD),
         ("ULRConfederationTreasury", "getSpendOperationHash"),
+        ("ULRConfederationTreasury", INACTIVE_RECOVERY_METHOD),
         ("CustodianDAOFeeRouter", "getSetFeeSharesOperationHash"),
         ("CustodianDAOFeeRouter", "getSetTreasuryOperationHash"),
         ("CustodianDAOFeeRouter", "getSetPayerOperationHash"),
@@ -455,11 +489,18 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
                 raise ValueError("ULR_ALREADY_ENROLLED")
             authority = conf[7]
     elif kind == "ULRConfederationTreasury":
-        _, _, treasury, _, _, conf = treasury_context(w3, pin, target.address, at)
+        recovery = helper == INACTIVE_RECOVERY_METHOD
+        _, staking, treasury, _, _, conf = treasury_context(
+            w3, pin, target.address, at, require_active=not recovery, legacy_factory=True)
         if bundle.get("role") != "conf_ceremony":
             raise ValueError("ULR_SPEND_POLICY")
         if read(registry, at, "treasuries", read(treasury, at, "scope")) != treasury.address:
             raise ValueError("ULR_TREASURY_NOT_ENROLLED")
+        if recovery:
+            if conf[-1]:
+                raise ValueError("ULR_RECOVERY_REQUIRES_INACTIVE")
+            if not recovery_supported(w3, treasury, at):
+                raise ValueError("ULR_TREASURY_RECOVERY_UNSUPPORTED")
         authority = conf[7]
     elif kind in ("CustodianValidator", "CustodianDAODecisionBoard"):
         _, staking, treasury, _, _, conf = treasury_context(w3, pin, intent["ulr_treasury"], at)
@@ -548,8 +589,22 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
         if read(registry, at, "treasuries", scope) != treasury.address:
             raise ValueError("ULR_ENROLLMENT_RECEIPT")
     elif helper == "getSpendOperationHash" and not complete:
-        if args[2] < w3.eth.get_block(at).timestamp:
+        if args[2] < anchor.timestamp:
             raise ValueError("ULR_SPEND_EXPIRED")
+    elif helper == INACTIVE_RECOVERY_METHOD:
+        if complete:
+            commitment = Web3.keccak(w3.codec.encode(["address", "uint256", "uint256"], args))
+            if read(treasury, at, "inactiveRecoveryReceipts", op) != commitment:
+                raise ValueError("ULR_RECOVERY_RECEIPT")
+        else:
+            recipient, amount, deadline = args
+            usd = contract(w3, "IERC20Metadata", read(treasury, at, "rewardToken"))
+            if recipient in ("0x" + "00" * 20, treasury.address, staking.address, usd.address):
+                raise ValueError("ULR_RECOVERY_RECIPIENT")
+            if not 0 < amount <= read(usd, at, "balanceOf", treasury.address):
+                raise ValueError("ULR_RECOVERY_AMOUNT")
+            if deadline < anchor.timestamp:
+                raise ValueError("ULR_RECOVERY_EXPIRED")
     elif kind == "CustodianDAOFeeRouter" and complete:
         if helper == "getSetPayerOperationHash" and not read(target, at, "authorizedPayers", args[0]):
             raise ValueError("ULR_ROUTER_RECEIPT")
@@ -575,11 +630,14 @@ def review(w3, intent, bundle, at, pin, *, require_finalized=True):
             raise ValueError("ULR_VOTING_CREATION_RECEIPT")
     if not complete and bytes(read(target, at, helper, *args)) != op:
         raise ValueError("ULR_OPERATION_HASH")
+    if helper == INACTIVE_RECOVERY_METHOD and w3.eth.get_block(at).hash != anchor.hash:
+        raise ValueError("ULR_SNAPSHOT_REORG")
     return dict(complete=bool(complete), authority=authority, arguments=args, target=target)
 
 
-def voting_context(w3, pin, board_address, treasury_address, at):
-    _, staking, _, _, _, conf = treasury_context(w3, pin, treasury_address, at)
+def voting_context(w3, pin, board_address, treasury_address, at, *, configured=None):
+    options = {"configured": configured} if configured is not None else {}
+    _, staking, _, _, _, conf = treasury_context(w3, pin, treasury_address, at, **options)
     board = contract(w3, "CustodianDAODecisionBoard", board_address)
     adapter = read(board, at, "staking")
     voting = proven(w3, "ULRConfederationVoting", adapter, at, [staking.address, conf[8]])

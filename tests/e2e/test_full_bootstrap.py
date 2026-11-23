@@ -6,6 +6,7 @@ from pathlib import Path
 from eth_account import Account
 from web3 import Web3
 from signer_agent.bootstrap import Bootstrap
+from signer_agent.bootstrap_formation import expected_formation
 from signer_agent.bootstrap_plan import build
 from signer_agent.dkg_protocol import Manifest
 from test_dkg_processes import RPC
@@ -14,7 +15,7 @@ from lifecycle_helpers import contract
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, shared=None, participant_keys=(1,2,3), custody=None, return_context=False, in_kind=None):
+def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, shared=None, participant_keys=(1,2,3), custody=None, return_context=False, in_kind=None, guarded_nonces=False, recovery=None):
     w3 = Web3(Web3.HTTPProvider(RPC))
     ethereum_chain = int(ethereum.get("chain_id", 1)) if ethereum else None
     evm_depth = "12" if ethereum_chain == 1 else "1"
@@ -29,6 +30,10 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
     homes = [tmp_path / ("terminal-" + str(i)) for i in range(3)]
     for home in homes:
         home.mkdir(mode=0o700)
+    ledger_dirs = [tmp_path / ("independent-ledger-" + str(i)) for i in range(3)]
+    if guarded_nonces:
+        for directory in ledger_dirs:
+            directory.mkdir(mode=0o700)
     operator_rpc = RPC.replace("://", "://fixture-user:fixture-rpc-token@", 1)
     friend_rpcs = [RPC, RPC.replace("127.0.0.1", "localhost"), RPC + "/"]
 
@@ -36,6 +41,8 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
         args = list(args)
         if custody is not None and group == "setup" and args[0] == "invite":
             args += ["--bitcoin-custody-policy", str(tmp_path / "custody.json")]
+        if recovery is not None and group == "setup" and args[0] == "invite":
+            args += ["--bitcoin-recovery-policy", str(tmp_path / "bitcoin-recovery.json")]
         if (system or in_kind) and group == "setup" and args[0] == "invite":
             args[args.index("--wrap-staker-bps") + 1] = "0"
             args[args.index("--deploy-staker-bps") + 1] = "0"
@@ -66,6 +73,8 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
         launcher = [sys.executable, str(ethereum["wrapper"])] if ethereum else [executable]
         if ethereum:
             launcher += ["--fixture-bitcoin-network", ethereum.get("bitcoin_network", "mainnet")]
+        if recovery is not None and group == "bootstrap":
+            args.append("--debug")
         process = subprocess.run(
             [*launcher, group, *map(str, args)],
             cwd=homes[member],
@@ -87,6 +96,8 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
         (tmp_path / "in-kind.json").write_text(json.dumps(in_kind))
     if custody is not None:
         (tmp_path / "custody.json").write_text(json.dumps(custody))
+    if recovery is not None:
+        (tmp_path / "bitcoin-recovery.json").write_text(json.dumps(recovery))
     identities = []
     for index,key in enumerate(participant_keys):
         reuse_identity = shared and participant_keys==shared['participant_keys']
@@ -157,6 +168,7 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
             identities[i],
             "--directory",
             tmp_path / ("friend-" + str(i + 1)),
+            *(("--nonce-ledger-dir", ledger_dirs[i]) if guarded_nonces else ()),
             member=i,
         )
     config_path = tmp_path / "profile.json"
@@ -295,6 +307,25 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
     else:
         raise AssertionError("bootstrap did not finish")
     assert run_bootstrap("verify")["status"] == "VERIFIED"
+    if guarded_nonces:
+        import sqlite3
+        from signer_agent.onboarding import password_file
+        from signer_agent.secure_state import SecureState
+
+        for role in ("evm_ceremony", "conf_ceremony"):
+            spent_count = 0
+            for i in range(3):
+                if addresses[i] not in config[role]["participants"]:
+                    continue
+                directory = tmp_path / ("friend-" + str(i + 1))
+                path = directory / (role + ".enc")
+                password = password_file(directory / "password")
+                signer = SecureState(str(path) + ".signing", password)
+                report = SecureState(path, password).evm_nonce_ledger(signer)
+                with sqlite3.connect(Path(report).as_uri() + "?mode=ro", uri=True) as ledger:
+                    spent_count += ledger.execute("SELECT count(*) FROM spent").fetchone()[0]
+                assert not Path(str(signer.path) + ".spent.sqlite").exists()
+            assert spent_count > 0
     final_progress = setup("status", "--board", board, "--rpc", RPC)
     assert all(
         c["status"] == "COMPLETED" for c in final_progress["ceremonies"].values()
@@ -306,6 +337,12 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
             assert participant(role, i, "verify")["status"] == "VERIFIED"
     bootstrap = Bootstrap(profile, journal, bitcoin=ethereum["core"] if ethereum else None)
     assert bootstrap.apply(verify=True)["status"] == "VERIFIED"
+    for kind, terms in expected_formation(config).items():
+        factory = bootstrap.contract(kind + "s")
+        title = kind.capitalize()
+        assert bytes(getattr(factory.functions, f"reserved{title}Session")(terms["id"]).call()) == terms["session_id"]
+        saved = getattr(factory.functions, f"reserved{title}Terms")(terms["id"]).call()
+        assert [bytes(value) for value in saved] == [terms["formation_hash"], terms["token_hash"]]
     first = result["manifest"]["contracts"]
     assert run_bootstrap("resume")["manifest"]["contracts"] == first
     if (custody is not None or return_context) and not system:
@@ -574,4 +611,4 @@ def exercise_bootstrap(tmp_path, record_property, ethereum=None, system=None, sh
 
 
 def test_generated_bootstrap_runs_to_verified_with_real_approvals(tmp_path, record_property):
-    exercise_bootstrap(tmp_path, record_property)
+    exercise_bootstrap(tmp_path, record_property, guarded_nonces=True)

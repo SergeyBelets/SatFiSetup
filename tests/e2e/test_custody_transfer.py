@@ -58,9 +58,11 @@ def wallet_address(btc, script):
     return btc.call("deriveaddresses", descriptor)[0]
 
 
-def bitcoin_payment(env, core, miner, signing_board, inputs, request, *, local_members):
+def bitcoin_payment(env, core, miner, signing_board, inputs, request, *, local_members, resume_expired=False):
     owner = local_members[0]
     batch = os.urandom(32).hex()
+    w3 = env["bootstrap"].w3
+    deadline = w3.eth.get_block("latest").timestamp + 3600
     options = ["--signing-board", signing_board, "--batch", batch,
         "--bitcoin-rpc", BTC_RPC, "--bitcoin-cookie", COOKIE]
     def call(member, action, *extra):
@@ -68,7 +70,7 @@ def bitcoin_payment(env, core, miner, signing_board, inputs, request, *, local_m
     arguments = []
     for outpoint in inputs: arguments += ["--input", outpoint]
     prepared = call(owner, "btc-prepare", *arguments, "--withdrawal", request.hex(), "--fee", "1000",
-        "--max-fee", "2000", "--deadline", str(env["bootstrap"].w3.eth.get_block("latest").timestamp + 3600),
+        "--max-fee", "1000" if resume_expired else "2000", "--deadline", str(deadline),
         "--signers", *map(str, range(1, len(local_members) + 1)))
     assert prepared["status"] == "BTC_PLAN_PREPARED", prepared
     for operation in ("reserve", "bind"):
@@ -77,7 +79,29 @@ def bitcoin_payment(env, core, miner, signing_board, inputs, request, *, local_m
         call(owner, "btc-execute", "--operation", operation)
         if operation == "reserve": call(owner, "btc-publish-plan")
     for member in local_members: assert call(member, "btc-commit")["status"] == "COMMITTED"
-    for member in local_members: assert call(member, "btc-sign")["status"] == "SIGNED"
+    assert call(owner, "btc-sign")["status"] == "SIGNED"
+    if resume_expired:
+        batch_id = bytes.fromhex(batch)
+        board = contract(w3, "BitcoinSigningBoard", signing_board)
+        batches = contract(w3, "BitcoinBatchRegistry", board.functions.batchRegistry().call())
+        escrow = env["bootstrap"].contract("escrow")
+        approved = batches.functions.batches(batch_id).call()
+        payment = escrow.functions.payment(batch_id).call()
+        raw_plan = board.functions.plan(batch_id).call()
+        assert approved[3] == 2 and escrow.functions.isBound(batch_id).call()
+        assert "error" not in w3.provider.make_request("evm_setNextBlockTimestamp", [deadline + 1])
+        assert "error" not in w3.provider.make_request("evm_mine", [])
+        with pytest.raises(ContractLogicError, match="signature may exist"):
+            escrow.functions.refund(request).call({"from": escrow.functions.getRequest(request).call()[0]})
+        # At the exact miner cap another transaction version cannot raise the fee.
+        assert call(owner, "btc-status")["missing_shares"] == [{"input": "0", "signer": "2"}]
+        for member in local_members[1:]:
+            assert call(member, "btc-sign", "--resume-expired")["status"] == "SIGNED"
+        assert batches.functions.batches(batch_id).call() == approved
+        assert escrow.functions.payment(batch_id).call() == payment
+        assert board.functions.plan(batch_id).call() == raw_plan
+    else:
+        for member in local_members[1:]: assert call(member, "btc-sign")["status"] == "SIGNED"
     result = call(owner, "btc-broadcast")
     assert result["status"] == "BROADCAST", result
     core.call("generatetoaddress", 6, miner)
@@ -167,6 +191,10 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
         transfer_id, request = event["id"], event["requestKey"]
         shares = d.contract("conf_shares")
         assert "mp" not in destination["manifest"]["contracts"]
+        quote = destination["command"]("custody-transfer", "status", *base, "--transfer-id", str(transfer_id))
+        assert quote["protocol_fee_s"] == str(1700 * 10**10)
+        assert quote["net_shares"] == str(998300 * 10**10)
+        assert quote["source_state"] == "PENDING"
     else:
         for action in ("approve", "request"):
             options = [*base, "--source", "0", "--satoshis", "1000000", *owner_args, "--id", action]
@@ -245,15 +273,26 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
     pool = d.contract("conf_pool")
     locked = shares.functions.balanceOf(owner.address).call()
     if native_s:
-        withdraw_args = ["--amount", str(locked), "--script", recipient_script, "--miner-fee-cap-sats", "1000"]
+        minimum_payout = 995153 if use_pass else 995003
+        deadline = w3.eth.get_block("latest").timestamp + 3600
+        withdraw_args = ["--amount", str(locked), "--script", recipient_script, "--miner-fee-cap-sats", "1000",
+                         "--minimum-btc-sats", str(minimum_payout)]
         if use_pass:
             sale = d.contract("nft_pass")
             not_owner = Web3.to_hex(Web3.keccak(text="NotTokenOwner()")[:4])
             with pytest.raises(ContractLogicError, match=not_owner):
-                pool.functions.requestWithdrawalWithNFT(locked, bytes.fromhex(recipient_script), pass_id, 1000).call(
-                    {"from": destination["addresses"][1]})
+                pool.functions.requestWithdrawalWithNFT(locked, bytes.fromhex(recipient_script), pass_id, 1000,
+                    minimum_payout, deadline).call({"from": destination["addresses"][1]})
             assert sale.functions.nftMetadata(pass_id).call()[2] == 0
             withdraw_args += ["--nft", str(pass_id)]
+        quote = destination["command"]("dao", "in-kind", "withdraw-quote", "--manifest", manifest,
+            "--rpc", RPC, "--confirmations", "1", "--sender", owner.address, *withdraw_args)
+        assert quote["status"] == "QUOTED" and quote["fits"], quote
+        assert int(quote["payout_at_cap_sats"]) == minimum_payout
+        assert int(quote["max_miner_fee_share_sats"]) == 1000
+        if use_pass:
+            assert sale.functions.nftMetadata(pass_id).call()[2] == 0
+        withdraw_args += ["--deadline", str(deadline)]
         eth_before = w3.eth.get_balance(owner.address)
         result = dao("withdraw", "exit", *withdraw_args)
         assert result["status"] == "VERIFIED", result
@@ -270,6 +309,8 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
             bytes.fromhex(recipient_script)), sender=owner.address)
         pool_kind = "ConfederationMultiPool"
     withdrawal_id = pool.functions.withdrawalCounter().call() - 1
+    if native_s:
+        assert pool.functions.minimumPayoutSats(withdrawal_id).call() == minimum_payout
     approve(destination, pool, pool_kind, "getProcessWithdrawalOperationHash", [withdrawal_id], custodians=True)
     tx(w3, pool.functions.processWithdrawal(withdrawal_id))
     due = pool.functions.getWithdrawal(withdrawal_id).call()[3] // 10**10
@@ -279,7 +320,7 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
         inputs.append(destination_treasury + ":" +
             str(vout(destination_treasury, d.contract("mining").functions.payoutScript().call())))
     withdrawal_batch, withdrawal = bitcoin_payment(destination, core, miner, destination["signing_board"], inputs,
-        destination_request, local_members=(1,2))
+        destination_request, local_members=(1,2), resume_expired=native_s)
     assert shares.functions.balanceOf(owner.address).call() == 0
     assert d.contract("escrow").functions.getRequest(destination_request).call()[7] == 3
     assert due == (996153 if use_pass else 996003)
@@ -287,7 +328,7 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
     if native_s:
         destination_fee = d.contract("escrow").functions.minerFee(withdrawal_batch).call()
         assert destination_fee == 1000
-        assert payout == due - destination_fee
+        assert payout == due - destination_fee == minimum_payout
         change_vout = vout(withdrawal["txid"], d.contract("mining").functions.payoutScript().call())
         change = satoshis(core.call("gettxout", withdrawal["txid"], change_vout)["value"])
         assert payout + destination_fee + change == received_sats
@@ -298,7 +339,8 @@ def test_transfer_then_exit_without_either_federation_representative(tmp_path, r
         record_property("native_s_accounting", json.dumps(dict(transferred_sats=received_sats,
             source_miner_fee_sats=source_fee, destination_miner_fee_sats=destination_fee,
             payout_sats=payout, reserve_sats=change, dao_share_units=change * 10**10,
-            pass_price_sats=1000 if use_pass else 0, withdrawal_evm_gas_wei=gas_paid)))
+            pass_price_sats=1000 if use_pass else 0, withdrawal_evm_gas_wei=gas_paid,
+            resumed_expired_batch_at_original_miner_cap=True)))
         return
     assert payout == due
     # Regression: a custodian also proposes and pays a surplus-treasury request,

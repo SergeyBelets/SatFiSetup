@@ -102,8 +102,10 @@ function getAuthorizationResult(uint256 sessionId) external view returns (...)
 ```solidity
 constructor(address dkgCoordinator, address federationDeployer, address frostCoordinator)
 
-function reserveFederationId(bytes32 sessionId, string federationId) external
+function reserveFederationId(bytes32 sessionId, string federationId, bytes32 formationHash, bytes32 tokenHash) external
 function reservedFederationSession(string federationId) external view returns (bytes32)
+function reservedFederationTerms(string federationId) external view returns (bytes32 formationHash, bytes32 tokenHash)
+function transferFederationReservation(string federationId, bytes32 previous, bytes32 replacement) external
 function adoptFederationDKG(bytes32 sessionId, string federationId) external
 function configureDeploymentFee(address router, uint256 amount, bool exemption) external
 function initiateFederationDKG(address[] participants, uint256 threshold, string federationId)
@@ -116,10 +118,17 @@ function getFederation(string federationId) external view returns (FederationCon
 function getDKGSession(string federationId) external view returns (bytes32)
 ```
 
-`reserveFederationId` binds an unused federation ID to one session. Only the
-factory deployer (`feeSetupAuthority`) can reserve it. The exact repeat is a
-no-op. `adoptFederationDKG` requires the reserved pair, a completed `EVM_AUTH`
-ceremony from the canonical registry and a caller in that ceremony's roster.
+`reserveFederationId` binds an unused federation ID to one session and two
+nonzero hashes. Only the factory deployer (`feeSetupAuthority`) can reserve it.
+An exact retry preserves the reservation. The completed `EVM_AUTH` roster and
+threshold must match the formation hash during adoption. Deployment requires the
+reserved token name and symbol. For an unused ID, `feeSetupAuthority` can move
+the reservation from its exact current session after the registry records
+`Failed` or `Aborted`. The replacement must be an unused V1 `EVM_AUTH`
+ceremony with the same ordered roster and threshold, either live within its
+deadline or completed. Both hashes remain bound to the ID. The old session
+remains unavailable for reservation on this factory. The factory emits
+`FederationReservationTransferred`.
 The deployer may initiate legacy DKG on Anvil/Sepolia for an unreserved ID.
 `configureDeploymentFee` is a separate one-time action by the same deployer.
 Paid deployment transfers the configured fee atomically.
@@ -132,8 +141,10 @@ Paid deployment transfers the configured fee atomically.
 constructor(address federationFactory, address dkgCoordinator, address deployer, address frostCoordinator)
 
 function configureDeploymentFee(address router, uint256 amount, bool exemption) external
-function reserveConfederationId(bytes32 sessionId, string confederationId) external
+function reserveConfederationId(bytes32 sessionId, string confederationId, bytes32 formationHash, bytes32 tokenHash) external
 function reservedConfederationSession(string confederationId) external view returns (bytes32)
+function reservedConfederationTerms(string confederationId) external view returns (bytes32 formationHash, bytes32 tokenHash)
+function transferConfederationReservation(string confederationId, bytes32 previous, bytes32 replacement) external
 function adoptConfederationDKG(bytes32 sessionId, string[] federationIds,
     CustodianMember[] custodians, uint256 totalThreshold, uint256 minCustodians, string confederationId) external
 function adoptConfederationFromFederation(bytes32 sessionId, string federationId,
@@ -158,11 +169,15 @@ function getRegisterCustodianDAOOperationHash(string confederationId, CustodianD
 function registerCustodianDAO(string confederationId, CustodianDAOConfig dao, bytes32 operationHash) external
 ```
 
-The factory deployer (`feeSetupAuthority()`) binds an unused ID to one DKG session.
-The binding is permanent and the exact retry is a no-op. All three adoption methods
-require the reserved pair on this factory. A missing or mismatched reservation raises
-`InvalidConfederationReservation` for an unused ID. The legacy `initiateConfederation`
+The factory deployer (`feeSetupAuthority()`) binds an unused ID to one DKG session
+and two nonzero hashes. An exact retry preserves the reservation. All three
+adoption methods check their mode and formation parameters against the reservation.
+Deployment checks the token name and symbol. The legacy `initiateConfederation`
 is limited to that deployer on local/Sepolia and excludes reserved IDs and sessions.
+Transfer uses the same terminal-state, unused-ID and replacement checks as the
+federation transfer. The event is `ConfederationReservationTransferred`.
+[ABI encoding and reservation procedure](FEDERATION_CONFEDERATION_SETUP.md#формат-хешей-резервации) ·
+[Operator recovery](RECOVERY.md#unused-factory-id-recovery).
 
 Adoption checks the exact ordered roster and threshold of a completed `EVM_AUTH` result
 on the canonical registry. The mixed paths require caller membership and use each

@@ -36,6 +36,7 @@ def _parser() -> argparse.ArgumentParser:
                                  ("bootstrap", "plan, apply, resume, verify infrastructure"),
                                  ("ops", "prepare, simulate and execute typed operations"),
                                  ("api", "authenticated loopback operational API"),
+                                 ("nonce-anchor", "serve an off-host append-only nonce ledger behind TLS"),
                                  ("bitcoin", "Bitcoin plans, broadcasts and proofs"),
                                  ("flow", "bounded automatic progress for enrolled DKG and explicit operations"),
                                  ("index", "confirmed EVM event indexing"),
@@ -186,7 +187,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
 
 def _main(argv: Optional[Iterable[str]] = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
-    if arguments and arguments[0] in ("setup","bootstrap","api","ops","bitcoin","index","dao-report","dao","ulr-treasury","system-profile","configure","startup-rewards","nft","fee-sale","custody-transfer","family-root","flow","relay-keeper","zk-worker"):
+    if arguments and arguments[0] in ("setup","bootstrap","api","ops","bitcoin","index","dao-report","dao","ulr-treasury","system-profile","configure","startup-rewards","nft","fee-sale","custody-transfer","family-root","flow","relay-keeper","zk-worker","nonce-anchor"):
         if arguments[0] == "relay-keeper":
             from .relay_keeper import main as operational_main
         elif arguments[0] == "flow":
@@ -223,6 +224,8 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
             from .bitcoin_cli import main as operational_main
         elif arguments[0] == "ops":
             from .operation_worker import main as operational_main
+        elif arguments[0] == "nonce-anchor":
+            from .nonce_anchor import main as operational_main
         else:
             from .operational_api import main as operational_main
         try:
@@ -253,6 +256,13 @@ def _main(argv: Optional[Iterable[str]] = None) -> int:
     try:
         config = Config.from_env()
         service = SigningService(config)
+        approves = (
+            (args.command == "run-once" and not args.reject_all)
+            or (args.command == "decide" and args.decision == "approve")
+            or (args.command == "watch" and config.auto_sign)
+        )
+        if approves and service.client.chain_id != 31337:
+            raise ValueError("PUBLIC_EVM_TYPED_SIGNING_REQUIRED")
     except Exception as exc:
         failure = participant_failure(exc)
         emit_debug(exc, code=failure["code"])

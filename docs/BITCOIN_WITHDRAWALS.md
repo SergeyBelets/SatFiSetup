@@ -2,7 +2,10 @@
 
 Новые конфедерации с ULR policy V3 погашают S из своего BTC-резерва. Комиссия
 майнеров вычитается из BTC-выплаты, а комиссия протокола перечисляется DAO в S
-после подтверждения выплаты. Ниже описан прежний профиль с выводом MP.
+после подтверждения выплаты. В новой сборке владелец фиксирует минимум чистых
+sats и последний срок включения заявки в EVM. План v5 и его RBF-замены
+учитывают индивидуальный минимум до объединения выплат. Ниже описан прежний
+профиль с выводом MP.
 [Порядок и расчёт V3](CONFEDERATION_DAO_IN_KIND.md#btc-и-комиссия-майнеров).
 
 [Схемы: SVG/PNG и hashes текущих Mermaid-исходников](DIAGRAMS.md).
@@ -127,6 +130,13 @@ replacement; a different txid requires the separately approved version path belo
 
 ## Cancellation and recovery
 
+Новый V3 может быть развёрнут с отдельным CLTV-кворумом. После подтверждения
+переноса всего покрытия одного семейства RBF его владельцам доступны исходные
+S. Порядок настройки, подписи и расчёта приведён в
+[инструкции по холодному восстановлению](BITCOIN_WITHDRAWAL_RECOVERY.md).
+После переноса учтённых UTXO обычные выплаты возобновляются с нового FROST-ключа.
+Реестр использует те же записи покрытия. [Ротация кошелька](BITCOIN_WITHDRAWAL_RECOVERY.md#ротация-после-переноса).
+
 An unbound request can be refunded once. A bound request can be refunded only
 when its batch was safely cancelled in Reserved state. Once Signing begins,
 time, mempool absence and RPC failure never authorize refunds. Pool rejection
@@ -209,6 +219,35 @@ retry. The escrow keeps the requests locked during these checks. Preserve the
 worker and signer journals during recovery. A relayer can submit a valid
 canonical proof directly to the escrow with a fresh and healthy SPV backend.
 
+
+## CPFP за счёт получателя S → BTC
+
+Если все подписи исходной выплаты уже собраны, другой участник может получить
+её точные байты через [экспорт подписанного V5-платежа](BITCOIN_ONCHAIN_RUNBOOK.md).
+Получатель сверяет txid со своим пакетом вывода. В своём Bitcoin-кошельке он
+готовит подписанную дочернюю транзакцию с одним входом, своим выходом выплаты,
+и одним выходом на выбранный адрес P2WPKH или P2TR. Комиссия дочерней
+транзакции равна разнице этих сумм. Исходный платёж, его условия в escrow
+и списание обеспечения конфедерации сохраняются.
+
+```sh
+frost-signer bitcoin cpfp-payout \
+  --bitcoin-network testnet4 --bitcoin-policy "$BTC_POLICY" \
+  --bitcoin-rpc "$BTC_RPC" --bitcoin-cookie "$BTC_COOKIE" \
+  --parent-raw payment-signed.json --parent-txid "$PARENT_TXID" \
+  --payout-vout "$PAYOUT_VOUT" --payout-script "$PAYOUT_SCRIPT" \
+  --child-raw child.hex --child-txid "$CHILD_TXID" \
+  --return-script "$RETURN_SCRIPT" --max-child-fee-sats "$MAX_CHILD_FEE"
+```
+
+Входные скрипты задаются в hex, txid в display order. Без `--submit` команда
+только проверяет пакет через Core. С `--submit` она отправляет проверенные
+байты. Используйте Bitcoin Core с `testmempoolaccept` и `submitpackage`.
+Успешный ответ означает приём локальным узлом. Дальнейшее распространение
+и подтверждение зависят от сети и политики майнеров. Settlement использует
+доказательство включения исходной транзакции. Если выход слишком мал или
+Core не принимает пакет, сохраните подписанные байты для повторной сверки.
+Для CPFP требуется полностью подписанный исходный платёж.
 
 ## Authorized fee replacement (17 October)
 

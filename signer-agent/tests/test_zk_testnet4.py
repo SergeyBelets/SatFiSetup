@@ -79,6 +79,7 @@ def test_policy_cli_is_offline_and_refuses_overwriting(tmp_path,capsys):
 def test_testnet4_worker_template_has_working_v2_schema_after_personal_bindings(tmp_path):
     from signer_agent.zk_worker import load_config
     c=json.loads((ROOT/'config/zkspv-testnet4-worker.example.json').read_text())
+    c['evm_rpc']='https://sepolia.example.test/participant-key'
     c['bitcoin_policy']=zk_policy()
     for key in ('directory','identity_file','host_binary','bitcoin_cookie'):
         c[key]=str(tmp_path/key)

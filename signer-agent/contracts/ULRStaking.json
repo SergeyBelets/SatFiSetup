@@ -836,6 +836,11 @@
   },
   {
     "type": "error",
+    "name": "InsufficientRewardCoverage",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidAddress",
     "inputs": []
   },

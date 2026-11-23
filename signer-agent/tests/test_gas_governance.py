@@ -129,7 +129,7 @@ def test_shared_guard_precedes_commit_and_cached_share_paths():
     def block(_):
         touched.append("gas guard")
         raise ValueError("GAS_CONFIGURATION_CHANGED")
-    service.client = SimpleNamespace(guard_gas_session=block)
+    service.client = SimpleNamespace(chain_id=31337, guard_gas_session=block)
     with pytest.raises(ValueError, match="GAS_CONFIGURATION_CHANGED"):
         service._approve_locked(SimpleNamespace(state=1, purpose=1))
     assert touched == ["gas guard"]

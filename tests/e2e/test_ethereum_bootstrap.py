@@ -69,7 +69,8 @@ def test_ethereum_mainnet_paid_bootstrap_from_addresses(tmp_path, monkeypatch, r
         monkeypatch.setattr("signer_agent.bitcoin_network.time", SimpleNamespace(time=lambda: core.record(core.height)["time"] + 1))
         exercise_bootstrap(tmp_path, record_property, ethereum=dict(core=core, policy=policy,
             cookie=cookie, token=token, feed=feed, chain_id=chain_id, bitcoin_network=bitcoin_network,
-            wrapper=Path(__file__).with_name("ethereum_cli_fixture.py")))
+            wrapper=Path(__file__).with_name("ethereum_cli_fixture.py")),
+            guarded_nonces=chain_id == 1 or bitcoin_network == "mainnet")
         record_property("ethereum_mainnet_scope", json.dumps(dict(
             chain_id=chain_id, bitcoin_network=bitcoin_network, hardfork="osaka", real_contracts=True, real_rust_crypto=True,
             consensus="local Anvil finalized tag, not public Ethereum consensus", bitcoin="historical Core simulation",

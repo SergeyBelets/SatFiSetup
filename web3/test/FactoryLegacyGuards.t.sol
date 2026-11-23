@@ -91,8 +91,15 @@ contract FactoryLegacyGuardsTest is ConfederationEpochFixture {
         bytes32 confId = keccak256("production confederation");
         _completeCeremony(fedId, _founders(2), 2, keccak256("EVM_AUTH"), GX);
         _completeCeremony(confId, _roster(1, 1), 2, keccak256("EVM_AUTH"), GX);
-        fed.reserveFederationId(fedId, "v1-fed");
-        conf.reserveConfederationId(confId, "v1-conf");
+        fed.reserveFederationId(
+            fedId, "v1-fed", keccak256(abi.encode(_founders(2), uint256(2))), keccak256(abi.encode("Federation", "FED"))
+        );
+        conf.reserveConfederationId(
+            confId,
+            "v1-conf",
+            keccak256(abi.encode(uint8(0), _ids(), _custodians(1), uint256(2), uint256(1))),
+            keccak256(abi.encode("Confederation", "CONF"))
+        );
         vm.startPrank(address(0x100));
         fed.adoptFederationDKG(fedId, "v1-fed");
         conf.adoptConfederationDKG(confId, _ids(), _custodians(1), 2, 1, "v1-conf");
@@ -124,9 +131,9 @@ contract FactoryLegacyGuardsTest is ConfederationEpochFixture {
         fed.adoptFederationDKG(other, federationId);
         vm.prank(otherRoster[0]);
         vm.expectRevert(FederationFactory.NotAuthorized.selector);
-        fed.reserveFederationId(other, federationId);
+        _reserveFederation(other, federationId, otherRoster);
 
-        fed.reserveFederationId(intended, federationId);
+        _reserveFederation(intended, federationId, intendedRoster);
         vm.prank(otherRoster[0]);
         vm.expectRevert(FederationFactory.InvalidFederationReservation.selector);
         fed.adoptFederationDKG(other, federationId);
@@ -141,9 +148,9 @@ contract FactoryLegacyGuardsTest is ConfederationEpochFixture {
         fed.adoptFederationDKG(intended, federationId);
         assertEq(fed.getDKGSession(federationId), intended);
         assertEq(fed.getFederation(federationId).members, intendedRoster);
-        fed.reserveFederationId(intended, federationId);
+        _reserveFederation(intended, federationId, intendedRoster);
 
-        fed.reserveFederationId(other, "other-federation");
+        _reserveFederation(other, "other-federation", otherRoster);
         vm.prank(otherRoster[0]);
         fed.adoptFederationDKG(other, "other-federation");
         assertEq(fed.getDKGSession("other-federation"), other);
@@ -158,12 +165,12 @@ contract FactoryLegacyGuardsTest is ConfederationEpochFixture {
         vm.expectRevert(FederationFactory.NotAuthorized.selector);
         fed.initiateFederationDKG(members, 2, "free-id");
 
-        fed.reserveFederationId(intended, "protected-id");
-        fed.reserveFederationId(intended, "protected-id");
+        _reserveFederation(intended, "protected-id", members);
+        _reserveFederation(intended, "protected-id", members);
         vm.expectRevert(FederationFactory.FederationAlreadyExists.selector);
-        fed.reserveFederationId(other, "protected-id");
+        _reserveFederation(other, "protected-id", members);
         vm.expectRevert(FederationFactory.InvalidFederationReservation.selector);
-        fed.reserveFederationId(intended, "alias");
+        _reserveFederation(intended, "alias", members);
         vm.expectRevert(FederationFactory.FederationAlreadyExists.selector);
         fed.initiateFederationDKG(members, 2, "protected-id");
         vm.mockCall(address(dkg), abi.encodeWithSelector(IDKGCoordinator.initiateDKG.selector), abi.encode(intended));
@@ -171,5 +178,11 @@ contract FactoryLegacyGuardsTest is ConfederationEpochFixture {
         fed.initiateFederationDKG(members, 2, "legacy-alias");
         assertEq(fed.reservedFederationSession("protected-id"), intended);
         assertEq(fed.getFederationCount(), 0);
+    }
+
+    function _reserveFederation(bytes32 session, string memory id, address[] memory members) private {
+        fed.reserveFederationId(
+            session, id, keccak256(abi.encode(members, uint256(2))), keccak256(abi.encode("Federation", "FED"))
+        );
     }
 }

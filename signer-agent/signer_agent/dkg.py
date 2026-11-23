@@ -7,6 +7,7 @@ from pathlib import Path
 from eth_account import Account
 from eth_abi import decode
 from web3 import Web3
+from .evm_rpc import evm_web3
 from . import crypto, dkg_protocol as protocol
 from .dkg_transport import Mailbox, sign, recover
 from .secure_state import SecureState
@@ -45,7 +46,7 @@ def atomic_private(path, data):
 
 class Registry:
     def __init__(self, rpc, address, private_key=None):
-        self.w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 20}))
+        self.w3 = evm_web3(rpc, timeout=20)
         self.account = Account.from_key(private_key) if private_key else None
         abi = json.loads(
             (
@@ -162,7 +163,7 @@ class Registry:
 
 
 class Participant:
-    def __init__(self, manifest, registry, state, mailbox):
+    def __init__(self, manifest, registry, state, mailbox, *, bitcoin_recovery=None):
         self.m = manifest
         self.r = registry
         self.s = state
@@ -170,6 +171,13 @@ class Participant:
         self.address = registry.account.address
         self.index = manifest.index(self.address)
         self.key = manifest.context.hex()
+        self.recovery_policy = None
+        if bitcoin_recovery is not None:
+            if manifest.purpose != "BTC_SPEND":
+                raise ValueError("WRONG_KEY_PURPOSE")
+            # Bootstrap validation pins the entire invitation. Only its cold
+            # leaf fields enter the Bitcoin participant's key derivation.
+            self.recovery_policy = {name: bitcoin_recovery[name] for name in ("height", "threshold", "keys")}
 
     def run_once(self, confirm_abort=None):
         from .transaction_wait import observation_pending
@@ -291,6 +299,8 @@ class Participant:
     def _run_once(self, info, c):
         m, r, s = self.m, self.r, self.s
         state = s.get(self.key)
+        if state is not None and state.get("bitcoin_recovery") != self.recovery_policy:
+            raise ValueError("DKG_BITCOIN_RECOVERY_POLICY_CHANGED")
         if info[4] != 4 and self._block.timestamp > info[5]:
             raise ValueError("CEREMONY_TIMEOUT")
         if state is None:
@@ -312,6 +322,8 @@ class Participant:
                 "part1", index=self.index, n=len(m.participants), t=m.threshold
             )
             state = dict(stage="round1", round1=out, transport_binding=dict(signature=signature))
+            if self.recovery_policy is not None:
+                state["bitcoin_recovery"] = self.recovery_policy
             s.put(self.key, state)
         if info[4] == 4:
             if state.get("result_hash") != bytes(c[3]).hex():
@@ -525,6 +537,7 @@ class Participant:
                 secret=state["round2"]["secret"],
                 round1=public,
                 round2=received,
+                **({"recovery_policy": self.recovery_policy} if self.recovery_policy is not None else {}),
             )
             state["result"] = out
             state.pop("round2", None)

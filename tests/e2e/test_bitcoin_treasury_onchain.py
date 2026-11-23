@@ -41,13 +41,37 @@ def test_unminted_treasury_uses_same_board_signing_and_spv_settlement(tmp_path):
     requested = env.participant("btc_ceremony", 1, "btc-treasury-execute", *common, *terms)
     assert requested["status"] == "BTC_FUNDING_EXECUTED"
     assert env.participant("btc_ceremony", 2, "btc-treasury-execute", *common, *terms)["withdrawal_ref"] == requested["withdrawal_ref"]
+    def prepare(batch):
+        options = [*common, "--batch", batch]
+        prepared = env.participant("btc_ceremony", 0, "btc-prepare", *options,
+            "--input", funded + ":" + str(output["n"]), "--withdrawal", requested["withdrawal_ref"],
+            "--fee", "200", "--max-fee", "200", "--deadline", w3.eth.get_block("latest").timestamp + 3600,
+            "--signers", "1", "2", "3")
+        assert prepared["plan"]["outputs"] == [dict(amount="400", script=destination)]
+        return options
+
+    cancelled = os.urandom(32).hex()
+    old_options = prepare(cancelled)
+    reservation = env.participant("btc_ceremony", 0, "btc-propose", *old_options, "--operation", "reserve")
+    _sign_session(env, int(reservation["session"]))
+    env.participant("btc_ceremony", 1, "btc-execute", *old_options, "--operation", "reserve")
+    # The reviewed cancellation is a separate, EVM-only authorization. Use an
+    # independent participant for execution and for the idempotent retry.
+    options = ["--signing-board", board, "--batch", cancelled, "--operation", "cancel",
+               "--deadline", w3.eth.get_block("latest").timestamp + 3600]
+    proposal = env.participant("btc_ceremony", 0, "btc-propose", *options)
+    _sign_session(env, int(proposal["session"]))
+    assert env.participant("btc_ceremony", 1, "btc-execute", *options)["status"] == "BTC_OPERATION_EXECUTED"
+    batches = env.bootstrap.contract("batches")
+    assert int(batches.functions.batchState(bytes.fromhex(cancelled)).call()) == 3
+    from signer_agent.bitcoin_worker import outpoint_hash
+    assert bytes(batches.functions.reservations(outpoint_hash(funded + ":" + str(output["n"]))).call()) == bytes(32)
+    nonce = w3.eth.get_transaction_count(env.addresses[2])
+    assert env.participant("btc_ceremony", 2, "btc-execute", *options)["status"] == "BTC_OPERATION_EXECUTED"
+    assert w3.eth.get_transaction_count(env.addresses[2]) == nonce
+
     batch = os.urandom(32).hex()
-    options = [*common, "--batch", batch]
-    prepared = env.participant("btc_ceremony", 0, "btc-prepare", *options,
-        "--input", funded + ":" + str(output["n"]), "--withdrawal", requested["withdrawal_ref"],
-        "--fee", "200", "--max-fee", "200", "--deadline", w3.eth.get_block("latest").timestamp + 3600,
-        "--signers", "1", "2", "3")
-    assert prepared["plan"]["outputs"] == [dict(amount="400", script=destination)]
+    options = prepare(batch)
     for operation in ("reserve", "bind"):
         proposal = env.participant("btc_ceremony", 0, "btc-propose", *options, "--operation", operation)
         _sign_session(env, int(proposal["session"]))

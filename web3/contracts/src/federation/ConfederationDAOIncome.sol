@@ -21,6 +21,10 @@ interface IConfederationFeeSale {
     function recordFee(uint256 amount) external;
 }
 
+interface IConfederationSettlementLifecycle {
+    function settlementDayLimit(address pool) external view returns (uint256);
+}
+
 /// @notice Receives and accounts for all income of one new confederation DAO.
 contract ConfederationDAOIncome is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -68,6 +72,7 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     CustodianValidator public immutable validator;
     ConfederationDAOStake public immutable staking;
     CustodianDAODecisionBoard public immutable decisions;
+    IConfederationSettlementLifecycle public immutable factory;
     address public passSale;
     IConfederationFeeSale public feeSale;
     address[] public tokens;
@@ -92,6 +97,10 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     mapping(uint256 => uint256) public dayEligibleTotal;
     mapping(address => mapping(address => uint256)) public reimbursement;
     mapping(address => mapping(address => mapping(uint256 => bool))) public claimed;
+    mapping(address => uint256) public closingIncome;
+    mapping(address => uint256) public closingReward;
+    mapping(address => mapping(address => uint256)) private closingClaimed;
+    uint256 public closingRatesDay;
 
     event Income(uint256 indexed day, address indexed token, Stream indexed stream, uint256 amount);
     event StablecoinApproved(address indexed token);
@@ -105,6 +114,9 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     event DayOpened(uint256 indexed day, bytes32 indexed evidenceHash);
     event DaySettled(uint256 indexed day, uint256 eligibleStake);
     event Claimed(address indexed owner, address indexed token, uint256 amount, bool expense);
+    event ClosingIncome(address indexed token, Stream indexed stream, uint256 amount);
+    event ClosingReward(address indexed token, uint256 amount);
+    event ClosingRatesApproved(uint256 indexed day, bytes32 indexed operationHash);
 
     error InvalidBinding();
     error InvalidAuthorization();
@@ -113,17 +125,21 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     error InvalidDay();
     error InvalidClaim();
     error InvalidTransfer();
+    error ClosingRatesRequired();
+    error AssetShortfall(address token, uint256 held, uint256 accounted);
 
-    constructor(address pool_, address share_, address auth_, address stake_, address decisions_) {
+    constructor(address pool_, address share_, address auth_, address stake_, address decisions_, address factory_) {
         pool = pool_;
         shareToken = share_;
         authorization = FROSTAuthorization(auth_);
         staking = ConfederationDAOStake(stake_);
         decisions = CustodianDAODecisionBoard(decisions_);
+        factory = IConfederationSettlementLifecycle(factory_);
         validator = staking.custodianValidator();
         if (pool_.code.length == 0 || share_.code.length == 0 || auth_.code.length == 0 || decisions_.code.length == 0
             || validator.frostMultisig() != auth_ || address(staking.stakeToken()) == share_
-            || address(decisions.staking()) != stake_ || address(decisions.authorization()) != auth_) {
+            || address(decisions.staking()) != stake_ || address(decisions.authorization()) != auth_
+            || factory_.code.length == 0 || settlementDayLimit() != type(uint256).max) {
             revert InvalidBinding();
         }
         approvedToken[share_] = true;
@@ -132,6 +148,8 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     }
 
     function rewardTokens() external view returns (address[] memory) { return tokens; }
+
+    function settlementDayLimit() public view returns (uint256) { return factory.settlementDayLimit(pool); }
 
     function getAddStablecoinOperationHash(address token) public view returns (bytes32) {
         return authorization.hashOperation(address(this), this.addStablecoin.selector, keccak256(abi.encode(token)),
@@ -178,12 +196,11 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     }
 
     function recordShareIncome(Stream stream, uint256 amount) external nonReentrant {
-        IERC20 shares = IERC20(shareToken);
-        uint256 balance = shares.balanceOf(address(this));
         if (stream == Stream.Direct || (stream == Stream.Pass ? msg.sender != passSale : msg.sender != pool)
-            || amount == 0 || balance - accountedBalance[shareToken] < amount) {
-            revert InvalidIncome();
-        }
+            || amount == 0) revert InvalidIncome();
+        IERC20 shares = IERC20(shareToken);
+        uint256 balance = _coveredBalance(shareToken);
+        if (balance - accountedBalance[shareToken] < amount) revert InvalidIncome();
         IConfederationFeeSale sale = feeSale;
         if (stream != Stream.Pass && address(sale) != address(0)) {
             uint256 reserved = Math.mulDiv(amount, sale.sellBps(), 10_000);
@@ -203,22 +220,27 @@ contract ConfederationDAOIncome is ReentrancyGuard {
         IConfederationFeeSale sale = feeSale;
         if (msg.sender != address(sale) || amount == 0) revert InvalidIncome();
         address token = sale.stablecoin();
-        if (IERC20(token).balanceOf(address(this)) - accountedBalance[token] < amount) revert InvalidIncome();
+        if (_coveredBalance(token) - accountedBalance[token] < amount) revert InvalidIncome();
         _record(token, Stream.Direct, amount);
     }
 
     /// @notice Accounts for transfers at their received value and in the day of this call.
     function sweep(address token) external nonReentrant returns (uint256 amount) {
         if (!approvedToken[token]) return 0;
-        amount = IERC20(token).balanceOf(address(this)) - accountedBalance[token];
+        amount = _coveredBalance(token) - accountedBalance[token];
         if (amount != 0) _record(token, Stream.Direct, amount);
     }
 
     function _record(address token, Stream stream, uint256 amount) private {
         uint256 day = block.timestamp / 1 days;
-        dayIncome[day][token][stream] += amount;
         accountedBalance[token] += amount;
-        emit Income(day, token, stream, amount);
+        if (day < settlementDayLimit()) {
+            dayIncome[day][token][stream] += amount;
+            emit Income(day, token, stream, amount);
+        } else {
+            closingIncome[token] += amount;
+            emit ClosingIncome(token, stream, amount);
+        }
     }
 
     function getSettlementOperationHash(DayReport calldata report) public view returns (bytes32) {
@@ -234,13 +256,14 @@ contract ConfederationDAOIncome is ReentrancyGuard {
 
     /// @notice Appends chronological expenses for the next closed day without opening it.
     function stageExpenses(ExpenseBatch calldata batch, bytes32 op) external nonReentrant {
-        if (processing || batch.day != nextSettlementDay || batch.day >= block.timestamp / 1 days) revert InvalidDay();
+        _requireReportDay(batch.day);
         uint256 count = batch.expenses.length;
         if (count == 0 || count > MAX_EXPENSES || batch.offset != stagedExpenseCount
             || batch.previous != stagedExpenseCommitment || batch.evidenceHash == bytes32(0)
             || (batch.offset != 0 && batch.firstPosition <= stagedExpensePosition)
             || batch.lastPosition < batch.firstPosition
             || (count > 1 && batch.lastPosition == batch.firstPosition)) revert InvalidReport();
+        _requireCovered();
         _consume(op, getStageExpensesOperationHash(batch));
         _recordExpenses(batch.expenses);
         stagedExpenseCount += count;
@@ -251,7 +274,7 @@ contract ConfederationDAOIncome is ReentrancyGuard {
 
     function openDay(DayReport calldata report, bytes32 op) external nonReentrant {
         uint256 day = report.day;
-        if (processing || day != nextSettlementDay || day >= block.timestamp / 1 days) revert InvalidDay();
+        _requireReportDay(day);
         uint256 count = tokens.length;
         if (report.evidenceHash == bytes32(0) || report.expenses.length > MAX_EXPENSES
             || (stagedExpenseCount != 0 && report.expenses.length != 0)
@@ -261,6 +284,7 @@ contract ConfederationDAOIncome is ReentrancyGuard {
         _consume(op, getSettlementOperationHash(report));
         for (uint256 i; i < count; ++i) {
             address token = tokens[i];
+            _coveredBalance(token);
             if (report.tokens[i] != token || report.unitsPerEth[i] == 0
                 || report.unitsPerEth[i] > type(uint128).max) revert InvalidReport();
             for (uint256 stream; stream < 4; ++stream) {
@@ -274,6 +298,11 @@ contract ConfederationDAOIncome is ReentrancyGuard {
         processing = true;
         dayEvidence[day] = report.evidenceHash;
         emit DayOpened(day, report.evidenceHash);
+    }
+
+    function _requireReportDay(uint256 day) private view {
+        if (processing || day != nextSettlementDay || day >= block.timestamp / 1 days
+            || day >= settlementDayLimit()) revert InvalidDay();
     }
 
     function _recordExpenses(Expense[] calldata expenses) private {
@@ -293,15 +322,71 @@ contract ConfederationDAOIncome is ReentrancyGuard {
     /// @notice Earmarks reimbursements before making any of this day's income claimable as rewards.
     function processDay(uint256 maxRows) external nonReentrant {
         if (!processing || maxRows == 0 || maxRows > MAX_PAYMENT_ROWS) revert InvalidDay();
+        _requireCovered();
+        if (_processDebts(maxRows)) _closeDay();
+    }
+
+    /// @dev A daily report can close when current income is insufficient to advance its debt head.
+    function _processDebts(uint256 maxRows) private returns (bool) {
         uint256 stop = Math.min(debtHead + maxRows, debtTail);
         while (debtHead < stop) {
-            if (!_allocate(debtHead)) {
-                _closeDay();
-                return;
-            }
+            if (!_allocate(debtHead)) return true;
             delete debt[debtHead++];
         }
-        if (debtHead == debtTail) _closeDay();
+        return debtHead == debtTail;
+    }
+
+    function getSetClosingRatesOperationHash(uint256 day, address[] calldata assets, uint256[] calldata rates)
+        public view returns (bytes32)
+    {
+        return authorization.hashOperation(address(this), this.setClosingRates.selector,
+            keccak256(abi.encode(day, assets, rates)), day);
+    }
+
+    /// @notice Approve rates for allocating existing debt in this UTC day without opening a new report.
+    function setClosingRates(uint256 day, address[] calldata assets, uint256[] calldata rates, bytes32 op)
+        external nonReentrant
+    {
+        _settledCutoffDay();
+        if (day != block.timestamp / 1 days || day == closingRatesDay || debtHead == debtTail) revert InvalidDay();
+        uint256 count = tokens.length;
+        if (assets.length != count || rates.length != count) revert InvalidReport();
+        _consume(op, getSetClosingRatesOperationHash(day, assets, rates));
+        for (uint256 i; i < count; ++i) {
+            if (assets[i] != tokens[i] || rates[i] == 0 || rates[i] > type(uint128).max) revert InvalidReport();
+            unitsPerEth[assets[i]] = rates[i];
+        }
+        closingRatesDay = day;
+        emit ClosingRatesApproved(day, op);
+    }
+
+    /// @notice Applies late receipts to old debts at this UTC day's rates, then to cutoff-day stakers.
+    function processClosingIncome(uint256 maxRows) external nonReentrant {
+        uint256 day = _settledCutoffDay();
+        if (maxRows == 0 || maxRows > MAX_PAYMENT_ROWS) revert InvalidDay();
+        if (debtHead != debtTail && closingRatesDay != block.timestamp / 1 days) revert ClosingRatesRequired();
+        _requireCovered();
+        for (uint256 i; i < tokens.length; ++i) {
+            address token = tokens[i];
+            availableIncome[token] += closingIncome[token];
+            delete closingIncome[token];
+        }
+        _processDebts(maxRows);
+        if (debtHead != debtTail || staking.totalEligibleStake(day) == 0) return;
+        for (uint256 i; i < tokens.length; ++i) {
+            address token = tokens[i];
+            uint256 amount = availableIncome[token];
+            if (amount == 0) continue;
+            closingReward[token] += amount;
+            delete availableIncome[token];
+            emit ClosingReward(token, amount);
+        }
+    }
+
+    function _settledCutoffDay() private view returns (uint256) {
+        uint256 limit = settlementDayLimit();
+        if (processing || limit == 0 || limit == type(uint256).max || nextSettlementDay != limit) revert InvalidDay();
+        return limit - 1;
     }
 
     function _allocate(uint256 id) private returns (bool) {
@@ -373,19 +458,44 @@ contract ConfederationDAOIncome is ReentrancyGuard {
         _pay(token, amount, true);
     }
 
+    function claimClosingReward(address token) external nonReentrant returns (uint256 amount) {
+        uint256 day = _settledCutoffDay();
+        uint256 total = staking.totalEligibleStake(day);
+        if (!approvedToken[token] || total == 0) revert InvalidClaim();
+        uint256 accrued = Math.mulDiv(closingReward[token], staking.eligibleStake(msg.sender, day), total);
+        amount = accrued - closingClaimed[msg.sender][token];
+        if (amount == 0) revert InvalidClaim();
+        closingClaimed[msg.sender][token] = accrued;
+        _pay(token, amount, false);
+    }
+
     function _pay(address token, uint256 amount, bool expense) private {
         if (amount != 0) {
+            uint256 beforeBalance = _coveredBalance(token);
             accountedBalance[token] -= amount;
             IERC20 asset = IERC20(token);
-            uint256 beforeBalance = asset.balanceOf(address(this));
+            uint256 beforeRecipient = asset.balanceOf(msg.sender);
             asset.safeTransfer(msg.sender, amount);
-            if (beforeBalance - asset.balanceOf(address(this)) != amount) revert InvalidTransfer();
+            if (
+                asset.balanceOf(address(this)) != beforeBalance - amount
+                    || asset.balanceOf(msg.sender) != beforeRecipient + amount
+            ) revert InvalidTransfer();
         }
         emit Claimed(msg.sender, token, amount, expense);
     }
 
+    function _coveredBalance(address token) private view returns (uint256 held) {
+        held = IERC20(token).balanceOf(address(this));
+        uint256 accounted = accountedBalance[token];
+        if (held < accounted) revert AssetShortfall(token, held, accounted);
+    }
+
+    function _requireCovered() private view {
+        for (uint256 i; i < tokens.length; ++i) _coveredBalance(tokens[i]);
+    }
+
     function _authorize(bytes32 op, bytes32 expected) private {
-        if (processing) revert InvalidDay();
+        if (processing || settlementDayLimit() != type(uint256).max) revert InvalidDay();
         _consume(op, expected);
         ++operationNonce;
     }

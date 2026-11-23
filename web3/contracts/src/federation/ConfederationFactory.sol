@@ -10,11 +10,7 @@ import "./CustodianValidator.sol";
 import "../FROSTAuthorization.sol";
 import "./FederationFeeManager.sol";
 import "./ConfederationMultiPool.sol";
-import "./CustodianDAOStaking.sol";
-import "./CustodianDAORateController.sol";
-import "./CustodianDAODailySettlement.sol";
-import "./CustodianDAODecisionBoard.sol";
-import "./CustodianDAOIncomeVault.sol";
+import {CustodianDAOConfigValidator} from "./CustodianDAOConfigValidator.sol";
 
 interface IConfederationFROSTCoordinator {
     function defaultVerifier() external view returns (address);
@@ -65,6 +61,7 @@ contract ConfederationFactory is IConfederationFactory {
 
     /// @notice Deployer for confederation contracts
     ConfederationDeployer public immutable deployer;
+    CustodianDAOConfigValidator private immutable daoConfigValidator;
     address public immutable frostCoordinator;
 
     /// @notice Confederation configurations
@@ -101,10 +98,18 @@ contract ConfederationFactory is IConfederationFactory {
 
     /// @notice One-to-one reservation of an ID for a DKG session on this factory.
     mapping(string => bytes32) public reservedConfederationSession;
+    struct ReservationTerms {
+        bytes32 formationHash;
+        bytes32 tokenHash;
+    }
+    mapping(string => ReservationTerms) public reservedConfederationTerms;
     mapping(bytes32 => bool) private reservedSessions;
 
     /// @notice Per-confederation nonce for target-bound FROST operations
     mapping(string => uint256) private confederationOperationNonces;
+
+    /// @notice Exclusive UTC settlement-day limit, max uint while active and zero for an unregistered pool.
+    mapping(address => uint256) public settlementDayLimit;
 
     // ======== ERRORS ========
 
@@ -131,6 +136,10 @@ contract ConfederationFactory is IConfederationFactory {
 
     event InterFederationCommitmentSubmitted(bytes32 indexed sessionId, string federationId, bytes32 commitment);
     event ConfederationIdReserved(string indexed confederationId, bytes32 indexed sessionId);
+    event ConfederationReservationTransferred(
+        string indexed confederationId, bytes32 indexed previous, bytes32 indexed replacement
+    );
+    event ConfederationSettlementCutoff(address indexed pool, uint256 lastDay);
 
     // ======== CONSTRUCTOR ========
 
@@ -152,24 +161,53 @@ contract ConfederationFactory is IConfederationFactory {
         dkgCoordinator = IDKGCoordinator(_dkgCoordinator);
         deployer = ConfederationDeployer(_deployer);
         frostCoordinator = _frostCoordinator;
+        daoConfigValidator = new CustodianDAOConfigValidator();
     }
 
     // ======== MAIN FUNCTIONS ========
 
-    /// @notice The factory deployer binds an unused ID to exactly one DKG session.
+    /// @notice The factory deployer binds an unused ID to a DKG session, formation and token metadata.
     /// @dev May precede DKG completion. The exact retry is a no-op.
-    function reserveConfederationId(bytes32 sessionId, string calldata id) external {
+    function reserveConfederationId(bytes32 sessionId, string calldata id, bytes32 formationHash, bytes32 tokenHash)
+        external
+    {
         if (msg.sender != feeSetupAuthority) revert NotAuthorized();
-        if (sessionId == 0 || bytes(id).length == 0) revert InvalidConfederationReservation();
+        if (sessionId == 0 || bytes(id).length == 0 || formationHash == 0 || tokenHash == 0) {
+            revert InvalidConfederationReservation();
+        }
         bytes32 previous = reservedConfederationSession[id];
-        if (previous == sessionId) return;
+        if (previous == sessionId) {
+            ReservationTerms storage terms = reservedConfederationTerms[id];
+            if (terms.formationHash != formationHash || terms.tokenHash != tokenHash) {
+                revert InvalidConfederationReservation();
+            }
+            return;
+        }
         if (previous != 0 || confederations[id].createdAt != 0) revert ConfederationAlreadyExists();
+        _requireUnusedReservationSession(sessionId);
+        reservedConfederationSession[id] = sessionId;
+        reservedConfederationTerms[id] = ReservationTerms(formationHash, tokenHash);
+        reservedSessions[sessionId] = true;
+        emit ConfederationIdReserved(id, sessionId);
+    }
+
+    /// @notice Move an unused reservation from a terminal ceremony to a replacement with the same DKG roster.
+    function transferConfederationReservation(string calldata id, bytes32 previous, bytes32 replacement) external {
+        if (msg.sender != feeSetupAuthority) revert NotAuthorized();
+        _requireCanonicalRegistry();
+        if (previous == 0 || reservedConfederationSession[id] != previous || confederationToSession[id] != 0
+            || replacement == 0) revert InvalidConfederationReservation();
+        _requireUnusedReservationSession(replacement);
+        DKGCoordinator(address(dkgCoordinator)).requireReservationTransfer(previous, replacement);
+        reservedConfederationSession[id] = replacement;
+        reservedSessions[replacement] = true;
+        emit ConfederationReservationTransferred(id, previous, replacement);
+    }
+
+    function _requireUnusedReservationSession(bytes32 sessionId) private view {
         if (reservedSessions[sessionId] || bytes(sessionToConfederation[sessionId]).length != 0) {
             revert InvalidConfederationReservation();
         }
-        reservedConfederationSession[id] = sessionId;
-        reservedSessions[sessionId] = true;
-        emit ConfederationIdReserved(id, sessionId);
     }
 
     /**
@@ -202,31 +240,27 @@ contract ConfederationFactory is IConfederationFactory {
     function adoptConfederationDKG(
         bytes32 sessionId,
         string[] calldata federationIds,
-        CustodianMember[] calldata custodianMembers,
+        CustodianMember[] memory custodianMembers,
         uint256 totalThreshold,
         uint256 minCustodians,
         string calldata confederationId
     ) external {
         _requireCanonicalRegistry();
-        _requireReservedConfederation(sessionId, confederationId);
-        Formation memory formation = _formation(federationIds, false);
-        _adopt(sessionId, formation, custodianMembers, totalThreshold, minCustodians, confederationId);
+        _adopt(sessionId, 0, federationIds, custodianMembers, totalThreshold, minCustodians, confederationId);
     }
 
     function adoptConfederationFromFederation(
         bytes32 sessionId,
         string calldata federationId,
-        CustodianMember[] calldata custodians,
+        CustodianMember[] memory custodians,
         uint256 totalThreshold,
         uint256 minCustodians,
         string calldata confederationId
     ) external {
         _requireCanonicalRegistry();
-        _requireReservedConfederation(sessionId, confederationId);
         string[] memory ids = new string[](1);
         ids[0] = federationId;
-        Formation memory formation = _formation(ids, true);
-        _adopt(sessionId, formation, custodians, totalThreshold, minCustodians, confederationId);
+        _adopt(sessionId, 1, ids, custodians, totalThreshold, minCustodians, confederationId);
     }
 
     function _requireLegacyNetwork() private view {
@@ -236,11 +270,13 @@ contract ConfederationFactory is IConfederationFactory {
     /// @notice A separate monetary epoch controlled exclusively by custodians.
     /// @dev Founders retain association metadata, never a share of this epoch's key.
     function adoptCustodianConfederationDKG(
-        bytes32 sessionId, string[] calldata federationIds, CustodianMember[] calldata custodians,
+        bytes32 sessionId, string[] calldata federationIds, CustodianMember[] memory custodians,
         uint256 threshold, uint256 minCustodians, string calldata id
     ) external {
         _requireCanonicalRegistry();
-        _requireReservedConfederation(sessionId, id);
+        _requireReservedConfederation(
+            sessionId, id, keccak256(abi.encode(uint8(2), federationIds, custodians, threshold, minCustodians))
+        );
         Formation memory formation = _formation(federationIds, false);
         uint256 n = custodians.length;
         require(n >= 2 && n <= MAX_DKG_PARTICIPANTS && threshold >= 2 && threshold <= n
@@ -275,9 +311,14 @@ contract ConfederationFactory is IConfederationFactory {
         if (confederations[id].createdAt != 0) revert ConfederationAlreadyExists();
     }
 
-    function _requireReservedConfederation(bytes32 sessionId, string calldata id) private view {
+    function _requireReservedConfederation(
+        bytes32 sessionId,
+        string calldata id,
+        bytes32 formationHash
+    ) private view {
         _requireNewConfederation(id);
-        if (sessionId == 0 || reservedConfederationSession[id] != sessionId) {
+        if (sessionId == 0 || reservedConfederationSession[id] != sessionId
+            || reservedConfederationTerms[id].formationHash != formationHash) {
             revert InvalidConfederationReservation();
         }
     }
@@ -305,7 +346,7 @@ contract ConfederationFactory is IConfederationFactory {
     /// @dev One composition rule for every creation path. Validator membership never changes this DKG roster.
     function _validateComposition(
         address[] memory founders,
-        CustodianMember[] calldata custodians,
+        CustodianMember[] memory custodians,
         uint256 threshold,
         uint256 minCustodians
     ) private pure returns (address[] memory participants) {
@@ -334,12 +375,17 @@ contract ConfederationFactory is IConfederationFactory {
 
     function _adopt(
         bytes32 sessionId,
-        Formation memory formation,
-        CustodianMember[] calldata custodians,
+        uint8 mode,
+        string[] memory federationIds,
+        CustodianMember[] memory custodians,
         uint256 threshold,
         uint256 minCustodians,
         string calldata id
     ) private {
+        _requireReservedConfederation(
+            sessionId, id, keccak256(abi.encode(mode, federationIds, custodians, threshold, minCustodians))
+        );
+        Formation memory formation = _formation(federationIds, mode == 1);
         formation.participants = _validateComposition(formation.founders, custodians, threshold, minCustodians);
         _checkAdoption(sessionId, formation.participants, threshold);
         require(DKGCoordinator(address(dkgCoordinator)).isSessionParticipant(sessionId, msg.sender), "DKG admission");
@@ -361,7 +407,7 @@ contract ConfederationFactory is IConfederationFactory {
     function _recordConfederation(
         bytes32 sessionId,
         Formation memory formation,
-        CustodianMember[] calldata custodians,
+        CustodianMember[] memory custodians,
         uint256 threshold,
         uint256 minCustodians,
         string calldata id
@@ -436,9 +482,12 @@ contract ConfederationFactory is IConfederationFactory {
         external
         returns (address frostMultisig, address custodianValidator, address multiPool, address shareToken)
     {
-        if (!v1Sessions[sessionId]) _requireLegacyNetwork();
+        bool adopted = v1Sessions[sessionId];
+        if (!adopted) _requireLegacyNetwork();
         string storage confederationId = sessionToConfederation[sessionId];
         if (bytes(confederationId).length == 0) revert SessionNotFound();
+        if (adopted && reservedConfederationTerms[confederationId].tokenHash
+            != keccak256(abi.encode(shareTokenName, shareTokenSymbol))) revert InvalidConfederationReservation();
 
         // Check DKG is complete
         IDKGCoordinator.DKGSessionInfo memory sessionInfo = dkgCoordinator.getSessionInfo(sessionId);
@@ -475,7 +524,7 @@ contract ConfederationFactory is IConfederationFactory {
         }
 
         // Deploy contracts via deployer
-        if(v1Sessions[sessionId]) {
+        if(adopted) {
         (frostMultisig, custodianValidator, multiPool, shareToken) = deployer.deployConfederationContractsV1(
             confederationId,
             allSigners,
@@ -501,7 +550,7 @@ contract ConfederationFactory is IConfederationFactory {
         );
         }
 
-        if(v1Sessions[sessionId]) _collectDeploymentFee();
+        if(adopted) _collectDeploymentFee();
         config.frostMultisig = frostMultisig;
         config.custodianValidator = custodianValidator;
         config.multiPool = multiPool;
@@ -514,6 +563,7 @@ contract ConfederationFactory is IConfederationFactory {
 
         // Activate confederation
         config.isActive = true;
+        settlementDayLimit[multiPool] = type(uint256).max;
 
         emit ConfederationDeployed(confederationId, frostMultisig, custodianValidator, multiPool, shareToken);
     }
@@ -566,6 +616,9 @@ contract ConfederationFactory is IConfederationFactory {
         confederationOperationNonces[confederationId]++;
 
         config.isActive = false;
+        uint256 lastDay = block.timestamp / 1 days;
+        settlementDayLimit[config.multiPool] = lastDay + 1;
+        emit ConfederationSettlementCutoff(config.multiPool, lastDay);
         emit ConfederationDeactivated(confederationId);
     }
 
@@ -582,7 +635,7 @@ contract ConfederationFactory is IConfederationFactory {
             CustodianValidator(config.custodianValidator).meetsMinimumCustodians(operationHash),
             "Custodian threshold not met"
         );
-        _validateCustodianDAO(config, dao);
+        daoConfigValidator.validate(dao, config.custodianValidator, config.frostMultisig);
         FROSTAuthorization(config.frostMultisig).consumeOperation(operationHash);
         confederationOperationNonces[confederationId]++;
         custodianDAOs[confederationId] = dao;
@@ -605,31 +658,6 @@ contract ConfederationFactory is IConfederationFactory {
     function getCustodianDAO(string calldata confederationId) external view returns (CustodianDAOConfig memory) {
         if (confederations[confederationId].createdAt == 0) revert ConfederationNotFound();
         return custodianDAOs[confederationId];
-    }
-
-    function _validateCustodianDAO(ConfederationConfig storage config, CustodianDAOConfig calldata dao) private view {
-        if (
-            dao.token.code.length == 0 || dao.staking.code.length == 0 || dao.controller.code.length == 0
-                || dao.twap.code.length == 0 || dao.incomeVault.code.length == 0 || dao.decisions.code.length == 0
-                || dao.settlement.code.length == 0
-        ) revert InvalidCustodianDAO();
-        CustodianDAOStaking staking = CustodianDAOStaking(dao.staking);
-        CustodianDAORateController controller = CustodianDAORateController(dao.controller);
-        CustodianDAODailySettlement settlement = CustodianDAODailySettlement(dao.settlement);
-        CustodianDAOIncomeVault vault = CustodianDAOIncomeVault(dao.incomeVault);
-        CustodianDAODecisionBoard decisions = CustodianDAODecisionBoard(dao.decisions);
-        if (
-            address(staking.stakeToken()) != dao.token || address(staking.custodianValidator()) != config.custodianValidator
-                || staking.distributor() != dao.settlement || address(controller.staking()) != dao.staking
-                || address(controller.validator()) != config.custodianValidator
-                || address(settlement.staking()) != dao.staking || address(settlement.controller()) != dao.controller
-                || address(settlement.twap()) != dao.twap || address(settlement.incomeVault()) != dao.incomeVault
-                || address(settlement.authorization()) != config.frostMultisig
-                || address(staking.rewardToken()) != address(settlement.rewardToken())
-                || address(vault.rewardToken()) != address(settlement.rewardToken())
-                || address(vault.authorization()) != config.frostMultisig || vault.settlement() != dao.settlement
-                || address(decisions.staking()) != dao.staking || address(decisions.authorization()) != config.frostMultisig
-        ) revert InvalidCustodianDAO();
     }
 
     /**

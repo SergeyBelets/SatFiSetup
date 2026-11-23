@@ -4,12 +4,13 @@ import json
 from pathlib import Path
 
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import TransactionNotFound
 
 from .safe_errors import DiagnosticArgumentParser
 from . import ulr_treasury as policy
 from .dao_client import DAOClient, account_at, address, wire, claim_days
-from .evm_network import read_block
+from .evm_network import read_block, verify_anchor
 from .operations import Journal, canonical
 
 
@@ -93,7 +94,7 @@ def pay_attempt(w3, at, state, key, waiting_for_balance):
 
 def main(argv):
     parser = DiagnosticArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["snapshot-prepare", "snapshot-roster", "enroll-prepare", "activate-prepare", "spend-prepare", "router-prepare",
+    parser.add_argument("action", choices=["snapshot-prepare", "snapshot-roster", "enroll-prepare", "activate-prepare", "spend-prepare", "recover-inactive-prepare", "router-prepare",
         "candidate-bind-prepare", "candidate-admit-prepare", "candidate-remove-prepare", "voting-prepare",
         "candidates", "delegate", "undelegate", "vote", "approve", "stake", "unstake", "wallet", "claim", "propose", "execute", "pay", "status"])
     parser.add_argument("--rpc", required=True)
@@ -133,14 +134,16 @@ def main(argv):
     if args.send and args.action in ("delegate", "undelegate", "vote", "claim", "approve", "stake", "unstake") and not args.id:
         raise ValueError("ULR_USER_OPERATION_ID_REQUIRED")
     pin = policy.load_pin(args.config)
-    w3 = Web3(Web3.HTTPProvider(args.rpc, request_kwargs={"timeout": 30}))
+    w3 = evm_web3(args.rpc, timeout=30)
     if str(w3.eth.chain_id) != pin["chain_id"]:
         raise ValueError("ULR_CHAIN_MISMATCH")
     at = read_block(w3, int(pin["confirmations"]))
     if args.action in ("claim", "approve", "stake", "unstake", "wallet"):
         staking = policy.contract(w3, "ULRStaking", pin["staking"])
+        exit_options = {"previous_build": True} if args.action in ("claim", "unstake", "wallet") else {}
         policy.proven(w3, "ULRStaking", staking.address, at.number,
-            policy.staking_args(staking, at.number))
+            policy.staking_args(staking, at.number), **exit_options)
+        verify_anchor(w3, at.number, at.hash)
         sender = account_at(args.identity_file).address if args.identity_file else address(
             args.sender or (args.owner if args.action == "wallet" else None))
         if args.action == "wallet":
@@ -197,7 +200,10 @@ def main(argv):
             intent = policy.intent_for(w3, registry, "ULRCustodianSnapshots", "getPublishDayOperationHash",
                 values, read(registry, "authorization"), bundle["role"], at.number, ulr_snapshot_inputs=inputs)
         else:
-            _, _, treasury, factory, conf_id, conf = policy.treasury_context(w3, pin, args.treasury, at.number)
+            recovery = args.action == "recover-inactive-prepare"
+            _, _, treasury, factory, conf_id, conf = policy.treasury_context(
+                w3, pin, args.treasury, at.number, require_active=not recovery,
+                legacy_factory=recovery or args.action == "spend-prepare")
             if args.action == "enroll-prepare":
                 intent = policy.intent_for(w3, registry, "ULRCustodianSnapshots", "getEnrollTreasuryOperationHash",
                     [factory.address, conf_id, treasury.address], conf[7], bundle["role"], at.number)
@@ -207,8 +213,13 @@ def main(argv):
                     raise ValueError("ULR_TREASURY_ACTIVATION_UNSUPPORTED")
                 intent = policy.intent_for(w3, registry, "ULRCustodianSnapshots", policy.ACTIVATE_TREASURY_METHOD,
                     [treasury.address], read(registry, "authorization"), bundle["role"], at.number)
-            elif args.action == "spend-prepare":
-                intent = policy.intent_for(w3, treasury, "ULRConfederationTreasury", "getSpendOperationHash",
+            elif args.action == "spend-prepare" or recovery:
+                if recovery and conf[-1]:
+                    raise ValueError("ULR_RECOVERY_REQUIRES_INACTIVE")
+                if recovery and not policy.recovery_supported(w3, treasury, at.number):
+                    raise ValueError("ULR_TREASURY_RECOVERY_UNSUPPORTED")
+                helper = policy.INACTIVE_RECOVERY_METHOD if recovery else "getSpendOperationHash"
+                intent = policy.intent_for(w3, treasury, "ULRConfederationTreasury", helper,
                     [address(args.recipient), policy.number(args.amount), policy.number(args.deadline)],
                     conf[7], bundle["role"], at.number)
             elif args.action.startswith("candidate-"):
@@ -291,6 +302,7 @@ def main(argv):
             return 0
         method = {"getPublishDayOperationHash": "publishDay", "getEnrollTreasuryOperationHash": "enrollTreasury",
                   policy.ACTIVATE_TREASURY_METHOD: "activateTreasury",
+                  policy.INACTIVE_RECOVERY_METHOD: "recoverInactive",
                   "getSpendOperationHash": "spend", "getSetFeeSharesOperationHash": "setFeeShares",
                   "getSetTreasuryOperationHash": "setTreasury", "getBindCandidateStakingOperationHash": "bindCandidateStaking",
                   "getAddCustodianOperationHash": "addCustodian", "getRemoveCustodianOperationHash": "removeCustodian",
@@ -308,7 +320,9 @@ def main(argv):
         print(json.dumps(result))
         return 0
 
-    _, staking, treasury, _, _, conf = policy.treasury_context(w3, pin, args.treasury, at.number)
+    _, staking, treasury, _, _, conf = policy.treasury_context(
+        w3, pin, args.treasury, at.number, require_active=args.action != "status",
+        legacy_factory=args.action == "status")
     if args.action == "candidates":
         validator = policy.contract(w3, "CustodianValidator", conf[8])
         result = read(validator, "getCustodianCandidates", policy.number(args.offset), policy.number(args.limit))
@@ -342,7 +356,11 @@ def main(argv):
     if args.action == "status":
         result = dict(day=str(day), treasury=treasury.address, balance=str(read(
             policy.contract(w3, "IERC20Metadata", read(staking, "rewardToken")), "balanceOf", treasury.address)),
-            settlement=wire(receipt), snapshot=wire(read(registry, "daySnapshots", day)))
+            settlement=wire(receipt), snapshot=wire(read(registry, "daySnapshots", day)),
+            active=conf[-1], enrolled=read(registry, "treasuries", read(treasury, "scope")) == treasury.address,
+            inactive_recovery_supported=policy.recovery_supported(w3, treasury, at.number))
+        if w3.eth.get_block(at.number).hash != at.hash:
+            raise ValueError("EVM_REORG_RECOVERY_REQUIRED")
     elif receipt[0]:
         result = dict(status="ALREADY_PROCESSED", day=str(day), settlement=wire(receipt))
     else:

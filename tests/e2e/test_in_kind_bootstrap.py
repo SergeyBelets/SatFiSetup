@@ -211,6 +211,8 @@ def buy_native_pass(context, manifest, buyer, buyer_file, workdir, *, price=1000
     income = bootstrap.contract("dao_income")
     operator_file = context["identities"][0]
     intent, quote = workdir / "pass-intent.json", workdir / "pass-quote.json"
+    stale_quote = workdir / "pass-quote-before-rotation.json"
+    rotation_intent = workdir / "pass-price-control.json"
     deadline = str(w3.eth.get_block("latest").timestamp + 3600)
 
     def dao(action, *args):
@@ -218,12 +220,13 @@ def buy_native_pass(context, manifest, buyer, buyer_file, workdir, *, price=1000
             "--confirmations", "1", "--manifest", manifest, *args)
 
     def send(action, operation_id, *args, identity=operator_file):
-        journal = workdir / ("pass-operator.sqlite" if identity == operator_file else "pass-buyer.sqlite")
+        journal = workdir / f"pass-{identity.stem}.sqlite"
         return dao(action, "--send", "--id", operation_id, "--state", journal,
                    "--identity-file", identity, *args)
 
     tariff = dao("tariff-prepare", "--duration", "86400", "--discount-bps", "5000",
-        "--volume-limit", str(shares.functions.totalSupply().call()), "--output", intent)
+        "--volume-limit", str(shares.functions.totalSupply().call()), "--minimum-price", str(price),
+        "--sales-until", deadline, "--output", intent)
     assert tariff["status"] == "PREPARED"
     approval = ("--board", context["board"], "--intent", intent)
     proposal = send("propose", "tariff-propose", *approval, "--deadline", deadline)
@@ -234,9 +237,26 @@ def buy_native_pass(context, manifest, buyer, buyer_file, workdir, *, price=1000
     assert send("execute", "tariff-execute", *execution)["status"] == "VERIFIED"
     assert send("execute", "tariff-execute", *execution)["status"] == "ALREADY_EXECUTED"
 
-    prepared = dao("price", "--identity-file", operator_file, "--tariff", tariff["tariff_id"],
-        "--buyer", buyer, "--amount", str(price), "--nonce", "1", "--deadline", deadline, "--output", quote)
-    assert prepared["status"] == "PREPARED"
+    quote_args = ("--tariff", tariff["tariff_id"], "--buyer", buyer, "--amount", str(price),
+                  "--nonce", "1", "--deadline", deadline)
+    prepared = dao("price", "--identity-file", operator_file, *quote_args, "--output", stale_quote)
+    assert prepared["status"] == "PREPARED" and prepared["price_epoch"] == "1"
+
+    new_signer, new_identity = context["addresses"][1], context["identities"][1]
+    rotation = dao("price-control-prepare", "--price-signer", new_signer, "--sales-paused", "false",
+        "--output", rotation_intent)
+    assert rotation["status"] == "PREPARED"
+    approval = ("--board", context["board"], "--intent", rotation_intent)
+    proposal = send("propose", "pass-rotation-propose", *approval, "--deadline", deadline, identity=new_identity)
+    assert proposal["status"] == "AWAITING_PARTICIPANTS"
+    assert proposal["operation_hash"] == rotation["operation_hash"]
+    approve_dao_intent(context, proposal, workdir, "pass-rotation")
+    execution = ("--session", proposal["session"], *approval)
+    assert send("execute", "pass-rotation-execute", *execution, identity=new_identity)["status"] == "VERIFIED"
+    assert dao("status")["pass_pricing"] == dict(signer=new_signer, epoch="2", paused=False)
+
+    prepared = dao("price", "--identity-file", new_identity, *quote_args, "--output", quote)
+    assert prepared["status"] == "PREPARED" and prepared["price_epoch"] == "2"
     quote_data = json.loads(quote.read_text())
     buy_abi = next(row["inputs"] for row in sale.abi if row.get("name") == "buy")
     buy = sale.functions.buy(*encode_args(buy_abi, [quote_data["quote"], quote_data["signature"]]))
@@ -244,6 +264,10 @@ def buy_native_pass(context, manifest, buyer, buyer_file, workdir, *, price=1000
         buy.call({"from": context["addresses"][0]})
 
     assert send("approve-pass", "pass-allowance", "--amount", str(price), identity=buyer_file)["status"] == "VERIFIED"
+    stale = json.loads(stale_quote.read_text())
+    with pytest.raises(ContractLogicError):
+        sale.functions.buy(*encode_args(buy_abi, [stale["quote"], stale["signature"]])).call({"from": buyer})
+    assert not sale.functions.usedQuote(buyer, 1).call()
     buyer_balance = shares.functions.balanceOf(buyer).call()
     dao_balance = shares.functions.balanceOf(income.address).call()
     supply = shares.functions.totalSupply().call()

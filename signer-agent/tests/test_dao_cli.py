@@ -97,8 +97,7 @@ def test_mainnet_dao_requires_finalized_rpc(monkeypatch):
             raise RuntimeError("provider does not support finalized")
         return AttributeDict(dict(number=100, hash=b"b" * 32))
     factory = lambda *a, **kw: SimpleNamespace(eth=SimpleNamespace(chain_id=1, get_block=block))
-    factory.HTTPProvider = lambda *a, **kw: None
-    monkeypatch.setattr(dao_client, "Web3", factory)
+    monkeypatch.setattr(dao_client, "evm_web3", factory)
     with pytest.raises(ValueError, match="ETHEREUM_FINALITY_UNAVAILABLE"):
         DAOClient("http://unused", "1")
     assert reads == ["latest", "finalized"]

@@ -120,13 +120,27 @@ def save_signed(identity_journal, bootstrap, key, step, result, *, allow_fee_rep
     bootstrap.journal.update(key, "SIGNED", result)
 
 
+def require_publication_context(bootstrap, source, prefix, step):
+    """Only the owning worker can authorize sending its saved Bitcoin transition."""
+    if (step.get("id") != "transition" or step.get("kind") != "call"
+            or step.get("contract") != "relay" or step.get("method") != "submitTransition"
+            or re.fullmatch(r"zk-worker-[0-9a-f]{64}", prefix) is None):
+        return
+    check = getattr(bootstrap, "check_worker_transition_broadcast", None)
+    if check is None:
+        raise ValueError("ZK_TRANSACTION_RECOVERY_REQUIRED")
+    check(source, prefix, step)
+
+
 def recover_identity(identity_journal, bootstrap, account=None, *, replacements=None, reservations=None):
     """Rebroadcast only authorized exact bytes, and stop on known failure/reorg."""
     from .bootstrap_nonce_close import CLOSE_KIND
     from .bootstrap_recovery import check_receipt_binding, protected_nonce_floor, signed_fields
-    from .bootstrap_replacement import ALTERNATIVE, SUPERSEDED, TRACKING, SIGNED_KEYS, is_related, observe as replacement_status
+    from .bootstrap_replacement import (ALTERNATIVE, SUPERSEDED, TRACKING, SIGNED_KEYS,
+                                        is_related, lineage_sender, observe as replacement_status)
     from .finalization_recovery import is_finalization_step, reconcile
     from .evm_network import verify_anchor
+    from .reservation_transfer_cli import is_reservation_transfer, validate_rebroadcast
 
     chain_id = bootstrap.w3.eth.chain_id
     floor = protected_nonce_floor(bootstrap.w3, identity_journal, account, chain_id)
@@ -186,6 +200,9 @@ def recover_identity(identity_journal, bootstrap, account=None, *, replacements=
                 checked_sources.add(binding)
             outcome = replacement_status(bootstrap, identity_journal, account, saved, source_journal, source_entry,
                 getattr(bootstrap, "evm_confirmations", 1)) if row["status"] == TRACKING else None
+            if outcome and outcome["status"] == "CANCELLED":
+                floor = max(floor, nonce + 1)
+                continue
             if outcome and outcome["status"] == "BROADCAST":
                 if replacements is not None:
                     replacements[(str(source), saved["operation"])] = outcome
@@ -223,6 +240,13 @@ def recover_identity(identity_journal, bootstrap, account=None, *, replacements=
             try:
                 bootstrap.w3.eth.get_transaction(saved["tx_hash"])
             except TransactionNotFound:
+                if source_entry is not None:
+                    step = source_entry["request"]
+                    if is_reservation_transfer(prefix, step):
+                        validate_rebroadcast(bootstrap.w3, source_journal, prefix, step, tx,
+                                             lineage_sender(saved, account),
+                                             confirmation_floor=getattr(bootstrap, "evm_confirmations", 1))
+                    require_publication_context(bootstrap, source_journal, prefix, step)
                 bootstrap.broadcast(saved["raw_transaction"])
         else:
             evidence = dict(source_result, tx_hash=saved["tx_hash"])
@@ -247,7 +271,7 @@ def recover_identity(identity_journal, bootstrap, account=None, *, replacements=
     return max(floor, replacement_floor)
 
 
-def verify_source_anchors(w3, journal, prefix, *, allow_recovery=False):
+def verify_source_anchors(w3, journal, prefix, *, allow_recovery=False, confirmation_floor=1):
     """Do not replay a dependent signed transaction from an orphaned read view.
 
     Identity recovery may be invoked by a different deployment/profile. It must
@@ -274,7 +298,7 @@ def verify_source_anchors(w3, journal, prefix, *, allow_recovery=False):
     if not anchors:
         return  # Historical journals did not record such anchors.
     profile = journal.get(prefix)["request"]["profile"]
-    safe = read_block(w3, int(profile.get("evm_confirmations", "1")))
+    safe = read_block(w3, max(confirmation_floor, int(profile.get("evm_confirmations", "1"))))
     blocks = {safe.number: safe}
     for anchor in anchors:
         number = int(anchor["number"])

@@ -13,6 +13,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'signer-agent'))
@@ -48,7 +49,17 @@ def check(role="signer", state_dir=None):
     for name in ("web3", "coincurve", "cryptography"):
         if importlib.util.find_spec(name) is None: missing.append("python:"+name)
     binary = Path(os.environ.get('SATOHSI_CRYPTO_BIN', ROOT/'frost-crypto/target/debug/satohsi-frost-crypto'))
-    if not binary.is_file() or not os.access(binary, os.X_OK): missing.append("build:native FROST")
+    native_frost_sha256 = None
+    if not binary.is_file() or not os.access(binary, os.X_OK):
+        missing.append("build:native FROST")
+    else:
+        from signer_agent.crypto import checked_binary
+        try:
+            with checked_binary(required=True) as (_, _, native_frost_sha256):
+                pass
+        except (OSError, ValueError) as error:
+            from signer_agent.participant_errors import participant_exception_code
+            missing.append('build:native-frost-pin:' + participant_exception_code(error))
     for name in ('DKGCoordinator', 'ULRStaking', 'ULRCustodianSnapshots', 'ULRConfederationTreasury',
                  'ULRConfederationVoting', 'BitcoinKeyFamilyRegistry', 'BitcoinAddressRegistry'):
         if not (ROOT/'web3/contracts/out'/f'{name}.sol'/f'{name}.json').is_file():
@@ -71,11 +82,13 @@ def check(role="signer", state_dir=None):
     sources={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()
         for base,pattern in [('signer-agent/signer_agent','*.py'),('frost-crypto/src','*.rs'),('web3/contracts/src','*.sol')]
         for p in sorted((ROOT/base).rglob(pattern))}
-    for name in ('frost-crypto/Cargo.lock','frost-crypto/Cargo.toml','web3/foundry.toml','signer-agent/requirements.lock','signer-agent/pyproject.toml'):
+    for name in ('frost-crypto/Cargo.lock','frost-crypto/Cargo.toml','web3/foundry.toml',
+                 'rust/zkspv/state-adapter/foundry.toml','signer-agent/requirements.lock','signer-agent/pyproject.toml'):
         sources[name]=hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
     source_hash=hashlib.sha256(json.dumps(sources,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     return dict(version="1", capabilities=c, role=role, status="BLOCKED" if missing else "READY_TO_CONFIGURE",
         missing=missing, tools=tools, native_frost=str(binary),
+        native_frost_sha256=native_frost_sha256,
         protocol_source_sha256=source_hash,
         prover=prover,
         qualification=False, peers="Every participant builds the same reviewed commit; endpoints and private state stay local")
@@ -89,15 +102,24 @@ def build():
         if not shutil.which(name): raise ValueError('MISSING_TOOL:'+name)
     if '1.8.5' not in (version(['forge','--version']) or ''): raise ValueError('FOUNDRY_1_8_5_REQUIRED')
     commands = [
-        [sys.executable,'-m','pip','install','-r','signer-agent/requirements.lock'],
-        [sys.executable,'-m','pip','install','--no-deps','-e','./signer-agent'],
-        ['cargo','+1.89.0','build','--locked','--manifest-path','frost-crypto/Cargo.toml'],
+        [sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--require-hashes',
+         '--only-binary', ':all:', '-r', 'signer-agent/requirements.lock'],
+        [sys.executable,'-m','pip','install','--no-deps','--no-build-isolation','-e','./signer-agent'],
         ['forge','build','--root','web3'],
         ['forge','build','--root','rust/zkspv/state-adapter'],
         [sys.executable,'ops/generate_abis.py','--check','--zk'],
         [sys.executable,'ops/generate_fee_runtime_hashes.py','--check'],
+        [sys.executable,'ops/check_bitcoin_custody_spv_pins.py'],
+        [sys.executable,'ops/check_contract_sizes.py','--check'],
     ]
     for command in commands: subprocess.run(command, cwd=ROOT, check=True)
+    from signer_agent.crypto import DEFAULT_BINARY, pin_local_build
+    DEFAULT_BINARY.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".frost-build-", dir=DEFAULT_BINARY.parent.parent) as target:
+        subprocess.run(['cargo', '+1.89.0', 'build', '--locked', '--manifest-path', 'frost-crypto/Cargo.toml',
+                        '--target-dir', target], cwd=ROOT, check=True)
+        os.replace(Path(target) / 'debug' / DEFAULT_BINARY.name, DEFAULT_BINARY)
+        pin_local_build()
 
 
 def identity(path, expected=None, generate=False):

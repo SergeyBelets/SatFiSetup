@@ -43,7 +43,7 @@ def test_partial_or_unknown_roles_are_rejected(value):
 
 
 @pytest.mark.parametrize('field,value', [('name',''),('name',' X'),('name','X '),('name','X\nY'),
-    ('name','X\u202eY'),('name','a'*129),('name','я'*65),('symbol',''),('symbol','x'*33),
+    ('name','X\u202eY'),('name','a'*129),('name','я'*65),('name','$dao_token'),('symbol',''),('symbol','x'*33),
     ('symbol','USD coin'),('symbol','РСТ'),('symbol',9)])
 def test_invalid_metadata_fails_before_enrollment(field,value):
     p=full_invite();p['token_metadata']=names();p['token_metadata']['governance'][field]=value
@@ -53,6 +53,22 @@ def test_invalid_metadata_fails_before_enrollment(field,value):
 def test_metadata_length_and_unicode_boundaries():
     assert tokens.token(dict(name='я'*64,symbol='X'*32))['name']=='я'*64
     assert tokens.token(dict(name='Project',symbol='X.v1-2_3'))['symbol']=='X.v1-2_3'
+
+
+@pytest.mark.parametrize("field", ["deployment_id", "federation_id", "confederation_id"])
+def test_enrollment_and_direct_plan_reject_ambiguous_references(field):
+    invite = full_invite()
+    profile = assemble(invite, signed_enrollments(invite))
+    invite[field] = profile[field] = "$factory"
+    with pytest.raises(ValueError, match="^BOOTSTRAP_LITERAL_REQUIRED$"):
+        validate_invite(invite)
+    with pytest.raises(ValueError, match="^BOOTSTRAP_LITERAL_REQUIRED$"):
+        build(profile)
+
+
+def test_old_direct_bootstrap_metadata_cannot_be_an_internal_reference():
+    with pytest.raises(ValueError, match="^TOKEN_METADATA_VALUE$"):
+        tokens.resolve({"governance_name": "$staking"})
 
 
 def test_signed_metadata_cannot_be_changed_removed_or_injected():

@@ -35,7 +35,10 @@ contract WithdrawalFeeSubsidyTest is BitcoinFeeReserveTest {
         fees.publishReconciliation(r,_op(fees.publishReconciliation.selector,abi.encode(r)));
     }
     function setUp() public override {
-        super.setUp();WithdrawalFeePlanVerifier verifier=new WithdrawalFeePlanVerifier();
+        _setUpSubsidy(6);
+    }
+    function _setUpSubsidy(uint32 confirmations) internal {
+        _setUpFeeReserve(confirmations);WithdrawalFeePlanVerifier verifier=new WithdrawalFeePlanVerifier();
         TestQualifiedFeeDerivation derivation=new TestQualifiedFeeDerivation();
         address expected=vm.computeCreateAddress(address(this),vm.getNonce(address(this))+2);
         payments=new WithdrawalFeePayments(address(addresses),expected,address(verifier));
@@ -414,6 +417,19 @@ contract WithdrawalFeeSubsidyTest is BitcoinFeeReserveTest {
         bytes memory source=_funding(1,1,0,destination,bytes32(uint256(450)),false);common.cacheValue(source,0);raw=_funding(1,1,0,script,_txid(source),false);funding.classify(raw,0,16);
         proof.setDepth(5);vm.expectRevert("fee funding proof/maturity");funding.admit(raw,0,bytes32(uint256(1)),new bytes32[](0),0,cg,dg);
         proof.setDepth(6);funding.admit(raw,0,bytes32(uint256(1)),new bytes32[](0),0,cg,dg);assertEq(credits.claimCount(),2);
+    }
+    function testSubsidyCoinbaseCreditUsesHigherConfiguredDepth() public {
+        _setUpSubsidy(144);
+        assertEq(common.depth(),144);
+        proof.setDepth(144);_minted();
+        bytes32 request=_request();bytes memory script=_btcBinding(request);
+        bytes memory raw=_funding(1,1,0,script,0,true);funding.classify(raw,0,16);
+        uint256 cg=addresses.custodyGeneration();uint256 dg=addresses.derivationGeneration();
+        proof.setDepth(143);
+        vm.expectRevert("fee funding proof/maturity");funding.admit(raw,0,bytes32(uint256(1)),new bytes32[](0),0,cg,dg);
+        assertEq(credits.claimCount(),0);
+        proof.setDepth(144);funding.admit(raw,0,bytes32(uint256(1)),new bytes32[](0),0,cg,dg);
+        assertEq(credits.claimCount(),1);
     }
     function testSubsidySharedPrincipalAndRefundScriptUsesAggregateOnce() public {
         refundScript=destination;bytes32 principalTx=_minted();bytes32 request=_request();bytes memory script=_btcBinding(request);(bytes32 feeTx,bytes32 id)=_topup(script,990);_report();

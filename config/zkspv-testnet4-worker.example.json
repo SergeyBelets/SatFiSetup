@@ -49,6 +49,7 @@
   "stage_timeout_seconds": "7200",
   "max_stage_retries": "2",
   "max_pending": "256",
+  "history_max_bytes": "134217728",
   "max_attempts": "32",
   "minimum_free_bytes": "8589934592",
   "max_tx_gas": "2000000",

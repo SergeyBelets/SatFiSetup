@@ -9,6 +9,7 @@ from eth_account._utils.legacy_transactions import Transaction
 from eth_account.typed_transactions import TypedTransaction
 from hexbytes import HexBytes
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.exceptions import TransactionNotFound
 
 from .onboarding import read_private
@@ -219,7 +220,7 @@ def acknowledge_revert(identity, tx_hash, rpc):
                 raise ValueError("CREATE_GROUP_RECOVERY_REQUIRED")
             if hashlib.sha256(canonical(step).encode()).hexdigest() != saved["step_hash"]:
                 raise ValueError("EVM_SIGNED_TRANSACTION_BINDING")
-        w3 = Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 20}))
+        w3 = evm_web3(rpc, timeout=20)
         protected_nonce_floor(w3, lane, account, w3.eth.chain_id)
         nonce = signed_nonce(saved, account, w3.eth.chain_id)
         block = anchor(w3)

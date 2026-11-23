@@ -10,12 +10,13 @@ from pathlib import Path
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from web3 import Web3
+from .evm_rpc import evm_web3
 from .safe_errors import DiagnosticArgumentParser
 from . import crypto
 from .dkg import atomic_private, Registry
 from .dkg_protocol import Manifest, PROTOCOL_ID
 from .operations import canonical, public_data, Journal
-from .secure_state import SecureState
+from .secure_state import SecureState, requires_independent_nonce_ledger
 from .bootstrap_policy import (ADDRESS_FIELDS, BOOLEAN_FIELDS, NUMBER_BOUNDS,
     POLICY_FIELDS, MAINNET_FIELDS, validate_policy, validate_mainnet_policy, validate_network_policy)
 from .bitcoin_network import is_public_network
@@ -168,6 +169,10 @@ def validate_invite(invite):
             from .bootstrap_custody import validate as validate_custody
             validate_custody(invite["bitcoin_custody"], invite["participants"], invite["min_custodians"])
             required.add("bitcoin_custody")
+        if "bitcoin_recovery" in invite:
+            from .bitcoin_recovery_policy import enrolled_policy
+            enrolled_policy(invite)
+            required.add("bitcoin_recovery")
         if "token_metadata" in invite:
             from .bootstrap_tokens import resolve
             resolve(invite)
@@ -192,6 +197,9 @@ def validate_invite(invite):
             required.add("deployment_fee")
     if set(invite) != required or invite["version"] not in ("1", "2", "3", "4", "5", "6"):
         raise ValueError("INVITATION_SCHEMA")
+    from .bootstrap_tokens import require_literal
+    for key in ("deployment_id", "federation_id", "confederation_id"):
+        require_literal(invite[key])
     mainnet = invite["version"] in ("4", "5")
     if invite["version"] == "6":
         validate_network_policy(invite, "INVITATION_PARAMETER: ")
@@ -306,6 +314,8 @@ def assemble(invite, enrollments, rpc=None):
             p["phase_duration"] = invite["phase_duration"]
         if "bitcoin_custody" in invite:
             p["bitcoin_custody"] = invite["bitcoin_custody"]
+        if "bitcoin_recovery" in invite:
+            p["bitcoin_recovery"] = invite["bitcoin_recovery"]
         if "token_metadata" in invite:
             p["token_metadata"] = invite["token_metadata"]
         if "system_bootstrap" in invite:
@@ -339,7 +349,8 @@ def assemble(invite, enrollments, rpc=None):
 def verify_profile(profile):
     data = profile["onboarding"]
     expected = assemble(data["invitation"], data["enrollments"])
-    if any((field in profile) != (field in expected) for field in ("withdrawal_fee", "ulr", "system_bootstrap", "token_metadata", "bitcoin_custody", "phase_duration")):
+    if any((field in profile) != (field in expected) for field in ("withdrawal_fee", "ulr", "system_bootstrap", "token_metadata",
+            "bitcoin_custody", "bitcoin_recovery", "phase_duration")):
         raise ValueError("ENROLLED_PROFILE_MISMATCH")
     for k, v in expected.items():
         if k == "evm_rpc":
@@ -352,7 +363,8 @@ def verify_profile(profile):
     return data["invitation"]
 
 
-def join(invite, expected_hash, identity_file, directory, *, bitcoin=None):
+def join(invite, expected_hash, identity_file, directory, *, bitcoin=None, nonce_ledger_dir=None,
+         nonce_anchor_config=None):
     validate_invite(invite)
     if expected_hash != fingerprint(invite):
         raise ValueError("INVITATION_FINGERPRINT_MISMATCH")
@@ -363,9 +375,21 @@ def join(invite, expected_hash, identity_file, directory, *, bitcoin=None):
             raise ValueError("MAINNET_CORE_REQUIRED")
         from .bitcoin_network import check_core
         check_core(bitcoin, invite["bitcoin_network"], invite["bitcoin_policy"])
+    if requires_independent_nonce_ledger(invite["chain_id"], invite["bitcoin_network"]) and nonce_ledger_dir is None:
+        raise ValueError("MAINNET_NONCE_LEDGER_REQUIRED")
+    anchor = None
+    if nonce_anchor_config is not None:
+        if nonce_ledger_dir is None:
+            raise ValueError("NONCE_LEDGER_PATH")
+        from .nonce_anchor import NonceAnchor
+        anchor = NonceAnchor.from_file(nonce_anchor_config)
     account = Account.from_key(json.loads(read_private(identity_file))["private_key"])
     if account.address not in invite["participants"]:
         raise ValueError("NOT_INVITED")
+    if nonce_ledger_dir is not None:
+        nonce_ledger_dir = Path(nonce_ledger_dir).expanduser()
+        if not nonce_ledger_dir.is_absolute():
+            raise ValueError("NONCE_LEDGER_PATH")
     root = Path(directory)
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     if root.is_symlink() or root.stat().st_mode & 0o077:
@@ -377,10 +401,20 @@ def join(invite, expected_hash, identity_file, directory, *, bitcoin=None):
     fd = os.open(root / ".enrollment.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "r+b") as locked:
         fcntl.flock(locked, fcntl.LOCK_EX)
-        return _join_locked(invite, expected_hash, account, root)
+        with crypto.require_pin(requires_independent_nonce_ledger(invite["chain_id"], invite["bitcoin_network"])):
+            return _join_locked(invite, expected_hash, account, root, nonce_ledger_dir, anchor)
 
 
-def _join_locked(invite, expected_hash, account, root):
+def _join_locked(invite, expected_hash, account, root, nonce_ledger_dir, anchor=None):
+    def state_for(role, password):
+        ledger = None
+        if nonce_ledger_dir is not None:
+            ledger = nonce_ledger_dir / f"{expected_hash}-{account.address[2:].lower()}-{role}.spent.sqlite"
+        return SecureState(str(root / (role + ".enc")), password, nonce_ledger=ledger, nonce_anchor=anchor)
+
+    def signing_state_for(state, role, password):
+        return None if role == "btc_ceremony" else SecureState(str(state.path) + ".signing", password, nonce_anchor=anchor)
+
     enrollment = root / "enrollment.json"
     # A retry verifies the old enrollment, never silently replaces a key.
     if enrollment.exists():
@@ -390,13 +424,24 @@ def _join_locked(invite, expected_hash, account, root):
             or data["invitation_hash"] != expected_hash
         ):
             raise ValueError("ENROLLMENT_CONTEXT")
+        if nonce_ledger_dir is not None:
+            password = password_file(root / "password")
+            for role in ROLES:
+                state = state_for(role, password)
+                signing_state = signing_state_for(state, role, password)
+                if signing_state is None:
+                    state.require_nonce_ledger()
+                else:
+                    state.evm_nonce_ledger(signing_state)
         return data
     if not (root / "password").exists():
         atomic_private(root / "password", (os.urandom(32).hex() + "\n").encode())
     password = password_file(root / "password")
     keys = {}
     for role in ROLES:
-        state = SecureState(str(root / (role + ".enc")), password)
+        state = state_for(role, password)
+        if nonce_ledger_dir is not None:
+            state.initialize_nonce_ledger(evm_signing_state=signing_state_for(state, role, password))
         with state.exclusive():
             binding = state.get("enrollment")
             if binding and binding != dict(
@@ -425,7 +470,7 @@ def _join_locked(invite, expected_hash, account, root):
     return result
 
 
-def make_manifest(profile, deployment, role, rpc):
+def make_manifest(profile, deployment, role, rpc, *, legacy_dao_exit=False):
     invite = verify_profile(profile)
     c = profile[role]
     address = deployment["contracts"]["dkg"]["address"]
@@ -450,15 +495,9 @@ def make_manifest(profile, deployment, role, rpc):
         registry.read_block_identifier = block.number
     else:
         block = registry.w3.eth.get_block("latest")
-    registry_at(registry.w3, address, block)
+    options = {"legacy_dao_exit": True} if legacy_dao_exit else {}
+    registry_at(registry.w3, address, block, **options)
     registry.check(m)
-    from .bootstrap import artifact
-
-    expected_code = bytes.fromhex(
-        artifact("DKGCoordinator")["deployedBytecode"]["object"].removeprefix("0x")
-    )
-    if bytes(registry.w3.eth.get_code(address, block_identifier=block.number)) != expected_code:
-        raise ValueError("REGISTRY_BUILD_MISMATCH")
     code_hash = Web3.keccak(registry.w3.eth.get_code(address, block_identifier=block.number)).hex()
     if code_hash.removeprefix("0x") != deployment["contracts"]["dkg"][
         "runtime_hash"
@@ -561,6 +600,7 @@ def main(argv):
     c.add_argument("--ulr-policy", help="signed shared ULR bootstrap policy: create/reuse and relay/zk-state-v2")
     c.add_argument("--token-metadata", help="JSON names and symbols; committed before participant enrollment")
     c.add_argument("--bitcoin-custody-policy", help="custodian-only Bitcoin/EVM monetary epoch and pinned source graphs")
+    c.add_argument("--bitcoin-recovery-policy", help="public CLTV recovery policy for a native S wallet")
     c.add_argument("--system-policy", help="single enrolled Bitcoin + ULR policy, including canonical key family and address/signing boards")
     c.add_argument("--reward-token")
     c.add_argument("--reward-token-code-hash")
@@ -585,6 +625,8 @@ def main(argv):
     c.add_argument("--accept-fingerprint", required=True)
     c.add_argument("--identity-file", required=True)
     c.add_argument("--directory", required=True)
+    c.add_argument("--nonce-ledger-dir", help="Private directory on independent storage for new signer states")
+    c.add_argument("--nonce-anchor-config", help="Private client configuration for the off-host nonce anchor")
     c.add_argument("--bitcoin-rpc")
     c.add_argument("--bitcoin-cookie")
     c = sub.add_parser(
@@ -631,6 +673,8 @@ def main(argv):
     c.add_argument("--accept-fingerprint", required=True)
     c.add_argument("--identity-file", required=True)
     c.add_argument("--directory", required=True)
+    c.add_argument("--nonce-ledger-dir", help="Private directory on independent storage for new signer states")
+    c.add_argument("--nonce-anchor-config", help="Private client configuration for the off-host nonce anchor")
     c.add_argument("--bitcoin-rpc")
     c.add_argument("--bitcoin-cookie")
     c = sub.add_parser(
@@ -669,10 +713,22 @@ def main(argv):
     c.add_argument("--state", required=True)
     c.add_argument('--ulr-config', help='Reviewed ULR pin for post-bootstrap custodian approvals')
     c.add_argument('--fee-sale-config', help='Independently reviewed fee sale and treasury pin')
+    from .reservation_transfer_cli import add_parser as reservation_parser
+    reservation_parser(sub)
+    from .reservation_ceremony import add_parsers as ceremony_parsers
+    ceremony_parsers(sub)
     for action in ("join-chain", "assemble-chain", "manifest-chain", "status", "pending"):
         sub.choices[action].add_argument("--board-creation-block", type=int,
             help="untrusted creation block locator from discovery; constructor proof remains required")
     a = p.parse_args(argv)
+    if a.action in ("reservation-invite", "reservation-ceremony"):
+        from .reservation_ceremony import execute
+        print(json.dumps(execute(a), sort_keys=True))
+        return 0
+    if a.action == "reservation-transfer":
+        from .reservation_transfer_cli import execute
+        print(json.dumps(execute(a), sort_keys=True))
+        return 0
     if a.action == "approve-custodian":
         from .custodian_cli import approve
 
@@ -754,6 +810,8 @@ def main(argv):
             if "bitcoin_custody" in invite and custody != invite["bitcoin_custody"]:
                 raise ValueError("BITCOIN_CUSTODY_CONFIG_CONFLICT")
             invite["bitcoin_custody"] = custody
+        if a.bitcoin_recovery_policy:
+            invite["bitcoin_recovery"] = read_public(a.bitcoin_recovery_policy)
         if a.token_metadata:
             names = read_public(a.token_metadata)
             if "token_metadata" in invite and names != invite["token_metadata"]:
@@ -788,7 +846,8 @@ def main(argv):
         invite = read_public(a.invite)
         result = join(
             invite, a.accept_fingerprint, a.identity_file, a.directory,
-            bitcoin=local_bitcoin(a, invite),
+            bitcoin=local_bitcoin(a, invite), nonce_ledger_dir=a.nonce_ledger_dir,
+            nonce_anchor_config=a.nonce_anchor_config,
         )
     elif a.action == "assemble":
         result = assemble(
@@ -877,7 +936,7 @@ def chain_main(a):
             result = dict(status=result["status"], step=result.get("step"),
                           fingerprint=fingerprint(invite))
     else:
-        w3 = Web3(Web3.HTTPProvider(a.rpc, request_kwargs={"timeout": 20}))
+        w3 = evm_web3(a.rpc, timeout=20)
         chain_id = w3.eth.chain_id
         if chain_id not in (1, 31337, 11155111):
             raise ValueError("INTEGRATION_NETWORK_NOT_ALLOWED")
@@ -905,7 +964,8 @@ def chain_main(a):
             from .platform_support import require_participant_prover
             require_participant_prover(invite)
             entry = join(invite, a.accept_fingerprint, a.identity_file, a.directory,
-                         bitcoin=local_bitcoin(a, invite))
+                         bitcoin=local_bitcoin(a, invite), nonce_ledger_dir=getattr(a, "nonce_ledger_dir", None),
+                         nonce_anchor_config=getattr(a, "nonce_anchor_config", None))
             transact(
                 w3,
                 a.identity_file,

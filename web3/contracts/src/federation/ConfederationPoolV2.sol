@@ -22,6 +22,9 @@ interface IConfederationBitcoinReserve {
 
 interface IConfederationPassManager {
     function nftModifier() external view returns (address);
+    function reserveWrapDiscount(uint256 id, uint256 amount, uint256 tokenId, address account)
+        external returns (uint256 fee, bool reserved);
+    function closeWrapDiscount(uint256 id, bool settled) external;
 }
 
 /// @notice Issues and redeems the confederation's S against its own proven Bitcoin reserve.
@@ -43,6 +46,13 @@ contract ConfederationPoolV2 is ReentrancyGuard {
     mapping(address => uint256) public pendingShares;
     mapping(address => uint256) public wrapPass;
     mapping(address => bool) public wrapPassSelected;
+    struct CustodyQuote {
+        address recipient;
+        uint256 amount;
+        uint256 fee;
+        bool reservedPass;
+    }
+    mapping(uint256 => CustodyQuote) private custodyQuotes;
     struct WithdrawalRequest {
         address requester;
         address token;
@@ -58,6 +68,7 @@ contract ConfederationPoolV2 is ReentrancyGuard {
     mapping(uint256 => bool) public withdrawalCancelled;
     mapping(uint256 => bool) public withdrawalPrepared;
     mapping(uint256 => uint64) public minerFeeLimitSats;
+    mapping(uint256 => uint64) public minimumPayoutSats;
     event DAOIncomeBound(address indexed income, bytes32 indexed operationHash);
     event BitcoinReserveBound(address indexed reserve);
     event Deposited(address indexed user, uint256 grossAmount, uint256 shareAmount);
@@ -70,6 +81,9 @@ contract ConfederationPoolV2 is ReentrancyGuard {
     error ZeroAmount();
     error InsufficientReserve();
     error InvalidWithdrawal();
+    error InvalidCustodyQuote();
+    error WithdrawalDeadlineExpired();
+    error WithdrawalMinimumNotCovered();
 
     constructor(string memory id, address auth, address validator, address shares) {
         require(bytes(id).length > 0 && auth.code.length > 0 && validator.code.length > 0, "pool config");
@@ -142,6 +156,71 @@ contract ConfederationPoolV2 is ReentrancyGuard {
         require(address(daoIncome) != address(0) && recipient != address(0), "issuance config");
         uint256 fee = (selfWrap && wrapPassSelected[recipient] ? _feeWithPass(true, amount, wrapPass[recipient], recipient)
             : address(feeManager) == address(0) ? 0 : feeManager.calculateFee(true, amount));
+        return _mintBacked(recipient, amount, fee);
+    }
+
+    function previewDirectDepositFee(uint256 amount) external view returns (uint256) {
+        require(address(daoIncome) != address(0) && address(feeManager) != address(0), "issuance config");
+        return feeManager.calculateFee(true, amount);
+    }
+
+    function mintFromDirectDeposit(address recipient, uint256 amount, uint256 fixedFee)
+        external nonReentrant returns (uint256)
+    {
+        require(msg.sender == address(bitcoinReserve) && msg.sender != address(0), "Bitcoin reserve only");
+        require(address(daoIncome) != address(0) && recipient != address(0), "issuance config");
+        return _mintBacked(recipient, amount, fixedFee);
+    }
+
+    /// @notice Fix the issue fee while the owner can still cancel the Bitcoin handover.
+    function lockCustodyQuote(uint256 id, address owner, address recipient, uint256 amount, uint256 minimum)
+        external nonReentrant returns (uint256 net)
+    {
+        require(msg.sender == address(bitcoinReserve) && msg.sender != address(0), "Bitcoin reserve only");
+        if (address(daoIncome) == address(0) || recipient == address(0) || custodyQuotes[id].amount != 0) {
+            revert InvalidCustodyQuote();
+        }
+        uint256 fee = address(feeManager) == address(0) ? 0 : feeManager.calculateFee(true, amount);
+        bool reservedPass;
+        if (fee != 0 && owner == recipient && wrapPassSelected[owner]) {
+            IConfederationPassManager manager = IConfederationPassManager(address(feeManager));
+            try manager.reserveWrapDiscount(id, amount, wrapPass[owner], owner) returns (uint256 quoted, bool reserved) {
+                fee = quoted;
+                reservedPass = reserved;
+            } catch (bytes memory reason) {
+                if (!_passUnavailable(true, bytes4(reason))) {
+                    assembly ("memory-safe") { revert(add(reason, 32), mload(reason)) }
+                }
+            }
+        }
+        if (fee >= amount || minimum == 0 || amount - fee < minimum) revert InvalidCustodyQuote();
+        custodyQuotes[id] = CustodyQuote(recipient, amount, fee, reservedPass);
+        return amount - fee;
+    }
+
+    function cancelCustodyQuote(uint256 id) external nonReentrant {
+        require(msg.sender == address(bitcoinReserve) && msg.sender != address(0), "Bitcoin reserve only");
+        CustodyQuote memory quote = custodyQuotes[id];
+        if (quote.amount == 0) revert InvalidCustodyQuote();
+        _closeCustodyQuote(id, quote, false);
+    }
+
+    function mintFromCustodyQuote(uint256 id, address recipient, uint256 amount)
+        external nonReentrant returns (uint256)
+    {
+        require(msg.sender == address(bitcoinReserve) && msg.sender != address(0), "Bitcoin reserve only");
+        CustodyQuote memory quote = custodyQuotes[id];
+        if (quote.amount == 0 || quote.amount != amount || quote.recipient != recipient) revert InvalidCustodyQuote();
+        _closeCustodyQuote(id, quote, true);
+        return _mintBacked(recipient, amount, quote.fee);
+    }
+
+    function _closeCustodyQuote(uint256 id, CustodyQuote memory quote, bool settled) private {
+        delete custodyQuotes[id];
+        if (quote.reservedPass) IConfederationPassManager(address(feeManager)).closeWrapDiscount(id, settled);
+    }
+
+    function _mintBacked(address recipient, uint256 amount, uint256 fee) private returns (uint256 net) {
         if (fee >= amount) revert ZeroAmount();
         uint256 next = totalPrincipal + amount;
         if (next > bitcoinReserve.deposits().totalBackingSats() * SAT) revert InsufficientReserve();
@@ -155,14 +234,28 @@ contract ConfederationPoolV2 is ReentrancyGuard {
         emit Deposited(recipient, amount, net);
     }
 
-    function requestWithdrawal(uint256 shares, bytes calldata script, uint64 feeLimit) external nonReentrant returns (uint256) {
-        uint256 fee = address(feeManager) == address(0) ? 0 : feeManager.calculateFee(false, shares);
-        return _request(shares, fee, script, feeLimit);
+    /// @notice Preview current terms without spending NFT quota or locking shares.
+    function quoteWithdrawal(uint256 shares, bytes calldata script, uint64 feeLimit, bool useNFT, uint256 nftId)
+        external view returns (uint256 protocolFee, uint256 grossSats, uint64 effectiveFeeLimit, uint256 scriptMinimumSats)
+    {
+        _requireWithdrawalBinding();
+        uint256 fee = useNFT ? _quoteWithdrawalWithPass(shares, nftId) : _plainWithdrawalFee(shares);
+        grossSats = _grossWithdrawalSats(shares, fee);
+        protocolFee = shares - grossSats * SAT;
+        (effectiveFeeLimit, scriptMinimumSats) = withdrawalEscrow.withdrawalPolicy(script, feeLimit);
     }
-    function requestWithdrawalWithNFT(uint256 shares, bytes calldata script, uint256 nftId, uint64 feeLimit)
+
+    function requestWithdrawal(uint256 shares, bytes calldata script, uint64 feeLimit, uint64 minimum, uint64 deadline)
         external nonReentrant returns (uint256)
     {
-        return _request(shares, _feeWithPass(false, shares, nftId, msg.sender), script, feeLimit);
+        if (block.timestamp > deadline) revert WithdrawalDeadlineExpired();
+        return _request(shares, _plainWithdrawalFee(shares), script, feeLimit, minimum, deadline);
+    }
+    function requestWithdrawalWithNFT(
+        uint256 shares, bytes calldata script, uint256 nftId, uint64 feeLimit, uint64 minimum, uint64 deadline
+    ) external nonReentrant returns (uint256) {
+        if (block.timestamp > deadline) revert WithdrawalDeadlineExpired();
+        return _request(shares, _feeWithPass(false, shares, nftId, msg.sender), script, feeLimit, minimum, deadline);
     }
     function setWrapPass(uint256 nftId) external {
         address modifier_ = IConfederationPassManager(address(feeManager)).nftModifier();
@@ -178,30 +271,64 @@ contract ConfederationPoolV2 is ReentrancyGuard {
         try feeManager.calculateFeeWithNFT(wrap, amount, nftId, owner) returns (uint256 quoted) {
             return quoted;
         } catch (bytes memory reason) {
-            bytes4 selector = bytes4(reason);
-            if (selector == FederationNFTModifier.NFTExpiredError.selector
-                || selector == FederationNFTModifier.VolumeLimitExceeded.selector
-                || (wrap && (selector == FederationNFTModifier.NotTokenOwner.selector
-                    || selector == FederationNFTModifier.NFTNotActive.selector
-                    || selector == IERC721Errors.ERC721NonexistentToken.selector))) {
-                return feeManager.calculateFee(wrap, amount);
-            }
+            if (_passUnavailable(wrap, bytes4(reason))) return feeManager.calculateFee(wrap, amount);
             assembly ("memory-safe") { revert(add(reason, 32), mload(reason)) }
         }
     }
-    function _request(uint256 shares, uint256 fee, bytes calldata script, uint64 feeLimit) private returns (uint256 id) {
+
+    function _passUnavailable(bool wrap, bytes4 selector) private pure returns (bool) {
+        return selector == FederationNFTModifier.NFTExpiredError.selector
+            || selector == FederationNFTModifier.VolumeLimitExceeded.selector
+            || (wrap && (selector == FederationNFTModifier.NotTokenOwner.selector
+                || selector == FederationNFTModifier.NFTNotActive.selector
+                || selector == IERC721Errors.ERC721NonexistentToken.selector));
+    }
+
+    function _requireWithdrawalBinding() private view {
         if (address(bitcoinReserve) == address(0) || address(daoIncome) == address(0)) revert InvalidBinding();
+    }
+
+    function _plainWithdrawalFee(uint256 shares) private view returns (uint256) {
+        return address(feeManager) == address(0) ? 0 : feeManager.calculateFee(false, shares);
+    }
+
+    function _quoteWithdrawalWithPass(uint256 shares, uint256 nftId) private view returns (uint256) {
+        if (address(feeManager) == address(0) || !feeManager.authorizedFeeCollectors(address(this))) {
+            revert InvalidBinding();
+        }
+        try feeManager.quoteFeeWithNFT(false, shares, nftId, msg.sender) returns (uint256 quoted) {
+            return quoted;
+        } catch (bytes memory reason) {
+            if (_passUnavailable(false, bytes4(reason))) return _plainWithdrawalFee(shares);
+            assembly ("memory-safe") { revert(add(reason, 32), mload(reason)) }
+        }
+    }
+
+    function _grossWithdrawalSats(uint256 shares, uint256 fee) private pure returns (uint256 gross) {
         if (fee >= shares) revert ZeroAmount();
-        uint256 principal = (shares - fee) / SAT * SAT;
-        if (principal == 0) revert ZeroAmount();
+        gross = (shares - fee) / SAT;
+        if (gross == 0) revert ZeroAmount();
+    }
+
+    function _request(uint256 shares, uint256 fee, bytes calldata script, uint64 feeLimit, uint64 minimum, uint64 deadline)
+        private returns (uint256 id)
+    {
+        _requireWithdrawalBinding();
+        uint256 gross = _grossWithdrawalSats(shares, fee);
+        (uint64 effectiveFeeLimit, uint256 scriptMinimum) = withdrawalEscrow.withdrawalPolicy(script, feeLimit);
+        if (minimum < scriptMinimum || gross < uint256(minimum) + effectiveFeeLimit) {
+            revert WithdrawalMinimumNotCovered();
+        }
+        uint256 principal = gross * SAT;
         if (principal > totalPrincipal - reservedS) revert InsufficientReserve();
         id = withdrawalCounter++;
-        bytes memory metadata = abi.encode(feeLimit);
+        bytes memory metadata = abi.encode(feeLimit, minimum, deadline);
         WithdrawalRequest memory w = WithdrawalRequest(msg.sender, address(shareToken), shares, principal, script,
             metadata, false, block.timestamp, bytes32(0));
         w.operationHash = _withdrawalHash(id, w);
         withdrawals[id] = w;
         minerFeeLimitSats[id] = feeLimit;
+        minimumPayoutSats[id] = minimum;
         pendingShares[msg.sender] += shares;
         reservedS += principal;
         shareToken.escrow(msg.sender, address(this), shares);

@@ -9,10 +9,10 @@
     "version": "2",
     "family_root": {
       "version": "create-1",
-      "creation_code_hash": "0x58b126c8646dcf10394747eebfa04d5f03521957fd3b48b90ae4bb4fe5affe27"
+      "creation_code_hash": "0xb6b0c39417ce900076428684118ecd35d617300eecef3acb1702a63712419940"
     },
     "family_enrollment": "ORIGINAL_AUTHORITY",
-    "derivation_source_hash": "0xc85485ebad9e8a03cac2ab3f82b97860c01e2e8c3727c2f36f0acc6c310a63fc",
+    "derivation_source_hash": "0x9cc764ea2f056fbbf257c84e37a0c10e07a17400ee8449f20381cb2108c69a3e",
     "qualification_commitment": "0xb7c02dbe9e4dc70e7588db8f1bcc31dcd4a27f2c4ba2ff18fe9e9cc0aa992a18",
     "service_policy_hash": "0x36d56281ed0d0a4919b9de3ba7415f7666eeae52e95df3df7692430f117c375f",
     "protocol_fee_cap_sats": "100000",

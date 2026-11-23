@@ -4,6 +4,7 @@ import hashlib
 import pytest
 from web3 import Web3
 from web3.exceptions import ContractCustomError
+from signer_agent.bootstrap_formation import federation_formation_hash, share_token_hash
 from test_dkg_processes import deploy, tx, artifact
 
 
@@ -71,7 +72,9 @@ def federation(w3, registry, coordinator, m):
     )
     tx(w3, orchestrator.functions.setAuthorizedDeployer(factory.address, True))
     tx(w3, factory.functions.configureDeploymentFee("0x" + "00" * 20, 0, True))
-    tx(w3, factory.functions.reserveFederationId(m.session_id, "integration-fed"))
+    token_metadata = ("Integration Share", "IS")
+    tx(w3, factory.functions.reserveFederationId(m.session_id, "integration-fed",
+        federation_formation_hash(m.participants, m.threshold), share_token_hash(*token_metadata)))
     w3.provider.make_request("anvil_impersonateAccount", [m.participants[0]])
     receipt = w3.eth.wait_for_transaction_receipt(
         factory.functions.adoptFederationDKG(m.session_id, "integration-fed").transact(
@@ -88,7 +91,7 @@ def federation(w3, registry, coordinator, m):
         )
     tx_from(
         w3,
-        factory.functions.deployFederation(m.session_id, "Integration Share", "IS"),
+        factory.functions.deployFederation(m.session_id, *token_metadata),
         m.participants[0],
     )
     config = factory.functions.getFederation("integration-fed").call()

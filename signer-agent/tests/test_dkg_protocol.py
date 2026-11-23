@@ -35,6 +35,20 @@ def test_golden_preimages_and_context_substitution():
         assert keccak(bytes.fromhex(vector["preimage"])).hex() == vector["hash"]
 
 
+def test_bitcoin_dkg_does_not_change_cold_policy_during_resume():
+    from types import SimpleNamespace
+    from signer_agent.dkg import Participant
+
+    manifest = Manifest.from_dict(dict(fixture()["manifest"], purpose="BTC_SPEND"))
+    registry = SimpleNamespace(account=SimpleNamespace(address=manifest.participants[0]))
+    policy = {"height": "700", "threshold": "2", "keys": ["11" * 32, "22" * 32]}
+    state = SimpleNamespace(get=lambda name: {"bitcoin_recovery": policy})
+    for replacement in (None, dict(policy, height="800")):
+        participant = Participant(manifest, registry, state, None, bitcoin_recovery=replacement)
+        with pytest.raises(ValueError, match="^DKG_BITCOIN_RECOVERY_POLICY_CHANGED$"):
+            participant._run_once(None, None)
+
+
 def test_hpke_confidentiality_and_context_authentication():
     key = crypto.call("transport_key")
     out = crypto.call(

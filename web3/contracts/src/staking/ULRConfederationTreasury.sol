@@ -46,6 +46,7 @@ contract ULRConfederationTreasury is ReentrancyGuard {
     uint256 public immutable payoutBps;
     uint256 public operationNonce;
     mapping(uint256 => Settlement) public settlements;
+    mapping(bytes32 => bytes32) public inactiveRecoveryReceipts;
 
     event Deposited(address indexed payer, uint256 amount);
     event DaySettled(
@@ -58,6 +59,7 @@ contract ULRConfederationTreasury is ReentrancyGuard {
         bytes32 snapshotCommitment
     );
     event OperationalSpend(address indexed recipient, uint256 amount, bytes32 operationHash);
+    event InactiveFundsRecovered(address indexed recipient, uint256 amount, bytes32 indexed operationHash);
 
     error InvalidBinding();
     error NotEnrolled();
@@ -90,6 +92,7 @@ contract ULRConfederationTreasury is ReentrancyGuard {
     }
 
     function deposit(uint256 amount) external nonReentrant {
+        _requireEnrolled(true);
         if (amount == 0) revert InvalidAmount();
         uint256 beforeBalance = rewardToken.balanceOf(address(this));
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -99,7 +102,7 @@ contract ULRConfederationTreasury is ReentrancyGuard {
 
     function previewDay(uint256 day) public view returns (Settlement memory result) {
         if (settlements[day].processed) return settlements[day];
-        _requireEnrolled();
+        _requireEnrolled(true);
         // Missed days cannot repeatedly drain the same current balance as historical income.
         uint256 today = block.timestamp / 1 days;
         if (day < staking.firstEligibleDay() || today == 0 || day != today - 1) revert InvalidDay();
@@ -153,13 +156,41 @@ contract ULRConfederationTreasury is ReentrancyGuard {
 
     /// @notice Explicit operational spending; the $1000 floor limits dividends, not approved operating costs.
     function spend(address recipient, uint256 amount, uint256 deadline, bytes32 op) external nonReentrant {
-        _requireEnrolled();
+        _requireEnrolled(true);
+        _transferApproved(recipient, amount, deadline, op, getSpendOperationHash(recipient, amount, deadline));
+        emit OperationalSpend(recipient, amount, op);
+    }
+
+    function getRecoverInactiveOperationHash(address recipient, uint256 amount, uint256 deadline)
+        public
+        view
+        returns (bytes32)
+    {
+        return authorization.hashOperation(
+            address(this),
+            this.recoverInactive.selector,
+            keccak256(abi.encode(recipient, amount, deadline)),
+            operationNonce
+        );
+    }
+
+    /// @notice Move an exact approved amount from the original enrolled treasury after deactivation.
+    function recoverInactive(address recipient, uint256 amount, uint256 deadline, bytes32 op) external nonReentrant {
+        _requireEnrolled(false);
+        _transferApproved(recipient, amount, deadline, op, getRecoverInactiveOperationHash(recipient, amount, deadline));
+        inactiveRecoveryReceipts[op] = keccak256(abi.encode(recipient, amount, deadline));
+        emit InactiveFundsRecovered(recipient, amount, op);
+    }
+
+    function _transferApproved(address recipient, uint256 amount, uint256 deadline, bytes32 op, bytes32 expected)
+        private
+    {
         if (
             recipient == address(0) || recipient == address(this) || recipient == address(staking)
                 || recipient == address(rewardToken)
         ) revert InvalidBinding();
         if (amount == 0) revert InvalidAmount();
-        if (block.timestamp > deadline || op != getSpendOperationHash(recipient, amount, deadline)) {
+        if (block.timestamp > deadline || op != expected) {
             revert InvalidOperation();
         }
         if (!validator.meetsMinimumCustodians(op)) revert ApprovalRequired();
@@ -172,14 +203,17 @@ contract ULRConfederationTreasury is ReentrancyGuard {
             beforeBalance - rewardToken.balanceOf(address(this)) != amount
                 || rewardToken.balanceOf(recipient) - recipientBefore != amount
         ) revert InvalidTransfer();
-        emit OperationalSpend(recipient, amount, op);
     }
 
-    function _requireEnrolled() private view {
+    function _requireEnrolled(bool active) private view {
         if (snapshots.treasuries(scope) != address(this)) revert NotEnrolled();
+        _requireFactoryBinding(active);
+    }
+
+    function _requireFactoryBinding(bool active) private view {
         IConfederationFactory.ConfederationConfig memory config = factory.getConfederation(confederationId);
         if (
-            !config.isActive || config.frostMultisig != address(authorization)
+            config.isActive != active || config.frostMultisig != address(authorization)
                 || config.custodianValidator != address(validator)
         ) revert InvalidBinding();
     }

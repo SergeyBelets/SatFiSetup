@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from web3 import Web3
+from .evm_rpc import evm_web3
 from web3.logs import DISCARD
 
 from .safe_errors import DiagnosticArgumentParser
@@ -27,7 +28,7 @@ def main(argv=None):
     p.add_argument('--owner');p.add_argument('--token-id');p.add_argument('--amount');p.add_argument('--wrap',action='store_true')
     p.add_argument('--deadline');p.add_argument('--session');p.add_argument('--sender');p.add_argument('--identity-file')
     p.add_argument('--state');p.add_argument('--id');p.add_argument('--send',action='store_true')
-    a=p.parse_args(argv);w3=Web3(Web3.HTTPProvider(a.rpc))
+    a=p.parse_args(argv);w3=evm_web3(a.rpc)
     if a.action=='init':
         if not all((a.board,a.role,a.factory,a.manager,a.chain_id,a.output)):
             p.error('init requires --board --role --factory --manager --chain-id --output')

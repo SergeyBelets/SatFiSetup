@@ -2,7 +2,7 @@
 
 [Схемы: SVG/PNG и hashes текущих Mermaid-исходников](DIAGRAMS.md).
 
-Обновлено 26 октября 2026. Для Bitcoin mainnet и testnet4 в поставку входит
+Для Bitcoin mainnet и testnet4 в поставку входит
 `frost-relay-keeper`. Он поддерживает relay после bootstrap, независимо от
 участников DKG. Без свежих заголовков SPV guard останавливает выпуск MP и расчёт
 выводов. Порог подписей, Bitcoin confirmations и Ethereum finality keeper не меняет.
@@ -10,8 +10,9 @@
 ## Подготовка keeper
 
 1. Установите проект по [инструкции первого запуска](FIRST_DKG_ONCHAIN.md).
-   Повторите установку `python -m pip install -e signer-agent`, если окружение
-   было создано до появления команды `frost-relay-keeper`.
+   Для обновления окружения запустите `python ops/bootstrap_host.py build` из
+   корня репозитория. Команда проверит хеши зависимостей и установит
+   актуальную версию `frost-relay-keeper`.
 2. Выделите keeper отдельный EVM-адрес и пополните его ETH для газа. Импортируйте
    его ключ в локальный `identity.json` с правами 0600, по инструкции скрытого
    ввода в [первом запуске](FIRST_DKG_ONCHAIN.md). Каталог — 0700.

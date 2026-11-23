@@ -1566,7 +1566,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidShareTokenBinding",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidWithdrawal",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidWithdrawalAuthorities",
     "inputs": []
   },
   {

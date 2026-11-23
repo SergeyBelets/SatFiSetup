@@ -75,7 +75,7 @@ def review_publishers(w3, bundle, at, coordinator=None):
         raise ValueError("BITCOIN_CUSTODY_PUBLISHER_EPOCH")
 
 
-def review_intent(w3, intent, bundle, at):
+def review_intent(w3, intent, bundle, at, *, legacy_enrolled=False, enrolled_issuer=None):
     """Additional immutable transfer/source checks on all networks before signing."""
     invite = bundle.get("onboarding", {}).get("invitation", {})
     if "bitcoin_custody" not in invite:
@@ -84,8 +84,13 @@ def review_intent(w3, intent, bundle, at):
     from .bitcoin_trust import checked_runtime
     from .contract_provenance import prove_creation
     policy = validate(invite["bitcoin_custody"], invite["participants"], invite["min_custodians"])
+    def previous_options(address, kind):
+        if (kind == "MiningPoolV1" and enrolled_issuer == address == intent["target"]
+                and intent["hash_method"] == "getSetCustodyTransferOperationHash"):
+            return {"previous_build": True}
+        return {}
     def contract(address, kind):
-        checked_runtime(w3, address, kind, at)
+        checked_runtime(w3, address, kind, at, **previous_options(address, kind))
         return w3.eth.contract(address=address, abi=artifact(kind)["abi"])
     def read(c, getter, *args):
         return getattr(c.functions, getter)(*args).call(block_identifier=at)
@@ -93,7 +98,7 @@ def review_intent(w3, intent, bundle, at):
     in_kind = enabled(invite)
     if in_kind:
         from .bootstrap_native_s import review
-        return review(w3, intent, bundle, at)
+        return review(w3, intent, bundle, at, legacy_enrolled=legacy_enrolled, enrolled_issuer=enrolled_issuer)
     pool_kind = "ConfederationPoolV2" if in_kind else "ConfederationMultiPool"
     escrow_kind = "BitcoinWithdrawalEscrowV2" if in_kind else "BitcoinWithdrawalEscrow"
     kind, method = intent.get("artifact"), intent.get("hash_method")
@@ -174,22 +179,40 @@ def review_intent(w3, intent, bundle, at):
             expected.append((local_mining, "MiningPoolV1", ["integration-pool", deposits.address,
                 escrow.address, names["name"], names["symbol"]]))
         for node, node_kind, arguments in expected:
-            evidence = prove_creation(w3, node.address, node_kind, arguments, at)
+            evidence = prove_creation(w3, node.address, node_kind, arguments, at,
+                                      **previous_options(node.address, node_kind))
             if evidence.get("method") != "direct" or evidence.get("sender") != invite["operator"]:
                 raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
         from .zk_spv import review_consumer
         review_consumer(w3, invite, escrow, escrow_kind, intent, at)
     if kind == "MiningPoolV1" and method == "getSetCustodyTransferOperationHash":
+        from .custody_network import require_enrolled_legacy, review_gateway_network
+
         mining = contract(intent["target"], kind)
-        gateway = contract(intent["hash_args"][0], "BitcoinCustodyTransfer")
+        gateway_kind = "BitcoinCustodyTransfer"
+        gateway_address = intent["hash_args"][0]
+        if previous_options(mining.address, kind):
+            auth = contract(read(mining, "authorization"), "DKGAuthorization")
+            op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
+            if (not read(auth, "executedOperations", op) or read(auth, "operationTargets", op) != mining.address
+                    or read(mining, "custodyTransfer") != gateway_address):
+                raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+        if legacy_enrolled:
+            gateway = w3.eth.contract(address=gateway_address, abi=artifact(gateway_kind)["abi"])
+            op = bytes.fromhex(intent["operation_hash"].removeprefix("0x"))
+            require_enrolled_legacy(w3, gateway, gateway_kind, mining, op, at)
+        else:
+            gateway = contract(gateway_address, gateway_kind)
+            from .bootstrap import encode_args
+            constructor = next(x for x in artifact(gateway_kind)["abi"] if x["type"] == "constructor")
+            arguments = encode_args(constructor["inputs"], [mining.address, read(gateway, "pool"), sources_args(policy)])
+            proof = prove_creation(w3, gateway.address, gateway_kind, arguments, at)
+            if proof.get("method") != "direct" or proof.get("sender") != invite["operator"]:
+                raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
+            review_gateway_network(w3, gateway, invite, at)
         pool = contract(read(gateway, "pool"), pool_kind)
         escrow = contract(read(mining, "escrow"), escrow_kind)
-        from .bootstrap import encode_args
-        constructor = next(x for x in artifact("BitcoinCustodyTransfer")["abi"] if x["type"] == "constructor")
-        arguments = encode_args(constructor["inputs"], [mining.address, pool.address, sources_args(policy)])
-        proof = prove_creation(w3, gateway.address, "BitcoinCustodyTransfer", arguments, at)
-        if (proof.get("method") != "direct" or proof.get("sender") != invite["operator"]
-                or read(gateway, "mining") != mining.address or not read(escrow, "localCustodyPools", pool.address)
+        if (read(gateway, "mining") != mining.address or not read(escrow, "localCustodyPools", pool.address)
                 or read(pool, "withdrawalEscrow") != read(mining, "escrow")
                 or read(pool, "frostMultisig") != read(mining, "authorization")):
             raise ValueError("BITCOIN_CUSTODY_GATEWAY_BINDING")
@@ -203,21 +226,6 @@ def review_intent(w3, intent, bundle, at):
             if list(read(gateway, "sourceAt", index)) != [source[field] if field in ("escrow", "token")
                     else bytes.fromhex(source[field][2:]) for field in SOURCE_FIELDS]:
                 raise ValueError("BITCOIN_CUSTODY_SOURCE")
-            # Hashes are committed before enrollment. Only this build's genuine
-            # non-proxy source contracts are supported; arbitrary legacy ABIs fail.
-            escrow = contract(source["escrow"], "BitcoinWithdrawalEscrow")
-            token = contract(source["token"], "PoolMpToken")
-            origin = contract(read(token, "poolDAO"), "MiningPoolV1")
-            nodes = ((escrow, "escrow_hash"), (token, "token_hash"), (origin, "mining_hash"),
-                     (contract(read(origin, "deposits"), "BitcoinDepositRegistry"), "deposit_hash"),
-                     (contract(read(escrow, "batches"), "BitcoinBatchRegistry"), "batch_hash"))
-            for node, field in nodes:
-                code = w3.eth.get_code(node.address, block_identifier=at)
-                if Web3.to_hex(Web3.keccak(code)) != source[field]:
-                    raise ValueError("BITCOIN_CUSTODY_SOURCE_CODE")
-            if (read(origin, "mpToken") != token.address or read(origin, "escrow") != escrow.address
-                    or read(origin, "deposits") != read(escrow, "depositRegistry")):
-                raise ValueError("BITCOIN_CUSTODY_SOURCE_GRAPH")
     elif kind == "MiningPoolV1" and method == "getSetMintAdmissionOperationHash":
         from .mint_admission import configuration
         configuration(w3, intent["hash_args"][0], at, expected_pool=intent["target"],

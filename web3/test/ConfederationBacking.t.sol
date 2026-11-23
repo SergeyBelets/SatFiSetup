@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {CustodyBatchFixture, CustodySPVFixture} from "./BitcoinCustodyTransfer.t.sol";
-import {EconomyAsset} from "./ConfederationDAOIncome.t.sol";
+import {EconomyAsset, EconomySettlementLifecycle} from "./ConfederationDAOIncome.t.sol";
 import {BitcoinWithdrawalEscrowV2} from "../contracts/src/federation/BitcoinWithdrawalEscrowV2.sol";
 import {BitcoinWithdrawalEscrow} from "../contracts/src/federation/BitcoinWithdrawalEscrow.sol";
 import {BitcoinCustodyTransferV2} from "../contracts/src/federation/BitcoinCustodyTransferV2.sol";
@@ -57,9 +57,9 @@ contract ConfederationBackingTest is Test {
         vm.warp(100 days);
         batches = new CustodyBatchFixture(bytes32(uint256(22)));
         spv = new CustodySPVFixture();
-        escrow = new BitcoinWithdrawalEscrowV2(address(batches), address(spv), 6, 294, 330, 100);
+        escrow = new BitcoinWithdrawalEscrowV2(address(batches), address(spv.relay()), 6, 294, 330, 100);
         batches.bindEscrow(address(escrow));
-        deposits = new BitcoinDepositRegistry(address(spv), batches.authorization(), 6, address(escrow));
+        deposits = new BitcoinDepositRegistry(address(spv.relay()), batches.authorization(), 6, address(escrow));
         escrow.setDepositRegistry(address(deposits), escrow.getSetDepositRegistryOperationHash(address(deposits)));
 
 
@@ -78,7 +78,8 @@ contract ConfederationBackingTest is Test {
         EconomyAsset ulr = new EconomyAsset(0);
         staking = new ConfederationDAOStake(address(ulr), address(validator), 200_000 ether);
         CustodianDAODecisionBoard decisions = new CustodianDAODecisionBoard(address(staking), batches.authorization());
-        income = new ConfederationDAOIncome(pool_, share_, batches.authorization(), address(staking), address(decisions));
+        income = new ConfederationDAOIncome(pool_, share_, batches.authorization(), address(staking), address(decisions),
+            address(new EconomySettlementLifecycle(pool_)));
         bytes32 op = pool.getBindDAOIncomeOperationHash(address(income));
         _approve(op);
         pool.bindDAOIncome(address(income), op);
@@ -124,9 +125,9 @@ contract ConfederationBackingTest is Test {
     function _configureSource() private {
         sourceBatches = new CustodyBatchFixture(bytes32(uint256(11)));
         sourceSpv = new CustodySPVFixture();
-        sourceEscrow = new BitcoinWithdrawalEscrow(address(sourceBatches), address(sourceSpv), 6, 294, 330);
+        sourceEscrow = new BitcoinWithdrawalEscrow(address(sourceBatches), address(sourceSpv.relay()), 6, 294, 330);
         sourceBatches.bindEscrow(address(sourceEscrow));
-        sourceDeposits = new BitcoinDepositRegistry(address(sourceSpv), sourceBatches.authorization(), 6, address(sourceEscrow));
+        sourceDeposits = new BitcoinDepositRegistry(address(sourceSpv.relay()), sourceBatches.authorization(), 6, address(sourceEscrow));
         sourceEscrow.setDepositRegistry(address(sourceDeposits),
             sourceEscrow.getSetDepositRegistryOperationHash(address(sourceDeposits)));
         sourceMining = new MiningPoolV1("source", address(sourceDeposits), address(sourceEscrow), "Source MP", "SMP");
@@ -148,10 +149,14 @@ contract ConfederationBackingTest is Test {
     }
 
     function _setUnwrapFee(uint256 bps) private {
+        _setFee(false, bps);
+    }
+
+    function _setFee(bool wrap, uint256 bps) private {
         IFeeManager.FeeConfig memory terms = IFeeManager.FeeConfig(IFeeManager.FeeType.FixedPercentage, bps, 0, 0);
-        bytes32 op = fees.getSetFeeConfigOperationHash(false, terms);
+        bytes32 op = fees.getSetFeeConfigOperationHash(wrap, terms);
         _approve(op);
-        fees.setFeeConfig(false, terms, op);
+        fees.setFeeConfig(wrap, terms, op);
     }
 
     function _little(uint64 value) private pure returns (bytes8 encoded) {
@@ -168,6 +173,89 @@ contract ConfederationBackingTest is Test {
         assertEq(shares.totalSupply(), pool.getTotalValueLocked());
     }
 
+    function _directDeposit(uint64 sats) private view returns (bytes memory raw, address[] memory recipients,
+        uint256[] memory amounts)
+    {
+        recipients = new address[](1);
+        recipients[0] = BOB;
+        amounts = new uint256[](1);
+        amounts[0] = uint256(sats) * SAT;
+        raw = abi.encodePacked(hex"0200000001", bytes32(uint256(77)), hex"0000000000ffffffff02",
+            _little(sats), hex"22", mining.payoutScript(), hex"00000000000000003a6a38",
+            mining.getDepositData(0, recipients, amounts), hex"00000000");
+    }
+
+    function testDirectDepositHonorsQuoteAfterFeeChangeAndCreditsOnlyProvenPrincipal() public {
+        uint64 sats = 10_000;
+        (bytes memory raw, address[] memory recipients, uint256[] memory amounts) = _directDeposit(sats);
+        bytes32 txid = _txid(raw);
+        uint256 gross = sats * SAT;
+        uint256 fixedFee = gross / 100;
+        vm.prank(BOB);
+        vm.expectRevert(ConfederationBitcoinReserve.InvalidDirectDepositQuote.selector);
+        mining.lockDirectDepositQuote(txid, 0, sats, gross - fixedFee + 1);
+        vm.prank(BOB);
+        (uint256 fee, uint256 net) = mining.lockDirectDepositQuote(txid, 0, sats, gross - fixedFee);
+        assertEq(fee, fixedFee);
+        assertEq(net, gross - fixedFee);
+        _invariant();
+
+        _setFee(true, 10_000);
+        vm.warp(block.timestamp + 31 days);
+        vm.prank(BOB);
+        (fee, net) = mining.lockDirectDepositQuote(txid, 0, sats, net);
+        assertEq(fee, fixedFee);
+        assertEq(net, gross - fixedFee);
+        uint256 beforeIncome = shares.balanceOf(address(income));
+        bytes32 op = mining.getMintOperationHash(txid, 0, recipients, amounts);
+        mining.mintFromProof(raw, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, op);
+        assertEq(shares.balanceOf(BOB), net);
+        assertEq(shares.balanceOf(address(income)), beforeIncome + fixedFee);
+        assertEq(deposits.totalBackingSats(), 100_000 + sats);
+        op = mining.getMintOperationHash(txid, 0, recipients, amounts);
+        vm.expectRevert("outpoint consumed or change");
+        mining.mintFromProof(raw, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, op);
+        _invariant();
+    }
+
+    function testDirectDepositQuoteRequiresExactRecipientOutpointAndSats() public {
+        uint64 sats = 10_000;
+        (bytes memory raw, address[] memory recipients, uint256[] memory amounts) = _directDeposit(sats);
+        bytes32 txid = _txid(raw);
+        vm.prank(ALICE);
+        mining.lockDirectDepositQuote(txid, 0, sats, 1);
+        vm.startPrank(BOB);
+        mining.lockDirectDepositQuote(bytes32(uint256(3)), 0, sats, 1);
+        mining.lockDirectDepositQuote(txid, 1, sats, 1);
+        mining.lockDirectDepositQuote(txid, 0, sats - 1, 1);
+        vm.stopPrank();
+        uint256 beforeNonce = mining.nonce();
+        bytes32 op = mining.getMintOperationHash(txid, 0, recipients, amounts);
+        vm.expectRevert(ConfederationBitcoinReserve.DirectDepositQuoteRequired.selector);
+        mining.mintFromProof(raw, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, op);
+        assertFalse(deposits.consumed(keccak256(abi.encode(txid, uint32(0)))));
+        assertEq(mining.nonce(), beforeNonce);
+        assertEq(shares.balanceOf(BOB), 0);
+        _invariant();
+    }
+
+    function testDirectDepositSupportsAnExplicitZeroFee() public {
+        _setFee(true, 0);
+        uint64 sats = 10_000;
+        (bytes memory raw, address[] memory recipients, uint256[] memory amounts) = _directDeposit(sats);
+        bytes32 txid = _txid(raw);
+        vm.prank(BOB);
+        mining.lockDirectDepositQuote(txid, 0, sats, amounts[0]);
+        (uint256 fee, uint256 net) = mining.directDepositQuote(txid, 0, BOB, sats);
+        assertEq(fee, 0);
+        assertEq(net, amounts[0]);
+        _setFee(true, 100);
+        bytes32 op = mining.getMintOperationHash(txid, 0, recipients, amounts);
+        mining.mintFromProof(raw, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, op);
+        assertEq(shares.balanceOf(BOB), net);
+        _invariant();
+    }
+
     function testTransferredSCanPayBTCAndFeesAndGasComeOnlyFromRealIncome() public {
         _invariant();
         assertEq(shares.balanceOf(address(income)), 1_000 * SAT);
@@ -177,7 +265,7 @@ contract ConfederationBackingTest is Test {
         assertEq(sourceMining.mpToken().balanceOf(BOB), 0);
         _setUnwrapFee(200);
         vm.startPrank(BOB);
-        uint256 id = pool.requestWithdrawal(40_000 * SAT, PAYOUT, 100);
+        uint256 id = pool.requestWithdrawal(40_000 * SAT, PAYOUT, 100, 39_100, type(uint64).max);
         vm.stopPrank();
         assertEq(pool.getWithdrawal(id).principalAmount, 39_200 * SAT);
         _approve(pool.getProcessWithdrawalOperationHash(id));
@@ -254,7 +342,7 @@ contract ConfederationBackingTest is Test {
         vm.prank(ALICE);
         shares.transfer(BOB, amount);
         vm.prank(BOB);
-        uint256 id = pool.requestWithdrawal(amount, PAYOUT, 100);
+        uint256 id = pool.requestWithdrawal(amount, PAYOUT, 100, 294, type(uint64).max);
         _invariant();
         vm.warp(block.timestamp + pool.WITHDRAWAL_CANCEL_DELAY());
         vm.prank(BOB);
@@ -262,7 +350,7 @@ contract ConfederationBackingTest is Test {
         assertEq(shares.balanceOf(BOB), amount);
         _invariant();
         vm.prank(BOB);
-        id = pool.requestWithdrawal(amount, PAYOUT, 100);
+        id = pool.requestWithdrawal(amount, PAYOUT, 100, 294, type(uint64).max);
         uint256 principal = pool.getWithdrawal(id).principalAmount;
         _approve(pool.getProcessWithdrawalOperationHash(id));
         pool.processWithdrawal(id);
@@ -280,11 +368,149 @@ contract ConfederationBackingTest is Test {
         _invariant();
     }
 
+    function testWithdrawalChecksGuaranteedMinimumAndBindsItWithSubmissionDeadline() public {
+        uint64 deadline = uint64(vm.getBlockTimestamp());
+        uint256 amount = 500 * SAT + 1;
+        uint64 defaultCap = type(uint64).max;
+        bytes memory localScript = mining.payoutScript();
+        uint256 balance = shares.balanceOf(ALICE);
+
+        vm.startPrank(ALICE);
+        (uint256 fee, uint256 gross, uint64 cap, uint256 scriptMinimum) =
+            pool.quoteWithdrawal(amount, PAYOUT, defaultCap, false, 0);
+        assertEq(fee, 5 * SAT + 1);
+        assertEq(gross, 495);
+        assertEq(cap, 100);
+        assertEq(scriptMinimum, 294);
+        vm.expectRevert(ConfederationPoolV2.WithdrawalMinimumNotCovered.selector);
+        pool.requestWithdrawal(amount, PAYOUT, defaultCap, 396, deadline);
+        vm.expectRevert(ConfederationPoolV2.WithdrawalMinimumNotCovered.selector);
+        pool.requestWithdrawal(amount, PAYOUT, defaultCap, 293, deadline);
+        vm.expectRevert(BitcoinWithdrawalEscrowV2.InvalidWithdrawalDestination.selector);
+        pool.requestWithdrawal(amount, localScript, defaultCap, 395, deadline);
+        assertEq(shares.balanceOf(ALICE), balance);
+        assertEq(pool.withdrawalCounter(), 0);
+        assertEq(pool.reservedS(), 0);
+
+        uint256 id = pool.requestWithdrawal(amount, PAYOUT, defaultCap, 395, deadline);
+        vm.stopPrank();
+        assertEq(pool.minerFeeLimitSats(id), defaultCap);
+        assertEq(pool.minimumPayoutSats(id), 395);
+        ConfederationPoolV2.WithdrawalRequest memory withdrawal = pool.getWithdrawal(id);
+        assertEq(withdrawal.metadata, abi.encode(defaultCap, uint64(395), deadline));
+        assertEq(withdrawal.principalAmount, gross * SAT);
+        assertEq(withdrawal.operationHash, pool.getProcessWithdrawalOperationHash(id));
+        _invariant();
+
+        vm.warp(deadline + 1);
+        vm.startPrank(ALICE);
+        vm.expectRevert(ConfederationPoolV2.WithdrawalDeadlineExpired.selector);
+        pool.requestWithdrawal(amount, PAYOUT, defaultCap, 395, deadline);
+        vm.expectRevert("cancel owner/delay");
+        pool.cancelWithdrawal(id);
+        vm.stopPrank();
+        _approve(withdrawal.operationHash);
+        pool.processWithdrawal(id);
+
+        vm.warp(deadline + pool.WITHDRAWAL_CANCEL_DELAY());
+        vm.prank(ALICE);
+        pool.cancelWithdrawal(id);
+        assertEq(shares.balanceOf(ALICE), balance);
+        assertEq(pool.pendingShares(ALICE), 0);
+        _invariant();
+    }
+
+    function testWithdrawalNFTQuoteUsesCurrentOwnerAndDoesNotConsumeQuotaOnInvalidRequests() public {
+        FederationNFTModifier pass = _selectFirstWrapPass(ALICE);
+        uint256 amount = 500 * SAT;
+        uint64 deadline = uint64(block.timestamp + 1 hours);
+        vm.prank(BOB);
+        vm.expectRevert(FederationNFTModifier.NotTokenOwner.selector);
+        pool.quoteWithdrawal(amount, PAYOUT, 100, true, 0);
+
+        vm.prank(ALICE);
+        (uint256 fee, uint256 gross,,) = pool.quoteWithdrawal(amount, PAYOUT, 100, true, 0);
+        assertEq(fee, 3 * SAT);
+        assertEq(gross, 497);
+        _setUnwrapFee(400);
+        vm.prank(ALICE);
+        vm.expectRevert(ConfederationPoolV2.WithdrawalMinimumNotCovered.selector);
+        pool.requestWithdrawalWithNFT(amount, PAYOUT, 0, 100, 397, deadline);
+        (, uint256 remaining,) = pass.getDiscount(0);
+        assertEq(remaining, 100_000 * SAT);
+        assertEq(pool.withdrawalCounter(), 0);
+        assertEq(pool.pendingShares(ALICE), 0);
+        _invariant();
+
+        _setUnwrapFee(100);
+        vm.warp(block.timestamp + 1 days);
+        deadline = uint64(vm.getBlockTimestamp());
+        vm.prank(ALICE);
+        (fee, gross,,) = pool.quoteWithdrawal(amount, PAYOUT, 100, true, 0);
+        assertEq(fee, 5 * SAT);
+        assertEq(gross, 495);
+        vm.startPrank(ALICE);
+        vm.expectRevert(ConfederationPoolV2.WithdrawalMinimumNotCovered.selector);
+        pool.requestWithdrawalWithNFT(amount, PAYOUT, 0, 100, 397, deadline);
+        uint256 id = pool.requestWithdrawalWithNFT(amount, PAYOUT, 0, 100, 395, deadline);
+        vm.stopPrank();
+        assertEq(pool.getWithdrawal(id).principalAmount, 495 * SAT);
+        (, remaining,) = pass.getDiscount(0);
+        assertEq(remaining, 100_000 * SAT);
+        _invariant();
+    }
+
     function testHandoverMintsSAfterActualBTCMoveAndNeedsOnlyDestinationForWithdrawal() public {
         selectedPass = _selectFirstWrapPass(BOB);
-        _exerciseHandover();
+        _exerciseHandover(BOB, 9_900 * SAT);
         (, uint256 remaining,) = selectedPass.getDiscount(0);
         assertEq(remaining, 100_000 * SAT);
+    }
+
+    function testHandoverKeepsReservedNFTDiscountWhenPassExpiresAndTariffChanges() public {
+        selectedPass = _selectFirstWrapPass(ALICE);
+        _exerciseHandover(ALICE, 9_950 * SAT);
+        (, uint256 remaining, bool valid) = selectedPass.getDiscount(0);
+        assertEq(remaining, 90_000 * SAT);
+        assertFalse(valid);
+    }
+
+    function testUnacceptableQuoteLocksNeitherMPNorNFTAndSuccessfulCancelReleasesBoth() public {
+        FederationNFTModifier pass = _selectFirstWrapPass(ALICE);
+        _fundSource();
+        vm.startPrank(ALICE);
+        vm.expectRevert(ConfederationPoolV2.InvalidCustodyQuote.selector);
+        gateway.request(0, 10_000 * SAT, 9_951 * SAT, ALICE);
+        vm.stopPrank();
+        (, uint256 remaining,) = pass.getDiscount(0);
+        assertEq(remaining, 100_000 * SAT);
+        assertEq(sourceMining.mpToken().balanceOf(ALICE), 10_000 * SAT);
+        assertEq(gateway.nextId(), 0);
+
+        vm.startPrank(ALICE);
+        uint256 id = gateway.request(0, 10_000 * SAT, 9_950 * SAT, ALICE);
+        vm.expectRevert("transfer owner/state");
+        gateway.setMinimumShares(id, 9_951 * SAT);
+        assertEq(gateway.quotedShares(id), 9_950 * SAT);
+        pass.transferFrom(ALICE, BOB, 0);
+        vm.stopPrank();
+        (, remaining,) = pass.getDiscount(0);
+        assertEq(remaining, 90_000 * SAT);
+        vm.startPrank(BOB);
+        vm.expectRevert("transfer owner/state");
+        gateway.cancel(id);
+        vm.stopPrank();
+        vm.prank(ALICE);
+        gateway.cancel(id);
+        (, remaining,) = pass.getDiscount(0);
+        assertEq(remaining, 100_000 * SAT);
+        assertEq(pass.ownerOf(0), BOB);
+        assertEq(sourceMining.mpToken().balanceOf(ALICE), 10_000 * SAT);
+        vm.startPrank(ALICE);
+        vm.expectRevert("transfer owner/state");
+        gateway.cancel(id);
+        vm.stopPrank();
+        _invariant();
     }
 
     function testFirstNFTDiscountAndTransferOfSelectedPass() public {
@@ -323,8 +549,8 @@ contract ConfederationBackingTest is Test {
         assertEq(pool.wrapPass(owner), 0);
     }
 
-    function _exerciseHandover() private {
-        bytes memory sourceFunding = abi.encodePacked(hex"0200000001", bytes32(0), hex"ffffffff00ffffffff01",
+    function _fundSource() private returns (bytes memory sourceFunding) {
+        sourceFunding = abi.encodePacked(hex"0200000001", bytes32(0), hex"ffffffff00ffffffff01",
             _little(10_000), hex"22", sourceMining.payoutScript(), hex"00000000");
         address[] memory recipients = new address[](1);
         recipients[0] = ALICE;
@@ -333,13 +559,23 @@ contract ConfederationBackingTest is Test {
         sourceMining.mintFromProof(sourceFunding, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts,
             sourceMining.getMintOperationHash(_txid(sourceFunding), 0, recipients, amounts));
         vm.startPrank(ALICE);
+        sourceMining.mpToken().approve(address(gateway), type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function _exerciseHandover(address recipient, uint256 net) private {
+        bytes memory sourceFunding = _fundSource();
+        uint256 recipientBefore = shares.balanceOf(recipient);
+        vm.startPrank(ALICE);
         address sourceToken = address(sourceMining.mpToken());
         (bool accepted,) = address(pool).call(abi.encodeWithSignature("deposit(address,uint256)", sourceToken, 10_000 * SAT));
         assertFalse(accepted);
-        sourceMining.mpToken().approve(address(gateway), type(uint256).max);
-        uint256 transfer = gateway.request(0, 10_000 * SAT, 9_900 * SAT, BOB);
+        uint256 transfer = gateway.request(0, 10_000 * SAT, net, recipient);
         vm.stopPrank();
-        assertEq(shares.balanceOf(BOB), 0);
+        assertEq(gateway.quotedShares(transfer), net);
+        _setFee(true, 10_000);
+        if (recipient == ALICE) vm.warp(block.timestamp + 1 days);
+        assertEq(shares.balanceOf(recipient), recipientBefore);
         assertEq(sourceMining.mpToken().balanceOf(address(sourceEscrow)), 10_000 * SAT);
         assertEq(sourceMining.mpToken().totalSupply(), 10_000 * SAT);
         assertEq(sourceDeposits.totalBackingSats(), 10_000);
@@ -372,27 +608,32 @@ contract ConfederationBackingTest is Test {
         assertEq(sourceMining.mpToken().totalSupply(), 0);
         assertEq(sourceDeposits.totalBackingSats(), 0);
         assertEq(deposits.totalBackingSats(), 100_000);
+        address[] memory recipients = new address[](1);
+        recipients[0] = recipient;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000 * SAT;
         bytes32 mintOp = mining.getMintOperationHash(_txid(paid), 0, recipients, amounts);
         vm.expectRevert("use custody transfer");
         mining.mintFromProof(paid, 0, bytes32(uint256(1)), new bytes32[](0), 0, recipients, amounts, mintOp);
         spv.setDepth(5);
         vm.expectRevert("transfer proof");
         gateway.finalize(ids, BATCH, paid, 0, bytes32(uint256(1)), new bytes32[](0), 0);
-        assertEq(shares.balanceOf(BOB), 0);
+        assertEq(shares.balanceOf(recipient), recipientBefore);
         spv.setDepth(6);
         gateway.finalize(ids, BATCH, paid, 0, bytes32(uint256(1)), new bytes32[](0), 0);
         assertEq(sourceMining.mpToken().totalSupply(), 0);
         assertEq(sourceDeposits.totalBackingSats(), 0);
         assertEq(deposits.totalBackingSats(), 110_000);
-        assertEq(shares.balanceOf(BOB), 9_900 * SAT);
-        assertEq(shares.balanceOf(address(income)), 1_100 * SAT);
+        assertEq(shares.balanceOf(recipient), recipientBefore + net);
+        assertEq(shares.balanceOf(address(income)), 11_000 * SAT - net);
         vm.expectRevert("transfer state");
         gateway.finalize(ids, BATCH, paid, 0, bytes32(uint256(1)), new bytes32[](0), 0);
         _invariant();
+        if (recipient == ALICE) return;
 
         sourceSpv.setCanonical(false);
         vm.startPrank(BOB);
-        uint256 id = pool.requestWithdrawal(5_000 * SAT, PAYOUT, 100);
+        uint256 id = pool.requestWithdrawal(5_000 * SAT, PAYOUT, 100, 4_850, type(uint64).max);
         vm.stopPrank();
         _approve(pool.getProcessWithdrawalOperationHash(id));
         pool.processWithdrawal(id);

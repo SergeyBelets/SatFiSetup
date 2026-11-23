@@ -1,7 +1,7 @@
 // Pinned local solc standard-JSON build. No network, downloads or test bypasses.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const [modulePath,output,install,baselinePath]=process.argv.slice(2);if(!modulePath||!output||install&&!['--install','--verifiers'].includes(install))throw Error('solc module and output required');
-const solc=require(path.resolve(modulePath));if(!solc.version().startsWith('0.8.30+'))throw Error('SOLC_PIN');
+const solc=require(path.resolve(modulePath));if(!solc.version().startsWith('0.8.39+commit.ce47f2c8.'))throw Error('SOLC_PIN');
 const root=path.resolve('web3');
 function walk(folder){return fs.readdirSync(path.join(root,folder),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(folder+'/'+e.name):e.name.endsWith('.sol')?[folder+'/'+e.name]:[]);}
 const roots=[...walk('contracts/src'),'test/fixtures/FamilyRegistryHarness.sol'];

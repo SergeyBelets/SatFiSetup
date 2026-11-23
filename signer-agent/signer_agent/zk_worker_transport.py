@@ -67,8 +67,8 @@ class WorkerTransport:
     def close(self):self.client.close()
     def ingest(self,*,routes=None):
         w=self.worker;c=self.client;c.poll()
-        pending=[r for r in c.store.incoming("REQUEST") if r[2]=="RECEIVED"
-                 and (routes is None or r[1]['header']['route'] in routes)]
+        pending=[r for r in c.store.incoming("REQUEST", received_only=True)
+                 if routes is None or r[1]['header']['route'] in routes]
         cursor=c.store.get("work_cursor") or 0
         processed=0
         b,_,_=c.context()
@@ -124,13 +124,16 @@ class WorkerTransport:
                 try:attach(w,dict(service_job_id=link["payment_job_id"],need_ids=[local]))
                 except Exception:w.inbox.put("payment_link_error:"+local,"SPV_CANONICAL_PAYMENT_LINK_PENDING")
             status=statuses.get(local,"QUEUED")
+            reason = result.get("reason")
             if result.get("status") in ("HALTED","HALT_OBSERVED_UNCONFIRMED"):status="HALTED"
+            elif status == "ATTEMPT_BUDGET_REVIEW_REQUIRED":
+                status, reason = "OBSERVATION_UNAVAILABLE", "ZK_WORKER_ATTEMPT_BUDGET"
             elif status == "WAITING_BITCOIN_RPC" or (result.get("status") == "BLOCKED" and status != "COMPLETED"):
                 status = "OBSERVATION_UNAVAILABLE"
             group=w.inbox.get("need_group:"+local)
             body=dict(version="1",request_id=link["request_id"],operation_id=link["operation_id"],status=status,
                 local_need_id=local,execution_group_id=group,service_deadline=str(link["deadline"]),
-                result=result.get("status"),reason=result.get("reason"),missed=b.timestamp>link["deadline"],
+                result=result.get("status"),reason=reason,missed=b.timestamp>link["deadline"],
                 canonical_service_job_id=(w.inbox.get("service:"+local) or {}).get("service_job_id"))
             marker=c.store.get("status:"+route) or dict(sequence=0,digest=None,next_at=0)
             digest=hashlib.sha256(canonical(body).encode()).hexdigest()

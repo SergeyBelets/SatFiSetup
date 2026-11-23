@@ -15,7 +15,10 @@ contract BitcoinFeeReserveTest is BitcoinAddressRegistryTest {
     uint256 constant N=0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141;
     bytes32 constant ALLOCATION=keccak256("fee allocation");
     function setUp() public virtual override {
-        _deploy(true);
+        _setUpFeeReserve(6);
+    }
+    function _setUpFeeReserve(uint32 confirmations) internal {
+        _deploy(true, confirmations);
         address board=address(new FeeBoardFixture(address(batches),address(dkg),dkg.BTC_ID()));
         address donor=address(new FROSTVerifier());
         address funding=address(new BitcoinFeeFundingVerifier());

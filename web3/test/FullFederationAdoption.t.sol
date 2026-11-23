@@ -60,7 +60,12 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
         conf.configureDeploymentFee(address(router), FEE, false);
         for (uint256 i; i < 3; ++i) token.mint(address(uint160(0x100 + i)), 10 * FEE);
         _completeCeremony(SOURCE_ID, _founders(3), 2, keccak256("EVM_AUTH"), GX);
-        fed.reserveFederationId(SOURCE_ID, "source");
+        fed.reserveFederationId(
+            SOURCE_ID,
+            "source",
+            keccak256(abi.encode(_founders(3), uint256(2))),
+            keccak256(abi.encode("Source shares", "SOURCE"))
+        );
         vm.startPrank(address(0x100));
         fed.adoptFederationDKG(SOURCE_ID, "source");
         token.approve(address(fed), FEE);
@@ -94,7 +99,14 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
     }
 
     function _adopt() private {
-        conf.reserveConfederationId(CONF_ID, "confederation");
+        string[] memory ids = new string[](1);
+        ids[0] = "source";
+        conf.reserveConfederationId(
+            CONF_ID,
+            "confederation",
+            keccak256(abi.encode(uint8(1), ids, _custodians(2), uint256(4), uint256(1))),
+            keccak256(abi.encode("Confederation shares", "CONF"))
+        );
         vm.prank(address(0x102));
         conf.adoptConfederationFromFederation(CONF_ID, "source", _custodians(2), 4, 1, "confederation");
     }
@@ -140,6 +152,9 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
 
     function testNonFirstFounderCanDeactivateWithBothRequiredApprovals() public {
         (FROSTAuthorization auth, CustodianValidator validator) = _deploy();
+        address pool = conf.getConfederation("confederation").multiPool;
+        assertEq(conf.settlementDayLimit(pool), type(uint256).max);
+        assertEq(conf.settlementDayLimit(OUTSIDER), 0);
         bytes32 op = conf.getDeactivateConfederationOperationHash("confederation");
         vm.prank(address(0x101));
         vm.expectRevert("FROST threshold not met");
@@ -156,6 +171,13 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
         vm.prank(address(0x101));
         conf.deactivateConfederation("confederation", op);
         assertFalse(conf.isConfederationActive("confederation"));
+        uint256 limit = vm.getBlockTimestamp() / 1 days + 1;
+        assertEq(conf.settlementDayLimit(pool), limit);
+        vm.warp(vm.getBlockTimestamp() + 1 days);
+        vm.prank(address(0x101));
+        vm.expectRevert(ConfederationFactory.ConfederationNotFound.selector);
+        conf.deactivateConfederation("confederation", op);
+        assertEq(conf.settlementDayLimit(pool), limit);
         assertTrue(fed.isFederationActive("source"));
         assertTrue(auth.executedOperations(op));
     }
@@ -208,6 +230,35 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
         assertEq(token.balanceOf(TREASURY), treasuryBefore + FEE);
     }
 
+    function testReservedTokenMetadataCheckedBeforeDeployingOrChargingFee() public {
+        _adopt();
+        address predictedPool = multiPoolDeployer.predictNextMultiPoolAddress();
+        uint256 nonceBefore = multiPoolDeployer.nextMultiPoolNonce();
+        uint256 payerBefore = token.balanceOf(address(0x102));
+        uint256 treasuryBefore = token.balanceOf(TREASURY);
+
+        vm.startPrank(address(0x102));
+        token.approve(address(conf), FEE);
+        vm.expectRevert(ConfederationFactory.InvalidConfederationReservation.selector);
+        conf.deployConfederation(CONF_ID, "Other confederation shares", "CONF");
+        vm.expectRevert(ConfederationFactory.InvalidConfederationReservation.selector);
+        conf.deployConfederation(CONF_ID, "Confederation shares", "OTHER");
+        assertEq(predictedPool.code.length, 0);
+        assertEq(multiPoolDeployer.nextMultiPoolNonce(), nonceBefore);
+        assertEq(token.balanceOf(address(0x102)), payerBefore);
+        assertEq(token.balanceOf(TREASURY), treasuryBefore);
+        IConfederationFactory.ConfederationConfig memory config = conf.getConfederation("confederation");
+        assertFalse(config.isActive);
+        assertEq(config.groupPubkey.length, 0);
+        assertEq(config.shareToken, address(0));
+        (,,, address share) = conf.deployConfederation(CONF_ID, "Confederation shares", "CONF");
+        vm.stopPrank();
+
+        assertEq(ERC20(share).name(), "Confederation shares");
+        assertEq(ERC20(share).symbol(), "CONF");
+        assertEq(token.balanceOf(TREASURY), treasuryBefore + FEE);
+    }
+
     function testMaximumRosterV1DeploymentAndConstructorPayloadsStayWithinLimits() public {
         EpochFederationsFixture sources = new EpochFederationsFixture();
         sources.setFederation("maximum-source", _founders(10), true);
@@ -217,7 +268,14 @@ contract FullFederationAdoptionTest is ConfederationEpochFixture {
         bytes32 id = keccak256("maximum full membership epoch");
         address[] memory roster = _roster(10, 6);
         _completeCeremony(id, roster, 12, keccak256("EVM_AUTH"), GX);
-        maximum.reserveConfederationId(id, "maximum-confederation");
+        string[] memory ids = new string[](1);
+        ids[0] = "maximum-source";
+        maximum.reserveConfederationId(
+            id,
+            "maximum-confederation",
+            keccak256(abi.encode(uint8(1), ids, _custodians(6), uint256(12), uint256(6))),
+            keccak256(abi.encode("Maximum confederation shares", "MAX"))
+        );
         vm.startPrank(address(0x109));
         maximum.adoptConfederationFromFederation(id, "maximum-source", _custodians(6), 12, 6, "maximum-confederation");
         (address a, address v, address p, address s) = maximum.deployConfederation(id, "Maximum confederation shares", "MAX");

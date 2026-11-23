@@ -30,6 +30,7 @@ contract MiningPoolV1 is ReentrancyGuard {
     mapping(bytes32 => uint64) public mintedAddressSats;
     event Minted(bytes32 indexed txid, uint32 indexed vout, uint64 satoshis);
     event MintAdmissionBound(address indexed admission);
+    event MintNonceExpired(uint256 indexed nonce);
     event CustodyTransferBound(address indexed gateway);
     event CustodyTransferMinted(bytes32 indexed claim, bytes32 indexed txid, uint32 vout, uint64 satoshis);
 
@@ -105,6 +106,8 @@ contract MiningPoolV1 is ReentrancyGuard {
         return address(deposits.addressRegistry()) == address(0) ? 1 : 2;
     }
 
+    function mintExpiryVersion() external pure returns (uint8) { return 1; }
+
     function getCustodyMintOperationHash(bytes32 txid, uint32 vout, address[] calldata recipients,
         uint256[] calldata amounts, uint256 custodyGeneration) public view returns (bytes32)
     {
@@ -143,6 +146,13 @@ contract MiningPoolV1 is ReentrancyGuard {
         authorization.consumeOperation(op);
         mintAdmission = admission;
         emit MintAdmissionBound(admission);
+    }
+
+    /// @dev The immutable admission verifies the exact current slot and its deadline.
+    function expireMintNonce(uint256 expectedNonce) external nonReentrant {
+        require(msg.sender == mintAdmission && nonce == expectedNonce, "mint expiry");
+        nonce = expectedNonce + 1;
+        emit MintNonceExpired(expectedNonce);
     }
 
     /// @notice Allocation hash included alongside the recipient in a zero-value OP_RETURN.

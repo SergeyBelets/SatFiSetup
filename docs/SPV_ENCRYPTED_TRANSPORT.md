@@ -177,8 +177,28 @@ immutable ACK and up to 64 sequenced statuses per request route. Request/reply
 TTL must include publication and finality time. The client bounds plaintext to
 12,000 bytes, inbox/outbox retained history, work per poll, retries/backoff and
 transaction/lifetime gas reservations. History includes sent/completed rows;
-there is no automatic deletion that would reset budgets. A cap leaves a visible
-pending/review state and preserves previously accepted rights.
+without the archive option these rows also count toward the admission cap.
+The journal preserves previously accepted rights and spending records.
+
+Set optional `history_max_bytes` to a decimal string between 8 MiB and 1 TiB,
+for example `"134217728"`, to use separate live admission counts in the existing
+`transport.sqlite`. Only unresolved outgoing and incoming operations count
+toward `max_pending_messages`. The example config enables this policy with 128 MiB.
+Confirmed outgoing ciphertext, handled inbound
+records, delivery identifiers, validation failures and all budget/nonce records
+stay in the journal. Removing the history policy from an upgraded journal fails
+closed. `status` reports the active counts and observed database, WAL and SHM
+bytes. The byte limit stops new admissions. Existing obligations may still
+need writes, including for rediscovery and reorg recovery. Keep additional
+filesystem capacity for the signed transaction and payment journals.
+
+With that option enabled, `poll` and `status` rebuild ACK and status projections
+after a confirmed EVM reorg in pages of `max_messages_per_poll`. Repeat the
+operation when it reports `SPV_REPLY_HISTORY_RECHECK_REQUIRED`. Payment handling
+waits for these pages to finish. A lagging RPC leaves the cursor unchanged.
+After an EVM fork a backlog may temporarily exceed the active admission limit.
+Previously signed bytes, exact ciphertext and expiry, validation evidence and
+payment records are retained throughout the recheck and after restart.
 
 Repeat publication reuses exactly the stored ciphertext, epochs and expiry and
 then the existing signed EVM transaction. It does not encrypt again on a retry.

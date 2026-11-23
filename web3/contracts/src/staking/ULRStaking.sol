@@ -66,6 +66,7 @@ contract ULRStaking is ReentrancyGuard {
     error InvalidClaimBatch();
     error NoEligibleStake();
     error InvalidTransfer();
+    error InsufficientRewardCoverage();
     error InvalidCandidatePage();
     error InvalidVotingDelegate();
 
@@ -210,11 +211,13 @@ contract ULRStaking is ReentrancyGuard {
         if (eligible == 0) revert NoEligibleStake();
         uint256 beforeBalance = rewardToken.balanceOf(address(this));
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
-        if (rewardToken.balanceOf(address(this)) - beforeBalance != amount) revert InvalidTransfer();
+        uint256 afterBalance = rewardToken.balanceOf(address(this));
+        if (afterBalance - beforeBalance != amount) revert InvalidTransfer();
         dayEligibleTotal[day] = eligible;
         dayReward[day] += amount;
         sourceDayFunding[day][msg.sender] += amount;
         totalFundedRewards += amount;
+        _requireRewardCoverage(afterBalance);
         emit DayFunded(day, msg.sender, amount, eligible);
     }
 
@@ -231,7 +234,7 @@ contract ULRStaking is ReentrancyGuard {
         }
         if (reward > 0) {
             totalClaimedRewards += reward;
-            _transferExact(rewardToken, msg.sender, reward);
+            _requireRewardCoverage(_transferExact(rewardToken, msg.sender, reward));
         }
     }
 
@@ -245,6 +248,10 @@ contract ULRStaking is ReentrancyGuard {
     /// @notice Includes unclaimed entitlements and rounding dust; no administrator can withdraw it.
     function rewardLiability() external view returns (uint256) {
         return totalFundedRewards - totalClaimedRewards;
+    }
+
+    function _requireRewardCoverage(uint256 balance) private view {
+        if (balance < totalFundedRewards - totalClaimedRewards) revert InsufficientRewardCoverage();
     }
 
     function _entitlement(address owner, uint256 day) private view returns (uint256) {
@@ -262,12 +269,13 @@ contract ULRStaking is ReentrancyGuard {
         }
     }
 
-    function _transferExact(IERC20 token, address recipient, uint256 amount) private {
+    function _transferExact(IERC20 token, address recipient, uint256 amount) private returns (uint256 remainingBalance) {
         uint256 beforeBalance = token.balanceOf(address(this));
         uint256 beforeRecipient = token.balanceOf(recipient);
         token.safeTransfer(recipient, amount);
+        remainingBalance = token.balanceOf(address(this));
         if (
-            beforeBalance - token.balanceOf(address(this)) != amount
+            beforeBalance - remainingBalance != amount
                 || token.balanceOf(recipient) - beforeRecipient != amount
         ) revert InvalidTransfer();
     }

@@ -81,3 +81,11 @@ def test_signing_commands_reject_misleading_fee_override(action):
     with pytest.raises(SystemExit) as error:
         main([action, '--max-fee', '1'])
     assert error.value.code == 2
+
+
+@pytest.mark.parametrize('options', [[], ['--batch', 'aa' * 32],
+    ['--signing-board', '0x' + '11' * 20, '--batch', 'aa' * 32, '--package', 'unused.json']])
+def test_expired_signing_requires_explicit_onchain_ids(options, capsys):
+    from signer_agent.participant_cli import main
+    assert main(['btc-sign', '--resume-expired', *options]) == 2
+    assert json.loads(capsys.readouterr().out)['code'] == 'BTC_EXPIRED_SIGNING_REQUIRES_IDS'

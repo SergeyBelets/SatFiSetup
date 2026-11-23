@@ -200,6 +200,12 @@ does not silently rewrite frozen worker/transport configurations after a new
 deployment. Other operations using the same EOA may cause an expected-address
 hold and require review.
 
+Predicted addresses here are deployment plan pins. Operational worker
+preparation and proving use the confirmed deployed state. For a state-first
+interactive CREATE, read the actual state from the partial bootstrap manifest
+and populate the worker with real consumer addresses before running it.
+[Cold-start flow](COLD_START.md#zk-первый-state-и-собственный-proof).
+
 A structural bootstrap uses `bitcoin_binding` to check state/adapter origin,
 policy, Core network/checkpoint and canonical EVM snapshot. Freshness checks
 remain `ZK_FRESHNESS_DEFERRED`; the result is
