@@ -522,6 +522,33 @@ def build(config):
             ],
         )
         steps[-1]["parallel_group"] = "factory-permissions"
+    # The ZK state contract depends only on the enrolled Bitcoin policy (its
+    # confederation ID comes from the invitation), not on any DKG key. Deploying
+    # it before the DKG waits lets workers catch up to the Bitcoin tip while the
+    # ceremonies run. Consumers, views and the Fresh barrier stay after DKG.
+    from .zk_spv import is_zk, constructor_args as zk_constructor_args, checkpoint_descriptor
+    zk = is_zk(p.get("bitcoin_policy"))
+    if zk:
+        if p["bitcoin_network"] not in ("mainnet","testnet4"):
+            raise ValueError("ZK_PROFILE_UNSUPPORTED")
+        from .bootstrap import Bootstrap
+        from .zk_profiles import profile as zk_profile
+        selected=zk_profile(p['bitcoin_policy'])
+        args = zk_constructor_args(p["bitcoin_policy"])
+        deploy("relay", selected['state'], *Bootstrap.wire(args), outputs=[
+            output("spv_guard", "relay", "adapter", [], [], selected['adapter']),
+            output("zk_verifier", "relay", "verifier", [], [], "RiscZeroGroth16Verifier"),
+        ])
+        steps[-1]["checks"] = [
+            dict(contract="relay", method=method, args=[], equals=Bootstrap.wire(value))
+            for method, value in (
+                ("confederationId", args[0][0]), ("programImageId", args[0][1]),
+                ("RELAY_PROFILE", args[0][2]), ("maxStateAge", args[0][3]),
+                ("maxTipLag", args[0][4]), ("baselineMaxTipAge", args[0][5]),
+                ("checkpointDescriptor", checkpoint_descriptor(p["bitcoin_policy"])),
+            )
+        ] + [dict(contract="spv_guard", method="state", args=[], equals="$relay"),
+             dict(contract="spv_guard", method="testHelpersEnabled", args=[], equals=False)]
     # Factory construction can overlap participant work; no key-dependent
     # constructor or authorization runs until all three results are finalized.
     steps.extend(ceremony_waits)
@@ -635,30 +662,11 @@ def build(config):
     if "token_metadata" in p:
         steps[-1].setdefault("checks", []).extend(dict(contract="conf_shares", method=key, args=[], equals=value)
             for key, value in names["confederation_share"].items())
-    from .zk_spv import is_zk, constructor_args as zk_constructor_args, checkpoint_descriptor
-    zk = is_zk(p.get("bitcoin_policy"))
     if zk:
-        if p["bitcoin_network"] not in ("mainnet","testnet4"):
-            raise ValueError("ZK_PROFILE_UNSUPPORTED")
-        from .bootstrap import Bootstrap
         from .zk_profiles import profile as zk_profile
         selected=zk_profile(p['bitcoin_policy'])
-        args = zk_constructor_args(p["bitcoin_policy"])
-        deploy("relay", selected['state'], *Bootstrap.wire(args), outputs=[
-            output("spv_guard", "relay", "adapter", [], [], selected['adapter']),
-            output("zk_verifier", "relay", "verifier", [], [], "RiscZeroGroth16Verifier"),
-        ])
-        steps[-1]["checks"] = [
-            dict(contract="relay", method=method, args=[], equals=Bootstrap.wire(value))
-            for method, value in (
-                ("confederationId", args[0][0]), ("programImageId", args[0][1]),
-                ("RELAY_PROFILE", args[0][2]), ("maxStateAge", args[0][3]),
-                ("maxTipLag", args[0][4]), ("baselineMaxTipAge", args[0][5]),
-                ("checkpointDescriptor", checkpoint_descriptor(p["bitcoin_policy"])),
-            )
-        ] + [dict(contract="spv_guard", method="state", args=[], equals="$relay"),
-             dict(contract="spv_guard", method="testHelpersEnabled", args=[], equals=False)]
-        # Read-only binding and inactive payment entry exist before the Fresh
+        # The state contract, its adapter and verifier were deployed before the
+        # DKG waits; read-only binding and inactive payment entry exist before the Fresh
         # barrier, so funding the first update cannot depend on a future mint.
         # Activation/payees/tariff still require explicit enrolled FROST review.
         deploy("spv_service_view", selected["view"], "$relay")

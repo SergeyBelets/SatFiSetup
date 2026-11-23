@@ -50,6 +50,25 @@ def test_zk_plan_preserves_independent_evm_policy(chain):
     assert len(checkpoint_descriptor(p["bitcoin_policy"])) == 32
 
 
+@pytest.mark.parametrize("chain", ["1", "11155111"])
+def test_zk_state_is_deployed_before_dkg_waits_and_consumers_after(chain):
+    p = zk_invite()
+    p["chain_id"] = chain
+    if chain == "1":
+        p.update(evm_confirmations="12", phase_duration="86400", integration_fee_exemption=False,
+                 deployment_fee=dict(amount="100", treasury=p["treasury"]))
+    ids = [s["id"] for s in build(profile(p))["steps"]]
+    waits = [ids.index(role + "_complete") for role in ("evm_ceremony", "conf_ceremony", "btc_ceremony")]
+    relay = ids.index("relay")
+    # The state contract needs no DKG key, so workers can start during the ceremonies.
+    assert ids.index("confederations") < relay < min(waits)
+    # Everything bound to the confederation authorization or Fresh state waits for DKG.
+    for later in ("spv_service_view", "spv_payment_registry", "spv_message_board",
+                  "bitcoin_relay_ready", "escrow"):
+        assert max(waits) < ids.index(later), later
+    assert ids.count("relay") == 1
+
+
 def test_enrollment_commits_zk_selection_and_every_fresh_limit(tmp_path):
     p = zk_invite()
     entries = signed_enrollments(p)
