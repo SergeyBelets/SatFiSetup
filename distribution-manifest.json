@@ -15983,8 +15983,8 @@
       "sha256": "dfd71ef0b5a16576e503e161f80a4ceb2240fb828471a5562ea19602d6cbed3d"
     },
     "ops/zkspv/groth16_docker.py": {
-      "bytes": 10365,
-      "sha256": "f38635d395f205f8b22b66046ad3b38ac95dc50c85529dfac20c244b73bd6181"
+      "bytes": 10580,
+      "sha256": "9a385dbabe0214f2b19f2effc01416cf50a3fbcc3bf01ff24d8681e74584b4ba"
     },
     "ops/zkspv/historical_sources.py": {
       "bytes": 2100,
@@ -29624,7 +29624,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "d4fe015950ed6f69a079c085465dd297f8239bcd",
+  "source_revision": "e04c705efbd1776db5b131ba857ae7451324febd",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }

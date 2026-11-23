@@ -32,7 +32,10 @@ def read_file(directory, name, limit):
 
 
 def create_args(name, work, image, *, low_memory=False, arch=None):
-    args = ["create", "--rm", "--name", name, "--network", "none", "--pull", "never",
+    # Run as the invoking user: with rootful Docker, root without capabilities
+    # cannot read the 0700/0600 job files; rootless/Desktop Docker is unaffected.
+    args = ["create", "--rm", "--name", name, "--user", f"{os.getuid()}:{os.getgid()}",
+            "--network", "none", "--pull", "never",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
             "--mount", f"type=bind,source={work},target=/mnt"]
     if arch:
