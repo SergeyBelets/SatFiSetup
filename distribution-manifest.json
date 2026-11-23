@@ -17995,8 +17995,8 @@
       "sha256": "6cbd5d85766376e4507b674a17364240c36de6e16a20abbb34400a70a48c802b"
     },
     "signer-agent/signer_agent/bootstrap_plan.py": {
-      "bytes": 43068,
-      "sha256": "382880c83993b4b093762a42c94666b682fd7108915dd2fafda1b6199d085b27"
+      "bytes": 43015,
+      "sha256": "db5d464be9cae7eeb0908eb5977e5ec65089647136e7a82ae38d41de2f7a616e"
     },
     "signer-agent/signer_agent/bootstrap_policy.py": {
       "bytes": 6315,
@@ -29616,7 +29616,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "47506da7104f096c27d71c9ba9ca046443959af5",
+  "source_revision": "d485432dd913fb7784d8d7474eb0691c15774928",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }

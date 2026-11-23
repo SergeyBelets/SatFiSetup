@@ -703,9 +703,8 @@ def build(config):
     if ethereum:
         steps[-1]["checks"] = [dict(contract="usd", method="allowance",
             args=[p["operator"], "$confederations"], equals="0", at_receipt=True)]
-    if "token_metadata" in p:
-        steps[-1].setdefault("checks", []).extend(dict(contract="conf_shares", method=key, args=[], equals=value)
-            for key, value in names["confederation_share"].items())
+    steps[-1]["checks"].extend(dict(contract="conf_shares", method=key, args=[], equals=value)
+        for key, value in names["confederation_share"].items())
     if zk:
         from .zk_profiles import profile as zk_profile
         selected=zk_profile(p['bitcoin_policy'])
