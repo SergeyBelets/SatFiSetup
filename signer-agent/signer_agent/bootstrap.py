@@ -907,6 +907,12 @@ class Bootstrap:
                     return dict(
                         status="DRY_RUN", next_step=step, manifest=self.manifest()
                     )
+                if step["kind"] == "deploy" and step.get("adopt"):
+                    from .zk_relay_deploy import adopt_step
+                    pending = adopt_step(self, step, key)
+                    if pending is not None:
+                        return pending
+                    continue
                 if account is None:
                     raise ValueError("LOCAL_EVM_IDENTITY_REQUIRED")
                 protected_transfer = is_reservation_transfer(self.prefix, step)

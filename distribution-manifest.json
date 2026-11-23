@@ -17947,8 +17947,8 @@
       "sha256": "0006271b5fc8b6b67bd526b829565f1cf3ef2882cd697517d64a11798e744b9d"
     },
     "signer-agent/signer_agent/bootstrap.py": {
-      "bytes": 64601,
-      "sha256": "f222df36c28fbda679caa51bc6d3fd541bc09ffa864ef819cb1679e9dffe2b54"
+      "bytes": 64898,
+      "sha256": "f3c548eab5f3a9b909da318653f3e424794f0ba7deddef67ef00ecd25d3a677a"
     },
     "signer-agent/signer_agent/bootstrap_confederation_dao.py": {
       "bytes": 19019,
@@ -17995,8 +17995,8 @@
       "sha256": "6cbd5d85766376e4507b674a17364240c36de6e16a20abbb34400a70a48c802b"
     },
     "signer-agent/signer_agent/bootstrap_plan.py": {
-      "bytes": 43015,
-      "sha256": "db5d464be9cae7eeb0908eb5977e5ec65089647136e7a82ae38d41de2f7a616e"
+      "bytes": 43396,
+      "sha256": "9d0c597244acb8ce12f22b14c7c5ede3722d04f1fa29cbad75c2c4be817058f5"
     },
     "signer-agent/signer_agent/bootstrap_policy.py": {
       "bytes": 6315,
@@ -18267,8 +18267,8 @@
       "sha256": "f3ae998c638e7f7bf5003457d2a7932d57e08238d2569ff5fafcc31f1ea758d4"
     },
     "signer-agent/signer_agent/onboarding.py": {
-      "bytes": 46521,
-      "sha256": "dfc1b8c7d591c24e4ef5ef1e6c506f6fe057bd768786caa9eca0f67723580d25"
+      "bytes": 47119,
+      "sha256": "acb92e9945932f3b1525617292b7ae2f43df2db8b75f21529ee59d7ce5f57651"
     },
     "signer-agent/signer_agent/onchain_transport.py": {
       "bytes": 17711,
@@ -18458,6 +18458,10 @@
       "bytes": 6860,
       "sha256": "7cf2ccad2f87f5478a4676c502cbafe7428a0c5f96c789e8b8393f11c0b535db"
     },
+    "signer-agent/signer_agent/zk_relay_deploy.py": {
+      "bytes": 11053,
+      "sha256": "fb9ee4a7a6138b2b723fccfd590c14c7cc95bac90c21cd126f1d3ea2b265299b"
+    },
     "signer-agent/signer_agent/zk_service_binding.py": {
       "bytes": 1832,
       "sha256": "7c6a4c57491c7164c4526fa01f5ee593f9cf6509442194f705819a21e2d20804"
@@ -18479,8 +18483,8 @@
       "sha256": "ad7e49213f14a7a5fa7a9e61430857297037166a293c0a28f7ca2e5169c767af"
     },
     "signer-agent/signer_agent/zk_worker.py": {
-      "bytes": 79793,
-      "sha256": "757cedc6a9d6f1053e8b26854d36ad5a15570570bcc9bc267426abf5aa1581cb"
+      "bytes": 80397,
+      "sha256": "82423244b49a6c17441d6b518010ed2c3b4b35241bf520d77f2ca7a359b0cdbc"
     },
     "signer-agent/signer_agent/zk_worker_batching.py": {
       "bytes": 2906,
@@ -19061,6 +19065,10 @@
     "signer-agent/tests/test_zk_preparation_sources.py": {
       "bytes": 2831,
       "sha256": "96c77851840e15fd54dba07cef25ea3c897a35c1bb67ee98e394f840c1b81102"
+    },
+    "signer-agent/tests/test_zk_relay_adopt.py": {
+      "bytes": 4475,
+      "sha256": "cee7f48fa0047c9d56fb34b762e57f0f5dc7b3e9a06a96ec8c2d73220d5e333b"
     },
     "signer-agent/tests/test_zk_submission.py": {
       "bytes": 4086,
@@ -29616,7 +29624,7 @@
   "proof_generation": "EACH_PARTICIPANT_LOCAL",
   "qualified": false,
   "schema": "satoshifi.participant-distribution.v1",
-  "source_revision": "d485432dd913fb7784d8d7474eb0691c15774928",
+  "source_revision": "cd89a9b8953297b20a7f21f85b42a43e2e634fa1",
   "static_guest": "Pinned program code, not a transition receipt",
   "worktree_snapshot": true
 }
