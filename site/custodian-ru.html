@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Клиент кастодиана — BTCyield</title>
+  <meta name="description" content="Скачать, проверить и запустить клиент кастодиана SatoshiFi.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=c8edbcdbe36d">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">BTC<span>yield</span></a>
+      <button class="mobile-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="nav-links">
+        <a href="index.html#how">Как это работает</a>
+        <a href="satoshifi-whitepaper-ru.html">Whitepaper</a>
+        <a href="confederation.html" class="nav-cta">Конфедерация →</a>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <main class="page">
+    <div class="container">
+      <span class="section-label">Кастодианам · <a href="custodian.html">English</a></span>
+      <h1>Клиент кастодиана</h1>
+      <p class="page-sub">Один скрипт всё устанавливает, создаёт ваш рабочий адрес, привязывает его к личному кошельку и проводит вас через церемонию создания ключей. Команду можно запускать повторно в любой момент: выполненные шаги пропускаются.</p>
+
+      <div class="panel">
+        <h2>Перед началом</h2>
+        <ul class="plain-list">
+          <li><b>Компьютер:</b> Linux x86-64, Windows 10/11 с WSL2 или Mac на Apple Silicon. Не меньше 30 ГБ свободного места (лучше 100 ГБ). Видеокарта для церемонии не нужна.</li>
+          <li><b>Windows:</b> откройте PowerShell от имени администратора, выполните <code>wsl --install -d Ubuntu</code>, перезагрузитесь, откройте приложение «Ubuntu» и вводите все команды ниже в нём.</li>
+          <li><b>Адрес доступа к Ethereum (RPC URL)</b> с архивными запросами, например бесплатное приложение Ethereum Mainnet на alchemy.com. Скрипт его спросит.</li>
+          <li><b>Личный кошелёк</b> (MetaMask или аппаратный). Сообщите его адрес оператору до запуска, иначе привязка будет отклонена.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h2>1. Скачайте и проверьте</h2>
+        <pre class="code" id="cmd-download"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-download">Copy</button>
+        <p>Напечатанная контрольная сумма SHA-256 должна быть ровно такой:</p>
+        <pre class="code" id="expected-sha"></pre>
+        <p>Сверьте её и с той, что оператор продиктует по телефону. Если хоть что-то не совпадает, остановитесь и позвоните оператору.</p>
+      </div>
+
+      <div class="panel">
+        <h2>2. Запустите</h2>
+        <pre class="code" id="cmd-run"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-run">Copy</button>
+        <p>Скрипт попросит пароль для установки программ, покажет сид-фразу нового рабочего адреса (запишите её на бумагу), спросит адрес доступа к Ethereum, откроет btcyield.online для привязки рабочего адреса к личному кошельку, дождётся 0,3 ETH на рабочем адресе, а затем приглашения оператора. Перед ответом «да» сверьте код приглашения с оператором по телефону.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Проверка</h2>
+        <pre class="code" id="cmd-check"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-check">Copy</button>
+        <p>Показывает, какие шаги выполнены и идёт ли церемония. Ход церемонии виден и на <a href="confederation.html">странице конфедерации</a> с подключённым личным кошельком, и в группе Telegram.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Версия</h2>
+        <dl class="kv" id="release"></dl>
+      </div>
+
+      <p class="footnote">Сайт никогда не спрашивает сид-фразу или приватные ключи.</p>
+    </div>
+  </main>
+
+  <script src="js/config.js?v=83003ccf847d"></script>
+  <script src="js/app.js?v=905f5c8e944b"></script>
+  <script src="js/custodian.js?v=ed0c4a0f4494"></script>
+</body>
+</html>
