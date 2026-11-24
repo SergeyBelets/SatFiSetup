@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custodian client — BTCyield</title>
+  <meta name="description" content="Download, verify and run the SatoshiFi custodian client.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=c8edbcdbe36d">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">BTC<span>yield</span></a>
+      <button class="mobile-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="nav-links">
+        <a href="index.html#how">How it works</a>
+        <a href="satoshifi-whitepaper.html">Whitepaper</a>
+        <a href="confederation.html" class="nav-cta">Confederation →</a>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <main class="page">
+    <div class="container">
+      <span class="section-label">Custodians</span>
+      <h1>Custodian client</h1>
+      <p class="page-sub">One script installs everything, creates your work address, binds it to your personal wallet and joins the key ceremony. Rerun the same command at any time: finished steps are skipped.</p>
+
+      <div class="panel">
+        <h2>Before you start</h2>
+        <ul class="plain-list">
+          <li><b>Computer:</b> Linux x86-64, Windows 10/11 with WSL2, or a Mac with Apple Silicon. At least 30 GB free disk (100 GB recommended). No graphics card is needed for the ceremony.</li>
+          <li><b>Windows:</b> open PowerShell as administrator, run <code>wsl --install -d Ubuntu</code>, restart, open the “Ubuntu” app and run every command below in it.</li>
+          <li><b>Ethereum RPC URL</b> with archive access, for example a free Alchemy Ethereum Mainnet app. The script asks for it.</li>
+          <li><b>Personal wallet</b> (MetaMask or hardware). Give its address to the operator before you start, otherwise the binding is rejected.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h2>1. Download and verify</h2>
+        <pre class="code" id="cmd-download"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-download">Copy</button>
+        <p>The printed SHA-256 must be exactly:</p>
+        <pre class="code" id="expected-sha"></pre>
+        <p>Compare it also with the value the operator tells you by phone. If anything differs, stop and call the operator.</p>
+      </div>
+
+      <div class="panel">
+        <h2>2. Run</h2>
+        <pre class="code" id="cmd-run"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-run">Copy</button>
+        <p>The script asks for your password to install packages, shows the seed phrase of the new work address (write it on paper), asks for the Ethereum RPC URL, opens btcyield.online to bind the work address to your personal wallet, waits for 0.3 ETH on the work address and then for the operator’s invitation. Check the invitation code with the operator by phone before you answer “yes”.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Check</h2>
+        <pre class="code" id="cmd-check"></pre>
+        <button type="button" class="btn btn-ghost" data-copy="cmd-check">Copy</button>
+        <p>Shows which steps are done and whether the ceremony is moving. Progress is also on the <a href="confederation.html">confederation page</a> with your personal wallet, and in the Telegram group.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Release</h2>
+        <dl class="kv" id="release"></dl>
+      </div>
+
+      <p class="footnote">The site never asks for your seed phrase or private keys.</p>
+    </div>
+  </main>
+
+  <script src="js/config.js?v=83003ccf847d"></script>
+  <script src="js/app.js?v=905f5c8e944b"></script>
+  <script src="js/custodian.js?v=c2268368a639"></script>
+</body>
+</html>
