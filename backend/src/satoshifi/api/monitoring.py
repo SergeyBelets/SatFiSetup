@@ -239,7 +239,8 @@ def put_operator_state(event):
     load_deployment(dep)
     store.deployments().update_item(
         Key={"deployment_id": dep},
-        UpdateExpression="SET snapshot=:s, snapshot_ts=:t, snapshot_received=:r",
+        UpdateExpression="SET #snap=:s, snapshot_ts=:t, snapshot_received=:r",
+        ExpressionAttributeNames={"#snap": "snapshot"},
         ExpressionAttributeValues={":s": json.dumps(data["snapshot"], ensure_ascii=False), ":t": ts,
                                    ":r": int(time.time())})
     return ok(accepted=True)
@@ -285,7 +286,12 @@ def post_telegram(event):
     message = update.get("message") or {}
     command = (message.get("text") or "").split()
     chat = (message.get("chat") or {}).get("id")
-    if not command or chat is None or command[0].split("@")[0] != "/status":
+    name = command[0].split("@")[0] if command else ""
+    if chat is None or name not in ("/status", "/help"):
+        return ok()
+    if name == "/help":
+        send_chat(chat, "/status — участники церемонии этого чата: вердикт, этап, возраст отчёта\n"
+                        "/help — эта справка\nКабинет: %s/confederation.html" % settings.site_origin())
         return ok()
     active = [i for i in store.scan_all(store.deployments()) if i.get("status") == "ACTIVE"]
     if chat != settings.operator_chat_id():

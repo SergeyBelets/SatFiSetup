@@ -17,6 +17,8 @@ RUNTIME_KEYS = {
     "silence_s": int,
     "repeat_s": int,
     "clock_skew_s": int,
+    "session_ttl_s": int,
+    "max_participants": int,
 }
 
 
@@ -55,6 +57,21 @@ def runtime() -> dict:
             raise ConfigError("runtime config %s must be %s" % (key, kind.__name__))
     require_checksum(raw["operator_address"], "operator_address")
     return raw
+
+
+def session_secret() -> bytes:
+    return ssm_value(env("SSM_SESSION_SECRET")).encode("utf-8")
+
+
+def site_origin() -> str:
+    origin = env("SITE_ORIGIN")
+    if not origin.startswith("https://") or origin.count("/") != 2:
+        raise ConfigError("SITE_ORIGIN must be https://<host>")
+    return origin
+
+
+def site_domain() -> str:
+    return site_origin()[len("https://"):]
 
 
 def telegram_token() -> str:

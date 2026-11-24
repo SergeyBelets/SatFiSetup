@@ -30,6 +30,22 @@ def nonces():
     return table("T_NONCES")
 
 
+def requests():
+    return table("T_REQUESTS")
+
+
+def allowlist():
+    return table("T_ALLOWLIST")
+
+
+def codes():
+    return table("T_CODES")
+
+
+def bindings():
+    return table("T_BINDINGS")
+
+
 def plain(value):
     """Convert DynamoDB Decimals back to int for JSON output."""
     if isinstance(value, Decimal):
