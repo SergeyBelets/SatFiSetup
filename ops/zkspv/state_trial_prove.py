@@ -105,7 +105,11 @@ def main():
         # CUDA runs without the socket filter (the driver needs sockets), so the
         # sandbox is loopback-only there: verify exactly that, not strict denial.
         probe=probe_code(cuda is not None)
-        command=[r0vm,'--elf',program,'--initial-input',base/'state.input','--receipt',out/'receipt.bin','--receipt-kind','composite','-v']
+        # With CUDA the first stage lifts/joins on the GPU and emits a succinct
+        # receipt: a composite one exceeds the 64 MiB bridge bound beyond a few
+        # headers. The CPU path keeps the qualified composite receipt.
+        first_kind='succinct' if cuda is not None else 'composite'
+        command=[r0vm,'--elf',program,'--initial-input',base/'state.input','--receipt',out/'receipt.bin','--receipt-kind',first_kind,'-v']
         if cuda is not None:
             command += ["--po2", cuda["segment_limit_po2"]]
     else:
@@ -117,7 +121,10 @@ def main():
             raise ValueError("ZK_STAGE_ARTIFACT_DRIFT")
         ro.append(previous/'receipt.bin')
         probe=probe_code(True)
-        if a.stage=='succinct':
+        if a.stage=='succinct' and read(previous/'verified/receipt.json').get('receipt_kind')=='succinct':
+            # Already succinct (CUDA first stage): independently re-verify it, do not recompress.
+            command=[bridge,'inspect',program,base/'state.journal',previous/'receipt.bin',out/'result']
+        elif a.stage=='succinct':
             command=[bridge,'compress','succinct',r0vm,program,base/'state.journal',previous/'receipt.bin',out/'result']
         else:
             from .groth16_docker import Broker
@@ -152,7 +159,7 @@ def main():
     unchanged=all(sha(ROOT/p)==digest for p,digest in prep['source_sha256'].items())
     verified=read(out/'verified/receipt.json') if (out/'verified/receipt.json').exists() else {}
     ok=(checks.get('verify',{}).get('exit_code')==0 and unchanged and input_matches()
-        and verified.get('receipt_kind')==a.stage)
+        and verified.get('receipt_kind')==('succinct' if a.stage=='composite' and cuda is not None else a.stage))
     if ok and cuda is not None and a.stage == "composite":
         with (out / "prove.log").open() as log:
             ok = any(line.strip() == "SatoshiFi segment_limit_po2=" + cuda["segment_limit_po2"] for line in log)
