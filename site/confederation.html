@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confederation — BTCyield</title>
+  <meta name="description" content="Start a confederation of custodians, follow its key ceremony and its dashboard.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">BTC<span>yield</span></a>
+      <button class="mobile-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="nav-links">
+        <a href="index.html#how">How it works</a>
+        <a href="index.html#streams">Streams</a>
+        <a href="satoshifi-whitepaper.html">Whitepaper</a>
+        <button class="wallet-btn" data-wallet-button>
+          <span class="wallet-icon"></span>
+          <span class="wallet-label">Connect Wallet</span>
+        </button>
+        <a href="confederation.html" class="nav-cta">Confederation →</a>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <main class="page">
+    <div class="container">
+      <div class="status error" id="page-error" role="alert" hidden></div>
+
+      <!-- Context 1: no wallet — pitch -->
+      <section id="ctx-intro" class="ctx" hidden>
+        <span class="section-label">Confederation</span>
+        <h1>Hold bitcoin together. Earn on it.</h1>
+        <p class="page-sub">A confederation is a group of custodians who jointly control one Bitcoin address with FROST threshold signatures. Depositors receive sBTC 1:1 and can always burn it to get their BTC back. The creator earns 2.5% APY on all capital staked in the confederation, plus 7% APY on their own stake.</p>
+        <div class="panel">
+          <h2>How a launch goes</h2>
+          <ol class="steps">
+            <li><b>Request</b> — you list the custodians and send a signed request from this page.</li>
+            <li><b>Invitation</b> — the operator publishes it on Ethereum; each custodian checks its code by phone.</li>
+            <li><b>Installation</b> — each custodian runs one script; it builds the software and waits for the invitation.</li>
+            <li><b>Key ceremony</b> — three distributed key generations, 2–3 days, no human steps.</li>
+            <li><b>Custody</b> — deposits, sBTC, staking; withdrawals signed by the custodian threshold.</li>
+          </ol>
+        </div>
+        <div class="panel">
+          <h2>What a custodian needs</h2>
+          <ul class="plain-list">
+            <li>A computer with an NVIDIA GPU of 6 GB or more (Linux, or Windows with WSL2), or a Mac on Apple Silicon.</li>
+            <li>100 GB of free disk space and a stable internet connection, kept on during the launch.</li>
+            <li>A personal wallet (MetaMask or a hardware wallet) and an Ethereum RPC URL.</li>
+            <li>0.3 ETH on the work address the script creates.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Get started</h2>
+          <p>Connect your wallet to send a request, or to open the ceremony and confederation dashboards you take part in.</p>
+          <button type="button" class="btn" data-wallet-button><span class="wallet-label">Connect Wallet</span></button>
+          <div class="contacts" data-contacts></div>
+        </div>
+      </section>
+
+      <!-- Wallet connected, not signed in -->
+      <section id="ctx-signin" class="ctx" hidden>
+        <h1>Sign in</h1>
+        <p class="page-sub">Sign a short message with your wallet to prove you own <span class="mono" id="signin-address"></span>. It is not a transaction and costs nothing. The session lives only in this tab.</p>
+        <div class="panel">
+          <button type="button" class="btn" id="signin">Sign in with Ethereum</button>
+          <div class="status" id="signin-status" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- Context 2: signed in, no ceremony and no confederation — contact the operator -->
+      <section id="ctx-contact" class="ctx" hidden>
+        <h1>Start a confederation</h1>
+        <p class="page-sub">You are not in an active ceremony or confederation yet. Send a request with the custodians you want, or contact the operator directly.</p>
+        <div class="panel" id="my-requests-panel" hidden>
+          <h2>Your requests</h2>
+          <table class="data-table">
+            <thead><tr><th>Request</th><th>Date</th><th>Participants</th><th>Status</th></tr></thead>
+            <tbody id="my-requests"></tbody>
+          </table>
+        </div>
+        <form class="panel" id="request-form" novalidate>
+          <h2>Request</h2>
+          <div class="field"><label for="rq-name">Your name</label><input type="text" id="rq-name" maxlength="120" required></div>
+          <div class="field"><label for="rq-email">E-mail</label><input type="email" id="rq-email" maxlength="200" required></div>
+          <div class="field"><label for="rq-telegram">Telegram (optional)</label><input type="text" id="rq-telegram" maxlength="64"></div>
+          <div class="field"><label for="rq-org">Organization (optional)</label><input type="text" id="rq-org" maxlength="120"></div>
+          <div class="field">
+            <span class="field-label">Custodians: personal Ethereum address, label, contact (optional). The operator joins automatically.</span>
+            <div class="participant-row fixed"><input type="text" id="rq-operator" disabled aria-label="Operator address"><input type="text" value="Operator" disabled aria-label="Operator label"></div>
+            <div id="rq-participants"></div>
+            <button type="button" class="btn btn-ghost" id="rq-add">Add custodian</button>
+          </div>
+          <p>You will sign the request hash with your wallet. It is not a transaction.</p>
+          <button type="submit" class="btn">Sign and send request</button>
+          <div class="status" id="rq-status" role="status" aria-live="polite"></div>
+        </form>
+        <div class="panel" id="rq-result" hidden>
+          <h2>Request sent</h2>
+          <p>Request <b class="mono" id="rq-id"></b> is delivered to the operator. The operator will contact you by e-mail.</p>
+          <div class="row">
+            <a class="btn btn-ghost" id="rq-mailto" href="#">E-mail the operator</a>
+            <button type="button" class="btn btn-ghost" id="rq-onchain">Message the operator's wallet</button>
+          </div>
+          <p class="hint">The wallet message is public and stays on the blockchain forever. It contains the request number and the custodian addresses, never your e-mail. You pay the gas.</p>
+          <div class="status" id="rq-onchain-status" role="status" aria-live="polite"></div>
+        </div>
+        <div class="panel">
+          <h2>Contact the operator</h2>
+          <div class="contacts" data-contacts></div>
+        </div>
+      </section>
+
+      <!-- Contexts 3–5: ceremony and/or confederation dashboards -->
+      <section id="ctx-dash" class="ctx" hidden>
+        <div class="dash-head">
+          <h1 id="dash-title">Dashboard</h1>
+          <div class="dash-controls">
+            <select id="dash-deployment" aria-label="Deployment" hidden></select>
+            <div class="tabs" id="dash-tabs" role="tablist" hidden>
+              <button type="button" role="tab" data-view="CEREMONY">Ceremony</button>
+              <button type="button" role="tab" data-view="CONFEDERATION">Confederation</button>
+            </div>
+          </div>
+        </div>
+        <p class="page-sub" id="dash-updated"></p>
+
+        <div id="view-ceremony" hidden>
+          <div class="panel highlight">
+            <h2>What to do now</h2>
+            <p id="cer-step" class="big"></p>
+          </div>
+          <div class="panel">
+            <h2>Ceremony</h2>
+            <dl class="kv" id="cer-state"></dl>
+          </div>
+          <div class="panel">
+            <h2>Participants</h2>
+            <table class="data-table">
+              <thead><tr><th>Participant</th><th>Personal</th><th>Work</th><th>Bound</th><th>Verdict</th><th>Stage</th><th>Last report</th></tr></thead>
+              <tbody id="cer-members"></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h2>Events</h2>
+            <ul class="event-list" id="cer-events"></ul>
+          </div>
+          <div class="panel">
+            <h2>Custodian client</h2>
+            <p>Run in a Linux, WSL2 or macOS terminal. Check the SHA-256 against the value the operator gave you by phone.</p>
+            <pre class="code" id="cer-command"></pre>
+            <button type="button" class="btn btn-ghost" id="cer-copy">Copy</button>
+            <dl class="kv" id="cer-release"></dl>
+          </div>
+        </div>
+
+        <div id="view-confederation" hidden>
+          <div class="panel">
+            <h2>Addresses</h2>
+            <dl class="kv" id="conf-addresses"></dl>
+            <div class="status" id="conf-verify" role="status" aria-live="polite"></div>
+          </div>
+          <div class="panel">
+            <h2>Bitcoin view (ZK state)</h2>
+            <dl class="kv" id="conf-zk"></dl>
+          </div>
+          <div class="panel">
+            <h2>Custodians</h2>
+            <table class="data-table">
+              <thead><tr><th>Custodian</th><th>Personal</th><th>Work</th><th>Verdict</th><th>Last report</th></tr></thead>
+              <tbody id="conf-members"></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h2>Events</h2>
+            <ul class="event-list" id="conf-events"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Binding mode: ?bind=… opened by the custodian script -->
+      <section id="ctx-bind" class="ctx" hidden>
+        <h1>Bind your work address</h1>
+        <p class="page-sub">Your SatoshiFi client asks you to confirm that its work address belongs to you. Sign one message with your <b>personal</b> wallet. It is not a transaction.</p>
+        <div class="panel">
+          <dl class="kv" id="bind-info"></dl>
+          <button type="button" class="btn" id="bind-sign">Connect personal wallet and sign</button>
+          <div class="status" id="bind-status" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <p class="footnote">The site never asks for your seed phrase or private keys.</p>
+    </div>
+  </main>
+
+  <div class="wallet-modal-overlay" id="wallet-modal">
+    <div class="wallet-modal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
+      <button class="wallet-modal-close" id="wallet-modal-close" aria-label="Close">×</button>
+      <h3 id="wallet-modal-title">Connect Wallet</h3>
+      <p>Choose your browser wallet. BTCyield works on Ethereum mainnet.</p>
+      <div class="wallet-option" data-wallet="metamask">
+        <div class="wallet-option-icon mm">🦊</div>
+        <div><div class="wallet-option-name">MetaMask</div><div class="wallet-option-desc">Browser extension, also with a hardware wallet</div></div>
+      </div>
+      <div class="wallet-option" data-wallet="rabby">
+        <div class="wallet-option-icon rb">💎</div>
+        <div><div class="wallet-option-name">Rabby</div><div class="wallet-option-desc">Browser extension wallet</div></div>
+      </div>
+      <div class="wallet-option" data-wallet="coinbase">
+        <div class="wallet-option-icon cb">🔵</div>
+        <div><div class="wallet-option-name">Coinbase Wallet</div><div class="wallet-option-desc">Browser extension wallet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/satoshifi-formats.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/confederation.js"></script>
+</body>
+</html>
