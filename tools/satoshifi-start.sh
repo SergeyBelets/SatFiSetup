@@ -204,17 +204,43 @@ start_shim
 # ---------------------------------------------------------------- 9. monitoring
 if ! done_step monitor; then
   say "9. Мониторинг (отчёт боту каждые 5 минут)"
-  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg min_balance_wei)" <<'PY'
+  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg min_balance_wei)" "$(cfg bind_page)" <<'PY'
 import json, os, sys
-p, api, dep, ident, rpc, minb = sys.argv[1:]
+p, api, dep, ident, rpc, minb, page = sys.argv[1:]
 fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 os.write(fd, json.dumps(dict(api_base=api, deployment=dep, identity_file=ident, rpc_url=rpc,
-                             min_balance_wei=minb, report_period_s=300), indent=1).encode()); os.close(fd)
+                             min_balance_wei=minb, report_period_s=300, bind_page=page, chain_id=1),
+                        indent=1).encode()); os.close(fd)
 PY
   mark monitor
 fi
 if ! pgrep -f "satoshifi_api.py report" >/dev/null; then
   (setsid nohup "$PY" "$SDK/tools/satoshifi_api.py" report --config "$H/report.json" >> "$H/report.log" 2>&1 &)
+fi
+
+# ---------------------------------------------------------------- 9b. binding
+open_url() {
+  if [ $IS_WSL = 1 ]; then powershell.exe -NoProfile -Command "Start-Process '$1'" >/dev/null 2>&1 || true
+  elif [ "$OS" = Darwin ]; then open "$1" >/dev/null 2>&1 || true
+  else xdg-open "$1" >/dev/null 2>&1 || true; fi
+}
+if ! done_step bound; then
+  say "9b. Привязка рабочего адреса к вашему кошельку"
+  echo "   Рабочий адрес: $ME"
+  echo "   Откроется страница btcyield.online. Подключите тот личный кошелёк, адрес которого вы сообщили"
+  echo "   оператору, и подпишите сообщение. Это не транзакция и ничего не стоит."
+  if ! "$PY" "$SDK/tools/satoshifi_api.py" bind --config "$H/report.json" | while IFS= read -r line; do
+      case "$line" in
+        BIND_LINK*)     echo; echo "   Если браузер не открылся, откройте ссылку вручную:"; echo "   ${line#BIND_LINK }"; echo
+                        echo "   Жду подписи (ссылка действует час, затем появится новая)..."; open_url "${line#BIND_LINK }" ;;
+        BIND_ACCEPTED*) ok "Привязка принята" ;;
+        BIND_REJECTED*) echo "   ✘ Привязка отклонена: ${line#BIND_REJECTED }" ;;
+        BIND_EXPIRED*)  echo "   Ссылка истекла." ;;
+      esac
+    done; then
+    die "Привязка не принята. NOT_ALLOWLISTED — оператор ещё не внёс ваш личный адрес; сообщите ему и запустите скрипт снова." 30
+  fi
+  mark bound
 fi
 
 # ---------------------------------------------------------------- 10. ETH

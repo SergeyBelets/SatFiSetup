@@ -4,6 +4,7 @@
   "chain_id": 1,
   "repo": "https://github.com/SergeyBelets/SatFiSetup.git",
   "api_base": "https://api.btcyield.online",
+  "bind_page": "https://btcyield.online/confederation.html",
   "bitcoin_upstream": "https://bitcoin-rpc.publicnode.com",
   "bitcoin_shim_port": 8399,
   "max_fee_per_gas_wei": "30000000000",
