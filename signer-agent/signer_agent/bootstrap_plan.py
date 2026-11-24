@@ -585,6 +585,12 @@ def build(config):
             )
         ] + [dict(contract="spv_guard", method="state", args=[], equals="$relay"),
              dict(contract="spv_guard", method="testHelpersEnabled", args=[], equals=False)]
+        if "zk_relay" in p:
+            # Deployed before enrollment by zk_relay_deploy; bootstrap verifies the
+            # creation transaction against this exact step instead of deploying.
+            steps[-1]["adopt"] = dict(address=p["zk_relay"]["address"], tx_hash=p["zk_relay"]["tx_hash"])
+    elif "zk_relay" in p:
+        raise ValueError("ZK_RELAY_REQUIRES_ZK_POLICY")
     # Factory construction can overlap participant work; no key-dependent
     # constructor or authorization runs until all three results are finalized.
     steps.extend(ceremony_waits)

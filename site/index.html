@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BTCyield — BTC Yield Platform</title>
+  <meta name="description" content="Decentralized BTC yield on Ethereum. Create a confederation of custodians, earn creator income, keep full control of your bitcoins.">
+  <meta property="og:title" content="BTCyield — BTC Yield Platform">
+  <meta property="og:description" content="Confederations of custodians secure BTC with FROST threshold signatures. 2.5% + 7% APY for the creator, 4–5% yield|loan stream.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://btcyield.online">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">BTC<span>yield</span></a>
+      <button class="mobile-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="nav-links">
+        <a href="index.html#how">How it works</a>
+        <a href="index.html#streams">Streams</a>
+        <a href="index.html#security">Security</a>
+        <a href="satoshifi-whitepaper.html">Whitepaper</a>
+        <button class="wallet-btn" data-wallet-button>
+          <span class="wallet-icon"></span>
+          <span class="wallet-label">Connect Wallet</span>
+        </button>
+        <a href="confederation.html" class="nav-cta">Confederation →</a>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge"><span class="dot"></span> Ethereum mainnet · Bitcoin mainnet</div>
+      <h1>BTC<span>yield</span></h1>
+      <p class="hero-sub">Decentralized yield on your bitcoin. Custodians hold BTC together under FROST threshold signatures; the wrapper sBTC moves through DeFi, and you can always burn it to get your BTC back.</p>
+      <div class="hero-metrics">
+        <div class="metric">
+          <div class="metric-value">2.5%+7%</div>
+          <div class="metric-label">Confederation creator APY</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">4–5%</div>
+          <div class="metric-label">Yield|Loan APY</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="partners" id="how">
+    <div class="container">
+      <span class="section-label reveal">How it works</span>
+      <h2 class="section-title reveal">A confederation in five steps</h2>
+      <p class="section-sub reveal">A confederation is a group of custodians who jointly control one Bitcoin address. No single person can move the coins; the Ethereum contracts verify every Bitcoin block with zero-knowledge proofs.</p>
+      <ol class="steps reveal">
+        <li><b>Request.</b> The initiator lists the custodians and sends a signed request to the operator.</li>
+        <li><b>Invitation.</b> The operator publishes an on-chain invitation; each custodian checks its code with the operator by phone.</li>
+        <li><b>Installation.</b> Each custodian runs one script on a computer with an NVIDIA GPU and funds a work address with ETH.</li>
+        <li><b>Key ceremony.</b> Three distributed key generations create the federation, confederation and Bitcoin keys. Nobody ever holds a whole key.</li>
+        <li><b>Custody.</b> Deposits mint sBTC 1:1; withdrawals are signed by the custodian threshold and checked against Bitcoin by ZK proofs.</li>
+      </ol>
+      <div class="cta-buttons reveal" style="justify-content:flex-start;margin-top:2rem">
+        <a href="confederation.html" class="cta-btn">Open the confederation page →</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="streams">
+    <div class="container">
+      <span class="section-label reveal">Yield streams</span>
+      <h2 class="section-title reveal">Two ways to participate</h2>
+      <p class="section-sub reveal">Choose your level of control, risk and yield.</p>
+      <div class="streams-grid">
+        <div class="stream-card s1 reveal">
+          <div class="stream-number">Stream 1</div>
+          <div class="stream-name">Confederation</div>
+          <div class="stream-yield">2.5% + 7% APY</div>
+          <div class="stream-risk">Risk: minimal · full BTC control</div>
+          <div class="stream-desc">Create your own confederation and earn 2.5% APY on all capital staked in it, even without staking BTC of your own. Stake your own BTC as well and earn an additional 7% APY on it. sBTC is minted 1:1 against locked BTC, and the custodians cannot block the withdrawal of burned wrappers.</div>
+          <ul class="stream-features">
+            <li>FROST threshold signatures — no single point of failure</li>
+            <li>Free exit — burn sBTC, get BTC back</li>
+            <li>Bitcoin state verified on Ethereum by ZK proofs</li>
+          </ul>
+        </div>
+        <div class="stream-card s2 reveal">
+          <div class="stream-number">Stream 2</div>
+          <div class="stream-name">Yield|Loan stream</div>
+          <div class="stream-yield">4–5% APY</div>
+          <div class="stream-risk">Risk: medium · rent from the whole TVL</div>
+          <div class="stream-desc">Wrap BTC into sBTC — the decentralized wrapper without compliance screening or blocklists — and provide liquidity to Yield Basis and Silo Finance. Placement is executed by the SatoshiFi manager multisig; you earn rent from the TVL of all confederations combined.</div>
+          <ul class="stream-features">
+            <li>sBTC vaults on Yield Basis</li>
+            <li>sBTC lending on Silo Finance</li>
+            <li>Stablecoin deposits from 4% APY</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="security" class="strategies">
+    <div class="container">
+      <span class="section-label reveal">Trust model</span>
+      <h2 class="section-title reveal">Security &amp; trust</h2>
+      <p class="section-sub reveal">Cryptographic guarantees instead of promises.</p>
+      <div class="security-grid">
+        <div class="sec-card reveal">
+          <div class="sec-title">FROST threshold signatures</div>
+          <div class="sec-desc">The private key never exists in full. A threshold of custodians must cooperate to sign; their key shares never leave their own computers.</div>
+        </div>
+        <div class="sec-card reveal">
+          <div class="sec-title">ZK view of Bitcoin</div>
+          <div class="sec-desc">Ethereum contracts accept Bitcoin headers only with a zero-knowledge proof of proof-of-work, starting from a fixed checkpoint. No trusted relayer.</div>
+        </div>
+        <div class="sec-card reveal">
+          <div class="sec-title">Algorithmic withdrawal</div>
+          <div class="sec-desc">Burn the wrapper and receive BTC. The withdrawal is enforced by contracts, not by a person.</div>
+        </div>
+        <div class="sec-card reveal">
+          <div class="sec-title">Audited by SmartState</div>
+          <div class="sec-desc">SatoshiFi contracts underwent a full audit by SmartState. Every operation is public on-chain.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tagline reveal">Your bitcoins — your rules. Math instead of trust.</div>
+
+  <section class="cta-section">
+    <div class="container">
+      <h2 class="cta-title reveal">Ready to earn<br>yield on your BTC?</h2>
+      <p class="cta-sub reveal">Start a confederation with your custodians, or join one you were invited to.</p>
+      <div class="cta-buttons reveal">
+        <a href="confederation.html" class="cta-btn">Confederation →</a>
+        <button class="cta-btn-secondary" data-wallet-button><span class="wallet-label">Connect Wallet</span></button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">BTCyield</div>
+        <div class="footer-links">
+          <a href="https://unilayer.solutions/" target="_blank" rel="noopener">SatoshiFi</a>
+          <a href="satoshifi-whitepaper.html">Whitepaper</a>
+          <a href="satoshifi-whitepaper-ru.html">Whitepaper (RU)</a>
+          <a href="confederation.html">Confederation</a>
+        </div>
+        <div class="footer-copy">© 2026 BTCyield. The site never asks for your seed phrase.</div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="wallet-modal-overlay" id="wallet-modal">
+    <div class="wallet-modal" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
+      <button class="wallet-modal-close" id="wallet-modal-close" aria-label="Close">×</button>
+      <h3 id="wallet-modal-title">Connect Wallet</h3>
+      <p>Choose your browser wallet. BTCyield works on Ethereum mainnet.</p>
+      <div class="wallet-option" data-wallet="metamask">
+        <div class="wallet-option-icon mm">🦊</div>
+        <div><div class="wallet-option-name">MetaMask</div><div class="wallet-option-desc">Browser extension, also with a hardware wallet</div></div>
+      </div>
+      <div class="wallet-option" data-wallet="rabby">
+        <div class="wallet-option-icon rb">💎</div>
+        <div><div class="wallet-option-name">Rabby</div><div class="wallet-option-desc">Browser extension wallet</div></div>
+      </div>
+      <div class="wallet-option" data-wallet="coinbase">
+        <div class="wallet-option-icon cb">🔵</div>
+        <div><div class="wallet-option-name">Coinbase Wallet</div><div class="wallet-option-desc">Browser extension wallet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

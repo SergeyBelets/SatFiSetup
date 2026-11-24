@@ -1,0 +1,16 @@
+{
+  "deployment_id": "satfi-m1",
+  "operator": "0xF66458BB45059b0E817d9ECE6504Acf322aA94f4",
+  "chain_id": 1,
+  "repo": "https://github.com/SergeyBelets/SatFiSetup.git",
+  "api_base": "https://api.btcyield.online",
+  "bitcoin_upstream": "https://bitcoin-rpc.publicnode.com",
+  "bitcoin_shim_port": 8399,
+  "max_fee_per_gas_wei": "30000000000",
+  "max_priority_fee_per_gas_wei": "2000000000",
+  "max_tx_gas": "16777216",
+  "min_balance_wei": "100000000000000000",
+  "rust_toolchain": "1.89.0",
+  "foundry_version": "1.8.5",
+  "home": ".satoshifi"
+}

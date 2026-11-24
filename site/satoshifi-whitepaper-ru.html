@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SatoshiFi — Whitepaper / Wiki</title>
+  <meta name="description" content="SatoshiFi Whitepaper. Децентрализованные майнинг-пулы, федерации и конфедерации с FROST-подписями, SPV-верификацией и управляемым yield|loan-потоком для BTC-yield.">
+  <meta property="og:title" content="SatoshiFi — Whitepaper">
+  <meta property="og:description" content="Полный технический whitepaper. Архитектура, FROST, SPV, кастодианы, BTC-yield интеграция.">
+  <meta property="og:type" content="article">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═════════════ Reset & Base ═════════════ */
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0c;
+      --bg-2: #111114;
+      --bg-3: #16161a;
+      --surface: rgba(255,255,255,0.03);
+      --surface-2: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --text: #f5f5f7;
+      --text-dim: #a1a1a8;
+      --text-faded: #6b6b73;
+      --accent: #f7931a;            /* Bitcoin orange */
+      --accent-2: #ffb347;
+      --accent-soft: rgba(247,147,26,0.12);
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      --container: 880px;
+      --container-wide: 1200px;
+    }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grain texture */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.025 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 1;
+      mix-blend-mode: overlay;
+    }
+
+    /* Ambient orange glow */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -40vh; left: 50%; transform: translateX(-50%);
+      width: 90vw; height: 90vh;
+      background: radial-gradient(ellipse at center, rgba(247,147,26,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═════════════ Typography ═════════════ */
+    h1, h2, h3, h4, h5 { font-family: var(--serif); font-weight: 700; line-height: 1.2; }
+    h1 { font-size: clamp(2.4rem, 5vw, 4.2rem); letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.8rem, 3.2vw, 2.6rem); letter-spacing: -0.015em; margin-bottom: 1rem; }
+    h3 { font-size: clamp(1.3rem, 2.2vw, 1.7rem); letter-spacing: -0.01em; margin: 2.2rem 0 0.8rem; }
+    h4 { font-size: 1.15rem; margin: 1.6rem 0 0.6rem; color: var(--accent-2); font-family: var(--sans); font-weight: 600; }
+    p { margin-bottom: 1rem; color: var(--text-dim); }
+    p strong, li strong { color: var(--text); font-weight: 600; }
+    a { color: var(--accent); text-decoration: none; transition: color .2s; }
+    a:hover { color: var(--accent-2); }
+
+    ul, ol { margin: 1rem 0 1.4rem 1.5rem; color: var(--text-dim); }
+    li { margin-bottom: 0.45rem; }
+    li::marker { color: var(--accent); }
+
+    code, pre { font-family: var(--mono); font-size: 0.88em; }
+    code { background: var(--surface-2); padding: 0.12em 0.4em; border-radius: 4px; color: var(--accent-2); border: 1px solid var(--border); }
+    pre { background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; overflow-x: auto; margin: 1.2rem 0; line-height: 1.55; }
+    pre code { background: transparent; padding: 0; border: 0; color: var(--text); }
+
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 0.4rem 0 0.4rem 1.4rem;
+      margin: 1.4rem 0;
+      color: var(--text);
+      font-style: italic;
+      background: var(--accent-soft);
+      border-radius: 0 6px 6px 0;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin: 1.4rem 0; font-size: 0.94rem; }
+    th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text); background: var(--surface); font-family: var(--sans); }
+    td { color: var(--text-dim); }
+    tr:hover td { background: var(--surface); }
+
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 2; }
+    .container-wide { max-width: var(--container-wide); margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 2; }
+
+    /* ═════════════ Top Nav ═════════════ */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(10,10,12,0.85);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0.9rem 0;
+    }
+    .topnav-inner { max-width: var(--container-wide); margin: 0 auto; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .brand { font-family: var(--serif); font-size: 1.4rem; font-weight: 900; color: var(--text); letter-spacing: -0.02em; }
+    .brand span { color: var(--accent); }
+    .nav-meta { display: flex; gap: 1.4rem; font-size: 0.85rem; color: var(--text-faded); }
+    .nav-meta a { color: var(--text-dim); }
+    .nav-meta a:hover { color: var(--accent); }
+    @media (max-width: 720px) {
+      .nav-meta { display: none; }
+    }
+
+    /* ═════════════ Hero ═════════════ */
+    .hero { padding: 10rem 0 5rem; text-align: center; }
+    .hero .eyebrow {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--accent);
+      border-radius: 100px;
+      margin-bottom: 2rem;
+      background: var(--accent-soft);
+    }
+    .hero h1 {
+      margin-bottom: 1.4rem;
+      background: linear-gradient(180deg, #ffffff 0%, #c4c4cb 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero h1 .accent { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+    .hero .lead {
+      font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+      color: var(--text-dim);
+      max-width: 640px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-faded);
+      margin-top: 3rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .hero-meta div span { display: block; color: var(--accent-2); margin-top: 0.3rem; font-size: 0.9rem; letter-spacing: 0.05em; }
+
+    /* ═════════════ TOC ═════════════ */
+    .toc-section { padding: 4rem 0; background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .toc-title { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); margin-bottom: 2rem; }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.5rem 2rem;
+      counter-reset: toc;
+    }
+    .toc-grid a {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 0.8rem 0;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      transition: color .2s, border-color .2s;
+      counter-increment: toc;
+    }
+    .toc-grid a::before {
+      content: counter(toc, decimal-leading-zero);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-faded);
+      flex-shrink: 0;
+    }
+    .toc-grid a:hover { color: var(--accent); border-color: var(--accent); }
+    .toc-grid a:hover::before { color: var(--accent); }
+
+    /* ═════════════ Chapter Sections ═════════════ */
+    section.chapter {
+      padding: 5rem 0 2rem;
+      position: relative;
+    }
+    section.chapter + section.chapter { border-top: 1px solid var(--border); }
+
+    .chapter-num {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.2rem;
+    }
+    .chapter h2 + p { font-size: 1.05rem; color: var(--text); margin-top: 1rem; }
+
+    /* Pull-quote sidebar style */
+    .pull-stat {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.4rem;
+      margin: 2.5rem 0;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 12px;
+    }
+    .pull-stat div .v {
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .pull-stat div .l {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-faded);
+    }
+
+    /* Two-column cards (architecture layers, etc.) */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.4rem;
+      margin: 2rem 0;
+    }
+    .card {
+      padding: 1.6rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color .2s, background .2s;
+    }
+    .card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .card h4 { margin-top: 0; color: var(--accent-2); font-family: var(--serif); font-size: 1.15rem; }
+    .card p { font-size: 0.94rem; margin: 0.5rem 0 0; }
+    .card .ico { font-family: var(--mono); font-size: 0.72rem; color: var(--text-faded); letter-spacing: 0.2em; text-transform: uppercase; }
+
+    /* Flow / numbered steps */
+    .flow {
+      list-style: none;
+      margin: 1.6rem 0;
+      padding: 0;
+      counter-reset: flow;
+    }
+    .flow li {
+      counter-increment: flow;
+      padding: 0.9rem 0 0.9rem 3rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      color: var(--text);
+    }
+    .flow li::before {
+      content: counter(flow, decimal-leading-zero);
+      position: absolute; left: 0; top: 0.85rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+    .flow li:last-child { border-bottom: 0; }
+    .flow li small { display: block; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.25rem; }
+
+    /* Tag chip */
+    .tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      color: var(--text-dim);
+      margin: 0.15rem 0.3rem 0.15rem 0;
+    }
+    .tag.accent { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+    /* FAQ */
+    details.faq {
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 0;
+    }
+    details.faq summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 1.02rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary::after {
+      content: '+';
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      color: var(--accent);
+      transition: transform .25s;
+    }
+    details.faq[open] summary::after { transform: rotate(45deg); }
+    details.faq[open] summary { color: var(--accent); }
+    details.faq .answer { margin-top: 0.8rem; color: var(--text-dim); }
+
+    /* Glossary */
+    .glossary { margin: 1.5rem 0; }
+    .glossary dt {
+      font-weight: 700;
+      color: var(--accent-2);
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      margin-top: 1.2rem;
+    }
+    .glossary dd {
+      color: var(--text-dim);
+      margin: 0.3rem 0 0 0;
+      padding-left: 0;
+    }
+
+    /* Divider ornament */
+    .ornament {
+      text-align: center;
+      margin: 3.5rem 0 2.5rem;
+      color: var(--text-faded);
+      letter-spacing: 0.8em;
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
+      padding: 4rem 0 3rem;
+      margin-top: 6rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+    }
+    .footer-grid h5 {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .footer-grid ul { margin: 0; padding: 0; list-style: none; }
+    .footer-grid li { margin-bottom: 0.5rem; }
+    .footer-grid a { color: var(--text-dim); font-size: 0.95rem; }
+    .footer-grid a:hover { color: var(--accent); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-faded);
+      font-family: var(--mono);
+      letter-spacing: 0.1em;
+    }
+
+    /* Scroll-spy active link helper */
+    .toc-sidebar {
+      display: none;
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: white; color: black; }
+      .topnav, footer { display: none; }
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 640px) {
+      .hero { padding: 8rem 0 3rem; }
+      .hero-meta { gap: 1.5rem; }
+      section.chapter { padding: 3.5rem 0 1.5rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.6rem; }
+      pre { padding: 1rem; font-size: 0.8em; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════════ Top Navigation ═════════════ -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a href="#top" class="brand">Satoshi<span>Fi</span></a>
+      <div class="nav-meta">
+        <a href="#toc">Содержание</a>
+        <a href="#ch-architecture">Архитектура</a>
+        <a href="#ch-frost">FROST</a>
+        <a href="#ch-btcyield">BTCyield</a>
+        <a href="#ch-faq">FAQ</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═════════════ Hero ═════════════ -->
+  <section class="hero" id="top">
+    <div class="container">
+      <span class="eyebrow">Whitepaper · v1.0 · 2026</span>
+      <h1>SatoshiFi.<br><span class="accent">Bitcoin без посредников.</span></h1>
+      <p class="lead">
+        Децентрализованные майнинг-пулы, федерации и конфедерации для BTC, DOGE, BCH и LTC.
+        Threshold-подписи FROST, ончейн SPV-верификация и yield|loan-поток под управлением мультисига для генерации доходности на bitcoin.
+      </p>
+      <div class="hero-meta">
+        <div>Технология<span>FROST · DKG · SPV</span></div>
+        <div>Сети<span>BTC · DOGE · BCH · LTC</span></div>
+        <div>Уровень<span>Ethereum / EVM</span></div>
+        <div>Лицензия<span>MIT</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Table of Contents ═════════════ -->
+  <section class="toc-section" id="toc">
+    <div class="container">
+      <div class="toc-title">Содержание</div>
+      <div class="toc-grid">
+        <a href="#ch-intro">Введение и обзор</a>
+        <a href="#ch-architecture">Архитектура системы</a>
+        <a href="#ch-contracts">Слой смарт-контрактов</a>
+        <a href="#ch-flows">User Flows</a>
+        <a href="#ch-tokenomics">Токеномика</a>
+        <a href="#ch-frost">FROST и DKG</a>
+        <a href="#ch-spv">SPV-верификация</a>
+        <a href="#ch-federation">Федерация и конфедерация</a>
+        <a href="#ch-custodians">Кастодианы и slashing</a>
+        <a href="#ch-rental">Аренда долей</a>
+        <a href="#ch-fees">Fee System</a>
+        <a href="#ch-security">Безопасность и риски</a>
+        <a href="#ch-btcyield">BTCyield: Yield|Loan Stream</a>
+        <a href="#ch-faq">FAQ</a>
+        <a href="#ch-glossary">Глоссарий</a>
+        <a href="#ch-references">Источники и лицензии</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 1: Введение ═════════════ -->
+  <section class="chapter" id="ch-intro">
+    <div class="container">
+      <div class="chapter-num">Глава 01 · Introduction</div>
+      <h2>Введение и обзор проекта</h2>
+      <p>
+        SatoshiFi — это система децентрализованных майнинг-пулов и BTC-федераций, построенная на смарт-контрактах
+        Ethereum (или совместимых EVM-сетях). Проект объединяет два уровня: локальные майнинг-пулы (<code>MiningPoolDAO</code>),
+        управляемые DAO-сообществом операторов и майнеров, и глобальную координацию через <code>MultiPoolDAO</code>
+        для каждой нативной сети (Bitcoin, Dogecoin, Bitcoin Cash, Litecoin).
+      </p>
+      <p>
+        Все критические процессы — распределение наград, верификация UTXO, формирование подписей — выполняются
+        ончейн. Никакого <em>single point of failure</em>, никакой кастодиальной модели в классическом смысле:
+        нативные BTC остаются на адресах федерации, защищённых пороговыми подписями, а ERC-20 обёртки
+        (mpToken и sToken) циркулируют в DeFi.
+      </p>
+
+      <h3>Что обеспечивает протокол</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Layer · DAO</div>
+          <h4>Децентрализация</h4>
+          <p>Каждый пул — независимый DAO, объединённый через <code>MultiPoolDAO</code> для глобальной координации. Управление через NFT/SBT-роли.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · SPV</div>
+          <h4>Прозрачность</h4>
+          <p>Ончейн-верификация всех UTXO и block headers. Распределение наград через открытые калькуляторы PPS, FPPS, PPLNS, Score.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · Crypto</div>
+          <h4>Криптографические гарантии</h4>
+          <p>FROST threshold-подписи (Schnorr/BIP340), Distributed Key Generation на блокчейне, staking и slashing для оракулов.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · Multi-chain</div>
+          <h4>Мультисетевая поддержка</h4>
+          <p>BTC (SimpleSPVContract), Dogecoin (SPVContractDogecoin), BCH, LTC — каждая сеть со своим sToken (SBTC, SDOGE, SBCH, SLTC).</p>
+        </div>
+      </div>
+
+      <div class="pull-stat">
+        <div><div class="v">4</div><div class="l">Поддерживаемых сетей</div></div>
+        <div><div class="v">t-of-n</div><div class="l">FROST порог подписей</div></div>
+        <div><div class="v">100</div><div class="l">Подтверждений зрелости</div></div>
+        <div><div class="v">71</div><div class="l">Критических теста</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 2: Архитектура ═════════════ -->
+  <section class="chapter" id="ch-architecture">
+    <div class="container">
+      <div class="chapter-num">Глава 02 · Architecture</div>
+      <h2>Архитектура системы</h2>
+      <p>
+        Система построена как модульный стек контрактов на Ethereum. Каждый слой решает свою задачу
+        и предоставляет интерфейс следующему слою. Разделение между локальным управлением (<code>MiningPoolDAO</code>)
+        и глобальной координацией (<code>MultiPoolDAO</code>) — основной архитектурный принцип, позволяющий
+        масштабировать систему по сетям и по числу пулов.
+      </p>
+
+      <h3>Слои архитектуры</h3>
+      <table>
+        <thead><tr><th>Слой</th><th>Ответственность</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Bitcoin / SPV</strong></td><td>Валидация заголовков блоков, зрелости coinbase, Merkle-инклюзии и реестра pool UTXO</td></tr>
+          <tr><td><strong>Pool</strong></td><td>Регистрация BTC-наград, минт MP-токенов, escrow и refund при погашении</td></tr>
+          <tr><td><strong>MultiPool</strong></td><td>Агрегация MP-токенов, выпуск share-токенов, учёт балансов по пулам</td></tr>
+          <tr><td><strong>Federation</strong></td><td>DKG, FROST-авторизация, управление пулами, governance</td></tr>
+          <tr><td><strong>Confederation</strong></td><td>Объединение федераций плюс custodian threshold</td></tr>
+          <tr><td><strong>Fees</strong></td><td>Расчёт wrap/unwrap комиссий, NFT-скидки, распределение fee между участниками</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Ключевые компоненты</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Core</div>
+          <h4>BitcoinHash, BlockHeader, TargetsHelper</h4>
+          <p>Парсинг и верификация структур Bitcoin: блоки, заголовки, target-расчёты, Merkle-доказательства.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Factory</div>
+          <h4>MiningPoolFactory, FederationFactory</h4>
+          <p>Деплой пулов, mpToken, sToken, FROST-мультисигов и MultiPool-контрактов из единой точки.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Tokens</div>
+          <h4>PoolMpToken, PoolSToken</h4>
+          <p>ERC-20 токены с привязкой 1:1 к нативному активу. Доступ ограничен через <code>PoolMembershipNFT</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Calculators</div>
+          <h4>PPS · FPPS · PPLNS · Score</h4>
+          <p>Реализации <code>IDistributionScheme</code> через единый <code>CalculatorRegistry</code> с whitelist.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Oracles</div>
+          <h4>StratumData Aggregator / Validator</h4>
+          <p>Сбор и валидация данных о шерах от Stratum-провайдеров, staking и slashing для честного поведения.</p>
+        </div>
+        <div class="card">
+          <div class="ico">FROST</div>
+          <h4>FROSTCoordinator, FROSTVerifier</h4>
+          <p>Координация threshold-подписей Schnorr/BIP340. Bootstrap через cryptographic FROST после DKG.</p>
+        </div>
+      </div>
+
+      <h3>Поток данных: Reward → mpToken → sToken → вывод</h3>
+      <ol class="flow">
+        <li>Bitcoin reward transaction
+          <small>Майнер находит блок, формируется coinbase-транзакция в нативной сети.</small>
+        </li>
+        <li>SPV maturity + merkle proof
+          <small><code>SimpleSPVContract</code> проверяет зрелость блока (≥ 100 подтверждений) и включение транзакции в Merkle-дерево.</small>
+        </li>
+        <li>Pool registers UTXO
+          <small><code>MiningPoolDAO</code> регистрирует подтверждённую coinbase-UTXO во внутреннем реестре.</small>
+        </li>
+        <li>Distribute reward
+          <small>Калькулятор (PPS/FPPS/PPLNS/Score) рассчитывает доли воркеров. <code>PoolMpToken.mint</code> минтит mpToken.</small>
+        </li>
+        <li>Deposit mpToken to MultiPool
+          <small>Майнер вызывает <code>depositMpToken</code>. SafeERC20 переводит токены, опционально удерживается wrap fee.</small>
+        </li>
+        <li>Share token minted
+          <small>Минтятся sToken (SBTC/SDOGE/SBCH/SLTC), обновляется per-pool баланс пользователя.</small>
+        </li>
+        <li>Request withdrawal
+          <small>Заявка на вывод: проверка баланса, создание pending lock, формирование operation hash.</small>
+        </li>
+        <li>FROST approval
+          <small>Threshold-подпись участников федерации. Для конфедераций — дополнительно custodian threshold.</small>
+        </li>
+        <li>BTC redemption broadcast
+          <small><code>constructRedemptionTx</code> формирует Bitcoin-транзакцию, off-chain MPC-signer публикует её в нативной сети.</small>
+        </li>
+        <li>verifyBurnViaSPV
+          <small>Проверка raw txid/source/output. Сжигание escrow, расчёт reserved/spent UTXO, закрытие заявки.</small>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 3: Контракты ═════════════ -->
+  <section class="chapter" id="ch-contracts">
+    <div class="container">
+      <div class="chapter-num">Глава 03 · Smart Contracts</div>
+      <h2>Слой смарт-контрактов</h2>
+      <p>
+        Все контракты написаны на Solidity ^0.8.19 с использованием библиотек OpenZeppelin
+        (<code>AccessControl</code>, <code>ReentrancyGuard</code>, <code>Pausable</code>, <code>SafeERC20</code>).
+        Ниже — описание ключевых контрактов и их публичных API.
+      </p>
+
+      <h3>MiningPoolDAO</h3>
+      <p>
+        Управление локальным пулом: приём шеров, верификация блоков через SPV, распределение наград
+        через калькуляторы, выпуск mpToken и взаимодействие с <code>MultiPoolDAO</code> для конвертации в sToken.
+      </p>
+      <p><strong>Ключевые структуры данных:</strong></p>
+      <ul>
+        <li><code>UTXO</code> — txId, vout, amount, spent</li>
+        <li><code>LockedTokens</code> — networkId, owner, amount, powScript, txId, createdAt, deadline, status</li>
+        <li><code>PoolInfo</code> — poolId, networkId, payoutScript, active</li>
+        <li><code>NetworkConfig</code> — active, spv, sToken</li>
+        <li><code>Backing</code> — totalReceived, reserved, available</li>
+      </ul>
+      <p><strong>Основные функции:</strong></p>
+      <pre><code>initialize(address frostAddress, bytes groupPub, uint64 redemptionTimeout, address slashRecv)
+setNetwork(uint8 networkId, address spvAddr, address sToken, bool active)
+registerPool(bytes32 poolId, uint8 networkId, bytes payoutScript, address operator)
+receiveReward(bytes32 poolId, bytes blockHeaderRaw, bytes txRaw, uint32 vout,
+              bytes32[] merkleProof, uint8[] directions)
+mintSTokenWithProof(bytes32 poolId, bytes blockHeaderRaw, bytes txRaw, uint32 vout,
+                    bytes32[] merkleProof, uint8[] directions, uint256 amount, address recipient)
+burnAndRedeem(uint8 networkId, uint256 amount, bytes powScript)
+withdrawFees(uint8 networkId, address to, uint256 amount)</code></pre>
+
+      <h3>SimpleSPVContract</h3>
+      <p>
+        Хранит заголовки блоков, отслеживает mainchain по cumulative work, проверяет включение
+        транзакций через Merkle-доказательства. Также управляет реестром pool UTXO. Доступ
+        к admin-функциям ограничен <code>spvAdmin</code>, test-helpers могут быть навсегда отключены через
+        <code>disableTestHelpers()</code>.
+      </p>
+      <pre><code>function addBlockHeader(bytes calldata rawHeader) public
+function disableTestHelpers() external
+function setPoolContract(address poolContract) external
+function transferSPVAdmin(address newAdmin) external
+function isMature(bytes32 blockHash) external view returns (bool)
+function isMatureWithDepth(bytes32 blockHash, uint32 confirmationDepth) external view returns (bool)
+function checkTxInclusion(bytes32 blockHash, bytes32 txid, bytes32[] calldata siblings, uint256 index)
+    external view returns (bool)
+function registerPoolUTXO(bytes32 txid, uint32 vout) external
+function markPoolUTXOSpent(bytes32 txid, uint32 vout) external</code></pre>
+
+      <h3>SimpleFROSTMultisig</h3>
+      <p>
+        Авторизационный адаптер для federation и confederation. Работает в двух режимах:
+        <em>legacy counter mode</em> (для совместимости и тестов) и <em>strict cryptographic mode</em>
+        (production). После bootstrap в cryptographic mode legacy-подсчёт подписей навсегда отключается.
+      </p>
+      <pre><code>function bootstrapCryptographicFROST(
+    address verifier,
+    bytes calldata groupPubkey,
+    string calldata signatureType
+) external
+
+function approveOperationWithAggregateSignature(
+    bytes32 operationHash,
+    address target,
+    bytes calldata aggregateSignature
+) external</code></pre>
+
+      <h3>Target-bound operation hash</h3>
+      <p>
+        Все привилегированные операции используют target-bound хеши, привязанные к домену,
+        chainid, адресу FROST-контракта, целевому контракту, селектору, параметрам и nonce.
+      </p>
+      <pre><code>function hashOperation(
+    address target,
+    bytes4 selector,
+    bytes32 paramsHash,
+    uint256 nonce
+) external view returns (bytes32)</code></pre>
+      <p>
+        Целевые контракты предоставляют helper-функции: <code>getAddPoolOperationHash</code>,
+        <code>getSetFeeManagerOperationHash</code>, <code>getProcessWithdrawalOperationHash</code> и пр.
+        Этим helpers нужно пользоваться вместо ручного построения хешей.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 4: User Flows ═════════════ -->
+  <section class="chapter" id="ch-flows">
+    <div class="container">
+      <div class="chapter-num">Глава 04 · User Flows</div>
+      <h2>Пользовательские сценарии</h2>
+      <p>
+        Система предоставляет шесть основных сценариев взаимодействия для двух базовых ролей:
+        майнеры и операторы пулов. Дополнительно — сценарии для оракулов и FROST-участников.
+      </p>
+
+      <h3>Сценарий 1 — Майнинг → mpToken</h3>
+      <ol class="flow">
+        <li>Майнер добывает блок, получает coinbase-транзакцию (UTXO).</li>
+        <li>Через Stratum отправляет данные о шерах в <code>StratumDataAggregator</code>.</li>
+        <li>Aggregator передаёт данные в <code>MiningPoolDAO</code>.</li>
+        <li><code>SPVContract</code> проверяет Merkle proof и зрелость блока (≥ 100 подтверждений).</li>
+        <li>Калькулятор из <code>CalculatorRegistry</code> распределяет доли по WorkerData/MemberData.</li>
+        <li><code>PoolMpToken.mint</code> выпускает mpToken получателям.</li>
+      </ol>
+
+      <h3>Сценарий 2 — Конвертация mpToken → sToken</h3>
+      <p>
+        Майнер может оставить mpToken на ERC-20 кошельке для свободного обращения, использовать в DeFi
+        или сконвертировать в sToken через <code>MultiPoolDAO.depositMpToken</code>. Конвертация
+        включает повторную SPV-верификацию и сжигание mpToken.
+      </p>
+
+      <h3>Сценарий 3 — Вывод sToken в нативные активы</h3>
+      <ol class="flow">
+        <li>Пользователь вызывает <code>burnAndRedeem(networkId, amount, powScript)</code>.</li>
+        <li><code>PoolSToken.burnFrom</code> сжигает токены и переводит mpToken в escrow.</li>
+        <li>Формируется operation hash, инициируется FROST-сессия.</li>
+        <li>t-of-n участников федерации (плюс custodian threshold для конфедераций) одобряют операцию.</li>
+        <li><code>constructRedemptionTx</code> формирует BTC-транзакцию с явной miner fee и RBF-совместимым sequence.</li>
+        <li>Off-chain MPC signer публикует транзакцию в нативной сети.</li>
+        <li><code>verifyBurnViaSPV</code> проверяет включение, escrow сжигается, reserve settled.</li>
+      </ol>
+
+      <h3>Сценарий 4 — Настройка пула оператором</h3>
+      <p>
+        Оператор вызывает <code>MiningPoolFactory.createPool</code>, получает развёрнутый клон
+        <code>MiningPoolDAO</code> и mpToken. Регистрирует пул в <code>MultiPoolDAO</code>,
+        выбирает калькулятор через <code>CalculatorRegistry</code> и настраивает политику выплат.
+      </p>
+
+      <h3>Сценарии 5–6 — Stratum-оракулы и FROST</h3>
+      <p>
+        Оракулы регистрируются в <code>StratumOracleRegistry</code>, получают <code>ORACLE_ROLE</code>,
+        валидируют данные через <code>StratumDataValidator</code>. FROST-сессии создаются для каждой
+        операции вывода и завершаются агрегированной Schnorr-подписью, верифицируемой через <code>FROSTVerifier</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 5: Токеномика ═════════════ -->
+  <section class="chapter" id="ch-tokenomics">
+    <div class="container">
+      <div class="chapter-num">Глава 05 · Tokenomics</div>
+      <h2>Токеномика и модели распределения</h2>
+      <p>
+        Токен-экономика построена вокруг двух типов токенов: <strong>mpToken</strong> (Mining Pool Token)
+        и <strong>sToken</strong> (SBTC, SDOGE, SBCH, SLTC). Оба ERC-20, оба привязаны 1:1 к нативному активу.
+      </p>
+
+      <h3>mpToken — локальный токен пула</h3>
+      <p>
+        Выпускается <code>PoolMpToken</code> для конкретного пула. Является wrapped-версией нативного актива
+        (1 mpBTC = 1 BTC). Минтится после SPV-верификации coinbase и расчёта калькулятора. Может
+        храниться на любом ERC-20 кошельке, передаваться между адресами, использоваться в DeFi или
+        сжигаться при конвертации в sToken.
+      </p>
+
+      <h3>sToken — глобальный токен сети</h3>
+      <p>
+        Выпускается <code>MultiPoolDAO</code> после повторной верификации UTXO. SBTC для BTC, SDOGE
+        для Dogecoin и т. д. Используется для вывода в нативные активы через FROST или для DeFi.
+        Обеспечен резервами пула (<code>Backing.available</code>).
+      </p>
+
+      <h3>Модели распределения наград</h3>
+      <table>
+        <thead>
+          <tr><th>Модель</th><th>Контракт</th><th>Ключевой параметр</th><th>Сильная сторона</th><th>Ограничение</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PPS</td><td>PPSCalculator</td><td>baseRate</td><td>Простота, предсказуемость</td><td>Не учитывает комиссии</td></tr>
+          <tr><td>FPPS</td><td>FPPSCalculator</td><td>baseRate, feeBonus</td><td>Учитывает tx-комиссии</td><td>Сложнее вычисления</td></tr>
+          <tr><td>PPLNS</td><td>PPLNSCalculator</td><td>windowSize</td><td>Анти-pool-hopping</td><td>Менее предсказуем</td></tr>
+          <tr><td>Score</td><td>ScoreCalculator</td><td>decayFactor</td><td>Стимулирует лояльность</td><td>Сложнее настройка</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Экономические стимулы</h3>
+      <ul>
+        <li><strong>Майнеры</strong> — мгновенные награды в mpToken с привязкой 1:1, выбор модели влияет на доходность.</li>
+        <li><strong>Операторы</strong> — комиссии в sToken, DAO-управление через NFT/SBT.</li>
+        <li><strong>Оракулы</strong> — staking и slashing в <code>StratumDataValidator</code> стимулируют честность.</li>
+        <li><strong>Безопасность</strong> — резервы <code>Backing</code> гарантируют 1:1 обеспечение, <code>defaultRedemptionTimeout</code> ограничивает крупные выводы.</li>
+      </ul>
+
+      <div class="ornament">· · ·</div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 6: FROST ═════════════ -->
+  <section class="chapter" id="ch-frost">
+    <div class="container">
+      <div class="chapter-num">Глава 06 · Threshold Cryptography</div>
+      <h2>FROST, DKG и BIP340</h2>
+      <p>
+        <strong>FROST</strong> (Flexible Round-Optimized Schnorr Threshold Signatures) — это основа
+        криптографических гарантий федерации. Приватный ключ никогда не существует целиком: каждый
+        участник хранит свою долю, и для подписи нужно собрать threshold-подписи (t-of-n).
+      </p>
+
+      <h3>Почему FROST</h3>
+      <ul>
+        <li><strong>Децентрализация</strong> — подпись без доверенного координатора, ответственность распределена между участниками.</li>
+        <li><strong>Эффективность</strong> — меньше раундов коммуникации по сравнению с MuSig2, оптимизирован под Schnorr.</li>
+        <li><strong>Безопасность</strong> — при t &gt; n/2 устойчив к компрометации меньшинства, защищён от rogue-key атак через VSS.</li>
+        <li><strong>BIP340-совместимость</strong> — Schnorr-подписи нативно валидны в Bitcoin Taproot.</li>
+      </ul>
+
+      <h3>Distributed Key Generation (DKG)</h3>
+      <p>
+        DKG в SatoshiFi <em>не генерирует секреты ончейн</em>. Контракт <code>DKGCoordinator</code>
+        координирует протокол: собирает VSS-обязательства, хеши шеров, public key shares и треш-аппрувы
+        для конечного group public key.
+      </p>
+      <ol class="flow">
+        <li>VSS commitment hashes — участники публикуют обязательства.</li>
+        <li>Encrypted share hashes — per-recipient зашифрованные доли.</li>
+        <li>Public key shares submission — публичные ключи долей.</li>
+        <li>Group public key approval — threshold-аппрувы конечного ключа.</li>
+        <li>completeDKG — финализация после secp256k1-валидации и проверки even-Y.</li>
+        <li>deployFederationWithCryptographicFROST — деплой с немедленным bootstrap.</li>
+      </ol>
+      <blockquote>
+        Безопасный путь — <code>finalizeDKG(uint256, bytes calldata groupPubkey)</code> с externally
+        generated group key material. Старый <code>finalizeDKG(uint256)</code> намеренно отключён
+        explicit revert'ом, поскольку он генерировал секреты ончейн.
+      </blockquote>
+
+      <h3>FROSTVerifier — поддерживаемые форматы</h3>
+      <p><strong>Group public key:</strong></p>
+      <ul>
+        <li>64 байта — <code>abi.encodePacked(uint256 pubX, uint256 pubY)</code></li>
+        <li>33 байта — SEC compressed key</li>
+        <li>32 байта — BIP340 x-only key, lifted до even Y</li>
+      </ul>
+      <p><strong>Signatures:</strong></p>
+      <ul>
+        <li>Schnorr/BIP340 — 64 байта <code>(Rx, z)</code> с even-Y lift, или 96 байт <code>(Rx, Ry, z)</code></li>
+        <li>ECDSA — 65 байт <code>(r, s, v)</code></li>
+      </ul>
+      <blockquote>
+        Schnorr-верификация отвергает odd-Y group keys и odd-Y R-points для BIP340-пути.
+      </blockquote>
+
+      <h3>Strict cryptographic mode vs legacy counter</h3>
+      <p>
+        После вызова <code>bootstrapCryptographicFROST</code> или <code>configureCryptographicFROST</code>
+        свойство <code>counterApprovalsEnabled</code> навсегда становится false. Все последующие
+        одобрения должны идти через <code>approveOperationWithAggregateSignature</code> с реальной
+        агрегированной подписью, проверяемой <code>cryptographicVerifier.verify</code>.
+      </p>
+      <p>
+        Legacy counter mode остаётся в контрактах для тестов и обратной совместимости, но
+        <strong>не является production security boundary</strong>. Production-деплой всегда
+        использует строгий путь <code>deployFederationWithCryptographicFROST(...)</code> или
+        <code>deployConfederationWithCryptographicFROST(...)</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 7: SPV ═════════════ -->
+  <section class="chapter" id="ch-spv">
+    <div class="container">
+      <div class="chapter-num">Глава 07 · Bitcoin Integration</div>
+      <h2>SPV-верификация и работа с UTXO</h2>
+      <p>
+        Simplified Payment Verification — компромисс между полнотой и эффективностью. SatoshiFi не
+        запускает полную ноду Bitcoin ончейн, а проверяет включение транзакций через заголовки
+        блоков и Merkle-пути.
+      </p>
+
+      <h3>SimpleSPVContract: что проверяется</h3>
+      <ul>
+        <li>Корректность 80-байтного заголовка блока.</li>
+        <li>Существование предыдущего блока в цепочке.</li>
+        <li>Target из поля <code>bits</code>, хеш блока ≤ target.</li>
+        <li>Сохранение difficulty bits для не-retarget блоков.</li>
+        <li>Cumulative work для отслеживания mainchain.</li>
+      </ul>
+
+      <h3>Зрелость и reorg</h3>
+      <p>
+        Стандартная глубина зрелости — 100 подтверждений (coinbase maturity для BTC). Для production
+        этот параметр должен быть выше демо-константы. <code>isMatureWithDepth</code> позволяет
+        задавать глубину явно. Поддерживается реорганизация цепи до 10 блоков (BTC), для Dogecoin
+        используется chain-length эвристика из-за более высокого блок-рейта.
+      </p>
+
+      <h3>Pool UTXO registry</h3>
+      <p>
+        SPV-контракт также является owner'ом реестра pool UTXO. Pool-контракты регистрируются
+        через <code>setPoolContract</code> (только <code>spvAdmin</code>), затем регистрируют свои
+        UTXO через <code>registerPoolUTXO(txid, vout)</code>. Test-хелперы (<code>addBlockWithHash</code>,
+        <code>setBlockMerkleRoot</code>) должны быть навсегда отключены в production через
+        <code>disableTestHelpers()</code>.
+      </p>
+
+      <h3>Reserve accounting в SimpleMiningPoolWithCalculator</h3>
+      <ul>
+        <li>Available / reserved / spent BTC reserve.</li>
+        <li>UTXO reserved/spent state.</li>
+        <li>Явная miner fee в конструируемых BTC-транзакциях.</li>
+        <li>RBF-совместимая политика sequence.</li>
+        <li><code>SIGHASH_ALL | SIGHASH_ANYONECANPAY</code> для fee bumping.</li>
+      </ul>
+
+      <h3>Финальность по сетям</h3>
+      <table>
+        <thead><tr><th>Сеть</th><th>Coinbase maturity</th><th>Стандарт для обычных tx</th><th>Время финальности</th></tr></thead>
+        <tbody>
+          <tr><td>Bitcoin (BTC)</td><td>100 блоков</td><td>6 подтверждений</td><td>≈ 1 час</td></tr>
+          <tr><td>Bitcoin Cash (BCH)</td><td>100 блоков</td><td>6 подтверждений</td><td>≈ 1 час</td></tr>
+          <tr><td>Litecoin (LTC)</td><td>240 блоков</td><td>6 подтверждений</td><td>≈ 15 мин</td></tr>
+          <tr><td>Dogecoin (DOGE)</td><td>600 блоков</td><td>6 подтверждений</td><td>≈ 6 мин</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 8: Федерация и конфедерация ═════════════ -->
+  <section class="chapter" id="ch-federation">
+    <div class="container">
+      <div class="chapter-num">Глава 08 · Federation</div>
+      <h2>Федерация и конфедерация</h2>
+      <p>
+        <strong>Федерация</strong> — это группа участников, владеющих долями ключа BTC-адреса через DKG.
+        <strong>Конфедерация</strong> объединяет федерации с институциональными кастодианами:
+        для критических операций требуется и FROST-threshold, и custodian-threshold.
+      </p>
+
+      <h3>FederationFactory — деплой</h3>
+      <p>
+        Strict production-путь <code>deployFederationWithCryptographicFROST(...)</code> атомарно
+        деплоит и инициализирует:
+      </p>
+      <ul>
+        <li><code>SimpleFROSTMultisig</code> с bootstrapped cryptographic FROST</li>
+        <li><code>SimpleMultiPool</code> для агрегации MP-токенов</li>
+        <li><code>MultiPoolShareToken</code> (sToken для федерации)</li>
+        <li>Опционально — fee system через deployer wiring</li>
+      </ul>
+
+      <h3>ConfederationFactory — добавляет custodian validator</h3>
+      <p>
+        <code>deployConfederationWithCryptographicFROST(...)</code> дополнительно деплоит
+        <code>CustodianValidator</code>. Все MultiPool-операции в конфедерации требуют двух
+        одобрений: FROST threshold для target-bound operation hash и custodian threshold для того
+        же хеша. Custodian set управляется внутри <code>CustodianValidator</code>, не только в
+        governance-wrapper.
+      </p>
+
+      <h3>MultiPool accounting</h3>
+      <p>
+        <code>SimpleMultiPool</code> и <code>ConfederationMultiPool</code> отслеживают балансы
+        per-user и per-MP-token:
+      </p>
+      <ul>
+        <li><code>userPoolBalances[user][mpToken]</code></li>
+        <li><code>pendingUserPoolShares[user][mpToken]</code></li>
+        <li><code>PoolInfo.exists</code> — сохранение accounting при реактивации</li>
+      </ul>
+      <p>
+        Withdrawals блокируют доли в pending lock, затем сжигают только при processWithdrawal.
+        Пользователь может отменить через <code>WITHDRAWAL_CANCEL_DELAY</code>, либо approved reject
+        path может освободить pending shares. Эта модель исключает использование S-токенов из
+        одного MP-пула для вывода из другого MP-пула.
+      </p>
+
+      <h3>Адреса федерации и ротация</h3>
+      <p>
+        Адреса генерируются через DKG в <code>FROSTCoordinator</code>. Публичный ключ (xpub)
+        создаётся ончейн, деривация по BIP-32 (HD wallets), адаптированному для P2WSH (BTC, BCH, LTC)
+        или Scrypt-совместимых адресов (DOGE). Список адресов хранится в <code>BridgeInbox</code>
+        и доступен через события <code>AddressGenerated</code>.
+      </p>
+      <p>
+        Ротация ключей инициируется голосованием DAO или по расписанию (≈ 6 месяцев,
+        ≈ 262 800 блоков для BTC). Новый DKG, старые ключи аннулируются, средства переводятся
+        на новый адрес multisig-транзакцией. Смена подтверждается ончейн через SPV.
+      </p>
+
+      <h3>Proof-of-Reserves</h3>
+      <ul>
+        <li><strong>Публичный список UTXO</strong> — в <code>BridgeInbox.federationAddresses</code>, события <code>UTXOUpdated</code>.</li>
+        <li><strong>Сопоставление выпуска и сжигания</strong> — <code>TokenMinted</code> при получении UTXO, <code>TokenBurned</code> при выводе. Инвариант: <code>totalSupply(sToken) ≤ totalUTXO</code>.</li>
+        <li><strong>Merkle-доказательства</strong> — релееры подают доказательства еженедельно, контракт проверяет ончейн.</li>
+        <li><strong>Внешний аудит</strong> — независимая проверка через explorer нативной сети и сопоставление с ончейн-данными <code>BridgeInbox</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 9: Кастодианы ═════════════ -->
+  <section class="chapter" id="ch-custodians">
+    <div class="container">
+      <div class="chapter-num">Глава 09 · Custodians</div>
+      <h2>Кастодианы, депозиты и slashing</h2>
+      <p>
+        Кастодиан — это доверенный участник <code>MultiPoolDAO</code>, который получает долю
+        криптографического ключа через FROST и гарантирует, что каждый член пула может вывести
+        свою долю независимо. За нарушения депозит кастодиана срезается через slashing.
+      </p>
+
+      <h3>Обычный MiningPoolDAO vs пул с кастодианом</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Mode A · Pure DAO</div>
+          <h4>Без кастодиана</h4>
+          <p>Вывод через коллективную FROST-подпись членов DAO. Требуется t-of-n из участников пула.
+          <strong>Плюс:</strong> низкие комиссии, полная децентрализация внутри пула.
+          <strong>Минус:</strong> вывод зависит от честности большинства, при отказе подписей возможны задержки.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Mode B · Custodian-backed</div>
+          <h4>С кастодианом</h4>
+          <p>Каждый член пула инициирует вывод своей доли индивидуально. Кастодиан верифицирует
+          валидность запроса и предоставляет свою долю подписи. <strong>Плюс:</strong> независимый
+          вывод, гарантия через slashing. <strong>Минус:</strong> дополнительная комиссия кастодиану.</p>
+        </div>
+      </div>
+
+      <h3>Механика slashing-депозита</h3>
+      <p>
+        Кастодиан вносит депозит в нативной валюте сети (ETH, BTC, USDC) или в специальном
+        токене DAO. Депозит блокируется на весь срок участия и срезается при доказанных
+        нарушениях: подпись невалидного запроса, отказ от подписи валидного запроса,
+        сговор с другими участниками.
+      </p>
+
+      <h3>Формулы комиссии и slashing</h3>
+      <p><strong>Опциональная привязка комиссии к депозиту</strong> (стимулирует крупные депозиты):</p>
+      <pre><code>f = k / (d + c) × r
+
+k — константа риска (например, 1e18)
+d — депозит кастодиана
+c — минимальный offset (например, 1e15)
+r — общее вознаграждение пула за период</code></pre>
+      <p><strong>Альтернатива — фиксированный процент кастодиана</strong>:</p>
+      <pre><code>f = p × r
+
+p — согласованный процент (например, 0.005 для 0.5%)
+r — общее вознаграждение пула за период</code></pre>
+      <p><strong>Slashing</strong> при нарушении:</p>
+      <pre><code>s = min(p × d, m)
+
+p — процент slashing (например, 0.1 для 10%)
+d — депозит кастодиана
+m — cap, чтобы не обнулить депозит полностью</code></pre>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 10: Аренда ═════════════ -->
+  <section class="chapter" id="ch-rental">
+    <div class="container">
+      <div class="chapter-num">Глава 10 · Hashrate Rental</div>
+      <h2>Аренда долей майнера</h2>
+      <p>
+        В пулах с привлечённым кастодианом майнеры могут сдавать в аренду свою долю (mpToken
+        или агрегированный хэшрейт). Кастодиан выступает третейским судьёй: гарантирует вывод
+        арендатору, разрешает споры, отвечает депозитом через slashing.
+      </p>
+
+      <h3>Шаги процесса</h3>
+      <ol class="flow">
+        <li><strong>Инициация</strong> — арендодатель вызывает <code>rentShare(amount, renter, duration, fee)</code>, делегируя долю и фиксируя условия.</li>
+        <li><strong>Оплата</strong> — арендатор переводит плату в escrow-контракт.</li>
+        <li><strong>Делегирование</strong> — доля временно ассоциируется с арендатором в <code>StratumDataAggregator</code>.</li>
+        <li><strong>Мониторинг</strong> — кастодиан через оракулы отслеживает фактический хэшрейт.</li>
+        <li><strong>Вывод наград</strong> — арендатор вызывает <code>redeemRentalRewards</code>, кастодиан верифицирует и подписывает.</li>
+        <li><strong>Споры</strong> — при низком хэшрейте арендатор подаёт жалобу, кастодиан проверяет данные оракулов и при подтверждении применяет slashing.</li>
+        <li><strong>Завершение</strong> — по истечении срока доля возвращается арендодателю.</li>
+      </ol>
+
+      <h3>Формулы аренды</h3>
+      <p><strong>Арендная плата</strong>:</p>
+      <pre><code>a = p × s × d
+
+p — процент аренды (например, 0.05 для 5%)
+s — размер доли в mpToken
+d — длительность аренды в периодах</code></pre>
+      <p><strong>Slashing нарушителя в споре</strong>:</p>
+      <pre><code>s = min(v × dep, max_s)
+
+v — процент нарушения (например, 0.2 для 20%)
+dep — депозит нарушителя
+max_s — максимальный slashing (cap)</code></pre>
+
+      <p>
+        Аренда добавляет ликвидность системе и превращает долю в пуле в арендуемый актив,
+        аналогично децентрализованным хэшрейт-маркетплейсам, но полностью ончейн.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 11: Fee System ═════════════ -->
+  <section class="chapter" id="ch-fees">
+    <div class="container">
+      <div class="chapter-num">Глава 11 · Fee System</div>
+      <h2>Fee System: wrap, unwrap, NFT-скидки</h2>
+      <p>
+        Fee-система обрабатывает wrap/deposit и unwrap/withdrawal комиссии для federation и
+        confederation пулов. Все изменения требуют FROST-аппрува, а для конфедераций — ещё и
+        custodian threshold.
+      </p>
+
+      <h3>Контракты</h3>
+      <table>
+        <thead><tr><th>Контракт</th><th>Назначение</th></tr></thead>
+        <tbody>
+          <tr><td><code>FederationFeeManager</code></td><td>Fee configs, расчёт fee, потребление NFT-скидок, authorized fee collectors</td></tr>
+          <tr><td><code>FeeDistributionCalculator</code></td><td>Equal или weighted распределение между членами и кастодианами</td></tr>
+          <tr><td><code>ProjectWalletRegistry</code></td><td>Per-federation project wallets с FROST-gated изменениями</td></tr>
+          <tr><td><code>GlobalProjectWalletRegistry</code></td><td>Owner-managed global native-fee distribution</td></tr>
+          <tr><td><code>FederationNFTModifier</code></td><td>ERC721 fee discount NFTs с expiration и volume limits</td></tr>
+          <tr><td><code>FeeSystemDeployer</code></td><td>Деплой всех fee-контрактов из единой точки</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Расчёт fee</h3>
+      <p><strong>Fixed percentage:</strong></p>
+      <pre><code>fee = amount × fixedBps / 10000</code></pre>
+      <p><strong>Dynamic:</strong></p>
+      <pre><code>fee = dynamicMinFee + amount × dynamicCoeffBps / 10000</code></pre>
+      <p>
+        Текущая реализация капит вычисленную fee на уровне <code>amount</code>, поэтому плохой
+        dynamic input не может вызвать underflow accounting. Config validation отвергает
+        <code>fixedBps &gt; 10000</code> и <code>dynamicCoeffBps &gt; 10000</code>.
+      </p>
+
+      <h3>NFT-скидки</h3>
+      <p>Доступны два API:</p>
+      <pre><code>function calculateFeeWithDiscount(
+    bool isWrap, uint256 amount, uint256 discountBps
+) external view returns (uint256 fee)
+
+function calculateFeeWithNFT(
+    bool isWrap, uint256 amount, uint256 nftTokenId, address account
+) external returns (uint256 fee)</code></pre>
+      <p>
+        <code>calculateFeeWithNFT</code> потребляет allowance через
+        <code>FederationNFTModifier.useDiscountFor</code>. NFT-контракт проверяет владение,
+        expiration, остаток volume и инкрементирует <code>usedVolume</code>.
+      </p>
+
+      <h3>Distribution modes</h3>
+      <pre><code>enum DistributionMode { Equal, ByPercentage }
+
+struct DistributionConfig {
+    uint256 memberShareBps;
+    uint256 custodianShareBps;
+    DistributionMode memberMode;
+    DistributionMode custodianMode;
+}</code></pre>
+      <p>
+        Validation требует <code>memberShareBps + custodianShareBps ≤ 10000</code>. Equal делит
+        сумму на активных получателей, ByPercentage использует веса.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 12: Безопасность ═════════════ -->
+  <section class="chapter" id="ch-security">
+    <div class="container">
+      <div class="chapter-num">Глава 12 · Security</div>
+      <h2>Безопасность и риски</h2>
+      <p>
+        Безопасность строится на восьми независимых слоях защиты. Ни один слой не является достаточным
+        сам по себе — атакующий должен пробить все одновременно.
+      </p>
+
+      <h3>Слои защиты</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Layer 1</div>
+          <h4>AccessControl</h4>
+          <p>Роли <code>ADMIN_ROLE</code>, <code>POOL_ROLE</code>, <code>ORACLE_ROLE</code>, <code>MINTER_ROLE</code>, <code>BURNER_ROLE</code>. Назначение только при initialize.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 2</div>
+          <h4>ReentrancyGuard</h4>
+          <p>Все функции, взаимодействующие с токенами или резервами, защищены <code>nonReentrant</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 3</div>
+          <h4>Pausable</h4>
+          <p>Экстренная остановка операций <code>receiveReward</code>, <code>mintSToken</code>, <code>burnAndRedeem</code> через ADMIN.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 4</div>
+          <h4>FROST Threshold</h4>
+          <p>Никаких единоличных подписей. t-of-n с t &gt; n/2, plus custodian threshold для конфедераций.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 5</div>
+          <h4>SPV Verification</h4>
+          <p>Maturity check (≥ 100 подтверждений), Merkle proof для каждого UTXO, reorg-handling до 10 блоков.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 6</div>
+          <h4>Backing Reserves</h4>
+          <p>1:1 привязка mpToken/sToken к нативному активу. Выпуск ограничен <code>Backing.available</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 7</div>
+          <h4>Oracle Staking/Slashing</h4>
+          <p>Депозит оракулов срезается за невалидные данные. Whitelist через <code>StratumOracleRegistry</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 8</div>
+          <h4>Gas Limits</h4>
+          <p><code>MIN_GAS_ESTIMATE = 50k</code>, <code>MAX_GAS_ESTIMATE = 5M</code>, <code>MAX_WORKERS = 1000–2000</code>.</p>
+        </div>
+      </div>
+
+      <h3>Известные риски и митigations</h3>
+      <table>
+        <thead><tr><th>Риск</th><th>Митigation</th></tr></thead>
+        <tbody>
+          <tr><td>Атаки на оракулы (фальшивые шеры)</td><td><code>ORACLE_ROLE</code>, мультивалидация, репутация, staking/slashing</td></tr>
+          <tr><td>Ошибки в SPV-верификации</td><td>≥ 100 подтверждений, поддержка reorg, проверенные библиотеки, регулярный аудит</td></tr>
+          <tr><td>Компрометация FROST-долей</td><td>t &gt; n/2, BIP340-валидация, redemption timeout, географическое распределение</td></tr>
+          <tr><td>Reentrancy через DeFi</td><td><code>ReentrancyGuard</code>, проверка <code>Backing.available</code> до минта</td></tr>
+          <tr><td>Ошибки калькуляторов</td><td><code>DistributionMath</code>, validation, whitelist в <code>CalculatorRegistry</code></td></tr>
+          <tr><td>Злоупотребление ADMIN-ролью</td><td>Multisig (Gnosis Safe), DAO через NFT/SBT, event logging</td></tr>
+          <tr><td>Реорганизация цепи</td><td><code>isMature</code> с большим depth, reorg до 10 блоков, мониторинг через оракулы</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Production checklist</h3>
+      <ul>
+        <li>Использовать <code>deployFederationWithCryptographicFROST</code> или <code>deployConfederationWithCryptographicFROST</code>.</li>
+        <li>Подтвердить, что <code>SimpleFROSTMultisig.counterApprovalsEnabled()</code> == false после bootstrap.</li>
+        <li>Строить approvals только через target contract helper hashes.</li>
+        <li>Отключить SPV test helpers через <code>disableTestHelpers()</code>.</li>
+        <li>Установить production confirmation depth, не полагаться на demo-константу.</li>
+        <li>Зарегистрировать authorized fee collectors и project/global fee managers до трафика.</li>
+        <li>Запустить Slither / Mythril в CI или dev-image.</li>
+        <li>Передать <code>ADMIN_ROLE</code> мультисигу или DAO.</li>
+      </ul>
+
+      <h3>Текущее состояние тестов</h3>
+      <p>
+        <code>web3/test/CriticalTests.t.sol</code> содержит 71 критический тест на текущий момент.
+        Покрытие включает: DKG-фазы и валидацию group key, strict FROST aggregate approval, BIP340
+        verifier vector, deploy guards для федераций/конфедераций, SPV admin/test-helper защиты,
+        MultiPool per-pool accounting и withdrawal locks, redemption escrow/refund и проверки
+        BTC-транзакций, fee config validation и authorized fee collectors, NFT ownership и
+        validation project wallet shares.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 13: BTCyield ═════════════ -->
+  <section class="chapter" id="ch-btcyield">
+    <div class="container">
+      <div class="chapter-num">Глава 13 · Integration</div>
+      <h2>BTCyield: yield|loan-поток на SatoshiFi</h2>
+      <p>
+        <strong>BTCyield</strong> — это продуктовый слой поверх инфраструктуры SatoshiFi.
+        SatoshiFi предоставляет cross-chain wrapping и кастодиальную инфраструктуру через FROST.
+        Размещение доходности в Yield Basis и Silo Finance выполняется напрямую командой SatoshiFi,
+        через мультисиг совместных решений менеджера.
+      </p>
+
+      <h3>Три потока дохода</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Stream 1</div>
+          <h4>Confederation · 2,5% + 7% APY</h4>
+          <p><strong>Риск:</strong> минимальный. <strong>Полный контроль над BTC.</strong> Создайте свою конфедерацию и получайте 2,5% APY на весь застейканный в ней капитал — даже не застейкав ни копейки собственного. Застейкайте и собственный BTC — и получите дополнительно 7% APY на собственный стейк, поверх продолжающихся 2,5% на сторонний капитал. Участники остаются владельцами bitcoins. Custodian алгоритмически не может заблокировать вывод сожжённых wrappers — его задача только защищать от компрометации ключа.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Stream 2</div>
+          <h4>Yield|Loan Stream · 4–5% APY</h4>
+          <p><strong>Риск:</strong> средний. <strong>Аренда от всего TVL системы.</strong> Wrap BTC в sBTC — собственную децентрализованную обёртку фаундеров SatoshiFi, без комплаенс-проверок и блок-листов — и предоставьте ликвидность напрямую в Yield Basis и Silo Finance. Внутри системы мультисиг менеджера также поддерживает пару cbBTC/sBTC на Yield Basis для полуавтоматического управления peg и пополнения ликвидности при необходимости — это внутренняя механика менеджера, а не то, что получает пользователь. Вы зарабатываете на полном TVL системы — все конфедерации вместе.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Stream 3</div>
+          <h4>Custodian DAO · стейкинг ULR</h4>
+          <p><strong>Риск:</strong> стратегический. <strong>Пропорциональное участие.</strong> ULR — токен прав/утилити Custodian DAO: общий выпуск 10 000 000, стейкинг пропорционально доле. Стейкеры получают долю от wrap/deploy-fee и дополнительной процентной доходности, распределяемую ежедневно поверх гарантированного базового дохода, направляемого поставщикам ликвидности.</p>
+        </div>
+      </div>
+
+      <h3>Yield-стратегии</h3>
+      <table>
+        <thead><tr><th>Стратегия</th><th>Платформа</th><th>Target Yield</th></tr></thead>
+        <tbody>
+          <tr><td>Управление peg sBTC (внутреннее)</td><td>Yield Basis + мультисиг менеджера</td><td>Base layer + fees</td></tr>
+          <tr><td>cyb-sBTC vaults</td><td>Yield Basis</td><td>2–3% APY</td></tr>
+          <tr><td>sBTC lending</td><td>Silo Finance</td><td>4–5% APY</td></tr>
+          <tr><td>yb-token collateral → crvUSD</td><td>Silo Finance</td><td>Leverage</td></tr>
+          <tr><td>Stablecoin deposit</td><td>Silo Finance</td><td>от 4% APY</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Custodian DAO: токен ULR</h3>
+      <div class="pull-stat">
+        <div><div class="v">10 000 000</div><div class="l">Общий выпуск ULR</div></div>
+        <div><div class="v">Pro-rata</div><div class="l">Модель стейкинга</div></div>
+        <div><div class="v">1 день</div><div class="l">Минимальный лок стейка</div></div>
+      </div>
+      <p><strong>Как распределяется доход ULR (ежедневно):</strong></p>
+      <ul>
+        <li>I_base = TVL_day × 0,00012 — гарантированный базовый доход, в первую очередь направляемый поставщикам ликвидности</li>
+        <li>I_excess = Income − I_base — остаток после покрытия базового дохода</li>
+        <li>Если I_excess &gt; 0: половина уходит стейкерам ULR пропорционально доле (I_ULR = I_excess / 2), вторая половина пополняет страховой резерв до 5% от резерва ликвидности, а излишек — поставщикам ликвидности</li>
+        <li>Если I_excess ≤ 0: стейкеры ULR в этот день не получают ничего — без фоллбэков и сглаживания</li>
+        <li>Нет премии за позднее вхождение или ранний выход; стейк ликвиден после минимального лока в 1 день</li>
+      </ul>
+
+      <h3>Roadmap</h3>
+      <ol class="flow">
+        <li><strong>Сейчас · Liquidity Provisioning</strong>
+          <small>Привлечение ликвидности для конфедераций SatoshiFi. Построение капитальной базы.</small>
+        </li>
+        <li><strong>Параллельно · Custodian DAO / распределение ULR</strong>
+          <small>Пропорциональный стейкинг ULR открыт для участников. Без фиксированного числа мест и резервных долей.</small>
+        </li>
+        <li><strong>+2 месяца · Confederation Launch</strong>
+          <small>Первые конфедерации после готовности DAO и ликвидности. DKG ceremonies. Подключение конфедераций к Yield|Loan Stream.</small>
+        </li>
+      </ol>
+
+      <h3>Сравнение потоков</h3>
+      <table>
+        <thead><tr><th></th><th>Confederation</th><th>Yield|Loan Stream</th><th>Custodian DAO</th></tr></thead>
+        <tbody>
+          <tr><td><strong>BTC Control</strong></td><td>Полный</td><td>Частичный (wrapped)</td><td>Не требуется</td></tr>
+          <tr><td><strong>Target Yield</strong></td><td>2,5% + 7% APY (создатель)</td><td>4–5% APY</td><td>Pro-rata доля ULR</td></tr>
+          <tr><td><strong>Уровень риска</strong></td><td>Минимальный</td><td>Средний</td><td>Стратегический</td></tr>
+          <tr><td><strong>Минимум входа</strong></td><td>3+ участника</td><td>BTC для wrapping</td><td>Стейк ULR</td></tr>
+          <tr><td><strong>Тип дохода</strong></td><td>Доход создателя</td><td>Аренда от TVL</td><td>Pro-rata, переменный</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 14: FAQ ═════════════ -->
+  <section class="chapter" id="ch-faq">
+    <div class="container">
+      <div class="chapter-num">Глава 14 · FAQ</div>
+      <h2>Часто задаваемые вопросы</h2>
+
+      <details class="faq">
+        <summary>Как добавить кастомный калькулятор для распределения наград?</summary>
+        <div class="answer">
+          Реализуйте интерфейс <code>IDistributionScheme</code>, включающий методы <code>calculate</code>,
+          <code>calculateForMembers</code>, <code>validateInput</code>, <code>validateMemberInput</code>,
+          <code>getSchemeInfo</code> и <code>estimateGas</code>. Зарегистрируйте контракт в
+          <code>CalculatorRegistry</code> через <code>registerCalculator</code> с указанием типа схемы,
+          названия, версии и оценки газа. Только authorized authors могут регистрировать, для
+          использования требуется whitelist через <code>whitelistCalculator</code>.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Как работает конвертация mpToken → sToken?</summary>
+        <div class="answer">
+          Майнер депозитит mpToken в соответствующий <code>MultiPoolDAO</code> (например,
+          <code>MultiPoolDAO_BTC</code> для BTC). Контракт повторно верифицирует связанные UTXO
+          через <code>SPVContract</code> или <code>SPVContractDogecoin</code>. После верификации
+          вызывается <code>PoolSToken.mint</code> для выпуска sToken (SBTC, SDOGE, SBCH, SLTC).
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Сколько MultiPoolDAO в системе?</summary>
+        <div class="answer">
+          По одному на каждую поддерживаемую сеть: BTC, Dogecoin, BCH, LTC. Каждый управляет своим
+          sToken и взаимодействует с соответствующим SPV-контрактом.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Что происходит, если SPV не верифицирует транзакцию?</summary>
+        <div class="answer">
+          <code>SPVContract</code> отклоняет блок, награды не распределяются. Майнер должен
+          предоставить корректные данные: block header, txRaw, Merkle proof. Это базовая защита
+          от фальшивых UTXO и атак на верификацию.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Обязательно ли использовать MultiPoolDAO для локальных пулов?</summary>
+        <div class="answer">
+          Нет. Локальные пулы могут работать автономно, распределяя mpToken на основе шеров и
+          калькуляторов. <code>MultiPoolDAO</code> нужен только для конвертации mpToken в sToken
+          для глобальной ликвидности или вывода в нативные активы.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Как майнеры получают доступ к пулу?</summary>
+        <div class="answer">
+          Майнеры получают <code>PoolMembershipNFT</code> (Soulbound Token), подтверждающий их
+          участие. SBT выдаётся <code>MiningPoolDAO</code> и необходим для подачи шеров и получения
+          mpToken. Дополнительные роли (админ, валидатор) назначаются через <code>PoolRoleBadgeNFT</code>.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Как обеспечивается безопасность вывода активов?</summary>
+        <div class="answer">
+          Вывод использует threshold-подписи через <code>FROSTCoordinator</code> и <code>FROSTVerifier</code>.
+          Пользователь инициирует <code>burnAndRedeem</code>, сжигая sToken. FROST формирует подпись
+          Schnorr (BIP340), которая верифицируется до создания нативной транзакции. Для конфедераций —
+          дополнительно требуется custodian threshold.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Можно ли приостановить работу пула?</summary>
+        <div class="answer">
+          Да, контракты используют OpenZeppelin <code>Pausable</code>. Администратор с ролью
+          <code>DEFAULT_ADMIN_ROLE</code> может приостановить операции <code>receiveReward</code>,
+          <code>mintSToken</code>, <code>burnAndRedeem</code>. В production эту роль рекомендуется
+          передать мультисигу или DAO.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Какие сети поддерживаются?</summary>
+        <div class="answer">
+          BTC (<code>SPVContract</code>), Dogecoin (<code>SPVContractDogecoin</code>), BCH и LTC.
+          Каждая сеть имеет свой <code>MultiPoolDAO</code> и sToken: SBTC, SDOGE, SBCH, SLTC.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Как происходит ротация ключей федерации?</summary>
+        <div class="answer">
+          Ротация инициируется голосованием DAO или по расписанию (≈ каждые 6 месяцев, ≈ 262 800
+          блоков для BTC). Запускается новый DKG в <code>FROSTCoordinator</code>, старые ключи
+          аннулируются, средства переводятся multisig-транзакцией. Смена подтверждается ончейн
+          через SPV.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Кто платит onchain fee при выводе в BTC?</summary>
+        <div class="answer">
+          Пользователь. Fee вычитается из тела вывода (<code>BridgeOutbox</code> конструирует
+          TX с явной miner fee). Пул может субсидировать fee через DAO для малых транзакций.
+          Пользователь может ускорить tx через RBF, так как используется
+          <code>SIGHASH_ALL | SIGHASH_ANYONECANPAY</code>.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Есть ли страховой пул?</summary>
+        <div class="answer">
+          Планируется. Резерв частично формируется из депозитов кастодианов, которые слэшатся при
+          нарушениях. Часть комиссий пула может направляться в резервный фонд (настраивается в
+          <code>MultiPoolDAO</code>). Дополнительный страховой пул в разработке.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>В какой юрисдикции работает федерация?</summary>
+        <div class="answer">
+          Федерация (<code>MultiPoolDAO</code>) децентрализована и не привязана к конкретной
+          юрисдикции. Каждый пул может выбрать применимое право через голосование DAO. sToken
+          могут классифицироваться по-разному в зависимости от юрисдикции (e-money, security,
+          utility), точный статус требует юридической консультации на этапе масштабирования.
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 15: Глоссарий ═════════════ -->
+  <section class="chapter" id="ch-glossary">
+    <div class="container">
+      <div class="chapter-num">Глава 15 · Glossary</div>
+      <h2>Глоссарий</h2>
+
+      <dl class="glossary">
+        <dt>mpToken</dt>
+        <dd>Локальный ERC-20 токен пула, привязанный 1:1 к нативному активу. Выпускается <code>MiningPoolDAO</code>. Свободно обращается, может быть выведен в нативную сеть или сконвертирован в sToken.</dd>
+
+        <dt>sToken</dt>
+        <dd>Глобальный ERC-20 токен сети (SBTC, SDOGE, SBCH, SLTC). Выпускается <code>MultiPoolDAO</code> для каждой сети. Обеспечивает ликвидность и вывод в нативные активы.</dd>
+
+        <dt>MiningPoolDAO</dt>
+        <dd>Контракт локального майнинг-пула. Принимает шеры, верифицирует через SPV, распределяет награды калькулятором, минтит mpToken.</dd>
+
+        <dt>MultiPoolDAO</dt>
+        <dd>Контракт глобальной координации для одной сети (BTC, DOGE, BCH, LTC). Проверяет UTXO, выпускает sToken, координирует вывод через FROST.</dd>
+
+        <dt>SPV (Simplified Payment Verification)</dt>
+        <dd>Механизм верификации без хранения полной ноды. Использует заголовки блоков и Merkle-пути.</dd>
+
+        <dt>FROST (Flexible Round-Optimized Schnorr Threshold)</dt>
+        <dd>Протокол threshold-подписей для secp256k1. Threshold t-of-n обеспечивает децентрализованную подпись.</dd>
+
+        <dt>DKG (Distributed Key Generation)</dt>
+        <dd>Распределённая генерация ключей. Каждый участник получает долю приватного ключа, групповой публичный ключ формируется коллективно.</dd>
+
+        <dt>BIP340</dt>
+        <dd>Bitcoin Improvement Proposal 340 — стандарт Schnorr-подписей для secp256k1, используемый в Taproot. Требует even-Y координаты публичных ключей и R-точек.</dd>
+
+        <dt>CalculatorRegistry</dt>
+        <dd>Реестр калькуляторов распределения (PPS, FPPS, PPLNS, Score). Поддерживает регистрацию, whitelist и статистику использования.</dd>
+
+        <dt>PPS / FPPS / PPLNS / Score</dt>
+        <dd>Модели распределения наград: фиксированная выплата за шару (PPS), плюс tx-комиссии (FPPS), за окно последних N шаров (PPLNS), экспоненциальное затухание (Score).</dd>
+
+        <dt>PoolMembershipNFT</dt>
+        <dd>Soulbound Token, подтверждающий участие майнера в пуле. Непередаваемый.</dd>
+
+        <dt>PoolRoleBadgeNFT</dt>
+        <dd>SBT для ролей в DAO (админ, валидатор и т. д.).</dd>
+
+        <dt>Stratum</dt>
+        <dd>Сетевой протокол передачи данных о шерах от майнеров. Интегрирован через <code>StratumDataAggregator</code> и <code>StratumDataValidator</code>.</dd>
+
+        <dt>UTXO (Unspent Transaction Output)</dt>
+        <dd>Невыделенный выход транзакции. Верифицируется через SPV для подтверждения наград.</dd>
+
+        <dt>DAO (Decentralized Autonomous Organization)</dt>
+        <dd>Организация, управляемая через смарт-контракты и токены (mpToken, NFT/SBT).</dd>
+
+        <dt>Federation</dt>
+        <dd>Группа участников, владеющих долями ключа BTC-адреса через DKG. Threshold t-of-n для всех операций.</dd>
+
+        <dt>Confederation</dt>
+        <dd>Федерация плюс кастодианский слой. Каждая операция требует FROST-threshold и custodian-threshold одновременно.</dd>
+
+        <dt>Custodian</dt>
+        <dd>Доверенный участник из <code>MultiPoolDAO</code>, получающий долю ключа через FROST. Гарантирует честность через депозит, который срезается при нарушениях.</dd>
+
+        <dt>Slashing</dt>
+        <dd>Срезание депозита участника (кастодиана, оракула) за доказанные нарушения. Стимулирует честное поведение.</dd>
+
+        <dt>Backing</dt>
+        <dd>Структура резервов: <code>totalReceived</code>, <code>reserved</code>, <code>available</code>. Выпуск sToken ограничен <code>available</code>.</dd>
+
+        <dt>Operation Hash</dt>
+        <dd>Target-bound хеш привилегированной операции. Включает домен, chainid, адрес FROST, целевой контракт, селектор, parameter hash и nonce.</dd>
+
+        <dt>RBF (Replace-By-Fee)</dt>
+        <dd>Bitcoin-стандарт замены неподтверждённой транзакции на версию с более высокой fee. SatoshiFi использует RBF-совместимую sequence policy для ускорения redemption.</dd>
+
+        <dt>Proof-of-Reserves (PoR)</dt>
+        <dd>Доказательство, что все выпущенные wrapped-токены обеспечены нативными активами на адресах федерации. У SatoshiFi — полностью ончейн через <code>BridgeInbox</code> и события.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 16: Источники ═════════════ -->
+  <section class="chapter" id="ch-references">
+    <div class="container">
+      <div class="chapter-num">Глава 16 · References</div>
+      <h2>Источники и лицензии</h2>
+
+      <h3>Академические и стандартизированные источники</h3>
+      <ol>
+        <li>Nakamoto, S. (2008). <em>Bitcoin: A Peer-to-Peer Electronic Cash System.</em></li>
+        <li>Komlo, C., &amp; Goldberg, I. (2020). <em>FROST: Flexible Round-Optimized Schnorr Threshold Signatures.</em></li>
+        <li>Feldman, P. (1987). <em>A Practical Scheme for Non-interactive Verifiable Secret Sharing.</em></li>
+        <li>BIP-340 — Schnorr Signatures for secp256k1.</li>
+        <li>BIP-32 — Hierarchical Deterministic Wallets.</li>
+        <li>SEC2 — Recommended Elliptic Curve Domain Parameters (secp256k1).</li>
+        <li>EIP-2565 — Modular Exponentiation Precompile Gas Cost.</li>
+      </ol>
+
+      <h3>Зависимости</h3>
+      <ul>
+        <li>OpenZeppelin Contracts — AccessControl, ReentrancyGuard, Pausable, ERC20, SafeERC20</li>
+      </ul>
+
+      <h3>Аудиторы и инструменты</h3>
+      <ul>
+        <li>SmartState — полный аудит SatoshiFi</li>
+        <li>Hexens — планируемый аудит</li>
+        <li>Slither, Mythril — рекомендованные инструменты статического анализа в CI</li>
+        <li>Foundry / Hardhat — фреймворки разработки и тестирования</li>
+      </ul>
+
+      <h3>Лицензии</h3>
+      <p>
+        Код смарт-контрактов и документация распространяются под лицензией <strong>MIT</strong>
+        (<code>SPDX-License-Identifier: MIT</code>). Зависимости (OpenZeppelin Contracts,
+        собственные библиотеки <code>BlockHeader</code>, <code>BitcoinUtils</code>,
+        <code>MerkleProofLib</code>) — также MIT.
+      </p>
+
+      <h3>Репозиторий и контакты</h3>
+      <ul>
+        <li>GitHub: <a href="https://github.com/SatoshiFi" target="_blank" rel="noopener">github.com/SatoshiFi</a></li>
+        <li>Сайт: <a href="https://unilayer.solutions/" target="_blank" rel="noopener">unilayer.solutions</a></li>
+        <li>BTCyield: <a href="https://btcyield.online" target="_blank" rel="noopener">btcyield.online</a></li>
+        <li>Issues и pull requests принимаются через GitHub</li>
+      </ul>
+
+      <div class="ornament">— FIN —</div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Footer ═════════════ -->
+  <footer>
+    <div class="container-wide">
+      <div class="footer-grid">
+        <div>
+          <h5>Документы</h5>
+          <ul>
+            <li><a href="#ch-architecture">Architecture</a></li>
+            <li><a href="#ch-frost">FROST &amp; DKG</a></li>
+            <li><a href="#ch-fees">Fee System</a></li>
+            <li><a href="#ch-security">Security</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Продукты</h5>
+          <ul>
+            <li><a href="https://btcyield.online" target="_blank" rel="noopener">BTCyield Platform</a></li>
+            <li><a href="https://unilayer.solutions/custody.html#explore" target="_blank" rel="noopener">Create Confederation</a></li>
+            <li><a href="https://unilayer.solutions/" target="_blank" rel="noopener">SatoshiFi</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Развитие</h5>
+          <ul>
+            <li><a href="https://github.com/SatoshiFi" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="#ch-references">Источники</a></li>
+            <li><a href="#ch-faq">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>© 2026 SatoshiFi · MIT Licence</div>
+        <div>Whitepaper v1.0 · Q2 2026</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Highlight active TOC entries on scroll
+    const sections = document.querySelectorAll('section.chapter[id]');
+    const navLinks = document.querySelectorAll('.topnav a[href^="#"]');
+    const tocLinks = document.querySelectorAll('.toc-grid a[href^="#"]');
+
+    function onScroll() {
+      const y = window.scrollY + 120;
+      let current = '';
+      sections.forEach(s => { if (s.offsetTop <= y) current = s.id; });
+      [...navLinks, ...tocLinks].forEach(a => {
+        const href = a.getAttribute('href');
+        if (href === '#' + current) a.style.color = 'var(--accent)';
+        else a.style.color = '';
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+</body>
+</html>

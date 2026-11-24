@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SatoshiFi — Whitepaper / Wiki</title>
+  <meta name="description" content="SatoshiFi Whitepaper. Decentralized mining pools, federations and confederations with FROST signatures, SPV verification and a managed BTC yield|loan stream.">
+  <meta property="og:title" content="SatoshiFi — Whitepaper">
+  <meta property="og:description" content="Complete technical whitepaper. Architecture, FROST, SPV, custodians, BTC-yield integration.">
+  <meta property="og:type" content="article">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═════════════ Reset & Base ═════════════ */
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0c;
+      --bg-2: #111114;
+      --bg-3: #16161a;
+      --surface: rgba(255,255,255,0.03);
+      --surface-2: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --text: #f5f5f7;
+      --text-dim: #a1a1a8;
+      --text-faded: #6b6b73;
+      --accent: #f7931a;            /* Bitcoin orange */
+      --accent-2: #ffb347;
+      --accent-soft: rgba(247,147,26,0.12);
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      --container: 880px;
+      --container-wide: 1200px;
+    }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grain texture */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.025 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 1;
+      mix-blend-mode: overlay;
+    }
+
+    /* Ambient orange glow */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -40vh; left: 50%; transform: translateX(-50%);
+      width: 90vw; height: 90vh;
+      background: radial-gradient(ellipse at center, rgba(247,147,26,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═════════════ Typography ═════════════ */
+    h1, h2, h3, h4, h5 { font-family: var(--serif); font-weight: 700; line-height: 1.2; }
+    h1 { font-size: clamp(2.4rem, 5vw, 4.2rem); letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.8rem, 3.2vw, 2.6rem); letter-spacing: -0.015em; margin-bottom: 1rem; }
+    h3 { font-size: clamp(1.3rem, 2.2vw, 1.7rem); letter-spacing: -0.01em; margin: 2.2rem 0 0.8rem; }
+    h4 { font-size: 1.15rem; margin: 1.6rem 0 0.6rem; color: var(--accent-2); font-family: var(--sans); font-weight: 600; }
+    p { margin-bottom: 1rem; color: var(--text-dim); }
+    p strong, li strong { color: var(--text); font-weight: 600; }
+    a { color: var(--accent); text-decoration: none; transition: color .2s; }
+    a:hover { color: var(--accent-2); }
+
+    ul, ol { margin: 1rem 0 1.4rem 1.5rem; color: var(--text-dim); }
+    li { margin-bottom: 0.45rem; }
+    li::marker { color: var(--accent); }
+
+    code, pre { font-family: var(--mono); font-size: 0.88em; }
+    code { background: var(--surface-2); padding: 0.12em 0.4em; border-radius: 4px; color: var(--accent-2); border: 1px solid var(--border); }
+    pre { background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; overflow-x: auto; margin: 1.2rem 0; line-height: 1.55; }
+    pre code { background: transparent; padding: 0; border: 0; color: var(--text); }
+
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 0.4rem 0 0.4rem 1.4rem;
+      margin: 1.4rem 0;
+      color: var(--text);
+      font-style: italic;
+      background: var(--accent-soft);
+      border-radius: 0 6px 6px 0;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin: 1.4rem 0; font-size: 0.94rem; }
+    th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text); background: var(--surface); font-family: var(--sans); }
+    td { color: var(--text-dim); }
+    tr:hover td { background: var(--surface); }
+
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 2; }
+    .container-wide { max-width: var(--container-wide); margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 2; }
+
+    /* ═════════════ Top Nav ═════════════ */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(10,10,12,0.85);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0.9rem 0;
+    }
+    .topnav-inner { max-width: var(--container-wide); margin: 0 auto; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .brand { font-family: var(--serif); font-size: 1.4rem; font-weight: 900; color: var(--text); letter-spacing: -0.02em; }
+    .brand span { color: var(--accent); }
+    .nav-meta { display: flex; gap: 1.4rem; font-size: 0.85rem; color: var(--text-faded); }
+    .nav-meta a { color: var(--text-dim); }
+    .nav-meta a:hover { color: var(--accent); }
+    @media (max-width: 720px) {
+      .nav-meta { display: none; }
+    }
+
+    /* ═════════════ Hero ═════════════ */
+    .hero { padding: 10rem 0 5rem; text-align: center; }
+    .hero .eyebrow {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--accent);
+      border-radius: 100px;
+      margin-bottom: 2rem;
+      background: var(--accent-soft);
+    }
+    .hero h1 {
+      margin-bottom: 1.4rem;
+      background: linear-gradient(180deg, #ffffff 0%, #c4c4cb 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero h1 .accent { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+    .hero .lead {
+      font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+      color: var(--text-dim);
+      max-width: 640px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-faded);
+      margin-top: 3rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .hero-meta div span { display: block; color: var(--accent-2); margin-top: 0.3rem; font-size: 0.9rem; letter-spacing: 0.05em; }
+
+    /* ═════════════ TOC ═════════════ */
+    .toc-section { padding: 4rem 0; background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .toc-title { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); margin-bottom: 2rem; }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.5rem 2rem;
+      counter-reset: toc;
+    }
+    .toc-grid a {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 0.8rem 0;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      transition: color .2s, border-color .2s;
+      counter-increment: toc;
+    }
+    .toc-grid a::before {
+      content: counter(toc, decimal-leading-zero);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-faded);
+      flex-shrink: 0;
+    }
+    .toc-grid a:hover { color: var(--accent); border-color: var(--accent); }
+    .toc-grid a:hover::before { color: var(--accent); }
+
+    /* ═════════════ Chapter Sections ═════════════ */
+    section.chapter {
+      padding: 5rem 0 2rem;
+      position: relative;
+    }
+    section.chapter + section.chapter { border-top: 1px solid var(--border); }
+
+    .chapter-num {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.2rem;
+    }
+    .chapter h2 + p { font-size: 1.05rem; color: var(--text); margin-top: 1rem; }
+
+    /* Pull-quote sidebar style */
+    .pull-stat {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.4rem;
+      margin: 2.5rem 0;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 12px;
+    }
+    .pull-stat div .v {
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .pull-stat div .l {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-faded);
+    }
+
+    /* Two-column cards (architecture layers, etc.) */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.4rem;
+      margin: 2rem 0;
+    }
+    .card {
+      padding: 1.6rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color .2s, background .2s;
+    }
+    .card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .card h4 { margin-top: 0; color: var(--accent-2); font-family: var(--serif); font-size: 1.15rem; }
+    .card p { font-size: 0.94rem; margin: 0.5rem 0 0; }
+    .card .ico { font-family: var(--mono); font-size: 0.72rem; color: var(--text-faded); letter-spacing: 0.2em; text-transform: uppercase; }
+
+    /* Flow / numbered steps */
+    .flow {
+      list-style: none;
+      margin: 1.6rem 0;
+      padding: 0;
+      counter-reset: flow;
+    }
+    .flow li {
+      counter-increment: flow;
+      padding: 0.9rem 0 0.9rem 3rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      color: var(--text);
+    }
+    .flow li::before {
+      content: counter(flow, decimal-leading-zero);
+      position: absolute; left: 0; top: 0.85rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+    .flow li:last-child { border-bottom: 0; }
+    .flow li small { display: block; color: var(--text-dim); font-size: 0.9rem; margin-top: 0.25rem; }
+
+    /* Tag chip */
+    .tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      color: var(--text-dim);
+      margin: 0.15rem 0.3rem 0.15rem 0;
+    }
+    .tag.accent { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+    /* FAQ */
+    details.faq {
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 0;
+    }
+    details.faq summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 1.02rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary::after {
+      content: '+';
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      color: var(--accent);
+      transition: transform .25s;
+    }
+    details.faq[open] summary::after { transform: rotate(45deg); }
+    details.faq[open] summary { color: var(--accent); }
+    details.faq .answer { margin-top: 0.8rem; color: var(--text-dim); }
+
+    /* Glossary */
+    .glossary { margin: 1.5rem 0; }
+    .glossary dt {
+      font-weight: 700;
+      color: var(--accent-2);
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      margin-top: 1.2rem;
+    }
+    .glossary dd {
+      color: var(--text-dim);
+      margin: 0.3rem 0 0 0;
+      padding-left: 0;
+    }
+
+    /* Divider ornament */
+    .ornament {
+      text-align: center;
+      margin: 3.5rem 0 2.5rem;
+      color: var(--text-faded);
+      letter-spacing: 0.8em;
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
+      padding: 4rem 0 3rem;
+      margin-top: 6rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+    }
+    .footer-grid h5 {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .footer-grid ul { margin: 0; padding: 0; list-style: none; }
+    .footer-grid li { margin-bottom: 0.5rem; }
+    .footer-grid a { color: var(--text-dim); font-size: 0.95rem; }
+    .footer-grid a:hover { color: var(--accent); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-faded);
+      font-family: var(--mono);
+      letter-spacing: 0.1em;
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: white; color: black; }
+      .topnav, footer { display: none; }
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 640px) {
+      .hero { padding: 8rem 0 3rem; }
+      .hero-meta { gap: 1.5rem; }
+      section.chapter { padding: 3.5rem 0 1.5rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.6rem; }
+      pre { padding: 1rem; font-size: 0.8em; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════════ Top Navigation ═════════════ -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a href="#top" class="brand">Satoshi<span>Fi</span></a>
+      <div class="nav-meta">
+        <a href="#toc">Contents</a>
+        <a href="#ch-architecture">Architecture</a>
+        <a href="#ch-frost">FROST</a>
+        <a href="#ch-btcyield">BTCyield</a>
+        <a href="#ch-faq">FAQ</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═════════════ Hero ═════════════ -->
+  <section class="hero" id="top">
+    <div class="container">
+      <span class="eyebrow">Whitepaper · v1.0 · 2026</span>
+      <h1>SatoshiFi.<br><span class="accent">Bitcoin without intermediaries.</span></h1>
+      <p class="lead">
+        Decentralized mining pools, federations and confederations for BTC, DOGE, BCH and LTC.
+        FROST threshold signatures, on-chain SPV verification, and a manager-multisig-operated yield|loan stream for native BTC yield.
+      </p>
+      <div class="hero-meta">
+        <div>Technology<span>FROST · DKG · SPV</span></div>
+        <div>Networks<span>BTC · DOGE · BCH · LTC</span></div>
+        <div>Layer<span>Ethereum / EVM</span></div>
+        <div>License<span>MIT</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Table of Contents ═════════════ -->
+  <section class="toc-section" id="toc">
+    <div class="container">
+      <div class="toc-title">Contents</div>
+      <div class="toc-grid">
+        <a href="#ch-intro">Introduction &amp; Overview</a>
+        <a href="#ch-architecture">System Architecture</a>
+        <a href="#ch-contracts">Smart Contract Layer</a>
+        <a href="#ch-flows">User Flows</a>
+        <a href="#ch-tokenomics">Tokenomics</a>
+        <a href="#ch-frost">FROST &amp; DKG</a>
+        <a href="#ch-spv">SPV Verification</a>
+        <a href="#ch-federation">Federation &amp; Confederation</a>
+        <a href="#ch-custodians">Custodians &amp; Slashing</a>
+        <a href="#ch-rental">Share Rental</a>
+        <a href="#ch-fees">Fee System</a>
+        <a href="#ch-security">Security &amp; Risks</a>
+        <a href="#ch-btcyield">BTCyield: Yield|Loan Stream</a>
+        <a href="#ch-faq">FAQ</a>
+        <a href="#ch-glossary">Glossary</a>
+        <a href="#ch-references">References &amp; Licenses</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 1: Introduction ═════════════ -->
+  <section class="chapter" id="ch-intro">
+    <div class="container">
+      <div class="chapter-num">Chapter 01 · Introduction</div>
+      <h2>Introduction and project overview</h2>
+      <p>
+        SatoshiFi is a system of decentralized mining pools and BTC federations built on smart
+        contracts deployed to Ethereum (or compatible EVM networks). The project combines two layers:
+        local mining pools (<code>MiningPoolDAO</code>) governed by a DAO of operators and miners,
+        and global coordination through <code>MultiPoolDAO</code> for each native network
+        (Bitcoin, Dogecoin, Bitcoin Cash, Litecoin).
+      </p>
+      <p>
+        All critical processes — reward distribution, UTXO verification, signature formation —
+        happen on-chain. No single point of failure, no custodial model in the traditional sense:
+        native BTC remains on federation addresses secured by threshold signatures, while ERC-20
+        wrappers (mpToken and sToken) circulate freely in DeFi.
+      </p>
+
+      <h3>What the protocol delivers</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Layer · DAO</div>
+          <h4>Decentralization</h4>
+          <p>Each pool is an independent DAO, unified through <code>MultiPoolDAO</code> for global coordination. Governance is enforced through NFT/SBT roles.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · SPV</div>
+          <h4>Transparency</h4>
+          <p>On-chain verification of every UTXO and block header. Reward distribution through open calculators: PPS, FPPS, PPLNS, Score.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · Crypto</div>
+          <h4>Cryptographic guarantees</h4>
+          <p>FROST threshold signatures (Schnorr/BIP340), Distributed Key Generation on-chain, staking and slashing for oracles.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer · Multi-chain</div>
+          <h4>Multi-network support</h4>
+          <p>BTC (SimpleSPVContract), Dogecoin (SPVContractDogecoin), BCH, LTC — each network with its own sToken (SBTC, SDOGE, SBCH, SLTC).</p>
+        </div>
+      </div>
+
+      <div class="pull-stat">
+        <div><div class="v">4</div><div class="l">Supported networks</div></div>
+        <div><div class="v">t-of-n</div><div class="l">FROST signature threshold</div></div>
+        <div><div class="v">100</div><div class="l">Confirmations for maturity</div></div>
+        <div><div class="v">71</div><div class="l">Critical tests passing</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 2: Architecture ═════════════ -->
+  <section class="chapter" id="ch-architecture">
+    <div class="container">
+      <div class="chapter-num">Chapter 02 · Architecture</div>
+      <h2>System architecture</h2>
+      <p>
+        The system is built as a modular stack of contracts on Ethereum. Each layer addresses a
+        specific concern and exposes an interface to the next. Separating local pool management
+        (<code>MiningPoolDAO</code>) from global coordination (<code>MultiPoolDAO</code>) is the
+        principal architectural decision that allows the system to scale across networks and pools.
+      </p>
+
+      <h3>Architecture layers</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Bitcoin / SPV</strong></td><td>Block header validation, coinbase maturity, Merkle inclusion, and pool UTXO registry</td></tr>
+          <tr><td><strong>Pool</strong></td><td>BTC reward registration, MP token minting, redemption escrow and refund</td></tr>
+          <tr><td><strong>MultiPool</strong></td><td>MP token aggregation, share token issuance, per-pool balance tracking</td></tr>
+          <tr><td><strong>Federation</strong></td><td>DKG, FROST authorization, pool management, governance</td></tr>
+          <tr><td><strong>Confederation</strong></td><td>Federation aggregation plus custodian threshold</td></tr>
+          <tr><td><strong>Fees</strong></td><td>Wrap/unwrap fee calculation, NFT discounts, fee distribution among participants</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Key components</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Core</div>
+          <h4>BitcoinHash, BlockHeader, TargetsHelper</h4>
+          <p>Parsing and verification of Bitcoin structures: blocks, headers, target calculations, Merkle proofs.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Factory</div>
+          <h4>MiningPoolFactory, FederationFactory</h4>
+          <p>Single-call deployment of pools, mpToken, sToken, FROST multisigs and MultiPool contracts.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Tokens</div>
+          <h4>PoolMpToken, PoolSToken</h4>
+          <p>ERC-20 tokens with 1:1 backing to the native asset. Access gated by <code>PoolMembershipNFT</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Calculators</div>
+          <h4>PPS · FPPS · PPLNS · Score</h4>
+          <p>Implementations of <code>IDistributionScheme</code> tracked by a single <code>CalculatorRegistry</code> with whitelisting.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Oracles</div>
+          <h4>StratumData Aggregator / Validator</h4>
+          <p>Share-data collection and validation from Stratum providers, with staking and slashing to enforce honest behavior.</p>
+        </div>
+        <div class="card">
+          <div class="ico">FROST</div>
+          <h4>FROSTCoordinator, FROSTVerifier</h4>
+          <p>Coordination of Schnorr/BIP340 threshold signatures. Bootstrapped via cryptographic FROST after DKG.</p>
+        </div>
+      </div>
+
+      <h3>Data flow: Reward → mpToken → sToken → redemption</h3>
+      <ol class="flow">
+        <li>Bitcoin reward transaction
+          <small>A miner finds a block; a coinbase transaction is formed in the native network.</small>
+        </li>
+        <li>SPV maturity + merkle proof
+          <small><code>SimpleSPVContract</code> verifies block maturity (≥ 100 confirmations) and Merkle inclusion of the transaction.</small>
+        </li>
+        <li>Pool registers UTXO
+          <small><code>MiningPoolDAO</code> records the confirmed coinbase UTXO in its internal registry.</small>
+        </li>
+        <li>Distribute reward
+          <small>The calculator (PPS/FPPS/PPLNS/Score) computes worker shares. <code>PoolMpToken.mint</code> issues mpTokens.</small>
+        </li>
+        <li>Deposit mpToken to MultiPool
+          <small>The miner calls <code>depositMpToken</code>. SafeERC20 transfers tokens, with an optional wrap fee withheld.</small>
+        </li>
+        <li>Share token minted
+          <small>sTokens (SBTC/SDOGE/SBCH/SLTC) are minted; the per-pool user balance is updated.</small>
+        </li>
+        <li>Request withdrawal
+          <small>Withdrawal request: balance check, pending lock creation, operation hash derivation.</small>
+        </li>
+        <li>FROST approval
+          <small>Threshold signature from federation participants. For confederations, additional custodian threshold is required.</small>
+        </li>
+        <li>BTC redemption broadcast
+          <small><code>constructRedemptionTx</code> builds a Bitcoin transaction; an off-chain MPC signer broadcasts it on the native network.</small>
+        </li>
+        <li>verifyBurnViaSPV
+          <small>Raw txid/source/output checks. Escrow is burned, reserved/spent UTXO accounting updated, request closed.</small>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 3: Smart Contracts ═════════════ -->
+  <section class="chapter" id="ch-contracts">
+    <div class="container">
+      <div class="chapter-num">Chapter 03 · Smart Contracts</div>
+      <h2>Smart contract layer</h2>
+      <p>
+        All contracts are written in Solidity ^0.8.19 using OpenZeppelin libraries
+        (<code>AccessControl</code>, <code>ReentrancyGuard</code>, <code>Pausable</code>, <code>SafeERC20</code>).
+        Below is a summary of the key contracts and their public APIs.
+      </p>
+
+      <h3>MiningPoolDAO</h3>
+      <p>
+        Local pool management: share intake, SPV block verification, reward distribution through
+        calculators, mpToken issuance, and interaction with <code>MultiPoolDAO</code> for sToken conversion.
+      </p>
+      <p><strong>Key data structures:</strong></p>
+      <ul>
+        <li><code>UTXO</code> — txId, vout, amount, spent</li>
+        <li><code>LockedTokens</code> — networkId, owner, amount, powScript, txId, createdAt, deadline, status</li>
+        <li><code>PoolInfo</code> — poolId, networkId, payoutScript, active</li>
+        <li><code>NetworkConfig</code> — active, spv, sToken</li>
+        <li><code>Backing</code> — totalReceived, reserved, available</li>
+      </ul>
+      <p><strong>Primary functions:</strong></p>
+      <pre><code>initialize(address frostAddress, bytes groupPub, uint64 redemptionTimeout, address slashRecv)
+setNetwork(uint8 networkId, address spvAddr, address sToken, bool active)
+registerPool(bytes32 poolId, uint8 networkId, bytes payoutScript, address operator)
+receiveReward(bytes32 poolId, bytes blockHeaderRaw, bytes txRaw, uint32 vout,
+              bytes32[] merkleProof, uint8[] directions)
+mintSTokenWithProof(bytes32 poolId, bytes blockHeaderRaw, bytes txRaw, uint32 vout,
+                    bytes32[] merkleProof, uint8[] directions, uint256 amount, address recipient)
+burnAndRedeem(uint8 networkId, uint256 amount, bytes powScript)
+withdrawFees(uint8 networkId, address to, uint256 amount)</code></pre>
+
+      <h3>SimpleSPVContract</h3>
+      <p>
+        Stores block headers, tracks the mainchain by cumulative work, and verifies transaction
+        inclusion through Merkle proofs. It also owns the pool UTXO registry. Admin functions are
+        restricted to <code>spvAdmin</code>; test helpers can be permanently disabled via
+        <code>disableTestHelpers()</code>.
+      </p>
+      <pre><code>function addBlockHeader(bytes calldata rawHeader) public
+function disableTestHelpers() external
+function setPoolContract(address poolContract) external
+function transferSPVAdmin(address newAdmin) external
+function isMature(bytes32 blockHash) external view returns (bool)
+function isMatureWithDepth(bytes32 blockHash, uint32 confirmationDepth) external view returns (bool)
+function checkTxInclusion(bytes32 blockHash, bytes32 txid, bytes32[] calldata siblings, uint256 index)
+    external view returns (bool)
+function registerPoolUTXO(bytes32 txid, uint32 vout) external
+function markPoolUTXOSpent(bytes32 txid, uint32 vout) external</code></pre>
+
+      <h3>SimpleFROSTMultisig</h3>
+      <p>
+        The authorization adapter for federation and confederation contracts. It operates in two
+        modes: <em>legacy counter mode</em> (for compatibility and tests) and <em>strict cryptographic
+        mode</em> (production). Once cryptographic FROST is bootstrapped, legacy counter approvals
+        are permanently disabled.
+      </p>
+      <pre><code>function bootstrapCryptographicFROST(
+    address verifier,
+    bytes calldata groupPubkey,
+    string calldata signatureType
+) external
+
+function approveOperationWithAggregateSignature(
+    bytes32 operationHash,
+    address target,
+    bytes calldata aggregateSignature
+) external</code></pre>
+
+      <h3>Target-bound operation hash</h3>
+      <p>
+        All privileged operations use target-bound hashes that include the domain, chainid, FROST
+        contract address, target contract, function selector, parameter hash, and nonce.
+      </p>
+      <pre><code>function hashOperation(
+    address target,
+    bytes4 selector,
+    bytes32 paramsHash,
+    uint256 nonce
+) external view returns (bytes32)</code></pre>
+      <p>
+        Target contracts expose helper functions: <code>getAddPoolOperationHash</code>,
+        <code>getSetFeeManagerOperationHash</code>, <code>getProcessWithdrawalOperationHash</code>, and others.
+        Callers should always use these helpers instead of constructing hashes by hand.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 4: User Flows ═════════════ -->
+  <section class="chapter" id="ch-flows">
+    <div class="container">
+      <div class="chapter-num">Chapter 04 · User Flows</div>
+      <h2>User scenarios</h2>
+      <p>
+        The system supports six primary interaction scenarios for two base roles: miners and pool
+        operators. Additional flows cover oracles and FROST participants.
+      </p>
+
+      <h3>Scenario 1 — Mining → mpToken</h3>
+      <ol class="flow">
+        <li>The miner produces a block and receives the coinbase UTXO.</li>
+        <li>Share data is sent via Stratum to <code>StratumDataAggregator</code>.</li>
+        <li>The aggregator forwards data to <code>MiningPoolDAO</code>.</li>
+        <li><code>SPVContract</code> verifies Merkle proof and block maturity (≥ 100 confirmations).</li>
+        <li>A calculator from <code>CalculatorRegistry</code> distributes shares across WorkerData/MemberData.</li>
+        <li><code>PoolMpToken.mint</code> issues mpToken to recipients.</li>
+      </ol>
+
+      <h3>Scenario 2 — Convert mpToken → sToken</h3>
+      <p>
+        The miner can keep mpToken in an ERC-20 wallet for unrestricted transfer, use them in DeFi,
+        or convert them to sToken via <code>MultiPoolDAO.depositMpToken</code>. Conversion involves
+        a re-verification of the underlying UTXO through SPV and burns the mpToken.
+      </p>
+
+      <h3>Scenario 3 — Redeem sToken to native assets</h3>
+      <ol class="flow">
+        <li>The user calls <code>burnAndRedeem(networkId, amount, powScript)</code>.</li>
+        <li><code>PoolSToken.burnFrom</code> burns the sTokens and moves mpToken into escrow.</li>
+        <li>An operation hash is built; a FROST session is initiated.</li>
+        <li>t-of-n federation participants (plus custodian threshold for confederations) approve the operation.</li>
+        <li><code>constructRedemptionTx</code> builds a BTC transaction with explicit miner fee and an RBF-compatible sequence.</li>
+        <li>An off-chain MPC signer broadcasts the transaction on the native network.</li>
+        <li><code>verifyBurnViaSPV</code> confirms inclusion; escrow is burned and reserves settled.</li>
+      </ol>
+
+      <h3>Scenario 4 — Pool setup by an operator</h3>
+      <p>
+        The operator calls <code>MiningPoolFactory.createPool</code> and receives a deployed clone of
+        <code>MiningPoolDAO</code> together with a mpToken. The pool is then registered in
+        <code>MultiPoolDAO</code>, a calculator is selected through <code>CalculatorRegistry</code>,
+        and a payout policy is configured.
+      </p>
+
+      <h3>Scenarios 5–6 — Stratum oracles and FROST</h3>
+      <p>
+        Oracles register with <code>StratumOracleRegistry</code>, receive <code>ORACLE_ROLE</code>,
+        and submit data validated by <code>StratumDataValidator</code>. FROST sessions are created
+        for each redemption operation and finalized with an aggregated Schnorr signature, verified
+        through <code>FROSTVerifier</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 5: Tokenomics ═════════════ -->
+  <section class="chapter" id="ch-tokenomics">
+    <div class="container">
+      <div class="chapter-num">Chapter 05 · Tokenomics</div>
+      <h2>Tokenomics and distribution models</h2>
+      <p>
+        Token economics revolve around two token types: <strong>mpToken</strong> (Mining Pool Token)
+        and <strong>sToken</strong> (SBTC, SDOGE, SBCH, SLTC). Both are ERC-20 and both are backed 1:1
+        by their native assets.
+      </p>
+
+      <h3>mpToken — local pool token</h3>
+      <p>
+        Issued by <code>PoolMpToken</code> for a specific pool. It is a wrapped version of the
+        native asset (1 mpBTC = 1 BTC). It is minted after SPV verification of the coinbase and
+        execution of the calculator. mpToken can be held in any ERC-20 wallet, transferred between
+        addresses, used in DeFi, or burned during conversion to sToken.
+      </p>
+
+      <h3>sToken — global network token</h3>
+      <p>
+        Issued by <code>MultiPoolDAO</code> after a second UTXO verification. SBTC for BTC, SDOGE
+        for Dogecoin, and so on. Used for redemption to native assets through FROST or for DeFi.
+        Backed by pool reserves (<code>Backing.available</code>).
+      </p>
+
+      <h3>Reward distribution models</h3>
+      <table>
+        <thead>
+          <tr><th>Model</th><th>Contract</th><th>Key parameter</th><th>Strength</th><th>Trade-off</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PPS</td><td>PPSCalculator</td><td>baseRate</td><td>Simplicity, predictability</td><td>Does not account for fees</td></tr>
+          <tr><td>FPPS</td><td>FPPSCalculator</td><td>baseRate, feeBonus</td><td>Includes tx fees</td><td>More expensive to compute</td></tr>
+          <tr><td>PPLNS</td><td>PPLNSCalculator</td><td>windowSize</td><td>Anti pool-hopping</td><td>Less predictable payouts</td></tr>
+          <tr><td>Score</td><td>ScoreCalculator</td><td>decayFactor</td><td>Encourages loyalty</td><td>More configuration to tune</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Economic incentives</h3>
+      <ul>
+        <li><strong>Miners</strong> — instant rewards in 1:1-backed mpToken; model choice (PPS, FPPS, PPLNS, Score) shapes the payout profile.</li>
+        <li><strong>Operators</strong> — fees in sToken, DAO governance through NFT/SBT.</li>
+        <li><strong>Oracles</strong> — staking and slashing in <code>StratumDataValidator</code> enforce honest reporting.</li>
+        <li><strong>Safety</strong> — <code>Backing</code> reserves guarantee 1:1 collateralization, <code>defaultRedemptionTimeout</code> bounds large withdrawals.</li>
+      </ul>
+
+      <div class="ornament">· · ·</div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 6: FROST ═════════════ -->
+  <section class="chapter" id="ch-frost">
+    <div class="container">
+      <div class="chapter-num">Chapter 06 · Threshold Cryptography</div>
+      <h2>FROST, DKG, and BIP340</h2>
+      <p>
+        <strong>FROST</strong> (Flexible Round-Optimized Schnorr Threshold Signatures) is the
+        foundation of the federation's cryptographic guarantees. The private key never exists in
+        whole form: each participant holds a share, and signing requires collecting a threshold
+        (t-of-n) of partial signatures.
+      </p>
+
+      <h3>Why FROST</h3>
+      <ul>
+        <li><strong>Decentralization</strong> — signing without a trusted coordinator; responsibility is split across participants.</li>
+        <li><strong>Efficiency</strong> — fewer communication rounds than MuSig2; optimized for Schnorr.</li>
+        <li><strong>Security</strong> — with t &gt; n/2 it tolerates minority compromise; VSS protects against rogue-key attacks.</li>
+        <li><strong>BIP340 compatibility</strong> — Schnorr signatures are natively valid in Bitcoin Taproot.</li>
+      </ul>
+
+      <h3>Distributed Key Generation (DKG)</h3>
+      <p>
+        DKG in SatoshiFi <em>does not generate secrets on-chain</em>. The <code>DKGCoordinator</code>
+        contract coordinates the protocol: collecting VSS commitments, share hashes, public key
+        shares, and threshold attestations for the final group public key.
+      </p>
+      <ol class="flow">
+        <li>VSS commitment hashes — participants publish commitments.</li>
+        <li>Encrypted share hashes — per-recipient encrypted shares.</li>
+        <li>Public key shares submission — per-share public keys.</li>
+        <li>Group public key approval — threshold attestations for the final key.</li>
+        <li>completeDKG — finalization after secp256k1 validation and even-Y check.</li>
+        <li>deployFederationWithCryptographicFROST — deployment with immediate bootstrap.</li>
+      </ol>
+      <blockquote>
+        The safe path is <code>finalizeDKG(uint256, bytes calldata groupPubkey)</code> with externally
+        generated group key material. The argumentless <code>finalizeDKG(uint256)</code> is deliberately
+        disabled with an explicit revert because it generated secrets on-chain.
+      </blockquote>
+
+      <h3>FROSTVerifier — supported formats</h3>
+      <p><strong>Group public key:</strong></p>
+      <ul>
+        <li>64 bytes — <code>abi.encodePacked(uint256 pubX, uint256 pubY)</code></li>
+        <li>33 bytes — SEC compressed key</li>
+        <li>32 bytes — BIP340 x-only key, lifted to even Y</li>
+      </ul>
+      <p><strong>Signatures:</strong></p>
+      <ul>
+        <li>Schnorr/BIP340 — 64 bytes <code>(Rx, z)</code> with even-Y lift, or 96 bytes <code>(Rx, Ry, z)</code></li>
+        <li>ECDSA — 65 bytes <code>(r, s, v)</code></li>
+      </ul>
+      <blockquote>
+        Schnorr verification rejects odd-Y group keys and odd-Y R points for the BIP340 path.
+      </blockquote>
+
+      <h3>Strict cryptographic mode vs. legacy counter</h3>
+      <p>
+        After <code>bootstrapCryptographicFROST</code> or <code>configureCryptographicFROST</code> is
+        called, the <code>counterApprovalsEnabled</code> flag becomes permanently false. All
+        subsequent approvals must go through <code>approveOperationWithAggregateSignature</code>
+        with a real aggregate signature, checked by <code>cryptographicVerifier.verify</code>.
+      </p>
+      <p>
+        Legacy counter mode remains in the contracts for tests and backward compatibility but
+        <strong>is not the production security boundary</strong>. Production deployments always
+        use the strict path <code>deployFederationWithCryptographicFROST(...)</code> or
+        <code>deployConfederationWithCryptographicFROST(...)</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 7: SPV ═════════════ -->
+  <section class="chapter" id="ch-spv">
+    <div class="container">
+      <div class="chapter-num">Chapter 07 · Bitcoin Integration</div>
+      <h2>SPV verification and UTXO handling</h2>
+      <p>
+        Simplified Payment Verification is a deliberate trade-off between completeness and
+        efficiency. SatoshiFi does not run a full Bitcoin node on-chain; instead it verifies
+        transaction inclusion through block headers and Merkle paths.
+      </p>
+
+      <h3>SimpleSPVContract: what gets verified</h3>
+      <ul>
+        <li>80-byte block header shape.</li>
+        <li>Existence of the previous block in the chain.</li>
+        <li>Target derived from <code>bits</code>; block hash ≤ target.</li>
+        <li>Difficulty bits preserved on non-retarget blocks.</li>
+        <li>Cumulative work used to track the mainchain.</li>
+      </ul>
+
+      <h3>Maturity and reorgs</h3>
+      <p>
+        The standard maturity depth is 100 confirmations (Bitcoin coinbase maturity). In production
+        this parameter should be raised above the demo constant. <code>isMatureWithDepth</code>
+        allows the depth to be set explicitly. Chain reorganizations of up to 10 blocks (BTC) are
+        supported; Dogecoin uses a chain-length heuristic due to its high block rate.
+      </p>
+
+      <h3>Pool UTXO registry</h3>
+      <p>
+        The SPV contract also owns the pool UTXO registry. Pool contracts are registered through
+        <code>setPoolContract</code> (only <code>spvAdmin</code>) and then register their UTXOs via
+        <code>registerPoolUTXO(txid, vout)</code>. Test helpers (<code>addBlockWithHash</code>,
+        <code>setBlockMerkleRoot</code>) must be permanently disabled in production through
+        <code>disableTestHelpers()</code>.
+      </p>
+
+      <h3>Reserve accounting in SimpleMiningPoolWithCalculator</h3>
+      <ul>
+        <li>Available / reserved / spent BTC reserve.</li>
+        <li>UTXO reserved/spent state.</li>
+        <li>Explicit miner fee in constructed BTC transactions.</li>
+        <li>RBF-compatible sequence policy.</li>
+        <li><code>SIGHASH_ALL | SIGHASH_ANYONECANPAY</code> for fee bumping.</li>
+      </ul>
+
+      <h3>Finality per network</h3>
+      <table>
+        <thead><tr><th>Network</th><th>Coinbase maturity</th><th>Standard tx confirmations</th><th>Time to finality</th></tr></thead>
+        <tbody>
+          <tr><td>Bitcoin (BTC)</td><td>100 blocks</td><td>6 confirmations</td><td>≈ 1 hour</td></tr>
+          <tr><td>Bitcoin Cash (BCH)</td><td>100 blocks</td><td>6 confirmations</td><td>≈ 1 hour</td></tr>
+          <tr><td>Litecoin (LTC)</td><td>240 blocks</td><td>6 confirmations</td><td>≈ 15 min</td></tr>
+          <tr><td>Dogecoin (DOGE)</td><td>600 blocks</td><td>6 confirmations</td><td>≈ 6 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 8: Federation ═════════════ -->
+  <section class="chapter" id="ch-federation">
+    <div class="container">
+      <div class="chapter-num">Chapter 08 · Federation</div>
+      <h2>Federation and confederation</h2>
+      <p>
+        A <strong>federation</strong> is a group of participants that jointly hold shares of the
+        BTC address key through DKG. A <strong>confederation</strong> extends a federation with
+        institutional custodians: critical operations require both a FROST threshold and a
+        custodian threshold.
+      </p>
+
+      <h3>FederationFactory — deployment</h3>
+      <p>
+        The strict production path <code>deployFederationWithCryptographicFROST(...)</code> atomically
+        deploys and initializes:
+      </p>
+      <ul>
+        <li><code>SimpleFROSTMultisig</code> with cryptographic FROST already bootstrapped</li>
+        <li><code>SimpleMultiPool</code> for MP-token aggregation</li>
+        <li><code>MultiPoolShareToken</code> (the federation's sToken)</li>
+        <li>Optional fee system through deployer wiring</li>
+      </ul>
+
+      <h3>ConfederationFactory — adds custodian validator</h3>
+      <p>
+        <code>deployConfederationWithCryptographicFROST(...)</code> additionally deploys
+        <code>CustodianValidator</code>. All MultiPool operations in a confederation require two
+        independent approvals: a FROST threshold for the target-bound operation hash and a custodian
+        threshold for the same hash. The custodian set is managed inside <code>CustodianValidator</code>,
+        not only in a governance wrapper.
+      </p>
+
+      <h3>MultiPool accounting</h3>
+      <p>
+        <code>SimpleMultiPool</code> and <code>ConfederationMultiPool</code> track per-user and
+        per-MP-token balances:
+      </p>
+      <ul>
+        <li><code>userPoolBalances[user][mpToken]</code></li>
+        <li><code>pendingUserPoolShares[user][mpToken]</code></li>
+        <li><code>PoolInfo.exists</code> — preserves accounting on reactivation</li>
+      </ul>
+      <p>
+        Withdrawals lock shares in pending accounting first and burn them only when the withdrawal
+        is processed. A user can cancel after <code>WITHDRAWAL_CANCEL_DELAY</code>, and an approved
+        reject path can release pending shares. This model prevents the use of S-tokens from one
+        MP pool to withdraw from another MP pool.
+      </p>
+
+      <h3>Federation addresses and key rotation</h3>
+      <p>
+        Addresses are generated through DKG in <code>FROSTCoordinator</code>. The public key (xpub)
+        is created on-chain; derivation follows BIP-32 (HD wallets) adapted for P2WSH (BTC, BCH, LTC)
+        or Scrypt-compatible addresses (DOGE). The address list is stored in <code>BridgeInbox</code>
+        and exposed via <code>AddressGenerated</code> events.
+      </p>
+      <p>
+        Key rotation is initiated by DAO vote or on schedule (≈ 6 months, ≈ 262,800 blocks for BTC).
+        A new DKG runs, old keys are invalidated, and funds are moved to the new address through a
+        multisig transaction. The rotation is confirmed on-chain through SPV.
+      </p>
+
+      <h3>Proof-of-Reserves</h3>
+      <ul>
+        <li><strong>Public UTXO list</strong> — in <code>BridgeInbox.federationAddresses</code>, with <code>UTXOUpdated</code> events.</li>
+        <li><strong>Mint/burn reconciliation</strong> — <code>TokenMinted</code> on UTXO receipt, <code>TokenBurned</code> on redemption. The invariant: <code>totalSupply(sToken) ≤ totalUTXO</code>.</li>
+        <li><strong>Merkle proofs</strong> — relayers submit proofs weekly; the contract verifies them on-chain.</li>
+        <li><strong>External audit</strong> — independent verification through the native network explorer cross-referenced against on-chain <code>BridgeInbox</code> data.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 9: Custodians ═════════════ -->
+  <section class="chapter" id="ch-custodians">
+    <div class="container">
+      <div class="chapter-num">Chapter 09 · Custodians</div>
+      <h2>Custodians, deposits, and slashing</h2>
+      <p>
+        A custodian is a trusted participant from <code>MultiPoolDAO</code> who holds a share of the
+        cryptographic key through FROST and guarantees that every pool member can withdraw their
+        share independently. Misbehavior is punished by slashing the custodian's deposit.
+      </p>
+
+      <h3>Pure MiningPoolDAO vs. pool with custodian</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Mode A · Pure DAO</div>
+          <h4>Without custodian</h4>
+          <p>Redemption requires a collective FROST signature from DAO members (t-of-n).
+          <strong>Pro:</strong> low fees, full intra-pool decentralization.
+          <strong>Con:</strong> redemption depends on majority cooperation; refusal to sign can delay payouts.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Mode B · Custodian-backed</div>
+          <h4>With custodian</h4>
+          <p>Each member can initiate a withdrawal of their own share independently. The custodian
+          verifies the request and provides their signature share. <strong>Pro:</strong> independent
+          withdrawal, slashing as economic guarantee. <strong>Con:</strong> additional custodian fee.</p>
+        </div>
+      </div>
+
+      <h3>Slashing-deposit mechanics</h3>
+      <p>
+        The custodian posts a deposit in the network's native currency (ETH, BTC, USDC) or in a
+        dedicated DAO token. The deposit is locked for the entire participation period and slashed
+        on proven violations: signing an invalid request, refusing to sign a valid request, or
+        colluding with other participants.
+      </p>
+
+      <h3>Fee and slashing formulas</h3>
+      <p><strong>Optional fee tied to deposit size</strong> (incentivizes larger deposits):</p>
+      <pre><code>f = k / (d + c) × r
+
+k — risk constant (e.g., 1e18)
+d — custodian deposit
+c — minimum offset (e.g., 1e15)
+r — total pool reward for the period</code></pre>
+      <p><strong>Alternative — fixed custodian percentage</strong>:</p>
+      <pre><code>f = p × r
+
+p — agreed percentage (e.g., 0.005 for 0.5%)
+r — total pool reward for the period</code></pre>
+      <p><strong>Slashing</strong> on violation:</p>
+      <pre><code>s = min(p × d, m)
+
+p — slashing percentage (e.g., 0.1 for 10%)
+d — custodian deposit
+m — cap, to avoid zeroing the deposit entirely</code></pre>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 10: Rental ═════════════ -->
+  <section class="chapter" id="ch-rental">
+    <div class="container">
+      <div class="chapter-num">Chapter 10 · Hashrate Rental</div>
+      <h2>Renting out miner shares</h2>
+      <p>
+        In pools backed by a custodian, miners can rent out their share (mpToken or aggregated
+        hashrate). The custodian acts as an arbitrator: it guarantees redemption to the renter,
+        resolves disputes, and bears responsibility through its slashable deposit.
+      </p>
+
+      <h3>Process steps</h3>
+      <ol class="flow">
+        <li><strong>Initiation</strong> — the lessor calls <code>rentShare(amount, renter, duration, fee)</code>, delegating the share and recording the terms.</li>
+        <li><strong>Payment</strong> — the renter transfers the rental fee into an escrow contract.</li>
+        <li><strong>Delegation</strong> — the share is temporarily associated with the renter in <code>StratumDataAggregator</code>.</li>
+        <li><strong>Monitoring</strong> — the custodian tracks the actual delivered hashrate through oracles.</li>
+        <li><strong>Reward redemption</strong> — the renter calls <code>redeemRentalRewards</code>; the custodian verifies and signs.</li>
+        <li><strong>Disputes</strong> — on hashrate shortfall the renter submits a complaint; the custodian checks oracle data and applies slashing if the violation is confirmed.</li>
+        <li><strong>Completion</strong> — at term end the share returns to the lessor.</li>
+      </ol>
+
+      <h3>Rental formulas</h3>
+      <p><strong>Rental fee</strong>:</p>
+      <pre><code>a = p × s × d
+
+p — rental percentage (e.g., 0.05 for 5%)
+s — share size in mpToken
+d — rental duration in periods</code></pre>
+      <p><strong>Slashing in dispute</strong>:</p>
+      <pre><code>s = min(v × dep, max_s)
+
+v — violation percentage (e.g., 0.2 for 20%)
+dep — violator's deposit
+max_s — maximum slashing (cap)</code></pre>
+
+      <p>
+        Share rental adds liquidity to the system and turns a stake in a pool into a tradable
+        asset, similar in spirit to decentralized hashrate marketplaces but fully on-chain.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 11: Fee System ═════════════ -->
+  <section class="chapter" id="ch-fees">
+    <div class="container">
+      <div class="chapter-num">Chapter 11 · Fee System</div>
+      <h2>Fee system: wrap, unwrap, NFT discounts</h2>
+      <p>
+        The fee system handles wrap/deposit and unwrap/withdrawal fees for federation and
+        confederation pools. Every change requires FROST approval, and confederations additionally
+        require a custodian threshold.
+      </p>
+
+      <h3>Contracts</h3>
+      <table>
+        <thead><tr><th>Contract</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>FederationFeeManager</code></td><td>Fee configs, fee calculation, NFT discount consumption, authorized fee collectors</td></tr>
+          <tr><td><code>FeeDistributionCalculator</code></td><td>Equal or weighted distribution between members and custodians</td></tr>
+          <tr><td><code>ProjectWalletRegistry</code></td><td>Per-federation project wallets with FROST-gated changes</td></tr>
+          <tr><td><code>GlobalProjectWalletRegistry</code></td><td>Owner-managed global native-fee distribution</td></tr>
+          <tr><td><code>FederationNFTModifier</code></td><td>ERC721 fee discount NFTs with expiration and volume limits</td></tr>
+          <tr><td><code>FeeSystemDeployer</code></td><td>Single-entry deployment of all fee contracts</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Fee calculation</h3>
+      <p><strong>Fixed percentage:</strong></p>
+      <pre><code>fee = amount × fixedBps / 10000</code></pre>
+      <p><strong>Dynamic:</strong></p>
+      <pre><code>fee = dynamicMinFee + amount × dynamicCoeffBps / 10000</code></pre>
+      <p>
+        The current implementation caps the computed fee at <code>amount</code>, so a bad dynamic
+        input cannot underflow pool accounting. Config validation rejects
+        <code>fixedBps &gt; 10000</code> and <code>dynamicCoeffBps &gt; 10000</code>.
+      </p>
+
+      <h3>NFT discounts</h3>
+      <p>Two fee APIs are available:</p>
+      <pre><code>function calculateFeeWithDiscount(
+    bool isWrap, uint256 amount, uint256 discountBps
+) external view returns (uint256 fee)
+
+function calculateFeeWithNFT(
+    bool isWrap, uint256 amount, uint256 nftTokenId, address account
+) external returns (uint256 fee)</code></pre>
+      <p>
+        <code>calculateFeeWithNFT</code> consumes allowance through
+        <code>FederationNFTModifier.useDiscountFor</code>. The NFT contract checks ownership,
+        expiration, remaining volume, and increments <code>usedVolume</code>.
+      </p>
+
+      <h3>Distribution modes</h3>
+      <pre><code>enum DistributionMode { Equal, ByPercentage }
+
+struct DistributionConfig {
+    uint256 memberShareBps;
+    uint256 custodianShareBps;
+    DistributionMode memberMode;
+    DistributionMode custodianMode;
+}</code></pre>
+      <p>
+        Validation requires <code>memberShareBps + custodianShareBps ≤ 10000</code>. Equal mode
+        splits the amount across active recipients; ByPercentage mode uses weights.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 12: Security ═════════════ -->
+  <section class="chapter" id="ch-security">
+    <div class="container">
+      <div class="chapter-num">Chapter 12 · Security</div>
+      <h2>Security and risks</h2>
+      <p>
+        Security is built on eight independent layers of defense. No single layer is sufficient on
+        its own — an attacker would have to defeat them all simultaneously.
+      </p>
+
+      <h3>Defense layers</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Layer 1</div>
+          <h4>AccessControl</h4>
+          <p>Roles <code>ADMIN_ROLE</code>, <code>POOL_ROLE</code>, <code>ORACLE_ROLE</code>, <code>MINTER_ROLE</code>, <code>BURNER_ROLE</code>. Assigned only during initialize.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 2</div>
+          <h4>ReentrancyGuard</h4>
+          <p>Every function interacting with tokens or reserves is protected by <code>nonReentrant</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 3</div>
+          <h4>Pausable</h4>
+          <p>Emergency stop for <code>receiveReward</code>, <code>mintSToken</code>, <code>burnAndRedeem</code> through ADMIN.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 4</div>
+          <h4>FROST Threshold</h4>
+          <p>No single-party signatures. t-of-n with t &gt; n/2, plus custodian threshold for confederations.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 5</div>
+          <h4>SPV Verification</h4>
+          <p>Maturity check (≥ 100 confirmations), Merkle proof for every UTXO, reorg handling up to 10 blocks.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 6</div>
+          <h4>Backing Reserves</h4>
+          <p>1:1 backing of mpToken/sToken to the native asset. Minting is bounded by <code>Backing.available</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 7</div>
+          <h4>Oracle Staking/Slashing</h4>
+          <p>Oracle deposits are slashed for invalid data. Whitelist enforced through <code>StratumOracleRegistry</code>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Layer 8</div>
+          <h4>Gas Limits</h4>
+          <p><code>MIN_GAS_ESTIMATE = 50k</code>, <code>MAX_GAS_ESTIMATE = 5M</code>, <code>MAX_WORKERS = 1000–2000</code>.</p>
+        </div>
+      </div>
+
+      <h3>Known risks and mitigations</h3>
+      <table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Oracle attacks (forged shares)</td><td><code>ORACLE_ROLE</code>, multi-validation, reputation, staking/slashing</td></tr>
+          <tr><td>SPV verification errors</td><td>≥ 100 confirmations, reorg support, audited libraries, regular audits</td></tr>
+          <tr><td>FROST share compromise</td><td>t &gt; n/2, BIP340 validation, redemption timeout, geographic distribution</td></tr>
+          <tr><td>Reentrancy via DeFi</td><td><code>ReentrancyGuard</code>, <code>Backing.available</code> check before mint</td></tr>
+          <tr><td>Calculator errors</td><td><code>DistributionMath</code>, input validation, whitelist in <code>CalculatorRegistry</code></td></tr>
+          <tr><td>ADMIN role abuse</td><td>Multisig (Gnosis Safe), DAO via NFT/SBT, event logging</td></tr>
+          <tr><td>Chain reorganization</td><td><code>isMature</code> with high depth, reorg up to 10 blocks, oracle monitoring</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Production checklist</h3>
+      <ul>
+        <li>Use <code>deployFederationWithCryptographicFROST</code> or <code>deployConfederationWithCryptographicFROST</code>.</li>
+        <li>Confirm <code>SimpleFROSTMultisig.counterApprovalsEnabled()</code> == false after bootstrap.</li>
+        <li>Build approvals only through target contract helper hashes.</li>
+        <li>Disable SPV test helpers via <code>disableTestHelpers()</code>.</li>
+        <li>Set production confirmation depth; do not rely on the demo constant.</li>
+        <li>Register authorized fee collectors and project/global fee managers before traffic.</li>
+        <li>Run Slither / Mythril in CI or a dev image.</li>
+        <li>Transfer <code>ADMIN_ROLE</code> to a multisig or DAO.</li>
+      </ul>
+
+      <h3>Current test inventory</h3>
+      <p>
+        <code>web3/test/CriticalTests.t.sol</code> currently contains 71 critical tests. Coverage
+        includes: DKG phases and group key validation, strict FROST aggregate approval, BIP340
+        verifier vector, federation/confederation deploy guards, SPV admin and test-helper
+        protections, MultiPool per-pool accounting and withdrawal locks, redemption escrow/refund
+        and BTC transaction checks, fee config validation and authorized fee collectors, NFT
+        ownership and project wallet share validation.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 13: BTCyield ═════════════ -->
+  <section class="chapter" id="ch-btcyield">
+    <div class="container">
+      <div class="chapter-num">Chapter 13 · Integration</div>
+      <h2>BTCyield: yield|loan stream on SatoshiFi</h2>
+      <p>
+        <strong>BTCyield</strong> is a product layer on top of SatoshiFi infrastructure.
+        SatoshiFi provides cross-chain wrapping and custodial infrastructure through FROST.
+        Yield placement into Yield Basis and Silo Finance is executed directly by the SatoshiFi
+        team, under a joint-decision manager multisig.
+      </p>
+
+      <h3>Three yield streams</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="ico">Stream 1</div>
+          <h4>Confederation · 2.5% + 7% APY</h4>
+          <p><strong>Risk:</strong> minimal. <strong>Full BTC control.</strong> Create your own confederation and earn 2.5% APY on all capital staked in it — even without staking any BTC of your own. Stake your own BTC as well and earn an additional 7% APY on your own stake, on top of the 2.5% you keep earning on third-party capital. Participants remain owners of their bitcoins. The custodian algorithmically cannot block withdrawal of burned wrappers — their job is solely to defend against key compromise.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Stream 2</div>
+          <h4>Yield|Loan Stream · 4–5% APY</h4>
+          <p><strong>Risk:</strong> medium. <strong>Rent from the entire system TVL.</strong> Wrap BTC into sBTC — SatoshiFi's own decentralized founders' wrapper, free of compliance screening and blocklists — and provide liquidity directly into Yield Basis and Silo Finance. Internally, the manager multisig also maintains a cbBTC/sBTC pair on Yield Basis to manage the peg semi-automatically, topping up liquidity when needed; this is a backend mechanic, not the wrapper you receive. You earn against the full system TVL — all confederations combined.</p>
+        </div>
+        <div class="card">
+          <div class="ico">Stream 3</div>
+          <h4>Custodian DAO · ULR staking</h4>
+          <p><strong>Risk:</strong> strategic. <strong>Pro-rata participation.</strong> ULR is the Custodian DAO's utility/rights token: 10,000,000 total supply, staked pro-rata. Stakers share in wrap/deploy fee income plus extra interest yield, distributed daily on top of the guaranteed base income routed to liquidity providers.</p>
+        </div>
+      </div>
+
+      <h3>Yield strategies</h3>
+      <table>
+        <thead><tr><th>Strategy</th><th>Platform</th><th>Target yield</th></tr></thead>
+        <tbody>
+          <tr><td>sBTC peg management (internal)</td><td>Yield Basis + manager multisig</td><td>Base layer + fees</td></tr>
+          <tr><td>cyb-sBTC vaults</td><td>Yield Basis</td><td>2–3% APY</td></tr>
+          <tr><td>sBTC lending</td><td>Silo Finance</td><td>4–5% APY</td></tr>
+          <tr><td>yb-token collateral → crvUSD</td><td>Silo Finance</td><td>Leverage</td></tr>
+          <tr><td>Stablecoin deposit</td><td>Silo Finance</td><td>from 4% APY</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Custodian DAO: the ULR token</h3>
+      <div class="pull-stat">
+        <div><div class="v">10,000,000</div><div class="l">Total ULR supply</div></div>
+        <div><div class="v">Pro-rata</div><div class="l">Staking model</div></div>
+        <div><div class="v">1 day</div><div class="l">Minimum stake lock</div></div>
+      </div>
+      <p><strong>How ULR income is distributed (daily):</strong></p>
+      <ul>
+        <li>I_base = TVL_day × 0.00012 — a guaranteed base income routed to liquidity providers first</li>
+        <li>I_excess = Income − I_base — whatever remains after the base is covered</li>
+        <li>If I_excess &gt; 0: half goes to ULR stakers pro-rata (I_ULR = I_excess / 2), the other half funds the insurance reserve up to 5% of the liquidity reserve, then overflows to liquidity providers</li>
+        <li>If I_excess ≤ 0: ULR stakers receive nothing that day — no fallback, no smoothing</li>
+        <li>No premium for late entry or early exit; stake is liquid after the 1-day minimum lock</li>
+      </ul>
+
+      <h3>Roadmap</h3>
+      <ol class="flow">
+        <li><strong>Now · Liquidity Provisioning</strong>
+          <small>Sourcing liquidity for SatoshiFi confederations. Building the capital base.</small>
+        </li>
+        <li><strong>In parallel · Custodian DAO / ULR Distribution</strong>
+          <small>Pro-rata ULR staking open to participants. No fixed seat count or reserved allocation.</small>
+        </li>
+        <li><strong>+2 months · Confederation Launch</strong>
+          <small>First confederations after DAO and liquidity are in place. DKG ceremonies. Connecting confederations to the Yield|Loan Stream.</small>
+        </li>
+      </ol>
+
+      <h3>Stream comparison</h3>
+      <table>
+        <thead><tr><th></th><th>Confederation</th><th>Yield|Loan Stream</th><th>Custodian DAO</th></tr></thead>
+        <tbody>
+          <tr><td><strong>BTC control</strong></td><td>Full</td><td>Partial (wrapped)</td><td>Not required</td></tr>
+          <tr><td><strong>Target yield</strong></td><td>2.5% + 7% APY (creator)</td><td>4–5% APY</td><td>Pro-rata ULR share</td></tr>
+          <tr><td><strong>Risk level</strong></td><td>Minimal</td><td>Medium</td><td>Strategic</td></tr>
+          <tr><td><strong>Minimum entry</strong></td><td>3+ participants</td><td>BTC for wrapping</td><td>ULR stake</td></tr>
+          <tr><td><strong>Income type</strong></td><td>Creator income</td><td>Rent from TVL</td><td>Pro-rata, variable</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 14: FAQ ═════════════ -->
+  <section class="chapter" id="ch-faq">
+    <div class="container">
+      <div class="chapter-num">Chapter 14 · FAQ</div>
+      <h2>Frequently asked questions</h2>
+
+      <details class="faq">
+        <summary>How do I add a custom reward calculator?</summary>
+        <div class="answer">
+          Implement the <code>IDistributionScheme</code> interface, including <code>calculate</code>,
+          <code>calculateForMembers</code>, <code>validateInput</code>, <code>validateMemberInput</code>,
+          <code>getSchemeInfo</code>, and <code>estimateGas</code>. Register the contract in
+          <code>CalculatorRegistry</code> via <code>registerCalculator</code>, providing scheme type,
+          name, version, and gas estimate. Only authorized authors can register; usage requires a
+          whitelist entry through <code>whitelistCalculator</code>.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>How does the mpToken → sToken conversion work?</summary>
+        <div class="answer">
+          The miner deposits mpToken into the relevant <code>MultiPoolDAO</code> (e.g.
+          <code>MultiPoolDAO_BTC</code> for BTC). The contract re-verifies the associated UTXO
+          through <code>SPVContract</code> or <code>SPVContractDogecoin</code>. After verification it
+          calls <code>PoolSToken.mint</code> to issue sToken (SBTC, SDOGE, SBCH, SLTC).
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>How many MultiPoolDAOs are there in the system?</summary>
+        <div class="answer">
+          One per supported network: BTC, Dogecoin, BCH, LTC. Each manages its own sToken and
+          integrates with the corresponding SPV contract.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>What happens if SPV does not verify a transaction?</summary>
+        <div class="answer">
+          <code>SPVContract</code> rejects the block and no rewards are distributed. The miner must
+          supply correct data: block header, txRaw, Merkle proof. This is the baseline defense
+          against forged UTXOs and verification attacks.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Is MultiPoolDAO mandatory for local pools?</summary>
+        <div class="answer">
+          No. Local pools can operate autonomously, distributing mpToken based on shares and
+          calculators. <code>MultiPoolDAO</code> is only required for converting mpToken to sToken
+          for global liquidity or redemption into native assets.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>How do miners gain access to a pool?</summary>
+        <div class="answer">
+          Miners receive a <code>PoolMembershipNFT</code> (Soulbound Token) confirming participation.
+          The SBT is issued by <code>MiningPoolDAO</code> and is required for submitting shares and
+          receiving mpToken. Additional roles (admin, validator) are granted via <code>PoolRoleBadgeNFT</code>.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>How is asset redemption secured?</summary>
+        <div class="answer">
+          Redemption uses threshold signatures through <code>FROSTCoordinator</code> and
+          <code>FROSTVerifier</code>. The user calls <code>burnAndRedeem</code>, burning sToken.
+          FROST produces a Schnorr (BIP340) signature, verified before the native transaction is
+          constructed. Confederations additionally require a custodian threshold.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Can a pool be paused?</summary>
+        <div class="answer">
+          Yes. Contracts use OpenZeppelin <code>Pausable</code>. An administrator with
+          <code>DEFAULT_ADMIN_ROLE</code> can pause <code>receiveReward</code>,
+          <code>mintSToken</code>, and <code>burnAndRedeem</code>. In production this role should be
+          transferred to a multisig or DAO.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Which networks are supported?</summary>
+        <div class="answer">
+          BTC (<code>SPVContract</code>), Dogecoin (<code>SPVContractDogecoin</code>), BCH, and LTC.
+          Each network has its own <code>MultiPoolDAO</code> and sToken: SBTC, SDOGE, SBCH, SLTC.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>How does federation key rotation work?</summary>
+        <div class="answer">
+          Rotation is initiated by DAO vote or on schedule (≈ every 6 months, ≈ 262,800 blocks for
+          BTC). A new DKG runs in <code>FROSTCoordinator</code>, old keys are invalidated, and funds
+          are moved through a multisig transaction. The rotation is confirmed on-chain via SPV.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Who pays the on-chain BTC fee during redemption?</summary>
+        <div class="answer">
+          The user. The fee is deducted from the redemption amount (<code>BridgeOutbox</code> builds
+          the transaction with an explicit miner fee). A pool may subsidize fees through DAO vote
+          for small transactions. The user can speed up the transaction via RBF, since
+          <code>SIGHASH_ALL | SIGHASH_ANYONECANPAY</code> is used.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>Is there an insurance pool?</summary>
+        <div class="answer">
+          Planned. A partial reserve is formed from custodian deposits, which are slashed on
+          violations. A portion of pool fees may be routed to a reserve fund (configured in
+          <code>MultiPoolDAO</code>). An additional insurance pool is in development.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>What jurisdiction does the federation operate under?</summary>
+        <div class="answer">
+          The federation (<code>MultiPoolDAO</code>) is decentralized and not bound to a single
+          jurisdiction. Each pool may select applicable law through DAO vote. sToken may be
+          classified differently across jurisdictions (e-money, security, utility); exact status
+          requires legal counsel at the scaling stage.
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 15: Glossary ═════════════ -->
+  <section class="chapter" id="ch-glossary">
+    <div class="container">
+      <div class="chapter-num">Chapter 15 · Glossary</div>
+      <h2>Glossary</h2>
+
+      <dl class="glossary">
+        <dt>mpToken</dt>
+        <dd>Local ERC-20 pool token, 1:1 backed by the native asset. Issued by <code>MiningPoolDAO</code>. Freely transferable, redeemable to the native network, or convertible to sToken.</dd>
+
+        <dt>sToken</dt>
+        <dd>Global network ERC-20 token (SBTC, SDOGE, SBCH, SLTC). Issued by <code>MultiPoolDAO</code> per network. Provides liquidity and redemption to native assets.</dd>
+
+        <dt>MiningPoolDAO</dt>
+        <dd>The local mining-pool contract. Accepts shares, verifies via SPV, distributes rewards through calculators, mints mpToken.</dd>
+
+        <dt>MultiPoolDAO</dt>
+        <dd>The global coordination contract for one network (BTC, DOGE, BCH, LTC). Verifies UTXOs, issues sToken, coordinates redemption through FROST.</dd>
+
+        <dt>SPV (Simplified Payment Verification)</dt>
+        <dd>Verification mechanism that does not require running a full node. Uses block headers and Merkle paths.</dd>
+
+        <dt>FROST (Flexible Round-Optimized Schnorr Threshold)</dt>
+        <dd>Threshold-signature protocol for secp256k1. A t-of-n threshold delivers decentralized signing.</dd>
+
+        <dt>DKG (Distributed Key Generation)</dt>
+        <dd>Distributed key generation. Each participant holds a share of the private key; the group public key is formed collectively.</dd>
+
+        <dt>BIP340</dt>
+        <dd>Bitcoin Improvement Proposal 340 — the secp256k1 Schnorr-signature standard used in Taproot. Requires even-Y coordinates for public keys and R points.</dd>
+
+        <dt>CalculatorRegistry</dt>
+        <dd>Registry of reward calculators (PPS, FPPS, PPLNS, Score). Supports registration, whitelisting, and usage statistics.</dd>
+
+        <dt>PPS / FPPS / PPLNS / Score</dt>
+        <dd>Reward distribution models: fixed payment per share (PPS), with tx fees (FPPS), over a window of last N shares (PPLNS), exponential decay (Score).</dd>
+
+        <dt>PoolMembershipNFT</dt>
+        <dd>Soulbound token confirming a miner's participation in a pool. Non-transferable.</dd>
+
+        <dt>PoolRoleBadgeNFT</dt>
+        <dd>SBT for DAO roles (admin, validator, etc.).</dd>
+
+        <dt>Stratum</dt>
+        <dd>Network protocol for transmitting miner share data. Integrated through <code>StratumDataAggregator</code> and <code>StratumDataValidator</code>.</dd>
+
+        <dt>UTXO (Unspent Transaction Output)</dt>
+        <dd>Unspent transaction output. Verified via SPV to confirm rewards.</dd>
+
+        <dt>DAO (Decentralized Autonomous Organization)</dt>
+        <dd>An organization governed through smart contracts and tokens (mpToken, NFT/SBT).</dd>
+
+        <dt>Federation</dt>
+        <dd>A group of participants jointly holding shares of a BTC address key through DKG. A t-of-n threshold gates all operations.</dd>
+
+        <dt>Confederation</dt>
+        <dd>A federation plus a custodian layer. Every operation requires both a FROST threshold and a custodian threshold simultaneously.</dd>
+
+        <dt>Custodian</dt>
+        <dd>A trusted participant from <code>MultiPoolDAO</code> holding a key share through FROST. Guarantees honesty through a slashable deposit.</dd>
+
+        <dt>Slashing</dt>
+        <dd>Confiscation of a participant's deposit (custodian, oracle) for proven violations. Aligns incentives toward honest behavior.</dd>
+
+        <dt>Backing</dt>
+        <dd>Reserve struct: <code>totalReceived</code>, <code>reserved</code>, <code>available</code>. sToken issuance is bounded by <code>available</code>.</dd>
+
+        <dt>Operation Hash</dt>
+        <dd>Target-bound hash of a privileged operation. Includes domain, chainid, FROST address, target contract, selector, parameter hash, and nonce.</dd>
+
+        <dt>RBF (Replace-By-Fee)</dt>
+        <dd>Bitcoin standard for replacing an unconfirmed transaction with one carrying a higher fee. SatoshiFi uses RBF-compatible sequence policy to accelerate redemption.</dd>
+
+        <dt>Proof-of-Reserves (PoR)</dt>
+        <dd>Proof that all issued wrapped tokens are backed by native assets on federation addresses. In SatoshiFi this is fully on-chain through <code>BridgeInbox</code> and events.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═════════════ Chapter 16: References ═════════════ -->
+  <section class="chapter" id="ch-references">
+    <div class="container">
+      <div class="chapter-num">Chapter 16 · References</div>
+      <h2>References and licenses</h2>
+
+      <h3>Academic and standards references</h3>
+      <ol>
+        <li>Nakamoto, S. (2008). <em>Bitcoin: A Peer-to-Peer Electronic Cash System.</em></li>
+        <li>Komlo, C., &amp; Goldberg, I. (2020). <em>FROST: Flexible Round-Optimized Schnorr Threshold Signatures.</em></li>
+        <li>Feldman, P. (1987). <em>A Practical Scheme for Non-interactive Verifiable Secret Sharing.</em></li>
+        <li>BIP-340 — Schnorr Signatures for secp256k1.</li>
+        <li>BIP-32 — Hierarchical Deterministic Wallets.</li>
+        <li>SEC2 — Recommended Elliptic Curve Domain Parameters (secp256k1).</li>
+        <li>EIP-2565 — Modular Exponentiation Precompile Gas Cost.</li>
+      </ol>
+
+      <h3>Dependencies</h3>
+      <ul>
+        <li>OpenZeppelin Contracts — AccessControl, ReentrancyGuard, Pausable, ERC20, SafeERC20</li>
+      </ul>
+
+      <h3>Auditors and tooling</h3>
+      <ul>
+        <li>SmartState — full audit of SatoshiFi</li>
+        <li>Hexens — planned audit</li>
+        <li>Slither, Mythril — recommended static analyzers in CI</li>
+        <li>Foundry / Hardhat — development and testing frameworks</li>
+      </ul>
+
+      <h3>Licenses</h3>
+      <p>
+        Smart contract code and documentation are distributed under the <strong>MIT</strong>
+        license (<code>SPDX-License-Identifier: MIT</code>). Dependencies (OpenZeppelin Contracts
+        and the project's own libraries — <code>BlockHeader</code>, <code>BitcoinUtils</code>,
+        <code>MerkleProofLib</code>) are also MIT.
+      </p>
+
+      <h3>Repository and contacts</h3>
+      <ul>
+        <li>GitHub: <a href="https://github.com/SatoshiFi" target="_blank" rel="noopener">github.com/SatoshiFi</a></li>
+        <li>Website: <a href="https://unilayer.solutions/" target="_blank" rel="noopener">unilayer.solutions</a></li>
+        <li>BTCyield: <a href="https://btcyield.online" target="_blank" rel="noopener">btcyield.online</a></li>
+        <li>Issues and pull requests are accepted through GitHub</li>
+      </ul>
+
+      <div class="ornament">— FIN —</div>
+    </div>
+  </section>
+
+  <!-- ═════════════ Footer ═════════════ -->
+  <footer>
+    <div class="container-wide">
+      <div class="footer-grid">
+        <div>
+          <h5>Documents</h5>
+          <ul>
+            <li><a href="#ch-architecture">Architecture</a></li>
+            <li><a href="#ch-frost">FROST &amp; DKG</a></li>
+            <li><a href="#ch-fees">Fee System</a></li>
+            <li><a href="#ch-security">Security</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Products</h5>
+          <ul>
+            <li><a href="https://btcyield.online" target="_blank" rel="noopener">BTCyield Platform</a></li>
+            <li><a href="https://unilayer.solutions/custody.html#explore" target="_blank" rel="noopener">Create Confederation</a></li>
+            <li><a href="https://unilayer.solutions/" target="_blank" rel="noopener">SatoshiFi</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Resources</h5>
+          <ul>
+            <li><a href="https://github.com/SatoshiFi" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="#ch-references">References</a></li>
+            <li><a href="#ch-faq">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>© 2026 SatoshiFi · MIT Licence</div>
+        <div>Whitepaper v1.0 · Q2 2026</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Highlight active TOC entries on scroll
+    const sections = document.querySelectorAll('section.chapter[id]');
+    const navLinks = document.querySelectorAll('.topnav a[href^="#"]');
+    const tocLinks = document.querySelectorAll('.toc-grid a[href^="#"]');
+
+    function onScroll() {
+      const y = window.scrollY + 120;
+      let current = '';
+      sections.forEach(s => { if (s.offsetTop <= y) current = s.id; });
+      [...navLinks, ...tocLinks].forEach(a => {
+        const href = a.getAttribute('href');
+        if (href === '#' + current) a.style.color = 'var(--accent)';
+        else a.style.color = '';
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+</body>
+</html>

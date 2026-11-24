@@ -177,6 +177,10 @@ def validate_invite(invite):
             from .bootstrap_tokens import resolve
             resolve(invite)
             required.add("token_metadata")
+        if "zk_relay" in invite:
+            from .zk_relay_deploy import validate_adoption
+            validate_adoption(invite["zk_relay"], invite.get("bitcoin_policy"))
+            required.add("zk_relay")
         if "system_bootstrap" in invite:
             from .bootstrap_system import validate
             validate(invite)
@@ -318,6 +322,8 @@ def assemble(invite, enrollments, rpc=None):
             p["bitcoin_recovery"] = invite["bitcoin_recovery"]
         if "token_metadata" in invite:
             p["token_metadata"] = invite["token_metadata"]
+        if "zk_relay" in invite:
+            p["zk_relay"] = invite["zk_relay"]
         if "system_bootstrap" in invite:
             p["system_bootstrap"] = invite["system_bootstrap"]
         if "ulr" in invite:
@@ -349,7 +355,7 @@ def assemble(invite, enrollments, rpc=None):
 def verify_profile(profile):
     data = profile["onboarding"]
     expected = assemble(data["invitation"], data["enrollments"])
-    if any((field in profile) != (field in expected) for field in ("withdrawal_fee", "ulr", "system_bootstrap", "token_metadata",
+    if any((field in profile) != (field in expected) for field in ("withdrawal_fee", "ulr", "system_bootstrap", "token_metadata", "zk_relay",
             "bitcoin_custody", "bitcoin_recovery", "phase_duration")):
         raise ValueError("ENROLLED_PROFILE_MISMATCH")
     for k, v in expected.items():
@@ -599,6 +605,8 @@ def main(argv):
     c.add_argument("--withdrawal-fee-policy", help="public opt-in personal fee bootstrap policy, committed by every V6 enrollment")
     c.add_argument("--ulr-policy", help="signed shared ULR bootstrap policy: create/reuse and relay/zk-state-v2")
     c.add_argument("--token-metadata", help="JSON names and symbols; committed before participant enrollment")
+    c.add_argument("--zk-relay", help="JSON {address, tx_hash} of a ZK state contract deployed before enrollment; "
+                   "bootstrap adopts it after verifying its creation transaction")
     c.add_argument("--bitcoin-custody-policy", help="custodian-only Bitcoin/EVM monetary epoch and pinned source graphs")
     c.add_argument("--bitcoin-recovery-policy", help="public CLTV recovery policy for a native S wallet")
     c.add_argument("--system-policy", help="single enrolled Bitcoin + ULR policy, including canonical key family and address/signing boards")
@@ -819,6 +827,8 @@ def main(argv):
             invite["token_metadata"] = names
         if public_bitcoin:
             invite["bitcoin_policy"] = read_public(a.bitcoin_policy)
+        if getattr(a, "zk_relay", None):
+            invite["zk_relay"] = read_public(a.zk_relay)
         if backed:
             invite["reward_token"] = dict(address=Web3.to_checksum_address(a.reward_token),
                 runtime_hash=a.reward_token_code_hash, decimals=a.reward_token_decimals)

@@ -99,7 +99,15 @@ def load_config(path, *, review=False):
     if (not isinstance(retained, str) or not re.fullmatch(r"[1-9][0-9]{0,3}", retained)
             or not int(c["max_pending"]) <= int(retained) <= 4096):
         raise ValueError("ZK_WORKER_CONFIG_RANGE:max_retained_needs")
-    if (not isinstance(c["allowed_consumers"], dict) or not 1 <= len(c["allowed_consumers"]) <= 4096
+    # Before any consumer exists (state deployed ahead of enrollment), an enabled
+    # heartbeat alone may drive catch-up from the checkpoint; consumers are added
+    # in a new worker directory once bootstrap creates them.
+    heartbeat_only = (c["version"] in ("2", "3", "4") and isinstance(c.get("heartbeat"), dict)
+                      and c["heartbeat"].get("enabled") is True and c.get("transport") is None
+                      and isinstance(c.get("service"), dict) and c["service"].get("mode") == "confederation")
+    minimum_consumers = 0 if heartbeat_only else 1
+    if (not isinstance(c["allowed_consumers"], dict)
+            or not minimum_consumers <= len(c["allowed_consumers"]) <= 4096
             or any(not Web3.is_checksum_address(k) or v not in ("MiningPoolV1", "BitcoinWithdrawalEscrow",
                    "ConfederationBitcoinReserve", "BitcoinWithdrawalEscrowV2")
                    for k, v in c["allowed_consumers"].items())
