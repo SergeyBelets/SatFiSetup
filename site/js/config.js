@@ -22,9 +22,9 @@ window.CONFIG = Object.freeze({
     SESSION_SIGNIN_SECONDS: 240,
     RELEASE: Object.freeze({
       repository: 'https://github.com/SergeyBelets/SatFiSetup',
-      commit: 'e8fea306a5bd899840230845500cae6b0d35db9e',
+      commit: '2398999553ccb39d05559e873303ca73cc194131',
       script: 'tools/satoshifi-start.sh',
-      scriptSha256: '89a16d18c08471d9a04224a937407c79ca51000ba789aa5fcb8ecb72ba45ec2a'
+      scriptSha256: 'a33f94d04c4eb9296921534336c8f01b7e4a1e8af899012b1693d165784c8da9'
     }),
     LINKS: Object.freeze({
       telegram: 'https://t.me/',
