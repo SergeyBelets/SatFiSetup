@@ -59,7 +59,7 @@
       <p class="section-sub reveal">A confederation is a group of custodians who jointly control one Bitcoin address. No single person can move the coins; the Ethereum contracts verify every Bitcoin block with zero-knowledge proofs.</p>
       <ol class="steps reveal">
         <li><b>Request.</b> The initiator lists the custodians and sends a signed request to the operator.</li>
-        <li><b>Invitation.</b> The operator publishes an on-chain invitation; each custodian checks its code with the operator by phone.</li>
+        <li><b>Invitation.</b> The operator publishes an on-chain invitation; each custodian checks its code against the one the operator posts in Telegram.</li>
         <li><b>Installation.</b> Each custodian runs one script on a computer with an NVIDIA GPU and funds a work address with ETH.</li>
         <li><b>Key ceremony.</b> Three distributed key generations create the federation, confederation and Bitcoin keys. Nobody ever holds a whole key.</li>
         <li><b>Custody.</b> Deposits mint sBTC 1:1; withdrawals are signed by the custodian threshold and checked against Bitcoin by ZK proofs.</li>
@@ -179,7 +179,7 @@
   </div>
 
   <script src="/js/lib/ethers-5.7.2.umd.min.js"></script>
-  <script src="js/config.js?v=105ade9ca734"></script>
+  <script src="js/config.js?v=25e8718e682d"></script>
   <script src="js/app.js?v=905f5c8e944b"></script>
 </body>
 </html>

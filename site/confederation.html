@@ -42,7 +42,7 @@
           <h2>How a launch goes</h2>
           <ol class="steps">
             <li><b>Request</b> — you list the custodians and send a signed request from this page.</li>
-            <li><b>Invitation</b> — the operator publishes it on Ethereum; each custodian checks its code by phone.</li>
+            <li><b>Invitation</b> — the operator publishes it on Ethereum; each custodian checks its code against the one the operator posts in Telegram.</li>
             <li><b>Installation</b> — each custodian runs one script; it builds the software and waits for the invitation.</li>
             <li><b>Key ceremony</b> — three distributed key generations, 2–3 days, no human steps.</li>
             <li><b>Custody</b> — deposits, sBTC, staking; withdrawals signed by the custodian threshold.</li>
@@ -154,7 +154,7 @@
           </div>
           <div class="panel">
             <h2>Custodian client</h2>
-            <p>Run in a Linux, WSL2 or macOS terminal. Check the SHA-256 against the value the operator gave you by phone. Step by step: <a href="custodian.html">custodian client guide</a>.</p>
+            <p>Run in a Linux, WSL2 or macOS terminal. Check the SHA-256 against the value the operator posted in Telegram. Step by step: <a href="custodian.html">custodian client guide</a>.</p>
             <pre class="code" id="cer-command"></pre>
             <button type="button" class="btn btn-ghost" id="cer-copy">Copy</button>
             <dl class="kv" id="cer-release"></dl>
@@ -221,7 +221,7 @@
   </div>
 
   <script src="/js/lib/ethers-5.7.2.umd.min.js"></script>
-  <script src="js/config.js?v=105ade9ca734"></script>
+  <script src="js/config.js?v=25e8718e682d"></script>
   <script src="js/satoshifi-formats.js?v=b8d08366bd9f"></script>
   <script src="js/app.js?v=905f5c8e944b"></script>
   <script src="js/confederation.js?v=7093808843a1"></script>
