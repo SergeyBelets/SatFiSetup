@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # SatoshiFi custodian start script (Linux, Windows WSL2, macOS).
-# Usage: bash satoshifi-start.sh --commit <40-hex SatFiSetup commit dictated by the operator>
+# Usage: bash satoshifi-start.sh --commit <40-hex SatFiSetup commit sent by the operator in Telegram>
 # Rerun the same command at any time: finished steps are skipped.
 set -euo pipefail
 umask 022
@@ -14,7 +14,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 if ! [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "Нужен аргумент --commit <40 hex символов>, его диктует оператор."; exit 2
+  echo "Нужен аргумент --commit <40 hex символов>, его присылает оператор в Telegram."; exit 2
 fi
 
 SDK="$HOME/satfi-sdk"
@@ -307,7 +307,7 @@ if sys.argv[2].lower() not in [p.lower() for p in parts]:
     sys.exit("Вашего рабочего адреса нет в составе — свяжитесь с оператором.")
 PY
   echo
-  ask "Код приглашения совпал с тем, что продиктовал оператор, и вы вступаете?" || die "Вы отказались от вступления." 30
+  ask "Код приглашения совпал с тем, что оператор прислал в Telegram, и вы вступаете?" || die "Вы отказались от вступления." 30
   BOARD=$("$PY" -c "import json,sys;print(json.load(open(sys.argv[1]))['board'])" "$INV")
   FP=$("$PY" -c "import json,sys;print(json.load(open(sys.argv[1]))['fingerprint'])" "$INV")
   "$FS" setup join-chain --board "$BOARD" --rpc "$RPC" \
