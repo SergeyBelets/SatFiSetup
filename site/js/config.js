@@ -15,16 +15,18 @@ window.CONFIG = Object.freeze({
     PAGE_PATH: '/confederation.html',
     OPERATOR_EMAIL: 'sb@unilayer.solutions',
     OPERATOR_TELEGRAM: 'sergebelets',
-    OPERATOR_ADDRESS: '0xF66458BB45059b0E817d9ECE6504Acf322aA94f4',
+    OPERATOR_ADDRESS: '0x46CbF0964BCE33B818BC08e9224bEC1e99e9496A',
     MIN_PARTICIPANTS: 1,
     MAX_PARTICIPANTS: 100,
     DASHBOARD_REFRESH_SECONDS: 60,
     SESSION_SIGNIN_SECONDS: 240,
     RELEASE: Object.freeze({
       repository: 'https://github.com/SergeyBelets/SatFiSetup',
-      commit: 'e8fea306a5bd899840230845500cae6b0d35db9e',
+      rawBase: 'https://raw.githubusercontent.com/SergeyBelets/SatFiSetup',
+      checkScript: 'tools/satoshifi-check.sh',
+      commit: 'ad5d5054de9c7b825573db29c8866da7edf678f1',
       script: 'tools/satoshifi-start.sh',
-      scriptSha256: '89a16d18c08471d9a04224a937407c79ca51000ba789aa5fcb8ecb72ba45ec2a'
+      scriptSha256: '2b4031a9b55426b79cc284a44b4df5c7f6dc93df71cb971e87999d8f69f5a5fc'
     }),
     LINKS: Object.freeze({
       telegram: 'https://t.me/',

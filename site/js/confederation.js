@@ -232,7 +232,7 @@
     ]), data.members.map((m) => m.me));
     renderEvents($('cer-events'), data.events);
     const R = C.RELEASE;
-    const command = 'cd ~ && curl -sSfLO https://raw.githubusercontent.com/SergeyBelets/SatFiSetup/' + R.commit + '/' + R.script
+    const command = 'cd ~ && curl -sSfLO ' + R.rawBase + '/' + R.commit + '/' + R.script
       + '\nshasum -a 256 satoshifi-start.sh\nbash satoshifi-start.sh --commit ' + R.commit;
     $('cer-command').textContent = command;
     $('cer-copy').onclick = () => navigator.clipboard.writeText(command).then(() => { $('cer-copy').textContent = 'Copied'; });

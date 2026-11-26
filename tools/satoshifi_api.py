@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Client for the SatoshiFi monitoring API (wrapper spec 5.2-5.3).
 
-Participants:  report (heartbeat loop), event.
+Participants:  bind (work address -> personal wallet), report (heartbeat loop), event.
 Operator:      op-deployment, op-event, op-state, op-status.
 
 Signs requests with the key in an SDK identity file (JSON with "private_key").
@@ -24,6 +24,7 @@ import stat
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from eth_account import Account
@@ -91,6 +92,62 @@ def eth_balance(rpc_url, address):
     if "result" not in result:
         raise RuntimeError("eth_getBalance failed: %s" % result.get("error", {}).get("message", "no result"))
     return int(result["result"], 16)
+
+
+WSIG_HEADER = "SatoshiFi work binding v1"
+BIND_KEYS = {"bind_page", "chain_id"}
+
+
+def wsig_message(deployment, chain_id, work, code, exp):
+    """Twin of backend messages.wsig_message and site satoshifi-formats.js."""
+    return "\n".join([WSIG_HEADER, "Deployment: %s" % deployment, "Chain ID: %d" % chain_id,
+                      "Work address: %s" % work, "Code: %s" % code, "Expires: %d" % exp])
+
+
+def bind_link(config, account, ttl):
+    code = secrets.token_hex(32)
+    exp = int(time.time()) + ttl
+    text = wsig_message(config["deployment"], int(config["chain_id"]), account.address, code, exp)
+    wsig = account.sign_message(encode_defunct(text=text)).signature.hex()
+    wsig = wsig if wsig.startswith("0x") else "0x" + wsig
+    query = urllib.parse.urlencode([("bind", code), ("deployment", config["deployment"]),
+                                    ("work", account.address), ("exp", exp), ("wsig", wsig)])
+    return code, exp, config["bind_page"] + "?" + query
+
+
+def binding_status(config, code):
+    request = urllib.request.Request(config["api_base"].rstrip("/") + "/v1/bindings/" + code, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return json.loads(exc.read().decode("utf-8") or "{}") | {"http": exc.code}
+
+
+def cmd_bind(args):
+    config = load_config(args.config, BIND_KEYS)
+    account = load_account(config["identity_file"])
+    while True:
+        code, exp, url = bind_link(config, account, args.ttl)
+        print("BIND_LINK " + url, flush=True)
+        if args.print_only:
+            return
+        while time.time() < exp:
+            try:
+                result = binding_status(config, code)
+            except (urllib.error.URLError, OSError, ValueError) as exc:
+                print("BIND_WAIT api unreachable: %s" % type(exc).__name__, file=sys.stderr, flush=True)
+                time.sleep(args.poll)
+                continue
+            state = result.get("binding")
+            if state == "ACCEPTED":
+                print("BIND_ACCEPTED " + account.address, flush=True)
+                return
+            if state == "REJECTED":
+                print("BIND_REJECTED %s" % result.get("reason"), flush=True)
+                sys.exit(3)
+            time.sleep(args.poll)
+        print("BIND_EXPIRED new link follows", flush=True)
 
 
 def event_payload(config, args):
@@ -162,6 +219,13 @@ def cmd_op_status(args):
 def main():
     parser = argparse.ArgumentParser(prog="satoshifi_api")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("bind", help="bind the work address to a personal wallet (participant)")
+    p.add_argument("--config", required=True)
+    p.add_argument("--ttl", type=int, default=3600, help="link lifetime, seconds")
+    p.add_argument("--poll", type=int, default=10)
+    p.add_argument("--print-only", action="store_true", help="print one link and exit")
+    p.set_defaults(func=cmd_bind)
 
     p = sub.add_parser("report", help="send heartbeat reports (participant)")
     p.add_argument("--config", required=True)

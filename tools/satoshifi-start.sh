@@ -40,6 +40,7 @@ cfg() { python3 -c "import json,sys;print(json.load(open(sys.argv[1]))[sys.argv[
 
 OS="$(uname -s)"; ARCH="$(uname -m)"
 IS_WSL=0; grep -qi microsoft /proc/version 2>/dev/null && IS_WSL=1
+if [ "$OS" = Darwin ]; then RAM_MB=$(( $(sysctl -n hw.memsize) / 1048576 )); else RAM_MB=$(( $(awk '/^MemTotal:/{print $2}' /proc/meminfo) / 1024 )); fi
 
 # ---------------------------------------------------------------- 1. computer
 if ! done_step computer; then
@@ -52,6 +53,8 @@ if ! done_step computer; then
   FREE_GB=$(df -Pk "$HOME" | awk 'NR==2{print int($4/1048576)}')
   [ "$FREE_GB" -ge 30 ] || die "Свободно ${FREE_GB} ГБ, нужно не меньше 30 ГБ." 10
   ok "Свободно на диске: ${FREE_GB} ГБ"
+  [ "$RAM_MB" -ge 7500 ] || die "Оперативной памяти $((RAM_MB/1024)) ГБ, нужно не меньше 8 ГБ$([ $IS_WSL = 1 ] && echo ' внутри WSL2 (по умолчанию WSL получает половину памяти Windows)')." 10
+  ok "Оперативная память: $((RAM_MB/1024)) ГБ"
   command -v nvidia-smi >/dev/null && ok "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1)" \
     || echo "   ! GPU NVIDIA не найдена — для церемонии не нужна, понадобится позже для доказательств."
   mark computer
@@ -118,7 +121,21 @@ FS="$SDK/signer-agent/.venv/bin/frost-signer"
 if ! done_step build; then
   say "5. Сборка SDK (20–60 минут)"
   [ -x "$PY" ] || python3 -m venv "$SDK/signer-agent/.venv"
-  (cd "$SDK" && "$PY" ops/bootstrap_host.py build)
+  echo "   Сборка идёт в 1–2 потока, чтобы не исчерпать память; браузер и другие программы можно не закрывать."
+  # Parallel solc/rustc can exhaust RAM and freeze the machine in swap. Fewer
+  # threads, and on Linux a memory ceiling: if it is exceeded only the build is
+  # killed, with a visible error, instead of the whole computer hanging.
+  export FOUNDRY_THREADS=1 CARGO_BUILD_JOBS=2
+  LIMIT=()
+  CG="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+  if [ "$OS" = Linux ] && command -v systemd-run >/dev/null && grep -qw memory "$CG" 2>/dev/null; then
+    LIMIT=(systemd-run --user --scope --quiet -p "MemoryMax=$((RAM_MB / 2))M" -p MemorySwapMax=0)
+    ok "Предел памяти для сборки: $((RAM_MB / 2)) МБ"
+  fi
+  if ! (cd "$SDK" && ${LIMIT[@]+"${LIMIT[@]}"} "$PY" ops/bootstrap_host.py build); then
+    (cd "$SDK" && "$PY" ops/bootstrap_host.py check) || true
+    die "Сборка прервалась. Если выше есть «Killed» — не хватило памяти: закройте лишние программы и запустите ту же команду снова." 10
+  fi
   chmod -R go-w "$SDK"
   STATUS=$(cd "$SDK" && "$PY" ops/bootstrap_host.py check | "$PY" -c "import json,sys;print(json.load(sys.stdin)['status'])")
   [ "$STATUS" = READY_TO_CONFIGURE ] || { (cd "$SDK" && "$PY" ops/bootstrap_host.py check); die "Сборка не готова." 10; }
@@ -204,17 +221,43 @@ start_shim
 # ---------------------------------------------------------------- 9. monitoring
 if ! done_step monitor; then
   say "9. Мониторинг (отчёт боту каждые 5 минут)"
-  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg min_balance_wei)" <<'PY'
+  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg min_balance_wei)" "$(cfg bind_page)" <<'PY'
 import json, os, sys
-p, api, dep, ident, rpc, minb = sys.argv[1:]
+p, api, dep, ident, rpc, minb, page = sys.argv[1:]
 fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 os.write(fd, json.dumps(dict(api_base=api, deployment=dep, identity_file=ident, rpc_url=rpc,
-                             min_balance_wei=minb, report_period_s=300), indent=1).encode()); os.close(fd)
+                             min_balance_wei=minb, report_period_s=300, bind_page=page, chain_id=1),
+                        indent=1).encode()); os.close(fd)
 PY
   mark monitor
 fi
 if ! pgrep -f "satoshifi_api.py report" >/dev/null; then
   (setsid nohup "$PY" "$SDK/tools/satoshifi_api.py" report --config "$H/report.json" >> "$H/report.log" 2>&1 &)
+fi
+
+# ---------------------------------------------------------------- 9b. binding
+open_url() {
+  if [ $IS_WSL = 1 ]; then powershell.exe -NoProfile -Command "Start-Process '$1'" >/dev/null 2>&1 || true
+  elif [ "$OS" = Darwin ]; then open "$1" >/dev/null 2>&1 || true
+  else xdg-open "$1" >/dev/null 2>&1 || true; fi
+}
+if ! done_step bound; then
+  say "9b. Привязка рабочего адреса к вашему кошельку"
+  echo "   Рабочий адрес: $ME"
+  echo "   Откроется страница btcyield.online. Подключите тот личный кошелёк, адрес которого вы сообщили"
+  echo "   оператору, и подпишите сообщение. Это не транзакция и ничего не стоит."
+  if ! "$PY" "$SDK/tools/satoshifi_api.py" bind --config "$H/report.json" | while IFS= read -r line; do
+      case "$line" in
+        BIND_LINK*)     echo; echo "   Если браузер не открылся, откройте ссылку вручную:"; echo "   ${line#BIND_LINK }"; echo
+                        echo "   Жду подписи (ссылка действует час, затем появится новая)..."; open_url "${line#BIND_LINK }" ;;
+        BIND_ACCEPTED*) ok "Привязка принята" ;;
+        BIND_REJECTED*) echo "   ✘ Привязка отклонена: ${line#BIND_REJECTED }" ;;
+        BIND_EXPIRED*)  echo "   Ссылка истекла." ;;
+      esac
+    done; then
+    die "Привязка не принята. NOT_ALLOWLISTED — оператор ещё не внёс ваш личный адрес; сообщите ему и запустите скрипт снова." 30
+  fi
+  mark bound
 fi
 
 # ---------------------------------------------------------------- 10. ETH
