@@ -1,6 +1,6 @@
 {
   "deployment_id": "satfi-m1",
-  "operator": "0xF66458BB45059b0E817d9ECE6504Acf322aA94f4",
+  "operator": "0x46CbF0964BCE33B818BC08e9224bEC1e99e9496A",
   "chain_id": 1,
   "repo": "https://github.com/SergeyBelets/SatFiSetup.git",
   "api_base": "https://api.btcyield.online",
