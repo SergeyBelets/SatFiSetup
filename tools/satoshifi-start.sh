@@ -40,6 +40,7 @@ cfg() { python3 -c "import json,sys;print(json.load(open(sys.argv[1]))[sys.argv[
 
 OS="$(uname -s)"; ARCH="$(uname -m)"
 IS_WSL=0; grep -qi microsoft /proc/version 2>/dev/null && IS_WSL=1
+if [ "$OS" = Darwin ]; then RAM_MB=$(( $(sysctl -n hw.memsize) / 1048576 )); else RAM_MB=$(( $(awk '/^MemTotal:/{print $2}' /proc/meminfo) / 1024 )); fi
 
 # ---------------------------------------------------------------- 1. computer
 if ! done_step computer; then
@@ -52,6 +53,8 @@ if ! done_step computer; then
   FREE_GB=$(df -Pk "$HOME" | awk 'NR==2{print int($4/1048576)}')
   [ "$FREE_GB" -ge 30 ] || die "Свободно ${FREE_GB} ГБ, нужно не меньше 30 ГБ." 10
   ok "Свободно на диске: ${FREE_GB} ГБ"
+  [ "$RAM_MB" -ge 7500 ] || die "Оперативной памяти $((RAM_MB/1024)) ГБ, нужно не меньше 8 ГБ$([ $IS_WSL = 1 ] && echo ' внутри WSL2 (по умолчанию WSL получает половину памяти Windows)')." 10
+  ok "Оперативная память: $((RAM_MB/1024)) ГБ"
   command -v nvidia-smi >/dev/null && ok "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1)" \
     || echo "   ! GPU NVIDIA не найдена — для церемонии не нужна, понадобится позже для доказательств."
   mark computer
@@ -118,7 +121,21 @@ FS="$SDK/signer-agent/.venv/bin/frost-signer"
 if ! done_step build; then
   say "5. Сборка SDK (20–60 минут)"
   [ -x "$PY" ] || python3 -m venv "$SDK/signer-agent/.venv"
-  (cd "$SDK" && "$PY" ops/bootstrap_host.py build)
+  echo "   Сборка идёт в 1–2 потока, чтобы не исчерпать память; браузер и другие программы можно не закрывать."
+  # Parallel solc/rustc can exhaust RAM and freeze the machine in swap. Fewer
+  # threads, and on Linux a memory ceiling: if it is exceeded only the build is
+  # killed, with a visible error, instead of the whole computer hanging.
+  export FOUNDRY_THREADS=1 CARGO_BUILD_JOBS=2
+  LIMIT=()
+  CG="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+  if [ "$OS" = Linux ] && command -v systemd-run >/dev/null && grep -qw memory "$CG" 2>/dev/null; then
+    LIMIT=(systemd-run --user --scope --quiet -p "MemoryMax=$((RAM_MB / 2))M" -p MemorySwapMax=0)
+    ok "Предел памяти для сборки: $((RAM_MB / 2)) МБ"
+  fi
+  if ! (cd "$SDK" && ${LIMIT[@]+"${LIMIT[@]}"} "$PY" ops/bootstrap_host.py build); then
+    (cd "$SDK" && "$PY" ops/bootstrap_host.py check) || true
+    die "Сборка прервалась. Если выше есть «Killed» — не хватило памяти: закройте лишние программы и запустите ту же команду снова." 10
+  fi
   chmod -R go-w "$SDK"
   STATUS=$(cd "$SDK" && "$PY" ops/bootstrap_host.py check | "$PY" -c "import json,sys;print(json.load(sys.stdin)['status'])")
   [ "$STATUS" = READY_TO_CONFIGURE ] || { (cd "$SDK" && "$PY" ops/bootstrap_host.py check); die "Сборка не готова." 10; }
