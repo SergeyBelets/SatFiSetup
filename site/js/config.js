@@ -24,7 +24,7 @@ window.CONFIG = Object.freeze({
       repository: 'https://github.com/SergeyBelets/SatFiSetup',
       rawBase: 'https://raw.githubusercontent.com/SergeyBelets/SatFiSetup',
       checkScript: 'tools/satoshifi-check.sh',
-      commit: '2398999553ccb39d05559e873303ca73cc194131',
+      commit: '08b635151c48ff1c6c245275c505adf1e1c98ed6',
       script: 'tools/satoshifi-start.sh',
       scriptSha256: 'a33f94d04c4eb9296921534336c8f01b7e4a1e8af899012b1693d165784c8da9'
     }),
