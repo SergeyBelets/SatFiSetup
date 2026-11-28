@@ -265,7 +265,7 @@ balance() { "$PY" -c "import sys;from web3 import Web3;w=Web3(Web3.HTTPProvider(
 if ! done_step funded; then
   say "10. ETH на рабочий адрес"
   echo "   Рабочий адрес: $ME"
-  echo "   Отправьте на него 0,3 ETH (сеть Ethereum). Жду поступления..."
+  echo "   Отправьте на него 0,05 ETH (сеть Ethereum). Жду поступления..."
   until [ "$(balance)" -ge "$(cfg min_balance_wei)" ]; do sleep 30; done
   ok "Баланс: $("$PY" -c "print($(balance)/1e18)") ETH"
   mark funded
