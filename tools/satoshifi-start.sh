@@ -221,7 +221,7 @@ start_shim
 # ---------------------------------------------------------------- 9. monitoring
 if ! done_step monitor; then
   say "9. Мониторинг (отчёт боту каждые 5 минут)"
-  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg min_balance_wei)" "$(cfg bind_page)" <<'PY'
+  "$PY" - "$H/report.json" "$(cfg api_base)" "$DEPLOYMENT" "$ID" "$RPC" "$(cfg low_balance_wei)" "$(cfg bind_page)" <<'PY'
 import json, os, sys
 p, api, dep, ident, rpc, minb, page = sys.argv[1:]
 fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -265,7 +265,7 @@ balance() { "$PY" -c "import sys;from web3 import Web3;w=Web3(Web3.HTTPProvider(
 if ! done_step funded; then
   say "10. ETH на рабочий адрес"
   echo "   Рабочий адрес: $ME"
-  echo "   Отправьте на него 0,05 ETH (сеть Ethereum). Жду поступления..."
+  echo "   Отправьте на него 0,1 ETH (сеть Ethereum). Жду поступления..."
   until [ "$(balance)" -ge "$(cfg min_balance_wei)" ]; do sleep 30; done
   ok "Баланс: $("$PY" -c "print($(balance)/1e18)") ETH"
   mark funded
